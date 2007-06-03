@@ -74,7 +74,7 @@ def p_stmt_body(p):
 
 def p_if_stmt(p):
     '''if_stmt : if_single_stmt
-               : if_multi_stmt'''
+               | if_multi_stmt'''
     p[0] = p[1]
     
 def p_if_single_stmt(p):
@@ -109,12 +109,12 @@ def p_if_multi_stmt(p):
     
 
 def p_let_stmt(p):
-    '''let_stmt : LET variable EQ expr,
+    '''let_stmt : LET variable EQ expr
                 | variable EQ expr'''
     if len(p) == 5:
-        p[0] = Assignment(p[3], p[5])
+        p[0] = Assignment(p[2], p[4])
     elif len(p) == 4:
-        p[0] = Assignment(p[2], p[3])
+        p[0] = Assignment(p[1], p[3])
         
 # Print        
         
@@ -131,24 +131,24 @@ def p_print_list(p):
     '''print_list | print_list print_item'''
     
 def p_print_item(p):
-    '''print_item | expr
-                    tab
-                    spc
-                    TILDE
-                    APOSTROPHE
-                    COMMA
-                    SEMICOLON'''
+    '''print_item : expr
+                  | tab 
+                  | spc
+                  | TILDE
+                  | APOSTROPHE
+                  | COMMA
+                  | SEMICOLON'''
                     
 def p_tab(p):
-    '''tab | TAB LPAREN expr RPAREN
+    '''tab : TAB LPAREN expr RPAREN
            | TAB LPAREN expr COMMA expr RPAREN'''
     if len(p) == 5:
         p[0] = TabH(p[3])
     elif len(p) == 7:
-        p[1] = TabXY(p[3], p[5])                           
+        p[] = TabXY(p[3], p[5])                           
 
 def p_spc(p):
-    '''spc | SPC LPAREN expr RPAREN'''
+    '''spc : SPC LPAREN expr RPAREN'''
     p[0] = Spc(p[3])
 
 # Expressions
@@ -191,11 +191,11 @@ def p_unary_op(p):
     p[0] = p[1]
     
 def p_expr_binary_op(p):
-    'expr_binary_op | expr binary_op expr'
+    'expr_binary_op : expr binary_op expr'
     p[0] = BinaryOp(p[2], p[1], p[3]) # TODO: Use an operator factory here
 
 def p_binary_op(p):
-    '''binary_op | QUERY
+    '''binary_op : QUERY
                  | PLING
                  | PIPE
                  | DOLLAR
