@@ -232,7 +232,7 @@ def p_expr_function(p):
                      | asc_func
                      | asn_func
                      | bget_func
-                     | chr_func
+                     | chr_str_func
                      | cos_func
                      | count_func
                      | deg_func
@@ -298,8 +298,12 @@ def p_asc_func(p):
     
 def p_bget_func(p):
     'bget_func : BGET channel'
-    p[0] = BgetFunc(p[3])
+    p[0] = BgetFunc(p[2])
     
+def p_chr_str_func(p):
+    'chr_str_func : CHR_STR expr'
+    p[0] = ChrStrFunc(p[2])
+
 # Error rule for syntax errors
 def p_error(p):
     print "Syntax error in input!"

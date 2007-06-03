@@ -69,6 +69,11 @@ class BgetFunc(AstNode):
     def __init__(self, channel, *args, **kwargs):
         self.channel = expr
         super(AscFunc, self).__init__(*args, **kwargs)        
+
+class ChrStrFunc(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(AscFunc, self).__init__(*args, **kwargs)
         
 class StrStringFunc(AstNode):
     def __init__(self, expr, base=10, *args, **kwargs):
