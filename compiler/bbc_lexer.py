@@ -13,7 +13,7 @@ tokens = (
     'PIPE',
     'HASH',
     'DOLLAR',
-    'PRIME',
+    'APOSTROPHE',
     'COLON',
     'COMMA',
     'SEMICOLON',
@@ -334,7 +334,7 @@ t_PLING = r'\!'
 t_PIPE = r'\|'
 t_HASH = r'\#'
 t_DOLLAR = r'\$'
-t_PRIME = r"'"
+t_APOSTROPHE = r"'"
 t_COLON = r':'
 t_COMMA = r','
 t_SEMICOLON = r';'
