@@ -74,6 +74,16 @@ class ChrStrFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(AscFunc, self).__init__(*args, **kwargs)
+
+class CosFunc(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(CosFunc, self).__init__(*args, **kwargs)
+
+class CountFunc(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(CountFunc, self).__init__(*args, **kwargs)    
         
 class StrStringFunc(AstNode):
     def __init__(self, expr, base=10, *args, **kwargs):

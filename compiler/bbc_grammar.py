@@ -237,6 +237,7 @@ def p_expr_function(p):
                      | count_func
                      | deg_func
                      | dim_func
+                     | end_func
                      | eof_func
                      | erl_func
                      | err_func
@@ -303,6 +304,14 @@ def p_bget_func(p):
 def p_chr_str_func(p):
     'chr_str_func : CHR_STR expr'
     p[0] = ChrStrFunc(p[2])
+    
+def p_cos_func(p):
+    'chr_str_func : CHR_STR expr'
+    p[0] = CosFunc(p[2])
+    
+def p_count_func(p):
+    'chr_str_func : COUNT'
+    p[0] = CountFunc(p[2])  
 
 # Error rule for syntax errors
 def p_error(p):
