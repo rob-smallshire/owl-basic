@@ -253,7 +253,8 @@ def p_let_stmt(p):
         
 def p_print_stmt(p):
     '''print_stmt : PRINT print_list
-                  | PRINT channel actual_arg_list'''
+                  | PRINT channel COMMA actual_arg_list'''
+    # TODO: Also need to handle simple PRINT channel
     if len(p) == 3:
         p[0] = Print(p[2])
     elif len(p) == 4:
@@ -316,12 +317,12 @@ def p_formal_arg(p):
 # Expressions
 
 def p_expr(p):
-    '''expr : literal
-            | variable
+    '''expr : expr_function
+            | expr_group
             | expr_unary_op
             | expr_binary_op
-            | expr_group
-            | expr_function'''
+            | variable
+            | literal'''
     p[0] = p[1]
 
 def p_literal(p):
@@ -331,7 +332,7 @@ def p_literal(p):
     p[0] = p[1]
 
 def p_channel(p):
-    '''channel : HASH expr'''
+    '''channel : HASH expr %prec UHASH'''
     p[0] = Channel(p[2])
 
 def p_variable(p):
@@ -418,7 +419,7 @@ precedence = (
              ('left', 'TIMES', 'DIVIDE', 'MOD', 'DIV'),
              ('left', 'CARET'),
              ('left', 'PLING', 'QUERY', 'PIPE', 'DOLLAR'),  # Binary indirection operators
-             ('right', 'NOT', 'UPLUS', 'UMINUS', 'UPLING', 'UQUERY', 'UPIPE', 'UDOLLAR') # Unary operators
+             ('right', 'FUNCTION', 'NOT', 'UPLUS', 'UMINUS', 'UPLING', 'UQUERY', 'UPIPE', 'UDOLLAR', 'UHASH'), # Unary operators
              )
                  
 def p_expr_group(p):
@@ -477,43 +478,51 @@ def p_expr_function(p):
     p[0] = p[1]
 
 def p_user_func(p):
-    'user_func : FN ID LPAREN actual_arg_list RPAREN'
+    'user_func : FN ID LPAREN actual_arg_list RPAREN %prec FUNCTION'
     p[0] = UserFunc(p[2], p[3])
      
 def p_abs_func(p):
-    'abs_func : ABS expr'
+    'abs_func : ABS expr %prec FUNCTION'
     p[0] = AbsFunc(p[2])
     
 def p_acs_func(p):
-    'acs_func : ACS expr'
+    'acs_func : ACS expr %prec FUNCTION'
     p[0] = AcsFunc(p[2])
     
 def p_str_str_func(p):
-    '''str_str_func : STR_STR expr
-                    | STR_STR TILDE expr'''
+    '''str_str_func : str_str_dec_func
+                    | str_str_hex_func'''
     if len(p) == 3:
         p[0] = StrStringFunc(p[2])
     elif len(p) == 4:
         p[0] = StrStringFunc(p[3], 16) # Base 16 conversion
+
+def p_str_str_dec_func(p):
+    'str_str_dec_func : STR_STR expr %prec FUNCTION'
+    p[0] = StrStringFunc(p[2], 10)
+    
+def p_str_str_hex_func(p):
+    'str_str_hex_func : STR_STR TILDE expr %prec FUNCTION'
+    p[0] = StrStringFunc(p[2], 16)
            
 def p_asc_func(p):
-    'asc_func : ASC expr'
+    'asc_func : ASC expr %prec FUNCTION'
     p[0] = AscFunc(p[2])
     
 def p_bget_func(p):
-    'bget_func : BGET channel'
+    'bget_func : BGET channel %prec FUNCTION'
     p[0] = BgetFunc(p[2])
     
 def p_chr_str_func(p):
-    'chr_str_func : CHR_STR expr'
+    'chr_str_func : CHR_STR expr %prec FUNCTION'
     p[0] = ChrStrFunc(p[2])
     
 def p_cos_func(p):
-    'cos_func : COS expr'
+    'cos_func : COS expr %prec FUNCTION'
     p[0] = CosFunc(p[2])
     
 def p_count_func(p):
-    'count_func : COUNT'
+    'count_func : COUNT %prec FUNCTION'
     p[0] = CountFunc(p[2])  
 
 # Error rule for syntax errors
