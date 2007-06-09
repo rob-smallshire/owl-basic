@@ -6,8 +6,9 @@ tokens = (
     'EOL',
     'ID',
     'LITERAL_STRING',
-    'LITERAL_INTEGER',
     'LITERAL_FLOAT',
+    'LITERAL_INTEGER',
+ #   'LITERAL_WORD_STRING',
     'QUERY',
     'PLING',
     'PIPE',
@@ -184,7 +185,8 @@ tokens = (
     'INSTALL',
     'PRIVATE',
     'BY',
-    'EXIT'
+    'EXIT',
+    'NOT'
 )
 
 # BBC Basic reserved words
@@ -194,6 +196,7 @@ reserved = {
     'EOR' : 'EOR',
     'MOD' : 'MOD',
     'OR'  : 'OR',
+    'NOT' : 'NOT',
     'ERROR' : 'ERROR',
     'LINE' : 'LINE',
     'OFF' : 'OFF',
@@ -376,6 +379,11 @@ def t_COMMENT(t):
     r'REM[^\n]*'
     pass
 
+# Define a rule so we can split lines with a trailing backslash
+def t_CONTINUATION(t):
+    r'\\[ \t]*[\r\n]'
+    t.lexer.lineno += 1
+    pass
 
 # Define a rule so we can track line numbers
 def t_EOL(t):
@@ -391,6 +399,14 @@ def t_ID(t):
 def t_LITERAL_STRING(t):
     r'"((?:[^"]+|"")*)"(?!")'
     t.value = t.value[1:-1].replace('""', '"')
+    return t
+
+def t_LITERAL_FLOAT(t):
+    r'([+-]?)(?=\d|\.\d)\d*(\.\d*)?(E([+-]?\d+))?'
+    try:
+        t.value = float(t.value)
+    except ValueError:
+        print "Number %s is too large!" % t.value
     return t
 
 def t_LITERAL_INTEGER(t):
@@ -422,14 +438,6 @@ def t_LITERAL_BINARY_INTEGER(t):
         t.value = 0
     return t
 
-def t_LITERAL_FLOAT(t):
-    r'([+-]?)(?=\d|\.\d)\d*(\.\d*)?(E([+-]?\d+))?'
-    try:
-        t.value = float(t.value)
-    except ValueError:
-        print "Number %s is too large!" % t.value
-    return t
-
 # Error handling rule
 def t_error(t):
     print "Illegal character '%s'" % t.value[0]
@@ -438,15 +446,16 @@ def t_error(t):
 # Build the lexer
 lex.lex()
 
-f = open(sys.argv[1], 'r')
-data = f.read()
-f.close()
-
-# Give the lexer some input
-lex.input(data)
-
-# Tokenize
-while 1:
-    tok = lex.token()
-    if not tok: break      # No more input
-    print tok
+if __name__ == '__main__':
+    f = open(sys.argv[1], 'r')
+    data = f.read()
+    f.close()
+    
+    # Give the lexer some input
+    lex.input(data)
+    
+    # Tokenize
+    while 1:
+        tok = lex.token()
+        if not tok: break      # No more input
+        print tok
