@@ -344,6 +344,10 @@ def t_TRACE(t):
     r'TRACE'
     return t
 
+def t_UNTIL(t):
+    r'UNTIL'
+    return t
+
 def t_WHILE(t):
     r'WHILE'
     return t
@@ -618,178 +622,60 @@ def t_TO(t):
 # Keywords before this point are disallowed at the start
 # of variable names
 
+# Now we list reserved identifiers. These cannot be used as
+# identifiers, but that can feature at the start of identifiers
+
+reserved = {
+    'ENDWHILE' : 'ENDWHILE',
+    'ENDCASE' : 'ENDCASE',
+    'ENDPROC' : 'ENDPROC',
+    'REPORT' : 'REPORT',
+    'RETURN' : 'RETURN',
+    'CLEAR' : 'CLEAR',
+    'CLOSE' : 'CLOSE',
+    'COUNT' : 'COUNT',
+    'ENDIF' : 'ENDIF',
+    'FALSE' : 'FALSE',
+    'HIMEM' : 'HIMEM',
+    'LOMEM' : 'LOMEM',
+    'BGET' : 'BGET',
+    'BPUT' : 'BPUT',
+    'EXIT' : 'EXIT',
+    'PAGE' : 'PAGE',
+    'QUIT' : 'QUIT',
+    'STOP' : 'STOP',
+    'TIME' : 'TIME',
+    'TRUE' : 'TRUE',
+    'VPOS' : 'VPOS',
+    'WAIT' : 'WAIT',
+    'CLG' : 'CLG',
+    'CLS' : 'CLS',
+    'END' : 'END',
+    'EOF' : 'EOF',
+    'ERL' : 'ERL',
+    'ERR' : 'ERR',
+    'EXT' : 'EXT',
+    'OFF' : 'OFF',
+    'POS' : 'POS',
+    'PTR' : 'PTR',
+    'RND' : 'RND',
+    'RUN' : 'RUN',
+    'BY' : 'BY',
+    'OF' : 'OF',
+    'PI' : 'PI'
+            }
+
 # Identifiers
 
-t_ID = r'[@a-zA-Z_`][a-zA-Z_0-9`]*[$%&#]?'
+def t_ID(t):
+    r'[@a-zA-Z_`][a-zA-Z_0-9`]*[$%&#]?'
+    t.type = reserved.get(t.value, 'ID') # Check for reserved identifiers
+    return t
 
 # Keywords after this point are allowed at
 # the start of variable names
 
-# Eight letter keywords
 
-def t_ENDWHILE(t):
-    r'ENDWHILE'
-    return t
-
-# Seven letter keywords
-
-def t_ENDCASE(t):
-    r'ENDCASE'
-    return t
-
-def t_ENDPROC(t):
-    r'ENDPROC'
-    return t
-
-# Six letter keywords
-
-def t_REPORT(t):
-    r'REPORT'
-    return t
-
-def t_RETURN(t):
-    r'RETURN'
-    return t
-
-# Five letter keywords
-
-def t_CLEAR(t):
-    r'CLEAR'
-    return t
-
-def t_CLOSE(t):
-    r'CLOSE'
-    return t
-
-def t_COUNT(t):
-    r'COUNT'
-    return t
-
-def t_ENDIF(t):
-    r'ENDIF'
-    return t
-
-def t_FALSE(t):
-    r'FALSE'
-    return t
-
-def t_HIMEM(t):
-    r'HIMEM'
-    return t
-
-def t_LOMEM(t):
-    r'LOMEM'
-    return t
-
-def t_UNTIL(t):
-    r'UNTIL'
-    return t
-
-# Four letter keywords
-
-def t_BGET(t):
-    r'BGET'
-    return t
-
-def t_BPUT(t):
-    r'BPUT'
-    return t
-
-def t_EXIT(t):
-    r'EXIT'
-    return t
-
-def t_PAGE(t):
-    r'PAGE'
-    return t
-
-def t_QUIT(t):
-    r'QUIT'
-    return t
-
-def t_STOP(t):
-    r'STOP'
-    return t
-
-def t_TIME(t):
-    r'TIME'
-    return t
-
-def t_TRUE(t):
-    r'TRUE'
-    return t
-
-def t_VPOS(t):
-    r'VPOS'
-    return t
-
-def t_WAIT(t):
-    r'WAIT'
-    return t
-
-# Three letter keywords
-
-def t_CLG(t):
-    r'CLG'
-    return t
-
-def t_CLS(t):
-    r'CLS'
-    return t
-
-def t_END(t):
-    r'END'
-    return t
-
-def t_EOF(t):
-    r'EOF'
-    return t
-
-def t_ERL(t):
-    r'ERL'
-    return t
-
-def t_ERR(t):
-    r'ERR'
-    return t
-
-def t_EXT(t):
-    r'EXT'
-    return t
-
-def t_OFF(t):
-    r'OFF'
-    return t
-
-def t_POS(t):
-    r'POS'
-    return t
-
-def t_PTR(t):
-    r'PTR'
-    return t
-
-def t_RND(t):
-    r'RND'
-    return t
-
-def t_RUN(t):
-    r'RUN'
-    return t
-
-# Two letter keywords
-
-def t_BY(t):
-    r'BY'
-    return t
-
-def t_OF(t):
-    r'OF'
-    return t
-
-def t_PI(t):
-    r'PI'
-    return t
 
 # Operators
 t_QUERY = r'\?'
