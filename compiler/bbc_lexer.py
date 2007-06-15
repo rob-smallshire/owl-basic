@@ -763,7 +763,7 @@ def t_LITERAL_INTEGER(t):
     return t
 
 def t_LITERAL_HEX_INTEGER(t):
-    r'&[\dA-Fa-f]+'
+    r'&[\dA-F]+'
     try:
         t.value = int(t.value[1:], 16)
         t.type = 'LITERAL_INTEGER'
