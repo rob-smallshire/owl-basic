@@ -201,8 +201,8 @@ def t_CONTINUATION(t):
 
 # Define a rule so we can track line numbers
 def t_EOL(t):
-    r'[\r\n]+'
-    t.lexer.lineno += len(t.value)
+    r'[\r\n]+' 
+    t.lexer.lineno += len(t.value) # possible error with line number on different platforms
     return t
 
 # In BBC BASIC identifiers cannot begin with prefixes, so we go contrary
