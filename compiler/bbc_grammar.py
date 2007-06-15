@@ -4,53 +4,29 @@ import ply.yacc as yacc
 from bbc_lexer import tokens
 from bbc_ast import *
 
-import sys
-
-# Precedence table for the above operators
-precedence = (
-             ('left', 'EOR', 'OR'),
-             ('left', 'AND'),
-             ('nonassoc', 'EQ' 'NE', 'LTE', 'GTE', 'LT', 'GT', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'SHIFT_RIGHT_UNSIGNED'),
-             ('left', 'PLUS', 'MINUS'),
-             ('left', 'TIMES', 'DIVIDE', 'MOD', 'DIV'),
-             ('left', 'CARET'),
-             ('left', 'PLING', 'QUERY', 'PIPE', 'DOLLAR'),  # Binary indirection operators
-             ('right', 'FUNCTION', 'NOT', 'UPLUS', 'UMINUS', 'UPLING', 'UQUERY', 'UPIPE', 'UDOLLAR', 'UHASH'), # Unary operators
-             )
-
 def p_program(p):
     'program : statement_list'
-    print "program"
-    p[0] = Program(p[1])
+    p[0] = p[1]
 
 # TODO: Distinguish single-line compound statements
     
-def p_statement_list(p): 
+def p_statement_list(p):
     '''statement_list : statement
                       | statement_list statement'''
-    print "statement_list"
     if len(p) == 2:
-        p[0] = StatementList(statement = p[1])
+        p[0] = StatementList(p[1])
     elif len(p) == 3:
-        p[0] = StatementList(list = p[1], statement = p[2])
+        p[0] = StatementList(p[1], p[2])
 
 def p_statement(p):
-    '''statement : non_compoundable_stmt_body stmt_terminator
-                 | compound_statement stmt_terminator'''
-    print "statement"
-    print len(p)
+    '''statement : compound_statement stmt_end'''
     p[0] = p[1]
-
-# TODO: Need to separate statements which can be used within
-#       compound statements, from statemenst which can
-#       only be used on their own line (e.g. CASE x OF or WHEN)
 
 # A single line statement list - use in single-line IF THEN ELSE oonstruct
 # TODO: May need concept of an empty statement to deal with trailing colons
 def p_compound_statement(p):
-    '''compound_statement : compoundable_stmt_body
-                          | compound_statement statement_separator compoundable_stmt_body'''
-    print "compound_statement"                      
+    '''compound_statement : stmt_body
+                          | compound_statement statement_separator stmt_body'''
     if len(p) == 2:
         p[0] = p[1]
     elif len(p) == 4:
@@ -58,24 +34,15 @@ def p_compound_statement(p):
 
 def p_statement_separator(p):
     'statement_separator : COLON'
-    print "statement_separator"
     p[0] = p[1]
     
 def p_stmt_terminator(p):
-    'stmt_terminator : EOL'
-    print "stmt_terminator"
-    p[0] = p[1]
-
-def p_compoundable_stmt_body(p):
-    'compoundable_stmt_body : stmt_body'
-    p[0] = p[1]
-    
-def p_non_compoundable_stmt_body(p):
-    '''non_compoundable_stmt_body : case_stmt'''
+    'stmt_end : EOL'
     p[0] = p[1]
                 
 # TODO: Statements to be implemented
     '''stmt_body : beats_stmt
+                 | case_stmt
                  | chain_stmt
                  | dim_stmt
                  | draw_stmt
@@ -111,14 +78,14 @@ def p_non_compoundable_stmt_body(p):
                  | tempo_stmt
                  | tint_stmt
                  | trace_stmt
+                 | vdu_stmt
                  | voice_stmt
                  | voices_stmt
                  | while_stmt
                  | width_stmt'''
 
 def p_stmt_body(p):
-    '''stmt_body : empty_stmt
-                 | bput_stmt
+    '''stmt_body : bput_stmt
                  | call_stmt
                  | circle_stmt
                  | clear_stmt
@@ -129,19 +96,9 @@ def p_stmt_body(p):
                  | data_stmt
                  | def_stmt
                  | if_stmt
-                 | for_stmt
                  | let_stmt
-                 | next_stmt
-                 | print_stmt
-                 | vdu_stmt'''
-    print "stmt_body"
+                 | print_stmt'''
     p[0] = p[1]  
-
-# Empty statement
-def p_empty_stmt(p):
-    '''empty_stmt :'''
-    print "empty_stmt"
-    p[0] = None
 
 # BPUT statement
 def p_bput_stmt(p):
@@ -154,29 +111,6 @@ def p_call_stmt(p):
     p[0] = Call(p[2])
     
 # TODO CASE stmt
-# Not that WHEN clauses which follow the OTHERWISE clause
-# a legal, but cannot be executed.
-# TODO : Put this into a special class of statements which
-# must begin on a new line.
-def p_case_stmt(p):
-    '''case_stmt : CASE expr OF stmt_terminator when_clause_list ENDCASE'''
-    p[0] = Case(p[2], p[5])
-
-def p_when_clause_list(p):
-    '''when_clause_list : when_clause
-                        | when_clause_list COMMA when_clause'''
-    if len(p) == 2:
-        p[0] = WhenClauseList(None, p[1])
-    elif len(p) == 4:
-        p[0] = WhenClauseList(p[1], p[3])
-    
-def p_when_clause(p):
-    '''when_clause : WHEN expr_list COLON statement_list
-                   | OTHERWISE COLON statement_list'''
-    if len(p) == 5:
-        p[0] = When(p[2], p[4])
-    elif len(p) == 4:
-        p[0] = Otherwise(p[3])
 
 # TODO CHAIN stmt
 
@@ -304,37 +238,6 @@ def p_if_multi_stmt(p):
         p[0] = If(p[2], p[4])
     elif len(p) == 8:
         p[0] = If(p[2], p[4], p[5])
-
-
-# The syntax ruls for FOR..NEXT loops are not implemented by the
-# grammar owing to the fact that NEXT is treated as a statement,
-# rather than as a loop terminator.  A later analysis of the parse
-# tree will attempt to match each NEXT with its corresponding FOR        
-def p_for_stmt(p):
-    '''for_stmt : FOR variable EQ expr TO expr
-                | FOR variable EQ expr TO expr STEP expr'''
-    if len(p) == 7:
-        p[0] = ForToStep(p[2], p[4], p[6], 1)
-    elif len(p) == 9:
-        p[0] = ForToStep(p[2], p[4], p[6], p[8])
-       
-# Rule for dealing with unmatched NEXT statements
-def p_next_stmt(p):
-    '''next_stmt : NEXT variable_list
-                 | NEXT'''
-    if len(p) == 3:
-        print p[2]
-        p[0] = Next(p[2])
-    elif len(p) == 2:
-        p[0] = Next(None)
-
-def p_variable_list(p):
-    '''variable_list : variable
-                     | variable_list COMMA variable'''
-    if len(p) == 2:
-        p[0] = VariableList(None, p[1])
-    elif len(p) == 4:
-        p[0] = VariableList(p[1], p[3])
     
 # Assignment
 
@@ -344,7 +247,6 @@ def p_let_stmt(p):
     if len(p) == 5:
         p[0] = Assignment(p[2], p[4])
     elif len(p) == 4:
-        print p[1], p[3]
         p[0] = Assignment(p[1], p[3])
         
 # Print related rules       
@@ -362,10 +264,7 @@ def p_print_stmt(p):
 def p_print_list(p):
     '''print_list : print_item
                   | print_list print_item'''
-    if len(p) == 2:
-        p[0] = PrintList(item = p[1])
-    elif len(p) == 3:
-        p[0] = PrintList(list = p[1], item = p[2])
+    p[0] = PrintList(p[1], p[2])
     
 def p_print_item(p):
     '''print_item : expr
@@ -378,50 +277,26 @@ def p_print_item(p):
     p[0] = p[1]
                     
 def p_tab(p):
-    '''tab : TAB_LPAREN expr RPAREN
-           | TAB_LPAREN expr COMMA expr RPAREN'''
-    if len(p) == 4:
-        p[0] = TabH(p[2])
-    elif len(p) == 6:
-        p[0] = TabXY(p[2], p[4])                           
+    '''tab : TAB LPAREN expr RPAREN
+           | TAB LPAREN expr COMMA expr RPAREN'''
+    if len(p) == 5:
+        p[0] = TabH(p[3])
+    elif len(p) == 7:
+        p[0] = TabXY(p[3], p[5])                           
 
 def p_spc(p):
-    '''spc : SPC expr'''
-    p[0] = Spc(p[2])
-
-# VDU
-
-def p_vdu_stmt(p):
-    '''vdu_stmt : VDU vdu_list'''
-    p[0] = Vdu(p[2])
-    
-def p_vdu_list(p):
-    '''vdu_list : vdu_item
-                | vdu_item vdu_list'''
-    if len(p) == 2:
-        p[0] = VduList(p[1], None) # Comma separator defaults to byte value
-    elif len(p) == 3:
-        p[0] = VduList(p[1], p[2])
-
-def p_vdu_item(p):
-    '''vdu_item : expr vdu_separator
-                | expr'''
-    if len(p) == 3:
-        p[0] = VduItem(p[1], p[2])
-    elif len(p) == 2:
-        p[0] = VduItem(p[1], ',')
-
-def p_vdu_separator(p):
-    '''vdu_separator : COMMA
-                     | SEMICOLON
-                     | PIPE'''
-    p[0] = p[1]
+    '''spc : SPC LPAREN expr RPAREN'''
+    p[0] = Spc(p[3])
 
 # Arguments
 
 def p_actual_arg_list(p):
-    '''actual_arg_list : expr_list'''
-    p[0] = p[1]
+    '''actual_arg_list : expr
+                       | actual_arg_list COMMA expr'''
+    if len(p) == 2:
+        return ActualArgmentList(p[1])
+    elif len(p) == 4:
+        return ActualArgumentList(p[1], p[3])
 
 def p_formal_arg_list(p):
     '''formal_arg_list : formal_arg
@@ -441,14 +316,6 @@ def p_formal_arg(p):
 
 # Expressions
 
-def p_expr_list(p):
-    '''expr_list : expr
-                 | expr_list COMMA expr'''
-    if len(p) == 2:
-        return ExpressionList(None, p[1])
-    elif len(p) == 4:
-        return ExpressionList(p[1], p[3])
-
 def p_expr(p):
     '''expr : expr_function
             | expr_group
@@ -456,7 +323,20 @@ def p_expr(p):
             | expr_binary_op
             | variable
             | literal'''
-    #print "Bar! [%s]" % p[1]
+    p[0] = p[1]
+
+def p_literal(p):
+    '''literal : LITERAL_STRING
+               | LITERAL_INTEGER
+               | LITERAL_FLOAT'''
+    p[0] = p[1]
+
+def p_channel(p):
+    '''channel : HASH expr %prec UHASH'''
+    p[0] = Channel(p[2])
+
+def p_variable(p):
+    'variable : ID'
     p[0] = p[1]
 
 def p_expr_unary_op(p):
@@ -468,9 +348,9 @@ def p_unary_op(p):
                 | unary_pling
                 | unary_pipe
                 | unary_dollar
+                | unary_plus
+                | unary_minus
                 | unary_not'''
-#                | unary_plus
-#                | unary_minus
     p[0] = p[1]
     
 def p_unary_query(p):
@@ -489,133 +369,59 @@ def p_unary_dollar(p):
     'unary_dollar : DOLLAR expr %prec UDOLLAR'
     p[0] = IndirectString(p[2])
     
-#def p_unary_minus(p):
-#    'unary_minus : MINUS expr %prec UMINUS'
-#    p[0] = UnaryMinus(p[2])
+def p_unary_minus(p):
+    'unary_minus : MINUS expr %prec UMINUS'
+    p[0] = UnaryMinus(p[2])
     
-#def p_unary_plus(p):
-#    'unary_plus : PLUS expr %prec UPLUS'
-#    p[0] = UnaryPlus(p[2])
+def p_unary_plus(p):
+    'unary_plus : PLUS expr %prec UPLUS'
+    p[0] = UnaryPlus(p[2])
     
 def p_unary_not(p):
-    'unary_not : NOT expr %prec NOT'
-    p[0] = Not(p[2])    
+    'unary_not : NOT expr %prec NOT'    
 
 def p_expr_binary_op(p):
-    '''expr_binary_op : binary_indirection_op
-                      | binary_math_op'''
-    print "Foo"
+    'expr_binary_op : expr binary_op expr'
+    p[0] = BinaryOp(p[2], p[1], p[3]) # TODO: Use an operator factory here
+
+def p_binary_op(p):
+    '''binary_op : QUERY
+                 | PLING
+                 | PIPE
+                 | DOLLAR
+                 | PLUS
+                 | MINUS
+                 | TIMES
+                 | DIVIDE
+                 | MOD
+                 | DIV
+                 | CARET
+                 | EQ
+                 | NE
+                 | LTE
+                 | GTE
+                 | LT
+                 | GT
+                 | SHIFT_LEFT
+                 | SHIFT_RIGHT
+                 | SHIFT_RIGHT_UNSIGNED
+                 | AND
+                 | OR
+                 | EOR'''
     p[0] = p[1]
 
-def p_binary_indirection_op(p):
-    '''binary_indirection_op : variable QUERY expr
-                             | variable PLING expr
-                             | variable PIPE expr
-                             | variable DOLLAR expr'''
-    p[0] = BinaryIndirectionOp(p[2], p[1], p[3])
-
-def p_binary_math_op(p):
-    '''binary_math_op : expr PLUS expr'''
-    return BinaryMathOp(p[2], p[1], p[3])
-
-#def p_binary_math_op(p):
-#    '''binary_math_op : binary_plus_expr
-#                      | binary_minus_expr
-#                      | binary_times_expr
-#                      | binary_divide_expr
-#                      | binary_mod_expr
-#                      | binary_div_expr
-#                      | binary_power_expr
-#                      | binary_eq_expr
-#                      | binary_ne_expr
-#                      | binary_lte_expr
-#                      | binary_gte_expr
-#                      | binary_lt_expr
-#                      | binary_gt_expr
-#                      | binary_shift_left_expr
-#                      | binary_shift_right_expr
-#                      | binary_shift_right_unsigned_expr
-#                      | binary_and_expr
-#                      | binary_or_expr
-#                      | binary_eor_expr'''
-#    p[0] = p[1]
-
-#def binary_plus_expr(p):
-#    'binary_plus_expr : expr PLUS expr'
-#    p[0] = BinaryPlus(p[1], p[3])
-#    
-#def binary_minus_expr(p):
-#    'binary_minus_expr : expr MINUS expr'
-#    p[0] = BinaryMinus(p[1], p[3])
-#
-#def binary_times_expr(p):
-#    'binary_times_expr : expr TIMES expr'
-#    p[0] = BinaryTimes(p[1], p[3])
-#     
-#def binary_divide_expr(p):
-#    'binary_divide_expr : expr DIVIDE expr'
-#    p[0] = BinaryDivide(p[1], p[3])
-#    
-#def binary_mod_expr(p):
-#    'binary_mod_expr : expr MOD expr'
-#    p[0] = BinaryMod(p[1], p[3])
-#
-#def binary_div_expr(p):
-#    'binary_div_expr : expr DIV expr'
-#    p[0] = BinaryDiv(p[1], p[3])
-#
-#def binary_power_expr(p):
-#    'binary_power_expr : expr CARET expr'
-#    p[0] = BinaryPower(p[1], p[3])
-#
-#def binary_eq_expr(p):
-#    'binary_eq_expr : expr EQ expr'
-#    p[0] = BinaryEqual(p[1], p[3])
-#
-#def binary_ne_expr(p):
-#    'binary_ne_expr : expr NE expr'
-#    p[0] = BinaryNotEqual(p[1], p[3])
-#
-#def binary_lte_expr(p):
-#    'binary_lte_expr : expr LTE expr'
-#    p[0] = BinaryLessThanEqual(p[1], p[3])
-#
-#def binary_gte_expr(p):
-#    'binary_gte_expr : expr GTE expr'
-#    p[0] = BinaryGreaterThanEqual(p[1], p[3])
-#
-#def binary_lt_expr(p):
-#    'binary_lt_expr : expr LT expr'
-#    p[0] = BinaryLessThan([1], p[3])
-#
-#def binary_gt_expr(p):
-#    'binary_gt_expr : expr GT expr'
-#    p[0] = BinaryGreaterThan(p[1], p[3])
-#
-#def binary_shift_left_expr(p):
-#    'binary_shift_left_expr : expr SHIFT_LEFT expr'
-#    p[0] = BinaryShiftLeft(p[1], p[3])
-#
-#def binary_shift_right_expr(p):
-#    'binary_shift_right_expr : expr SHIFT_RIGHT expr'
-#    p[0] = BinaryPlus(p[1], p[3])
-#
-#def binary_shift_right_unsigned_expr(p):
-#    'binary_shift_right_unsigned_expr : expr SHIFT_RIGHT_UNSIGNED expr'
-#    p[0] = BinaryShiftRightUnsigned(p[1], p[3])
-#
-#def binary_and_expr(p):
-#    'binary_and_expr : expr AND expr'
-#    p[0] = BinaryAnd(p[1], p[3])
-#
-#def binary_or_expr(p):
-#    'binary_or_expr : expr OR expr'
-#    p[0] = BinaryOr(p[1], p[3])
-#
-#def binary_eor_expr(p):
-#    'binary_eor_expr : expr EOR expr'
-#    p[0] = BinaryEor(p[1], p[3])
-#    
+# Precedence table for the above operators
+precedence = (
+             ('left', 'EOR', 'OR'),
+             ('left', 'AND'),
+             ('nonassoc', 'EQ' 'NE', 'LTE', 'GTE', 'LT', 'GT', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'SHIFT_RIGHT_UNSIGNED'),
+             ('left', 'PLUS', 'MINUS'),
+             ('left', 'TIMES', 'DIVIDE', 'MOD', 'DIV'),
+             ('left', 'CARET'),
+             ('left', 'PLING', 'QUERY', 'PIPE', 'DOLLAR'),  # Binary indirection operators
+             ('right', 'FUNCTION', 'NOT', 'UPLUS', 'UMINUS', 'UPLING', 'UQUERY', 'UPIPE', 'UDOLLAR', 'UHASH'), # Unary operators
+             )
+                 
 def p_expr_group(p):
     'expr_group : LPAREN expr RPAREN'
     p[0] = p[2]
@@ -719,48 +525,10 @@ def p_count_func(p):
     'count_func : COUNT %prec FUNCTION'
     p[0] = CountFunc(p[2])  
 
-def p_channel(p):
-    '''channel : HASH expr %prec UHASH'''
-    p[0] = Channel(p[2])
-
-def p_literal(p):
-    '''literal : literal_string
-               | literal_integer
-               | literal_float'''
-    print 'Literal'
-    p[0] = p[1]
-
-def p_literal_string(p):
-    'literal_string : LITERAL_STRING'
-    p[0] = LiteralString(p[1])
-    
-def p_literal_integer(p):
-    'literal_integer : LITERAL_INTEGER'
-    p[0] = LiteralInteger(p[1])
-    
-def p_literal_float(p):
-    'literal_float : LITERAL_FLOAT'
-    p[0] = LiteralFloat(p[1])
-
-def p_variable(p):
-    'variable : ID'
-    p[0] = p[1]
-
-
 # Error rule for syntax errors
 def p_error(p):
     print "Syntax error in input!"
 
 # Build the parser
-yacc.yacc(debug = 1)
+yacc.yacc()
 
-if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        f = open(sys.argv[1], 'r')
-        data = f.read()
-        f.close()
-    
-        # Give the lexer some input
-        parse_tree = yacc.parse(data)
-        print parse_tree
-    
