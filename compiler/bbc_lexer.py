@@ -189,6 +189,22 @@ tokens = (
     'NOT'
 )
 
+def t_COMMENT(t):
+    r'REM[^\n]*'
+    pass
+
+# Define a rule so we can split lines with a trailing backslash and leading backslash
+def t_CONTINUATION(t):
+    r'\\[ \t]*[\r\n][ \t]*\\'
+    t.lexer.lineno += 1
+    pass
+
+# Define a rule so we can track line numbers
+def t_EOL(t):
+    r'[\r\n]+'
+    t.lexer.lineno += len(t.value)
+    return t
+
 # In BBC BASIC identifiers cannot begin with prefixes, so we go contrary
 # to the advice in the PLY manual, since we want PRINTED to be lexed as
 # PRINT ED
@@ -722,22 +738,6 @@ t_DOT = r'\.'
 
 
 t_ignore  = ' \t'
-
-def t_COMMENT(t):
-    r'REM[^\n]*'
-    pass
-
-# Define a rule so we can split lines with a trailing backslash and leading backslash
-def t_CONTINUATION(t):
-    r'\\[ \t]*[\r\n][ \t]*\\'
-    t.lexer.lineno += 1
-    pass
-
-# Define a rule so we can track line numbers
-def t_EOL(t):
-    r'[\r\n]+'
-    t.lexer.lineno += len(t.value)
-    return t
 
 def t_LITERAL_STRING(t):
     r'"((?:[^"]+|"")*)"(?!")'
