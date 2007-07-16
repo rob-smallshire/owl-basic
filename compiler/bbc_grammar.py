@@ -4,8 +4,6 @@ import ply.yacc as yacc
 from bbc_lexer import tokens
 from bbc_ast import *
 
-import sys
-
 # Precedence table for the above operators
 precedence = (
              ('left', 'EOR', 'OR'),
@@ -35,7 +33,7 @@ def p_statement_list(p):
         p[0] = StatementList(list = p[1], statement = p[2])
 
 def p_statement(p):
-    '''statement : non_compoundable_stmt_body stmt_terminator
+    '''statement : stmt_body stmt_terminator
                  | compound_statement stmt_terminator'''
     print "statement"
     print len(p)
@@ -48,8 +46,8 @@ def p_statement(p):
 # A single line statement list - use in single-line IF THEN ELSE oonstruct
 # TODO: May need concept of an empty statement to deal with trailing colons
 def p_compound_statement(p):
-    '''compound_statement : compoundable_stmt_body
-                          | compound_statement statement_separator compoundable_stmt_body'''
+    '''compound_statement : stmt_body
+                          | compound_statement statement_separator stmt_body'''
     print "compound_statement"                      
     if len(p) == 2:
         p[0] = p[1]
@@ -66,13 +64,13 @@ def p_stmt_terminator(p):
     print "stmt_terminator"
     p[0] = p[1]
 
-def p_compoundable_stmt_body(p):
-    'compoundable_stmt_body : stmt_body'
-    p[0] = p[1]
-    
-def p_non_compoundable_stmt_body(p):
-    '''non_compoundable_stmt_body : case_stmt'''
-    p[0] = p[1]
+#def p_compoundable_stmt_body(p):
+#    'compoundable_stmt_body : stmt_body'
+#    p[0] = p[1]
+#    
+#def p_non_compoundable_stmt_body(p):
+#    '''non_compoundable_stmt_body : case_stmt'''
+#    p[0] = p[1]
                 
 # TODO: Statements to be implemented
     '''stmt_body : beats_stmt
@@ -158,25 +156,25 @@ def p_call_stmt(p):
 # a legal, but cannot be executed.
 # TODO : Put this into a special class of statements which
 # must begin on a new line.
-def p_case_stmt(p):
-    '''case_stmt : CASE expr OF stmt_terminator when_clause_list ENDCASE'''
-    p[0] = Case(p[2], p[5])
-
-def p_when_clause_list(p):
-    '''when_clause_list : when_clause
-                        | when_clause_list COMMA when_clause'''
-    if len(p) == 2:
-        p[0] = WhenClauseList(None, p[1])
-    elif len(p) == 4:
-        p[0] = WhenClauseList(p[1], p[3])
-    
-def p_when_clause(p):
-    '''when_clause : WHEN expr_list COLON statement_list
-                   | OTHERWISE COLON statement_list'''
-    if len(p) == 5:
-        p[0] = When(p[2], p[4])
-    elif len(p) == 4:
-        p[0] = Otherwise(p[3])
+#def p_case_stmt(p):
+#    '''case_stmt : CASE expr OF stmt_terminator when_clause_list ENDCASE'''
+#    p[0] = Case(p[2], p[5])
+#
+#def p_when_clause_list(p):
+#    '''when_clause_list : when_clause
+#                        | when_clause_list COMMA when_clause'''
+#    if len(p) == 2:
+#        p[0] = WhenClauseList(None, p[1])
+#    elif len(p) == 4:
+#        p[0] = WhenClauseList(p[1], p[3])
+#    
+#def p_when_clause(p):
+#    '''when_clause : WHEN expr_list COLON statement_list
+#                   | OTHERWISE COLON statement_list'''
+#    if len(p) == 5:
+#        p[0] = When(p[2], p[4])
+#    elif len(p) == 4:
+#        p[0] = Otherwise(p[3])
 
 # TODO CHAIN stmt
 
@@ -744,23 +742,11 @@ def p_literal_float(p):
 
 def p_variable(p):
     'variable : ID'
-    p[0] = p[1]
+    p[0] = Variable(p[1])
 
 
 # Error rule for syntax errors
 def p_error(p):
     print "Syntax error in input!"
 
-# Build the parser
-yacc.yacc(debug = 1)
-
-if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        f = open(sys.argv[1], 'r')
-        data = f.read()
-        f.close()
-    
-        # Give the lexer some input
-        parse_tree = yacc.parse(data)
-        print parse_tree
-    
+        

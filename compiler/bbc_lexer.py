@@ -1,6 +1,4 @@
-import sys
-
-import ply.lex as lex
+# BBC BASIC Lexer
 
 tokens = (
     'EOL',
@@ -787,19 +785,5 @@ def t_error(t):
     print "Illegal character '%s'" % t.value[0]
     t.lexer.skip(1)
 
-# Build the lexer
-lex.lex()
 
-if __name__ == '__main__':
-    f = open(sys.argv[1], 'r')
-    data = f.read()
-    f.close()
 
-    # Give the lexer some input
-    lex.input(data)
-
-    # Tokenize
-    while 1:
-        tok = lex.token()
-        if not tok: break      # No more input
-        print tok
