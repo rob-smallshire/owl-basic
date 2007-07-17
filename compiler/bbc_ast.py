@@ -57,6 +57,17 @@ class Assignment(AstNode):
         self.WriteEndElement()
         self.WriteEndElement()
 
+class Bput(AstNode):
+    def __init__(self, channel, expr, *args, **kwargs):
+        self.channel = channel
+        self.expr = expr
+        super(Bput, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Bput")
+        self.channel.xml(writer)
+        writer.WriteEndElement()  
+        
 class Case(AstNode):
     def __init__(self, expr, when_list, *args, **kwargs):
         self.expr = expr
@@ -445,3 +456,5 @@ class LiteralFloat(AstNode):
         writer.WriteString(str(self.value))
         writer.WriteEndAttribute()
         writer.WriteEndElement()        
+        
+ 
