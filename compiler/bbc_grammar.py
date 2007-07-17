@@ -76,7 +76,6 @@ def p_stmt_terminator(p):
     '''stmt_body : beats_stmt
                  | chain_stmt
                  | dim_stmt
-                 | draw_stmt
                  | ellipse_stmt
                  | envelope_stmt
                  | fill_stmt
@@ -126,6 +125,7 @@ def p_stmt_body(p):
                  | colour_stmt
                  | data_stmt
                  | def_stmt
+                 | draw_stmt
                  | if_stmt
                  | for_stmt
                  | let_stmt
