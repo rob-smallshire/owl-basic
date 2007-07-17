@@ -66,8 +66,8 @@ class Bput(AstNode):
     def xml(self, writer):
         writer.WriteStartElement("Bput")
         self.channel.xml(writer)
-        writer.WriteStartElement("byte")
-        self.expression.xml(writer)
+        writer.WriteStartElement("Byte")
+        self.expr.xml(writer)
         writer.WriteEndElement()
         writer.WriteEndElement()  
         
