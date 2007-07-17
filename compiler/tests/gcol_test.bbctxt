@@ -1,0 +1,8 @@
+REM Test of BBC Basic GCOL statement
+GCOL mode, colour
+GCOL colour
+GCOL 0, 5
+GCOL 1, 3
+GCOL 2, 4
+GCOL 3, 5
+GCOL 4, 2

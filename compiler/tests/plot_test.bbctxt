@@ -1,0 +1,9 @@
+REM Test of PLOT statement
+PLOT 4,0,0
+PLOT 5,1280, 1024
+X = 5
+Y = 10
+PLOT 69, X, Y
+
+PLOT 4,100, 100
+PLOT 101, 200, 200

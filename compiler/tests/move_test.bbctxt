@@ -1,0 +1,10 @@
+REM Test of MOVE statement
+MOVE 0,0
+MOVE 1280, 1024
+X = 5
+Y = 10
+MOVE X, Y
+
+REM Test of relative draw from BASIC V
+MOVE BY 100, 100
+MOVE BY X, Y

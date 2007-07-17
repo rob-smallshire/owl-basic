@@ -1,0 +1,13 @@
+REM Test of SOUND statement
+
+SOUND channel,amplitude,pitch,duration
+SOUND 1,1,148,40
+SOUND &1001,-15,100,15
+SOUND 1,-15,200,10
+SOUND &201,-15,100,20
+SOUND &203,-15,116,20
+SOUND 2,-15,200,20
+SOUND &202,-15,128,20
+SOUND OFF
+
+

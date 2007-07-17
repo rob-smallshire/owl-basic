@@ -1,0 +1,10 @@
+REM Test of FILL statement
+FILL 0,0
+FILL 1280, 1024
+X = 5
+Y = 10
+FILL X, Y
+
+REM Test of relative draw from BASIC V
+FILL BY 100, 100
+FILL BY X, Y
