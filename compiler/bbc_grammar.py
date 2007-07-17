@@ -261,16 +261,20 @@ def p_def_fn_stmt(p):
 def p_def_proc_stmt(p):
     '''def_proc_stmt : DEF PROC ID statement_list ENDPROC
                      | DEF PROC ID LPAREN formal_arg_list RPAREN statement_list ENDPROC'''
-    if len(p) == 5:
+    if len(p) == 6:
         p[0] = DefineFunction(p[3], None, p[4])
-    elif len(p) == 8:
+    elif len(p) == 9:
         p[0] = DefineFunction(p[3], p[5], p[7])
 
 # DRAW statements
 def p_draw_stmt(p):
-    '''draw_stmt : DRAW expr COMMA expr'''
-    p[0] = Draw(p[2], p[4])
-        
+    '''draw_stmt : DRAW expr COMMA expr
+                 | DRAW BY expr COMMA expr'''
+    if len(p) == 5:
+        p[0] = Draw(p[2], p[4])
+    elif len(p) == 6:
+        p[0] = Draw(p[3], p[5], True)
+
 # IF statements
 
 def p_if_stmt(p):

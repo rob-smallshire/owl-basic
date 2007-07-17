@@ -143,13 +143,17 @@ class Next(AstNode):
         writer.WriteEndElement()
         
 class Draw(AstNode):
-    def __init__(self, x, y, *args, **kwargs):
+    def __init__(self, x, y, relative = False, *args, **kwargs):
         self.x = x
         self.y = y
+        self.relative = relative
         super(Draw, self).__init__(*args, **kwargs)
         
     def xml(self, writer):
         writer.WriteStartElement("Draw")
+        writer.WriteStartAttribute("relative")
+        writer.WriteString(str(self.relative))
+        writer.WriteEndAttribute()
         writer.WriteStartElement("X")
         self.x.xml(writer)
         writer.WriteEndElement()
