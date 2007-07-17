@@ -89,7 +89,6 @@ def p_stmt_terminator(p):
                  | local_stmt
                  | mode_stmt
                  | mouse_stmt
-                 | move_stmt       IAN
                  | origin_stmt     IAN
                  | oscli_stmt
                  | plot_stmt       IAN
@@ -129,6 +128,7 @@ def p_stmt_body(p):
                  | if_stmt
                  | for_stmt
                  | let_stmt
+                 | move_stmt
                  | next_stmt
                  | print_stmt
                  | vdu_stmt'''
@@ -353,6 +353,16 @@ def p_let_stmt(p):
     elif len(p) == 4:
         print p[1], p[3]
         p[0] = Assignment(p[1], p[3])
+        
+        # DRAW statements
+def p_move_stmt(p):
+    '''move_stmt : MOVE expr COMMA expr
+                 | MOVE BY expr COMMA expr'''
+    if len(p) == 5:
+        p[0] = Move(p[2], p[4])
+    elif len(p) == 6:
+        p[0] = Move(p[3], p[5], True)
+
         
 # Print related rules       
         

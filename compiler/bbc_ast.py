@@ -182,6 +182,26 @@ class If(AstNode):
         self.false_clause.xml(writer)
         writer.WriteEndElement()
         writer.WriteEndElement()
+
+class Move(AstNode):
+    def __init__(self, x, y, relative = False, *args, **kwargs):
+        self.x = x
+        self.y = y
+        self.relative = relative
+        super(Move, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Move")
+        writer.WriteStartAttribute("relative")
+        writer.WriteString(str(self.relative))
+        writer.WriteEndAttribute()
+        writer.WriteStartElement("X")
+        self.x.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Y")
+        self.y.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
     
 class Print(AstNode):
     def __init__(self, print_list, *args, **kwargs):
