@@ -4,3 +4,7 @@ DRAW 1280, 1024
 X = 5
 Y = 10
 DRAW X, Y
+
+REM Test of relative draw from BASIC V
+DRAW BY 100, 100
+DRAW BY X, Y
