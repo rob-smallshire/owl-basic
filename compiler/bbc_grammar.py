@@ -76,35 +76,35 @@ def p_stmt_terminator(p):
     '''stmt_body : beats_stmt
                  | chain_stmt
                  | dim_stmt
-                 | ellipse_stmt
-                 | envelope_stmt
-                 | fill_stmt
+                 | ellipse_stmt    IAN
+                 | envelope_stmt   IAN
+                 | fill_stmt       IAN
                  | for_stmt
-                 | gcol_stmt
+                 | gcol_stmt       IAN
                  | gosub_stmt
-                 | goto_stmt
+                 | goto_stmt       
                  | input_stmt
                  | library_stmt
                  | line_stmt
                  | local_stmt
                  | mode_stmt
                  | mouse_stmt
-                 | move_stmt
-                 | origin_stmt
+                 | move_stmt       IAN
+                 | origin_stmt     IAN
                  | oscli_stmt
-                 | plot_stmt
-                 | point_stmt
+                 | plot_stmt       IAN
+                 | point_stmt      IAN
                  | proc_stmt
                  | quit_stmt
                  | read_stmt
-                 | rectangle_stmt
+                 | rectangle_stmt  IAN
                  | repeat_stmt
                  | report_stmt
                  | restore_stmt
                  | return_stmt
-                 | sound_stmt
-                 | swap_stmt
-                 | sys_stmt
+                 | sound_stmt      IAN
+                 | swap_stmt       IAN
+                 | sys_stmt        
                  | tempo_stmt
                  | tint_stmt
                  | trace_stmt
