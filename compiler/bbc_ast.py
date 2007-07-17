@@ -58,15 +58,16 @@ class Assignment(AstNode):
         writer.WriteEndElement()
 
 class Bput(AstNode):
-    def __init__(self, channel, expr, *args, **kwargs):
+    def __init__(self, channel, expression, *args, **kwargs):
         self.channel = channel
-        self.expr = expr
+        self.expr = expression
         super(Bput, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
         writer.WriteStartElement("Bput")
-        writer.WriteStartElement("expr")
-        self.expr.xml(writer)
+        self.channel.xml(writer)
+        writer.WriteStartElement("byte")
+        self.expression.xml(writer)
         writer.WriteEndElement()
         writer.WriteEndElement()  
         
