@@ -48,14 +48,14 @@ class Assignment(AstNode):
         super(Assignment, self).__init__(*args, **kwargs)
         
     def xml(self, writer):
-        self.WriteStartElement("Assignment")
-        self.WriteStartElement("LValue")
+        writer.WriteStartElement("Assignment")
+        writer.WriteStartElement("LValue")
         self.lvalue.xml(writer)
-        self.WriteEndElement()
-        self.WriteStartElement("RValue")
+        writer.WriteEndElement()
+        writer.WriteStartElement("RValue")
         self.rvalue.xml(writer)
-        self.WriteEndElement()
-        self.WriteEndElement()
+        writer.WriteEndElement()
+        writer.WriteEndElement()
 
 class Bput(AstNode):
     def __init__(self, channel, expr, *args, **kwargs):
@@ -65,7 +65,9 @@ class Bput(AstNode):
 
     def xml(self, writer):
         writer.WriteStartElement("Bput")
-        self.channel.xml(writer)
+        writer.WriteStartElement("expr")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
         writer.WriteEndElement()  
         
 class Case(AstNode):
