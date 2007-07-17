@@ -1,0 +1,6 @@
+REM Test of DRAW statement
+DRAW 0,0
+DRAW 1280, 1024
+X = 5
+Y = 10
+DRAW X, Y
