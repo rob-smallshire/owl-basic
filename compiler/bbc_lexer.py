@@ -682,7 +682,7 @@ reserved = {
 # Identifiers
 
 def t_ID(t):
-    r'[@a-zA-Z_`][a-zA-Z_0-9`]*[$%&#]?'
+    r'[@a-zA-Z_`][a-zA-Z_0-9`]*[$%&]?'
     # Ampersand and hash suffixes only apply to BBC BASIC for Windows
     t.type = reserved.get(t.value, 'ID') # Check for reserved identifiers
     return t
