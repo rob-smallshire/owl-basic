@@ -265,6 +265,11 @@ def p_def_proc_stmt(p):
         p[0] = DefineFunction(p[3], None, p[4])
     elif len(p) == 8:
         p[0] = DefineFunction(p[3], p[5], p[7])
+
+# DRAW statements
+def p_draw_stmt(p):
+    '''draw_stmt : DRAW expr COMMA expr'''
+    p[0] = Draw(p[2], p[4])
         
 # IF statements
 

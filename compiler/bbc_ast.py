@@ -142,6 +142,23 @@ class Next(AstNode):
             self.var_list.xml(writer)
         writer.WriteEndElement()
         
+class Draw(AstNode):
+    def __init__(self, x, y, *args, **kwargs):
+        self.x = x
+        self.y = y
+        super(Draw, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Draw")
+        writer.WriteStartElement("X")
+        self.x.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Y")
+        self.y.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+        
 class If(AstNode):
     def __init__(self, condition, true_clause, false_clause, *args, **kwargs):
         self.condition = expression
