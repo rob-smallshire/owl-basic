@@ -1,0 +1,9 @@
+REM Test of SWAP statement
+
+SWAP a,b
+SWAP Coat$, Hat$
+SWAP A$(), B$()
+
+
+
+
