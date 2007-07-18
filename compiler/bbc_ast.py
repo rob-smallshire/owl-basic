@@ -149,15 +149,6 @@ class Next(AstNode):
             self.var_list.xml(writer)
         writer.WriteEndElement()
 
-class Ellipse(AstNode):
-    def __init__(self, x, y, hrad, vrad, fill=False, *args, **kwargs):
-        self.x = x
-        self.y = y
-        self.hrad = hrad
-        self.vrad = vrad
-        self.fill = fill
-        
-
 class Draw(AstNode):
     def __init__(self, x, y, relative = False, *args, **kwargs):
         self.x = x
@@ -177,7 +168,33 @@ class Draw(AstNode):
         self.y.xml(writer)
         writer.WriteEndElement()
         writer.WriteEndElement()
-       
+
+class Ellipse(AstNode):
+    def __init__(self, x, y, hrad, vrad, fill=False, *args, **kwargs):
+        self.x = x
+        self.y = y
+        self.hrad = hrad
+        self.vrad = vrad
+        self.fill = fill       
+    def xml(self, writer):
+        writer.WriteStartElement("Ellipse")
+        writer.WriteStartAttribute("Fill")
+        writer.WriteString(str(self.fill))
+        writer.WriteEndAttribute()
+        writer.WriteStartElement("X")
+        self.x.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Y")
+        self.y.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("HRad")
+        self.hrad.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("VRad")
+        self.vrad.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
 class If(AstNode):
     def __init__(self, condition, true_clause, false_clause, *args, **kwargs):
         self.condition = expression
@@ -248,6 +265,8 @@ class PrintList(AstNode):
 
 class Rectangle(AstNode):
     def __init__(self, x1, y1, width, height, x2=None, y2=None, rectType=None, *args, **kwargs):
+        # if height is NONE then it is a square
+        # unsure if need to check that SWAP has a TO
         self.x1 = x1
         self.y1 = y1
         self.width = width
@@ -274,11 +293,10 @@ class Rectangle(AstNode):
         writer.WriteStartElement("Height")
         self.height.xml(writer)
         writer.WriteEndElement()
-        if self.x2 <> None:
+        if self.x2 and self.y2
             writer.WriteStartElement("DestX")            #'DestX' will work but 'X2' wont.
             self.x2.xml(writer)                          # Unknown why this fails
             writer.WriteEndElement()
-        if self.y2 <> None:
             writer.WriteStartElement("DestY")            #'DestY' will work but 'Y2' wont.
             self.y2.xml(writer)                          # Unknown Why this fails
             writer.WriteEndElement()

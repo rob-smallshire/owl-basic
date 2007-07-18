@@ -408,26 +408,26 @@ def p_rectangle_stmt(p):
     
     if len(p) == 7:
         #RECTANGLE expr COMMA expr COMMA expr
-        p[0] = Rectangle(p[2], p[4], p[6], p[6])
+        p[0] = Rectangle(p[2], p[4], p[6], None)
     elif len(p) == 9:
         #RECTANGLE expr COMMA expr COMMA expr COMMA expr
         p[0] = Rectangle(p[2], p[4], p[6], p[8])
     elif len(p) == 11:
         #RECTANGLE expr COMMA expr COMMA expr TO expr COMMA expr
-        p[0] = Rectangle(p[2], p[4], p[6], p[6], p[8], p[10])
+        p[0] = Rectangle(p[2], p[4], p[6], None, p[8], p[10])
     elif len(p) == 13:
         #RECTANGLE expr COMMA expr COMMA expr COMMA expr TO expr COMMA expr
         p[0] = Rectangle(p[2], p[4], p[6], p[8], p[10], p[12])
     elif len(p) == 8:    #unsure if this is how to impliment this    
         #RECTANGLE FILL expr COMMA expr COMMA expr
-        p[0] = Rectangle(p[3], p[5], p[7], p[7], rectType = p[2])
+        p[0] = Rectangle(p[3], p[5], p[7], None, rectType = p[2])
     elif len(p) == 10:
         #RECTANGLE FILL expr COMMA expr COMMA expr COMMA expr
         p[0] = Rectangle(p[3], p[5], p[7], p[9], rectType = p[2])
     elif len(p) == 12:
         #RECTANGLE FILL expr COMMA expr COMMA expr TO expr COMMA expr
         #RECTANGLE SWAP expr COMMA expr COMMA expr TO expr COMMA expr
-        p[0] = Rectangle(p[3], p[5], p[7], p[7], p[9], p[11], p[2])
+        p[0] = Rectangle(p[3], p[5], p[7], None, p[9], p[11], p[2])
     elif len(p) == 14:
         #RECTANGLE FILL expr COMMA expr COMMA expr COMMA expr TO expr COMMA expr
         #RECTANGLE SWAP expr COMMA expr COMMA expr COMMA expr TO expr COMMA expr
