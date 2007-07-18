@@ -73,7 +73,6 @@ def p_stmt_terminator(p):
                  | dim_stmt
                  | envelope_stmt   IAN
                  | fill_stmt       IAN
-                 | gcol_stmt       IAN
                  | gosub_stmt
                  | goto_stmt       
                  | input_stmt
@@ -130,6 +129,7 @@ def p_stmt_body(p):
                  | def_stmt
                  | draw_stmt
                  | ellipse_stmt
+                 | gcol_stmt
                  | if_stmt
                  | for_stmt
                  | let_stmt
@@ -291,6 +291,14 @@ def p_ellipse_stmt(p):
         p[0] = Ellipse(p[2], p[4], p[6], p[8])
     elif len(p) == 10:
         p[0] = Ellipse(p[3], p[5], p[7], p[9],fill=True)
+
+def p_gcol_stmt(p):
+    '''gcol_stmt : GCOL expr
+                 | GCOL expr COMMA expr'''
+    if len(p) == 3:
+        p[0] = Gcol(p[2])
+    elif len(p) == 5:
+        p[0] = Gcol(p[4], p[2])
 
 # IF statements
 

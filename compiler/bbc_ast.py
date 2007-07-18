@@ -217,6 +217,24 @@ class Ellipse(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
+class Gcol(AstNode):
+    #arguments on this class are transposed in comparison to BBC Basic
+    def __init__(self, col, mode=None, *args, **kwargs):
+        self.mode = mode
+        self.col = col
+        super(Gcol, self).__init__(*args, **kwargs)
+          
+    def xml(self, writer):
+        writer.WriteStartElement("Gcol")
+        writer.WriteStartElement("Col")
+        self.col.xml(writer)
+        writer.WriteEndElement()
+        if self.mode:
+            writer.WriteStartElement("Mode")
+            self.mode.xml(writer)
+            writer.WriteEndElement()
+        writer.WriteEndElement()
+
 class If(AstNode):
     def __init__(self, condition, true_clause, false_clause, *args, **kwargs):
         self.condition = expression
