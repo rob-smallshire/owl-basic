@@ -82,7 +82,6 @@ def p_stmt_terminator(p):
                  | local_stmt
                  | mode_stmt
                  | mouse_stmt
-                 | origin_stmt     IAN
                  | oscli_stmt
                  | plot_stmt       IAN
                  | proc_stmt
@@ -135,6 +134,7 @@ def p_stmt_body(p):
                  | for_stmt
                  | let_stmt
                  | move_stmt
+                 | origin_stmt
                  | next_stmt
                  | print_stmt
                  | rectangle_stmt
@@ -379,6 +379,9 @@ def p_move_stmt(p):
     elif len(p) == 6:
         p[0] = Move(p[3], p[5], True)
 
+def p_origin_stmt(p):
+    '''origin_stmt : ORIGIN expr COMMA expr'''
+    p[0] = Origin(p[2], p[4])
         
 # Print related rules       
         

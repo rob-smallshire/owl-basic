@@ -195,7 +195,9 @@ class Ellipse(AstNode):
         self.y = y
         self.hrad = hrad
         self.vrad = vrad
-        self.fill = fill       
+        self.fill = fill
+        super(Ellipse, self).__init__(*args, **kwargs)
+               
     def xml(self, writer):
         writer.WriteStartElement("Ellipse")
         writer.WriteStartAttribute("Fill")
@@ -247,6 +249,22 @@ class Move(AstNode):
         writer.WriteStartAttribute("relative")
         writer.WriteString(str(self.relative))
         writer.WriteEndAttribute()
+        writer.WriteStartElement("X")
+        self.x.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Y")
+        self.y.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+class Origin(AstNode):
+    def __init__(self, x, y, *args, **kwargs):
+        self.x = x
+        self.y = y
+        super(Origin, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Origin")
         writer.WriteStartElement("X")
         self.x.xml(writer)
         writer.WriteEndElement()
