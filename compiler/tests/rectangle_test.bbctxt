@@ -10,14 +10,34 @@ RECTANGLE FILL 640, 512, 256, 128
 
 REM Copy a rectangle
 RECTANGLE xpos, ypos, width, height TO destx, desty
-RECTANGLE 100, 100, 50, 50, TO 200, 200
+RECTANGLE 100, 100, 50, 50 TO 200, 200
 
 REM Move a rectangle
-RECTANGLE FILL xpos, xpos, width, height TO destx, desty
+RECTANGLE FILL xpos, ypos, width, height TO destx, desty
 RECTANGLE FILL 123, 456, 321, 654 TO 23, 47
 
 REM Swap two rectangles
 RECTANGLE SWAP x1, y1, dx, dy TO x2, y2
-RECTANGLE SWAP 10, 20, 5, 7, 678, 232
+RECTANGLE SWAP 10, 20, 5, 7 TO 678, 232
 
+REM Test Above again for Squares
 
+REM Draw a rectangle
+RECTANGLE xpos, ypos, width
+RECTANGLE 100, 200, 300
+
+REM Draw a filled rectangle
+RECTANGLE FILL xpos, ypos, width
+RECTANGLE FILL 640, 512, 256
+
+REM Copy a rectangle
+RECTANGLE xpos, ypos, width TO destx, desty
+RECTANGLE 100, 100, 50 TO 200, 200
+
+REM Move a rectangle
+RECTANGLE FILL xpos, xpos, width TO destx, desty
+RECTANGLE FILL 123, 456, 321 TO 23, 47
+
+REM Swap two rectangles
+RECTANGLE SWAP x1, y1, dx TO x2, y2
+RECTANGLE SWAP 10, 20, 5 TO 678, 232

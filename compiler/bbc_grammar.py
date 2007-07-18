@@ -96,7 +96,6 @@ def p_stmt_terminator(p):
                  | proc_stmt
                  | quit_stmt
                  | read_stmt
-                 | rectangle_stmt  IAN
                  | repeat_stmt
                  | report_stmt
                  | restore_stmt
@@ -131,6 +130,7 @@ def p_stmt_body(p):
                  | move_stmt
                  | next_stmt
                  | print_stmt
+                 | rectangle_stmt
                  | vdu_stmt'''
     print "stmt_body"
     p[0] = p[1]  
@@ -393,6 +393,50 @@ def p_print_item(p):
                   | COMMA
                   | SEMICOLON'''
     p[0] = p[1]
+    
+def p_rectangle_stmt(p):
+    '''rectangle_stmt : RECTANGLE expr COMMA expr COMMA expr
+                      | RECTANGLE expr COMMA expr COMMA expr COMMA expr
+                      | RECTANGLE expr COMMA expr COMMA expr TO expr COMMA expr
+                      | RECTANGLE expr COMMA expr COMMA expr COMMA expr TO expr COMMA expr
+                      | RECTANGLE FILL expr COMMA expr COMMA expr
+                      | RECTANGLE FILL expr COMMA expr COMMA expr COMMA expr
+                      | RECTANGLE FILL expr COMMA expr COMMA expr TO expr COMMA expr
+                      | RECTANGLE FILL expr COMMA expr COMMA expr COMMA expr TO expr COMMA expr                      
+                      | RECTANGLE SWAP expr COMMA expr COMMA expr
+                      | RECTANGLE SWAP expr COMMA expr COMMA expr COMMA expr
+                      | RECTANGLE SWAP expr COMMA expr COMMA expr TO expr COMMA expr
+                      | RECTANGLE SWAP expr COMMA expr COMMA expr COMMA expr TO expr COMMA expr'''    
+    
+    if len(p) == 7:
+        #RECTANGLE expr COMMA expr COMMA expr
+        p[0] = Rectangle(p[2], p[4], p[6], p[6])
+    elif len(p) == 9:
+        #RECTANGLE expr COMMA expr COMMA expr COMMA expr
+        p[0] = Rectangle(p[2], p[4], p[6], p[8])
+    elif len(p) == 11:
+        #RECTANGLE expr COMMA expr COMMA expr TO expr COMMA expr
+        p[0] = Rectangle(p[2], p[4], p[6], p[6], p[8], p[10])
+    elif len(p) == 13:
+        #RECTANGLE expr COMMA expr COMMA expr COMMA expr TO expr COMMA expr
+        p[0] = Rectangle(p[2], p[4], p[6], p[8], p[10], p[12])
+    elif len(p) == 8:    #unsure if this is how to impliment this    
+        #RECTANGLE FILL expr COMMA expr COMMA expr
+        #RECTANGLE SWAP expr COMMA expr COMMA expr
+        p[0] = Rectangle(p[3], p[5], p[7], p[7], rectType = p[2])
+    elif len(p) == 10:
+        #RECTANGLE FILL expr COMMA expr COMMA expr COMMA expr
+        #RECTANGLE SWAP expr COMMA expr COMMA expr COMMA expr
+        p[0] = Rectangle(p[3], p[5], p[7], p[9], rectType = p[2])
+    elif len(p) == 12:
+        #RECTANGLE FILL expr COMMA expr COMMA expr TO expr COMMA expr
+        #RECTANGLE SWAP expr COMMA expr COMMA expr TO expr COMMA expr
+        p[0] = Rectangle(p[3], p[5], p[7], p[7], p[9], p[11], p[2])
+    elif len(p) == 14:
+        #RECTANGLE FILL expr COMMA expr COMMA expr COMMA expr TO expr COMMA expr
+        #RECTANGLE SWAP expr COMMA expr COMMA expr COMMA expr TO expr COMMA expr
+        p[0] = Rectangle(p[3], p[5], p[7], p[9], p[11], p[13], p[2])
+        
                     
 def p_tab(p):
     '''tab : TAB_LPAREN expr RPAREN

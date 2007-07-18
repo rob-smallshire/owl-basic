@@ -230,6 +230,44 @@ class PrintList(AstNode):
         self.next_item.xml(writer)
         writer.WriteEndElement()
         writer.WriteEndElement()
+
+class Rectangle(AstNode):
+    def __init__(self, x1, y1, width, height, x2=None, y2=None, rectType=None, *args, **kwargs):
+        self.x1 = x1
+        self.y1 = y1
+        self.width = width
+        self.height = height
+        self.x2 = x2
+        self.y2 = y2
+        self.rectType = rectType
+        super(Rectangle, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Rectangle")
+        writer.WriteStartAttribute("rectType")
+        writer.WriteString(str(self.rectType))
+        writer.WriteEndAttribute()
+        writer.WriteStartElement("X1")
+        self.x1.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Y1")
+        self.y1.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Width")
+        self.width.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Height")
+        self.height.xml(writer)
+        writer.WriteEndElement()
+        if self.x2 <> None:
+            writer.WriteStartElement("DestX")            #'DestX' will work but 'X2' wont.
+            self.x2.xml(writer)                          # Unknown why this fails
+            writer.WriteEndElement()
+        if self.y2 <> None:
+            writer.WriteStartElement("DestY")            #'DestY' will work but 'Y2' wont.
+            self.y2.xml(writer)                          # Unknown Why this fails
+            writer.WriteEndElement()
+        writer.WriteEndElement()        
         
 class TabH(AstNode):
     def __init__(self, h):
