@@ -86,7 +86,6 @@ def p_stmt_terminator(p):
                  | origin_stmt     IAN
                  | oscli_stmt
                  | plot_stmt       IAN
-                 | point_stmt      IAN
                  | proc_stmt
                  | quit_stmt
                  | read_stmt
