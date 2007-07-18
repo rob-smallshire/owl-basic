@@ -457,24 +457,30 @@ def p_spc(p):
 # VDU
 
 def p_vdu_stmt(p):
-    '''vdu_stmt : VDU vdu_list'''
-    p[0] = Vdu(p[2])
+    '''vdu_stmt : VDU
+                | VDU vdu_list'''
+    if len(p) == 2:
+        p[0] = Vdu()
+    elif len(p) == 3:    
+        p[0] = Vdu(p[2])
     
 def p_vdu_list(p):
     '''vdu_list : vdu_item
-                | vdu_item vdu_list'''
+                | vdu_list vdu_item'''
     if len(p) == 2:
-        p[0] = VduList(p[1], None) # Comma separator defaults to byte value
+        p[0] = VduList(p[1])
     elif len(p) == 3:
-        p[0] = VduList(p[1], p[2])
+        p[1].append(p[2])
+        p[0] = p[1]
 
 def p_vdu_item(p):
     '''vdu_item : expr vdu_separator
                 | expr'''
-    if len(p) == 3:
+    if len(p) == 2:
+        p[0] = VduItem(p[1])
+    elif len(p) == 3:
         p[0] = VduItem(p[1], p[2])
-    elif len(p) == 2:
-        p[0] = VduItem(p[1], ',')
+
 
 def p_vdu_separator(p):
     '''vdu_separator : COMMA

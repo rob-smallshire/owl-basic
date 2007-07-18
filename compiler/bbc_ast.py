@@ -361,16 +361,6 @@ class Spc(AstNode):
         self.expr.xml(writer)
         writer.WriteEndElement()
         
-class Vdu(AstNode):
-    def __init__(self, list, *args, **kwargs):
-        self.list = list
-        super(Vdu, self).__init__(*args, **kwargs)
-        
-    def xml(self, writer):
-        writer.WriteStartElement("Vdu")
-        self.list.xml(writer)
-        writer.WriteEndElement()
-
 class VariableList(AstNode):
     def __init__(self, first_variable=None, *args, **kwargs):
         self.variables = []
@@ -398,27 +388,36 @@ class Variable(AstNode):
         writer.WriteString(self.name)
         writer.WriteEndAttribute()
         writer.WriteEndElement()
+
+class Vdu(AstNode):
+    def __init__(self, list=None, *args, **kwargs):
+        self.list = list
+        super(Vdu, self).__init__(*args, **kwargs)
         
+    def xml(self, writer):
+        writer.WriteStartElement("Vdu")
+        if self.list:
+            self.list.xml(writer)
+        writer.WriteEndElement()       
 
 class VduList(AstNode):
-    def __init__(self, item, tail, *args, **kwargs):
-        self.item = item
-        self.tail = tail
+    def __init__(self, first_item=None, *args, **kwargs):
+        self.items = []
+        if first_item:
+            self.items.append(first_item)
         super(VduList, self).__init__(*args, **kwargs)
+    
+    def append(self, item):
+        self.items.append(item)
         
     def xml(self, writer):
         writer.WriteStartElement("VduList")
-        writer.WriteStartElement("Item")
-        self.item.xml(writer)
-        writer.WriteEndElement()
-        if self.tail:
-            writer.WriteStartElement("Tail")
-            self.tail.xml(writer)
-            writer.WriteEndElement()
+        for item in self.items:
+            item.xml(writer)
         writer.WriteEndElement()
 
 class VduItem(AstNode):
-    def __init__(self, expr, separator, *args, **kwargs):
+    def __init__(self, expr, separator=',', *args, **kwargs):
         self.expr = expr
         self.separator = separator
         super(VduItem, self).__init__(*args, **kwargs)
@@ -426,11 +425,10 @@ class VduItem(AstNode):
     def xml(self, writer):
         writer.WriteStartElement("VduItem")
         writer.WriteStartAttribute("separator")
-        writer.WriteString(self.separator)
+        writer.WriteString(str(self.separator))
         writer.WriteEndAttribute()
-        writer.expr.xml(writer)
+        self.expr.xml(writer)
         writer.WriteEndElement()
-        return "VduItem { %s, '%s' }" % (self.expr, self.separator)
 
 class ExpressionList(AstNode):
     def __init__(self, list, item, *args, **kwargs):
