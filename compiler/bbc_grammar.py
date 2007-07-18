@@ -32,7 +32,7 @@ def p_statement_list(p):
         p[0] = p[1]
 
 def p_statement(p):
-    '''statement : stmt_body stmt_terminator
+    '''statement : any_stmt_body stmt_terminator
                  | compound_statement stmt_terminator'''
     p[0] = p[1]
 
@@ -105,6 +105,20 @@ def p_stmt_terminator(p):
                  | while_stmt
                  | width_stmt'''
 
+# All statements
+def p_any_stmt_body(p):
+    '''any_stmt_body : stmt_body
+                     | lone_stmt_body'''
+    p[0] = p[1]
+
+# Statements which must appear alone on
+# their own line                     
+def p_lone_stmt_body(p):
+    '''lone_stmt_body : case_stmt'''
+    p[0] = p[1]
+
+# Statements which can appear alone,
+# or in compound statements on one line
 def p_stmt_body(p):
     '''stmt_body : empty_stmt
                  | bput_stmt
@@ -144,31 +158,34 @@ def p_bput_stmt(p):
 def p_call_stmt(p):
     '''call_stmt : CALL actual_arg_list'''
     p[0] = Call(p[2])
+
     
 # TODO CASE stmt
 # Not that WHEN clauses which follow the OTHERWISE clause
 # a legal, but cannot be executed.
 # TODO : Put this into a special class of statements which
 # must begin on a new line.
-#def p_case_stmt(p):
-#    '''case_stmt : CASE expr OF stmt_terminator when_clause_list ENDCASE'''
-#    p[0] = Case(p[2], p[5])
-#
-#def p_when_clause_list(p):
-#    '''when_clause_list : when_clause
-#                        | when_clause_list COMMA when_clause'''
-#    if len(p) == 2:
-#        p[0] = WhenClauseList(None, p[1])
-#    elif len(p) == 4:
-#        p[0] = WhenClauseList(p[1], p[3])
-#    
-#def p_when_clause(p):
-#    '''when_clause : WHEN expr_list COLON statement_list
-#                   | OTHERWISE COLON statement_list'''
-#    if len(p) == 5:
-#        p[0] = When(p[2], p[4])
-#    elif len(p) == 4:
-#        p[0] = Otherwise(p[3])
+def p_case_stmt(p):
+    '''case_stmt : CASE expr OF stmt_terminator when_clause_list ENDCASE'''
+    p[0] = Case(p[2], p[5])
+    
+def p_when_clause_list(p):
+    '''when_clause_list : when_clause
+                        | when_clause_list when_clause'''
+    if len(p) == 2:
+        p[0] = WhenClauseList(p[1])
+    elif len(p) == 3:
+        print "p2 = %s" % p[2]
+        p[1].append(p[2])
+        p[0] = p[1]
+    
+def p_when_clause(p):
+    '''when_clause : WHEN expr_list COLON statement_list
+                   | OTHERWISE statement_list'''
+    if len(p) == 5:
+        p[0] = WhenClause(p[2], p[4])
+    elif len(p) == 3:
+        p[0] = OtherwiseClause(p[2])
 
 # TODO CHAIN stmt
 
@@ -498,9 +515,9 @@ def p_formal_arg_list(p):
     '''formal_arg_list : formal_arg
                        | formal_arg_list COMMA formal_arg'''
     if len(p) == 2:
-        return FormalArgumentList(p[1])
+        p[0] = FormalArgumentList(p[1])
     if len(p) == 4:
-        return FormalArgumentList(p[1], p[3])
+        p[0] = FormalArgumentList(p[1], p[3])
     
 def p_formal_arg(p):
     '''formal_arg : ID
@@ -516,9 +533,10 @@ def p_expr_list(p):
     '''expr_list : expr
                  | expr_list COMMA expr'''
     if len(p) == 2:
-        return ExpressionList(None, p[1])
+        p[0] = ExpressionList(p[1])
     elif len(p) == 4:
-        return ExpressionList(p[1], p[3])
+        p[1].append(p[3])
+        p[0] = p[1]
 
 def p_expr(p):
     '''expr : expr_function
@@ -585,7 +603,7 @@ def p_binary_indirection_op(p):
 
 def p_binary_math_op(p):
     '''binary_math_op : expr PLUS expr'''
-    return BinaryMathOp(p[2], p[1], p[3])
+    p[0] = BinaryMathOp(p[2], p[1], p[3])
 
 #def p_binary_math_op(p):
 #    '''binary_math_op : binary_plus_expr

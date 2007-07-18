@@ -1,0 +1,16 @@
+REM BBC Basic CASE test
+CASE toss% OF
+  WHEN 0 : coin$ = "tails"
+  WHEN 1 : coin$ = "heads"
+  OTHERWISE coin$ = "cheat"
+ENDCASE
+
+CASE direction$ OF
+  WHEN "left","LEFT" :
+  PRINT "turn left"
+  WHEN "right","RIGHT" :
+  PRINT "Turn right"
+  OTHERWISE
+  PRINT "Straight on"
+ENDCASE
+

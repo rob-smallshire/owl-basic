@@ -87,16 +87,29 @@ class Case(AstNode):
         self.when_list = when_list
         
     def xml(self, writer):
-        pass
+        writer.WriteStartElement("Case")
+        writer.WriteStartElement("Test")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
+        self.when_list.xml(writer)
+        writer.WriteEndElement()
 
 class WhenClauseList(AstNode):
-    def __init__(self, list, item, *args, **kwargs):
-        self.list = list
-        self.item = item
+    def __init__(self, first_clause=None, *args, **kwargs):
+        self.clauses = []
+        if first_clause:
+            self.clauses.append(first_clause)
         super(WhenClauseList, self).__init__(*args, **kwargs)
         
+    def append(self, when_clause):
+        self.clauses.append(when_clause)
+        
     def xml(self, writer):
-        pass
+        writer.WriteStartElement("WhenClauseList")
+        for clause in self.clauses:
+            print self.clauses
+            clause.xml(writer)
+        writer.WriteEndElement()
 
 class WhenClause(AstNode):
     def __init__(self, expr_list, statement_list, *args, **kwargs):
@@ -105,7 +118,11 @@ class WhenClause(AstNode):
         super(WhenClause, self).__init__(*args, **kwargs)
         
     def xml(self, writer):
-        pass
+        writer.WriteStartElement("WhenClause")
+        print self.expr_list
+        self.expr_list.xml(writer)
+        self.statement_list.xml(writer)
+        writer.WriteEndElement()
 
 class OtherwiseClause(AstNode):
     def __init__(self, statement_list, *args, **kwargs):
@@ -113,7 +130,9 @@ class OtherwiseClause(AstNode):
         super(OtherwiseClause, self).__init__(*args, **kwargs)
         
     def xml(self, writer):
-        pass
+        writer.WriteStartElement("OtherwiseClause")
+        self.statement_list.xml(writer)
+        writer.WriteEndElement()
 
 class ForToStep(AstNode):
     def __init__(self, identifier, start, end, step, *args, **kwargs):
@@ -431,20 +450,19 @@ class VduItem(AstNode):
         writer.WriteEndElement()
 
 class ExpressionList(AstNode):
-    def __init__(self, list, item, *args, **kwargs):
-        self.list = list
-        self.item = item
+    def __init__(self, first_expr=None, *args, **kwargs):
+        self.expressions = []
+        if first_expr:
+            self.expressions.append(first_expr)
         super(ExpressionList, self).__init__(*args, **kwargs)
+        
+    def append(self, expr):
+        self.expressions.append(expr) 
         
     def xml(self, writer):
         writer.WriteStartElement("ExpressionList")
-        if self.list:
-            writer.WriteStartElement("PriorList")
-            self.list.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteStartElement("NextItem")
-        self.item.xml(writer)
-        writer.WriteEndElement()
+        for expr in self.expressions:
+            expr.xml(writer)
         writer.WriteEndElement()
         
 class UnaryOp(AstNode):

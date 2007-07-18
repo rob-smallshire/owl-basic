@@ -1,0 +1,5 @@
+REM Variable lists are used after NEXT statements
+FOR i% = 1 TO 10
+FOR j% = 1 TO 10
+PRINT i%
+NEXT i%, j%

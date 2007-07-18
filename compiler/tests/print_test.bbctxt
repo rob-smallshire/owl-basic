@@ -1,0 +1,18 @@
+PRINT 1
+PRINT 10,200
+PRINT;10;200
+PRINT
+PRINT "Answer";A
+PRINT "Answer"A
+PRINT "Answer",A
+PRINT 3.14159
+PRINT 0.42
+PRINT 3.3'2.25
+PRINT "VAT inclusive price ";
+PRINT "Is your ";B$;" all right?"
+PRINT TAB(10);name$TAB(30);job$
+PRINT TAB(20,31);value
+PRINT TAB(10);A$;TAB(20);B$
+PRINT TAB(5);foo$'SPC5;bar$
+
+
