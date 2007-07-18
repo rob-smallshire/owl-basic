@@ -1,0 +1,4 @@
+REM Test of BBC Basic ASN function
+X = ASN0.5
+X = ASN(0.5)
+X = ASN 0.5
