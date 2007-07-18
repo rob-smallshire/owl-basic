@@ -38,7 +38,8 @@ class StatementList(AstNode):
     def xml(self, writer):
         writer.WriteStartElement("StatementList")
         for statement in self.statements:
-            statement.xml(writer)
+            if statement:
+                statement.xml(writer)
         writer.WriteEndElement()
 
 class Channel(AstNode):
@@ -236,7 +237,7 @@ class Move(AstNode):
         writer.WriteEndElement()
     
 class Print(AstNode):
-    def __init__(self, print_list, *args, **kwargs):
+    def __init__(self, print_list=None, *args, **kwargs):
         self.print_list = print_list
         super(Print, self).__init__(*args, **kwargs)
         
@@ -247,20 +248,41 @@ class Print(AstNode):
         writer.WriteEndElement()
 
 class PrintList(AstNode):
-    def __init__(self, list=None, item=None, *args, **kwargs):
-        self.prior_list = list
-        self.next_item  = item
+    def __init__(self, first_item=None, *args, **kwargs):
+        self.print_items = []
+        if first_item:
+            self.print_items.append(first_item)
         super(PrintList, self).__init__(*args, **kwargs)
+    
+    def append(self, item):
+        self.print_items.append(item)
         
     def xml(self, writer):
         writer.WriteStartElement("PrintList")
-        if self.prior_list:
-            writer.WriteStartElement("PriorList")
-            self.prior_list.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteStartElement("NextItem")
-        self.next_item.xml(writer)
+        for item in self.print_items:
+            item.xml(writer)
         writer.WriteEndElement()
+
+class PrintItem(AstNode):
+    def __init__(self, item=None, *args, **kwargs):
+        self.item = item
+        super(PrintItem, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("PrintItem")
+        self.item.xml(writer)
+        writer.WriteEndElement()
+
+class PrintManipulator(AstNode):
+    def __init__(self, manip, *args, **kwargs):
+        self.manip = manip
+        super(PrintManipulator, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("PrintManipulator")
+        writer.WriteStartAttribute("type")
+        writer.WriteString(self.manip)
+        writer.WriteEndAttribute()
         writer.WriteEndElement()
 
 class Rectangle(AstNode):
@@ -303,8 +325,8 @@ class Rectangle(AstNode):
         writer.WriteEndElement()        
         
 class TabH(AstNode):
-    def __init__(self, h):
-        self.h_expr = expr
+    def __init__(self, h, *args, **kwargs):
+        self.h_expr = h
         super(TabH, self).__init__(*args, **kwargs)
         
     def xml(self, writer):

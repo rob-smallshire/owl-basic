@@ -127,12 +127,13 @@ def p_stmt_body(p):
                  | print_stmt
                  | rectangle_stmt
                  | vdu_stmt'''
-    p[0] = Statement(p[1])  
+    if p[1]:
+        p[0] = Statement(p[1])
 
 # Empty statement
 def p_empty_stmt(p):
     '''empty_stmt :'''
-    p[0] = Statement()
+    pass
 
 # BPUT statement
 def p_bput_stmt(p):
@@ -367,10 +368,12 @@ def p_move_stmt(p):
 # Print related rules       
         
 def p_print_stmt(p):
-    '''print_stmt : PRINT print_list
+    '''print_stmt : PRINT
+                  | PRINT print_list
                   | PRINT channel COMMA actual_arg_list'''
-    # TODO: Also need to handle simple PRINT channel
-    if len(p) == 3:
+    if len(p) == 2:
+        p[0] = Print()
+    elif len(p) == 3:
         p[0] = Print(p[2])
     elif len(p) == 4:
         p[0] = PrintFile(p[2], p[3])      
@@ -380,19 +383,24 @@ def p_print_list(p):
     '''print_list : print_item
                   | print_list print_item'''
     if len(p) == 2:
-        p[0] = PrintList(item = p[1])
+        p[0] = PrintList(p[1])
     elif len(p) == 3:
-        p[0] = PrintList(list = p[1], item = p[2])
+        p[1].append(p[2])
+        p[0] = p[1]
     
 def p_print_item(p):
     '''print_item : expr
                   | tab 
                   | spc
-                  | TILDE
-                  | APOSTROPHE
-                  | COMMA
-                  | SEMICOLON'''
-    p[0] = p[1]
+                  | print_manipulator'''
+    p[0] = PrintItem(p[1])
+    
+def p_print_manipulator(p):
+    '''print_manipulator : TILDE
+                         | APOSTROPHE
+                         | COMMA
+                         | SEMICOLON'''
+    p[0] = PrintManipulator(p[1])
     
 def p_rectangle_stmt(p):
     '''rectangle_stmt : RECTANGLE expr COMMA expr COMMA expr
