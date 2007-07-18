@@ -293,7 +293,7 @@ class Rectangle(AstNode):
         writer.WriteStartElement("Height")
         self.height.xml(writer)
         writer.WriteEndElement()
-        if self.x2 and self.y2
+        if self.x2 and self.y2:
             writer.WriteStartElement("DestX")            #'DestX' will work but 'X2' wont.
             self.x2.xml(writer)                          # Unknown why this fails
             writer.WriteEndElement()
