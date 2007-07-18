@@ -519,7 +519,17 @@ class AscFunc(AstNode):
         writer.WriteStartElement("Asc")
         self.expr.xml(writer)
         writer.WriteEndElement()
+
+class AsnFunc(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(AsnFunc, self).__init__(*args, **kwargs)
         
+    def xml(self, writer):
+        writer.WriteStartElement("Asn")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
+ 
 class BgetFunc(AstNode):
     def __init__(self, channel, *args, **kwargs):
         self.channel = expr

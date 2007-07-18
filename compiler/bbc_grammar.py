@@ -73,7 +73,6 @@ def p_stmt_terminator(p):
                  | dim_stmt
                  | envelope_stmt   IAN
                  | fill_stmt       IAN
-                 | for_stmt
                  | gcol_stmt       IAN
                  | gosub_stmt
                  | goto_stmt       
@@ -708,7 +707,6 @@ def p_expr_group(p):
 
 # TODO: Functions to be implemented
 '''    expr_function : adval_func
-                     | asn_func
                      | deg_func
                      | dim_func
                      | end_func
@@ -750,6 +748,7 @@ def p_expr_function(p):
                      | abs_func
                      | acs_func
                      | asc_func
+                     | asn_func
                      | bget_func
                      | chr_str_func
                      | cos_func
@@ -768,7 +767,11 @@ def p_abs_func(p):
 def p_acs_func(p):
     'acs_func : ACS expr %prec FUNCTION'
     p[0] = AcsFunc(p[2])
-    
+
+def p_asn_func(p):
+    'asn_func : ASN expr %prec FUNCTION'
+    p[0] = AsnFunc(p[2])
+
 def p_str_str_func(p):
     '''str_str_func : str_str_dec_func
                     | str_str_hex_func'''
