@@ -26,17 +26,15 @@ def p_program(p):
 def p_statement_list(p): 
     '''statement_list : statement
                       | statement_list statement'''
-    print "statement_list"
     if len(p) == 2:
-        p[0] = StatementList(statement = p[1])
+        p[0] = StatementList(p[1])
     elif len(p) == 3:
-        p[0] = StatementList(list = p[1], statement = p[2])
+        p[1].append(p[2])
+        p[0] = p[1]
 
 def p_statement(p):
     '''statement : stmt_body stmt_terminator
                  | compound_statement stmt_terminator'''
-    print "statement"
-    print len(p)
     p[0] = p[1]
 
 # TODO: Need to separate statements which can be used within
@@ -47,21 +45,19 @@ def p_statement(p):
 # TODO: May need concept of an empty statement to deal with trailing colons
 def p_compound_statement(p):
     '''compound_statement : stmt_body
-                          | compound_statement statement_separator stmt_body'''
-    print "compound_statement"                      
+                          | compound_statement statement_separator stmt_body'''                    
     if len(p) == 2:
-        p[0] = p[1]
+        p[0] = StatementList(p[1])
     elif len(p) == 4:
-        p[0] = StatementList(p[1], p[3])
+        p[1].append(p[3])
+        p[0] = p[1] 
 
 def p_statement_separator(p):
     'statement_separator : COLON'
-    print "statement_separator"
     p[0] = p[1]
     
 def p_stmt_terminator(p):
     'stmt_terminator : EOL'
-    print "stmt_terminator"
     p[0] = p[1]
 
 #def p_compoundable_stmt_body(p):
@@ -133,13 +129,13 @@ def p_stmt_body(p):
                  | rectangle_stmt
                  | vdu_stmt'''
     print "stmt_body"
-    p[0] = p[1]  
+    p[0] = Statement(p[1])  
 
 # Empty statement
 def p_empty_stmt(p):
     '''empty_stmt :'''
     print "empty_stmt"
-    p[0] = None
+    p[0] = Statement()
 
 # BPUT statement
 def p_bput_stmt(p):

@@ -14,24 +14,33 @@ class Program(AstNode):
         self.statement_list.xml(writer)
         writer.WriteEndElement()
 
+class Statement(AstNode):
+    def __init__(self, body=None, *args, **kwargs):
+        self.body = body
+        super(Statement, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Statement")
+        if self.body:
+            self.body.xml(writer)
+        writer.WriteEndElement()
+
 class StatementList(AstNode):
-    def __init__(self, list=None, statement=None, *args, **kwargs):
-        self.prior_list      = list
-        self.next_statement  = statement
+    def __init__(self, first_statement=None, *args, **kwargs):
+        self.statements = []
+        if first_statement:
+            self.statements.append(first_statement)
         super(StatementList, self).__init__(*args, **kwargs)
+    
+    def append(self, statement):
+        self.statements.append(statement)
         
     def xml(self, writer):
         writer.WriteStartElement("StatementList")
-        if self.prior_list:
-            writer.WriteStartElement("PriorList")
-            self.prior_list.xml(writer)
-            writer.WriteEndElement()
-        if self.next_statement:
-            writer.WriteStartElement("NextStatement")      
-            self.next_statement.xml(writer)
-            writer.WriteEndElement()
+        for statement in self.statements:
+            statement.xml(writer)
         writer.WriteEndElement()
- 
+
 class Channel(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
