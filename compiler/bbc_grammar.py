@@ -18,7 +18,6 @@ precedence = (
 
 def p_program(p):
     'program : statement_list'
-    print "program"
     p[0] = Program(p[1])
 
 # TODO: Distinguish single-line compound statements
@@ -128,13 +127,11 @@ def p_stmt_body(p):
                  | print_stmt
                  | rectangle_stmt
                  | vdu_stmt'''
-    print "stmt_body"
     p[0] = Statement(p[1])  
 
 # Empty statement
 def p_empty_stmt(p):
     '''empty_stmt :'''
-    print "empty_stmt"
     p[0] = Statement()
 
 # BPUT statement
@@ -325,7 +322,7 @@ def p_for_stmt(p):
     '''for_stmt : FOR variable EQ expr TO expr
                 | FOR variable EQ expr TO expr STEP expr'''
     if len(p) == 7:
-        p[0] = ForToStep(p[2], p[4], p[6], 1)
+        p[0] = ForToStep(p[2], p[4], p[6], LiteralInteger(1))
     elif len(p) == 9:
         p[0] = ForToStep(p[2], p[4], p[6], p[8])
        
@@ -334,7 +331,6 @@ def p_next_stmt(p):
     '''next_stmt : NEXT variable_list
                  | NEXT'''
     if len(p) == 3:
-        print p[2]
         p[0] = Next(p[2])
     elif len(p) == 2:
         p[0] = Next(None)
@@ -343,9 +339,10 @@ def p_variable_list(p):
     '''variable_list : variable
                      | variable_list COMMA variable'''
     if len(p) == 2:
-        p[0] = VariableList(None, p[1])
+        p[0] = VariableList(p[1])
     elif len(p) == 4:
-        p[0] = VariableList(p[1], p[3])
+        p[1].append(p[3])
+        p[0] = p[1]
     
 # Assignment
 
@@ -355,7 +352,6 @@ def p_let_stmt(p):
     if len(p) == 5:
         p[0] = Assignment(p[2], p[4])
     elif len(p) == 4:
-        print p[1], p[3]
         p[0] = Assignment(p[1], p[3])
         
         # DRAW statements
@@ -517,7 +513,6 @@ def p_expr(p):
             | expr_binary_op
             | variable
             | literal'''
-    #print "Bar! [%s]" % p[1]
     p[0] = p[1]
 
 def p_expr_unary_op(p):
@@ -565,7 +560,6 @@ def p_unary_not(p):
 def p_expr_binary_op(p):
     '''expr_binary_op : binary_indirection_op
                       | binary_math_op'''
-    print "Foo"
     p[0] = p[1]
 
 def p_binary_indirection_op(p):
@@ -788,7 +782,6 @@ def p_literal(p):
     '''literal : literal_string
                | literal_integer
                | literal_float'''
-    print 'Literal'
     p[0] = p[1]
 
 def p_literal_string(p):

@@ -33,9 +33,7 @@ if __name__ == '__main__':
     parser.add_option("-l", "--lex", action='store_true', dest='lex', default=False)
     
     (options, args) = parser.parse_args();
-    
-    print args
-    
+        
     filename = args[0]
     
     # Read the file

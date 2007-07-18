@@ -125,7 +125,6 @@ class ForToStep(AstNode):
     def xml(self, writer):
         writer.WriteStartElement("For")
         writer.WriteStartElement("LValue")
-        print self.identifier
         self.identifier.xml(writer)
         writer.WriteEndElement()
         writer.WriteStartElement("First")
@@ -134,10 +133,9 @@ class ForToStep(AstNode):
         writer.WriteStartElement("Last")
         self.end.xml(writer)
         writer.WriteEndElement()
-        if self.step:
-            writer.WriteStartElement("Step")
-            self.step.xml(writer)
-            writer.WriteEndElement()
+        writer.WriteStartElement("Step")
+        self.step.xml(writer)
+        writer.WriteEndElement()
         writer.WriteEndElement()
     
 class Next(AstNode):
@@ -333,31 +331,30 @@ class Vdu(AstNode):
         writer.WriteEndElement()
 
 class VariableList(AstNode):
-    def __init__(self, list, item, *args, **kwargs):
-        self.list = list
-        self.item = item
+    def __init__(self, first_variable=None, *args, **kwargs):
+        self.variables = []
+        if first_variable:
+            self.variables.append(first_variable)
         super(VariableList, self).__init__(*args, **kwargs)
+    
+    def append(self, variable):
+        self.variables.append(variable)
         
     def xml(self, writer):
         writer.WriteStartElement("VariableList")
-        if self.list:
-            writer.WriteStartElement("PriorList")
-            self.list.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteStartElement("NextItem")
-        self.item.xml(writer)
-        writer.WriteEndElement()
+        for variable in self.variables:
+            variable.xml(writer)
         writer.WriteEndElement()
 
 class Variable(AstNode):
-    def __init__(self, id, *args, **kwargs):
-        self.id = id
+    def __init__(self, name, *args, **kwargs):
+        self.name = name
         super(Variable, self).__init__(*args, **kwargs)
         
     def xml(self, writer):
         writer.WriteStartElement("Variable")
-        writer.WriteStartAttribute("id")
-        writer.WriteString(self.id)
+        writer.WriteStartAttribute("name")
+        writer.WriteString(self.name)
         writer.WriteEndAttribute()
         writer.WriteEndElement()
         
