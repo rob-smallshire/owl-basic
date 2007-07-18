@@ -141,7 +141,16 @@ class Next(AstNode):
         if self.var_list:
             self.var_list.xml(writer)
         writer.WriteEndElement()
+
+class Ellipse(AstNode):
+    def __init__(self, x, y, hrad, vrad, fill=False, *args, **kwargs):
+        self.x = x
+        self.y = y
+        self.hrad = hrad
+        self.vrad = vrad
+        self.fill = fill
         
+
 class Draw(AstNode):
     def __init__(self, x, y, relative = False, *args, **kwargs):
         self.x = x
@@ -161,8 +170,7 @@ class Draw(AstNode):
         self.y.xml(writer)
         writer.WriteEndElement()
         writer.WriteEndElement()
-
-        
+       
 class If(AstNode):
     def __init__(self, condition, true_clause, false_clause, *args, **kwargs):
         self.condition = expression

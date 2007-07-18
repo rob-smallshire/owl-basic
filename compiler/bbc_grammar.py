@@ -76,7 +76,6 @@ def p_stmt_terminator(p):
     '''stmt_body : beats_stmt
                  | chain_stmt
                  | dim_stmt
-                 | ellipse_stmt    IAN
                  | envelope_stmt   IAN
                  | fill_stmt       IAN
                  | for_stmt
@@ -124,6 +123,7 @@ def p_stmt_body(p):
                  | data_stmt
                  | def_stmt
                  | draw_stmt
+                 | ellipse_stmt
                  | if_stmt
                  | for_stmt
                  | let_stmt
@@ -275,6 +275,14 @@ def p_draw_stmt(p):
     elif len(p) == 6:
         p[0] = Draw(p[3], p[5], True)
 
+def p_ellipse_stmt(p):
+    '''ellipse_stmt : ELLIPSE expr COMMA expr COMMA expr COMMA expr
+                    | ELLIPSE FILL expr COMMA expr COMMA expr COMMA expr'''
+    if len(p) == 9:
+        p[0] = Ellipse(p[2], p[4], p[6], p[8])
+    elif len(p) == 10:
+        p[0] = Ellipse(p[3], p[5], p[7], p[9],fill=True)
+
 # IF statements
 
 def p_if_stmt(p):
@@ -403,8 +411,6 @@ def p_rectangle_stmt(p):
                       | RECTANGLE FILL expr COMMA expr COMMA expr COMMA expr
                       | RECTANGLE FILL expr COMMA expr COMMA expr TO expr COMMA expr
                       | RECTANGLE FILL expr COMMA expr COMMA expr COMMA expr TO expr COMMA expr                      
-                      | RECTANGLE SWAP expr COMMA expr COMMA expr
-                      | RECTANGLE SWAP expr COMMA expr COMMA expr COMMA expr
                       | RECTANGLE SWAP expr COMMA expr COMMA expr TO expr COMMA expr
                       | RECTANGLE SWAP expr COMMA expr COMMA expr COMMA expr TO expr COMMA expr'''    
     
@@ -422,11 +428,9 @@ def p_rectangle_stmt(p):
         p[0] = Rectangle(p[2], p[4], p[6], p[8], p[10], p[12])
     elif len(p) == 8:    #unsure if this is how to impliment this    
         #RECTANGLE FILL expr COMMA expr COMMA expr
-        #RECTANGLE SWAP expr COMMA expr COMMA expr
         p[0] = Rectangle(p[3], p[5], p[7], p[7], rectType = p[2])
     elif len(p) == 10:
         #RECTANGLE FILL expr COMMA expr COMMA expr COMMA expr
-        #RECTANGLE SWAP expr COMMA expr COMMA expr COMMA expr
         p[0] = Rectangle(p[3], p[5], p[7], p[9], rectType = p[2])
     elif len(p) == 12:
         #RECTANGLE FILL expr COMMA expr COMMA expr TO expr COMMA expr
