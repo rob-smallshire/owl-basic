@@ -77,8 +77,8 @@ def p_stmt_terminator(p):
                  | library_stmt
                  | line_stmt
                  | local_stmt
-                 | mode_stmt
-                 | mouse_stmt    IAN
+                 | mode_stmt     IAN needs ATTN commented out
+                 | mouse_stmt    IAN needs ATTN commented out
                  | oscli_stmt
                  | proc_stmt
                  | quit_stmt
