@@ -71,7 +71,6 @@ def p_stmt_terminator(p):
     '''stmt_body : beats_stmt
                  | chain_stmt
                  | dim_stmt
-                 | envelope_stmt   IAN
                  | gosub_stmt
                  | goto_stmt       
                  | input_stmt
@@ -127,6 +126,7 @@ def p_stmt_body(p):
                  | def_stmt
                  | draw_stmt
                  | ellipse_stmt
+                 | envelope_stmt
                  | fill_stmt
                  | gcol_stmt
                  | if_stmt
@@ -291,6 +291,10 @@ def p_ellipse_stmt(p):
         p[0] = Ellipse(p[2], p[4], p[6], p[8])
     elif len(p) == 10:
         p[0] = Ellipse(p[3], p[5], p[7], p[9],fill=True)
+
+def p_envelope_stmt(p):
+    '''envelope_stmt : ENVELOPE expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr'''
+    p[0] = Envelope(p[2],p[4],p[6],p[8],p[10],p[12],p[14],p[16],p[18],p[20],p[22],p[24],p[26],p[28] )
 
 def p_fill_stmt(p):
     '''fill_stmt : FILL expr COMMA expr

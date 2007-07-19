@@ -217,6 +217,71 @@ class Ellipse(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
+class Envelope(AstNode):
+    def __init__(self, n, t, pitch1, pitch2, pitch3, pNum1, pNum2, pNum3, ampAttack, ampDecay, ampSustain, ampRelease, ala, ald, *args, **kwargs):
+        self.n=n
+        self.t=t
+        self.pitch1 = pitch1
+        self.pitch2 = pitch2
+        self.pitch3 = pitch3
+        self.pNum1 = pNum1
+        self.pNum2 = pNum2
+        self.pNum3 = pNum3
+        self.ampAttack = ampAttack
+        self.ampDecay = ampDecay
+        self.ampSustain = ampSustain
+        self.ampRelease = ampRelease
+        self.ala = ala
+        self.ald = ald
+        super(Envelope, self).__init__(*args, **kwargs)
+               
+    def xml(self, writer):
+        writer.WriteStartElement("Envelope")
+        writer.WriteStartElement("N")
+        self.n.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("T")
+        self.t.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Pitch1")
+        self.pitch1.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Pitch2")
+        self.pitch2.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Pitch3")
+        self.pitch3.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("PNum1")
+        self.pNum1.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("PNum2")
+        self.pNum2.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("PNum3")
+        self.pNum3.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("AmpAttack")
+        self.ampAttack.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("AmpDecay")
+        self.ampDecay.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("AmpSustain")
+        self.ampSustain.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("AmpRelease")
+        self.ampRelease.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Ala")
+        self.ala.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Ald")
+        self.ald.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+
 class Fill(AstNode):
     def __init__(self, x, y, relative = False, *args, **kwargs):
         self.x = x
