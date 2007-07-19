@@ -646,17 +646,13 @@ def p_expr(p):
     p[0] = p[1]
 
 def p_expr_unary_op(p):
-    'expr_unary_op : unary_op expr'
-    p[0] = UnaryOp(p[1], p[2]) # TODO: Use an operator factory here
-
-def p_unary_op(p):
-    '''unary_op : unary_query
-                | unary_pling
-                | unary_pipe
-                | unary_dollar
-                | unary_not
-                | unary_plus
-                | unary_minus'''
+    '''expr_unary_op : unary_query
+                     | unary_pling
+                     | unary_pipe
+                     | unary_dollar
+                     | unary_not
+                     | unary_plus
+                     | unary_minus'''
     p[0] = p[1]
     
 def p_unary_query(p):
