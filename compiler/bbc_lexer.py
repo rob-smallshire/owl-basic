@@ -744,7 +744,7 @@ def t_LITERAL_STRING(t):
     return t
 
 def t_LITERAL_FLOAT(t):
-    r'[+-]?\d*\.\d+(E([+-]?\d+))?'
+    r'\d*\.\d+(E([+-]?\d+))?'
     try:
         t.value = float(t.value)
     except ValueError:
