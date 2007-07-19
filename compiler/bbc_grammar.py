@@ -78,7 +78,7 @@ def p_stmt_terminator(p):
                  | line_stmt
                  | local_stmt
                  | mode_stmt
-                 | mouse_stmt
+                 | mouse_stmt    IAN
                  | oscli_stmt
                  | proc_stmt
                  | quit_stmt
@@ -398,6 +398,32 @@ def p_move_stmt(p):
         p[0] = Move(p[2], p[4])
     elif len(p) == 6:
         p[0] = Move(p[3], p[5], True)
+
+#def p_mouse_stmt(p):
+#    '''mouse_stmt : MOUSE expr COMMA expr COMMA expr
+#                  | MOUSE ON
+#                  | MOUSE ON expr
+#                  | MOUSE OFF
+#                  | MOUSE TO expr COMMA expr
+#                  | MOUSE RECTANGLE expr COMMA expr COMMA expr COMMA expr
+#                  | MOUSE RECTANGLE OFF'''
+#    if len(p) == 7:
+#        #MOUSE expr COMMA expr COMMA expr
+#        p[0] = Mouse(p[2], p[4], p[6])
+#    elif len(p) == 3:
+#        #MOUSE ON
+#        #MOUSE OFF
+#        p[0] = Mouse(onOff = p[2]) # need to detect if it is ON or OFF
+#    elif len(p) == 4:
+#        #MOUSE ON expr
+#        #MOUSE RECTANGLE OFF
+#        p[0] = Mouse(shape = p[3]) # need help here. depend on p[2] depends of what params to send 
+#    elif len(p) == 6:
+#        #MOUSE TO expr COMMA expr
+#        p[0] = Mouse(moveX = p[3], moveY = p[5])
+#    elif len(p) == 10:
+#        #MOUSE RECTANGLE expr COMMA expr COMMA expr COMMA expr
+#        p[0] = Mouse(rectL = p[3], rectB = p[5], rectW = p[7], rectH = p[9])
 
 def p_origin_stmt(p):
     '''origin_stmt : ORIGIN expr COMMA expr'''
