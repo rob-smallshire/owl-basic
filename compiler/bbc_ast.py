@@ -190,12 +190,13 @@ class Draw(AstNode):
         writer.WriteEndElement()
 
 class Ellipse(AstNode):
-    def __init__(self, x, y, hrad, vrad, fill=False, *args, **kwargs):
+    def __init__(self, x, y, hrad, vrad, rotate=None, fill=False, *args, **kwargs):
         self.x = x
         self.y = y
         self.hrad = hrad
         self.vrad = vrad
         self.fill = fill
+        self.rotate = rotate
         super(Ellipse, self).__init__(*args, **kwargs)
                
     def xml(self, writer):
@@ -215,6 +216,10 @@ class Ellipse(AstNode):
         writer.WriteStartElement("VRad")
         self.vrad.xml(writer)
         writer.WriteEndElement()
+        if self.rotate:
+            writer.WriteStartElement("Rotate")
+            self.rotate.xml(writer)
+            writer.WriteEndElement()
         writer.WriteEndElement()
 
 class Envelope(AstNode):

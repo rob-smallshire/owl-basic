@@ -286,13 +286,20 @@ def p_draw_stmt(p):
     elif len(p) == 6:
         p[0] = Draw(p[3], p[5], True)
 
-def p_ellipse_stmt(p):
+def p_ellipse_stmt(p): # BBC BASIC V also supports rotation of an ellipse
     '''ellipse_stmt : ELLIPSE expr COMMA expr COMMA expr COMMA expr
-                    | ELLIPSE FILL expr COMMA expr COMMA expr COMMA expr'''
+                    | ELLIPSE FILL expr COMMA expr COMMA expr COMMA expr
+                    | ELLIPSE expr COMMA expr COMMA expr COMMA expr COMMA expr
+                    | ELLIPSE FILL expr COMMA expr COMMA expr COMMA expr COMMA expr'''
+
     if len(p) == 9:
         p[0] = Ellipse(p[2], p[4], p[6], p[8])
     elif len(p) == 10:
         p[0] = Ellipse(p[3], p[5], p[7], p[9],fill=True)
+    elif len(p) == 11:
+        p[0] = Ellipse(p[2], p[4], p[6], p[8], p[10], fill=True)
+    elif len(p) == 12:
+        p[0] = Ellipse(p[3], p[5], p[7], p[9], p[11], fill=True)
 
 def p_envelope_stmt(p):
     '''envelope_stmt : ENVELOPE expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr'''
