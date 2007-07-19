@@ -77,7 +77,7 @@ def p_stmt_terminator(p):
                  | library_stmt
                  | line_stmt
                  | local_stmt
-                 | mode_stmt     IAN needs ATTN commented out
+                 | mode_stmt     IAN
                  | mouse_stmt    IAN needs ATTN commented out
                  | oscli_stmt
                  | proc_stmt
@@ -399,9 +399,9 @@ def p_move_stmt(p):
     elif len(p) == 6:
         p[0] = Move(p[3], p[5], True)
 
-#def p_mode_stmt(p):
-#    '''mode_stmt : MODE numeric'''    # may need a new type unless i use expr
-#    p[0] = Mode(p[2])
+def p_mode_stmt(p):
+    '''mode_stmt : MODE expr'''
+    p[0] = Mode(p[2])
 
 #def p_mouse_stmt(p):
 #    '''mouse_stmt : MOUSE expr COMMA expr COMMA expr
