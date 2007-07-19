@@ -77,8 +77,7 @@ def p_stmt_terminator(p):
                  | library_stmt
                  | line_stmt
                  | local_stmt
-                 | mode_stmt     IAN
-                 | mouse_stmt    IAN needs ATTN commented out
+                 | mouse_stmt    IAN needs ATTN commented out Also Real BASIC V has more options
                  | oscli_stmt
                  | proc_stmt
                  | quit_stmt
@@ -131,6 +130,7 @@ def p_stmt_body(p):
                  | if_stmt
                  | for_stmt
                  | let_stmt
+                 | mode_stmt
                  | move_stmt
                  | origin_stmt
                  | next_stmt
