@@ -255,7 +255,9 @@ def p_def_stmt(p):
     '''def_stmt : def_fn_stmt
                 | def_proc_stmt'''
     p[0] = p[1]
-    
+
+# The statement list needs to be modified so there can be more
+# than one point of return form functions
 def p_def_fn_stmt(p):
     '''def_fn_stmt : DEF FN ID EQ expr
                    | DEF FN ID LPAREN formal_arg_list RPAREN EQ expr
@@ -271,9 +273,9 @@ def p_def_proc_stmt(p):
     '''def_proc_stmt : DEF PROC ID statement_list ENDPROC
                      | DEF PROC ID LPAREN formal_arg_list RPAREN statement_list ENDPROC'''
     if len(p) == 6:
-        p[0] = DefineFunction(p[3], None, p[4])
+        p[0] = DefineProcedure(p[3], None, p[4])
     elif len(p) == 9:
-        p[0] = DefineFunction(p[3], p[5], p[7])
+        p[0] = DefineProcedure(p[3], p[5], p[7])
 
 # DRAW statements
 def p_draw_stmt(p):
@@ -652,9 +654,9 @@ def p_unary_op(p):
                 | unary_pling
                 | unary_pipe
                 | unary_dollar
-                | unary_not'''
-#                | unary_plus
-#                | unary_minus
+                | unary_not
+                | unary_plus
+                | unary_minus'''
     p[0] = p[1]
     
 def p_unary_query(p):
@@ -673,13 +675,13 @@ def p_unary_dollar(p):
     'unary_dollar : DOLLAR expr %prec UDOLLAR'
     p[0] = IndirectString(p[2])
     
-#def p_unary_minus(p):
-#    'unary_minus : MINUS expr %prec UMINUS'
-#    p[0] = UnaryMinus(p[2])
+def p_unary_minus(p):
+    'unary_minus : MINUS expr %prec UMINUS'
+    p[0] = UnaryMinus(p[2])
     
-#def p_unary_plus(p):
-#    'unary_plus : PLUS expr %prec UPLUS'
-#    p[0] = UnaryPlus(p[2])
+def p_unary_plus(p):
+    'unary_plus : PLUS expr %prec UPLUS'
+    p[0] = UnaryPlus(p[2])
     
 def p_unary_not(p):
     'unary_not : NOT expr %prec NOT'
