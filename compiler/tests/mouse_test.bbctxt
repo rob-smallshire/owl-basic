@@ -1,7 +1,7 @@
 REM Testing the mouse routines
 
-MOUSE x,y,b
-MOUSE x,y,b,t
+MOUSE x, y, b
+MOUSE x, y, b, t
 
 MOUSE ON
 MOUSE ON 5
@@ -16,4 +16,4 @@ MOUSE RECTANGLE OFF
 MOUSE STEP 5
 MOUSE STEP 3,7
 
-MOUSE COLOUR a,255,127,15
+REM MOUSE COLOUR a,255,127,15

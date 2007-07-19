@@ -77,7 +77,6 @@ def p_stmt_terminator(p):
                  | library_stmt
                  | line_stmt
                  | local_stmt
-                 | mouse_stmt    IAN needs ATTN commented out Also Real BASIC V has more options
                  | oscli_stmt
                  | proc_stmt
                  | quit_stmt
@@ -131,6 +130,7 @@ def p_stmt_body(p):
                  | for_stmt
                  | let_stmt
                  | mode_stmt
+                 | mouse_stmt
                  | move_stmt
                  | origin_stmt
                  | next_stmt
@@ -403,31 +403,56 @@ def p_mode_stmt(p):
     '''mode_stmt : MODE expr'''
     p[0] = Mode(p[2])
 
-#def p_mouse_stmt(p):
-#    '''mouse_stmt : MOUSE expr COMMA expr COMMA expr
-#                  | MOUSE ON
-#                  | MOUSE ON expr
-#                  | MOUSE OFF
-#                  | MOUSE TO expr COMMA expr
-#                  | MOUSE RECTANGLE expr COMMA expr COMMA expr COMMA expr
-#                  | MOUSE RECTANGLE OFF'''
-#    if len(p) == 7:
-#        #MOUSE expr COMMA expr COMMA expr
-#        p[0] = Mouse(p[2], p[4], p[6])
-#    elif len(p) == 3:
-#        #MOUSE ON
-#        #MOUSE OFF
-#        p[0] = Mouse(onOff = p[2]) # need to detect if it is ON or OFF
-#    elif len(p) == 4:
-#        #MOUSE ON expr
-#        #MOUSE RECTANGLE OFF
-#        p[0] = Mouse(shape = p[3]) # need help here. depend on p[2] depends of what params to send 
-#    elif len(p) == 6:
-#        #MOUSE TO expr COMMA expr
-#        p[0] = Mouse(moveX = p[3], moveY = p[5])
-#    elif len(p) == 10:
-#        #MOUSE RECTANGLE expr COMMA expr COMMA expr COMMA expr
-#        p[0] = Mouse(rectL = p[3], rectB = p[5], rectW = p[7], rectH = p[9])
+def p_mouse_stmt(p):
+    '''mouse_stmt : MOUSE variable COMMA variable COMMA variable
+                  | MOUSE variable COMMA variable COMMA variable COMMA variable
+                  | MOUSE ON
+                  | MOUSE ON expr
+                  | MOUSE OFF
+                  | MOUSE TO expr COMMA expr
+                  | MOUSE RECTANGLE expr COMMA expr COMMA expr COMMA expr
+                  | MOUSE RECTANGLE OFF
+                  | MOUSE STEP expr
+                  | MOUSE STEP expr COMMA expr
+                  | MOUSE COLOUR expr COMMA expr COMMA expr COMMA expr'''
+    #nested IF is to see that the p[2] contains
+    if str(p[2]) == 'ON':
+        if len(p) == 3:
+            #MOUSE ON
+            p[0] = MousePointer(pointer = 0) # default if not supplied =0
+        elif len(p) == 4:
+            #MOUSE ON expr
+            p[0] = MousePointer(pointer = p[3])
+    elif str(p[2]) == 'OFF':
+        #MOUSE OFF
+        p[0] = MousePointer(off = True)
+    elif str(p[2]) == 'TO':
+        #MOUSE TO
+        p[0] = MousePointer(toX = p[3], toY = p[5])
+    elif str(p[2]) == 'RECTANGLE':
+        if len(p) == 10:
+            #MOUSE RECTANGLE
+            p[0] = MouseRectangle(p[3], p[5], p[7], p[9])
+        elif len(p) == 4:
+            #MOUSE RECTANGLE OFF
+            p[0] = MouseRectangle(off=True)
+    elif str(p[2]) == 'STEP':
+        if len(p) == 4:
+            #MOUSE STEP expr
+            p[0] = MouseStep(p[3])
+        if len(p) == 6:
+            #MOUSE STEP expr COMMA expr
+            p[0] = MouseStep(p[3], p[5])
+    elif str(p[2]) == 'COLOUR':    #Not sure if i need to check for COLOR
+        #MOUSE COLOUR expr COMMA expr COMMA expr COMMA expr
+        p[0] = MouseColour(p[3], p[5], p[7], p[9])
+    else:
+        if len(p) == 7:
+            #MOUSE variable COMMA variable COMMA variable
+            p[0] = Mouse(p[2], p[4], p[6])
+        elif len(p) == 9:
+            #MOUSE variable COMMA variable COMMA variable COMMA variable
+            p[0] = Mouse(p[2], p[4], p[6], p[8])
 
 def p_origin_stmt(p):
     '''origin_stmt : ORIGIN expr COMMA expr'''

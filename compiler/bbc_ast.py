@@ -281,7 +281,6 @@ class Envelope(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-
 class Fill(AstNode):
     def __init__(self, x, y, relative = False, *args, **kwargs):
         self.x = x
@@ -370,6 +369,130 @@ class Mode(AstNode):
         self.mode.xml(writer)
         writer.WriteEndElement()
 
+class Mouse(AstNode):
+    def __init__(self, x, y, b, t=None, *args, **kwargs):
+        self.x = x
+        self.y = y
+        self.b = b
+        self.t = t
+        super(Mouse, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Mouse")
+        writer.WriteStartElement("X")
+        self.x.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Y")
+        self.y.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Button")
+        self.b.xml(writer)
+        writer.WriteEndElement()
+        if self.t:
+            writer.WriteStartElement("Time")
+            self.t.xml(writer)
+            writer.WriteEndElement()            
+        writer.WriteEndElement()
+
+class MouseStep(AstNode):
+    def __init__(self, x, y=None, *args, **kwargs):
+        self.x = x
+        self.y = y
+        super(MouseStep, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("MouseStep")
+        writer.WriteStartElement("X")
+        self.x.xml(writer)
+        writer.WriteEndElement()
+        if self.y:
+            writer.WriteStartElement("Y")
+            self.y.xml(writer)
+            writer.WriteEndElement()
+        writer.WriteEndElement()
+
+class MouseColour(AstNode):
+    def __init__(self, attrib, r, g, b, *args, **kwargs):
+        self.attrib = attrib
+        self.r = r
+        self.g = g
+        self.b = b
+        super(MouseColour, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("MouseColour")
+        writer.WriteStartElement("Attrib")
+        self.attrib.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("R")
+        self.r.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("G")
+        self.g.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("B")
+        self.b.xml(writer)
+        writer.WriteEndElement()            
+        writer.WriteEndElement()
+
+class MousePointer(AstNode):
+    def __init__(self, toX=None, toY=None, pointer= None, off=None, *args, **kwargs):
+        self.toX = toX
+        self.toY = toY
+        self.pointer = pointer
+        self.off = off
+        super(MousePointer, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("MousePointer")
+        if self.toX:
+            writer.WriteStartElement("ToX")
+            self.toX.xml(writer)
+            writer.WriteEndElement()
+        if self.toY:
+            writer.WriteStartElement("ToY")
+            self.toY.xml(writer)
+            writer.WriteEndElement()
+        if self.pointer:
+            writer.WriteStartElement("Type")
+            self.pointer.xml(writer)
+            writer.WriteEndElement()
+        if self.off:
+            writer.WriteStartElement("Off")
+            #self.off.xml(writer)              #unsure if tag here is enough
+            writer.WriteEndElement()            
+        writer.WriteEndElement()
+
+class MouseRectangle(AstNode):
+    def __init__(self, left=None, bottom=None, width=None, height=None, off=None, *args, **kwargs):
+        self.left = left
+        self.bottom = bottom
+        self.width = width
+        self.height = height
+        self.off = off
+        super(MouseRectangle, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("MouseRectangle")
+        if self.off:
+           writer.WriteStartAttribute("OFF")
+           writer.WriteString(str(self.off))
+           writer.WriteEndAttribute()
+        if self.left and self.bottom and self.width and self.height:
+            writer.WriteStartElement("Left")
+            self.left.xml(writer)
+            writer.WriteEndElement()
+            writer.WriteStartElement("Bottom")
+            self.bottom.xml(writer)
+            writer.WriteEndElement()
+            writer.WriteStartElement("Width")
+            self.width.xml(writer)
+            writer.WriteEndElement()
+            writer.WriteStartElement("Height")
+            self.height.xml(writer)
+            writer.WriteEndElement()            
+        writer.WriteEndElement()
+            
 class Origin(AstNode):
     def __init__(self, x, y, *args, **kwargs):
         self.x = x
@@ -654,7 +777,6 @@ class ExpressionList(AstNode):
 class UnaryOp(AstNode):
     def __init__(self, *args, **kwargs):
         super(UnaryOp, self).__init__(*args, **kwargs)
-
     
 class BinaryMathOp(AstNode):
     def __init__(self, operator, lhs, rhs, *args, **kwargs):
