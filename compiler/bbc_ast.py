@@ -360,6 +360,18 @@ class Move(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
+#class Mode(AstNode):
+#    def __init__(self, mode, *args, **kwargs):
+#        self.mode = mode
+#        super(Mode, self).__init__(*args, **kwargs)
+#        
+#    def xml(self, writer):
+#        writer.WriteStartElement("Mode")
+#        writer.WriteStartElement("X")
+#        self.mode.xml(writer)
+#        writer.WriteEndElement()
+#        writer.WriteEndElement()
+
 class Origin(AstNode):
     def __init__(self, x, y, *args, **kwargs):
         self.x = x
