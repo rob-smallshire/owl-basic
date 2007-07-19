@@ -489,7 +489,37 @@ class Rectangle(AstNode):
             self.y2.xml(writer)                          # Unknown Why this fails
             writer.WriteEndElement()
         writer.WriteEndElement()        
-        
+
+class Sound(AstNode):
+    def __init__(self, channel = None, amplitude = None, pitch = None, duration = None, off=False, *args, **kwargs):
+        self.channel = channel
+        self.amplitude = amplitude
+        self.pitch = pitch
+        self.duration = duration
+        self.off = off
+        super(Sound, self).__init__(*args, **kwargs)
+               
+    def xml(self, writer):
+        writer.WriteStartElement("Sound")
+        if self.off:
+            writer.WriteStartAttribute("OFF")
+            writer.WriteString(str(self.off))
+            writer.WriteEndAttribute()
+        else:
+            writer.WriteStartElement("Channel")
+            self.channel.xml(writer)
+            writer.WriteEndElement()
+            writer.WriteStartElement("Amplitude")
+            self.amplitude.xml(writer)
+            writer.WriteEndElement()
+            writer.WriteStartElement("Pitch")
+            self.pitch.xml(writer)
+            writer.WriteEndElement()
+            writer.WriteStartElement("Duration")
+            self.duration.xml(writer)
+            writer.WriteEndElement()
+        writer.WriteEndElement()
+
 class TabH(AstNode):
     def __init__(self, h, *args, **kwargs):
         self.h_expr = h

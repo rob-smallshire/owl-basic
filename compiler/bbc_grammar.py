@@ -87,7 +87,6 @@ def p_stmt_terminator(p):
                  | report_stmt
                  | restore_stmt
                  | return_stmt
-                 | sound_stmt      IAN
                  | swap_stmt       IAN
                  | sys_stmt        
                  | tempo_stmt
@@ -138,6 +137,7 @@ def p_stmt_body(p):
                  | plot_stmt
                  | print_stmt
                  | rectangle_stmt
+                 | sound_stmt
                  | vdu_stmt'''
     if p[1]:
         p[0] = Statement(p[1])
@@ -491,7 +491,14 @@ def p_rectangle_stmt(p):
         #RECTANGLE FILL expr COMMA expr COMMA expr COMMA expr TO expr COMMA expr
         #RECTANGLE SWAP expr COMMA expr COMMA expr COMMA expr TO expr COMMA expr
         p[0] = Rectangle(p[3], p[5], p[7], p[9], p[11], p[13], p[2])
-        
+
+def p_sound_stmt(p):
+    '''sound_stmt : SOUND expr COMMA expr COMMA expr COMMA expr
+                  | SOUND OFF'''
+    if len(p) == 9:
+        p[0] = Sound(p[2], p[4], p[6], p[8])
+    elif len(p) == 3:
+        p[0] = Sound(off=True)
                     
 def p_tab(p):
     '''tab : TAB_LPAREN expr RPAREN
