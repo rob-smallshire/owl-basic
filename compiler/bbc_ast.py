@@ -217,6 +217,26 @@ class Ellipse(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
+class Fill(AstNode):
+    def __init__(self, x, y, relative = False, *args, **kwargs):
+        self.x = x
+        self.y = y
+        self.relative = relative
+        super(Fill, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Fill")
+        writer.WriteStartAttribute("relative")
+        writer.WriteString(str(self.relative))
+        writer.WriteEndAttribute()
+        writer.WriteStartElement("X")
+        self.x.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Y")
+        self.y.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
 class Gcol(AstNode):
     #arguments on this class are transposed in comparison to BBC Basic
     def __init__(self, col, mode=None, *args, **kwargs):
@@ -290,7 +310,32 @@ class Origin(AstNode):
         self.y.xml(writer)
         writer.WriteEndElement()
         writer.WriteEndElement()
-    
+
+class Plot(AstNode):
+    def __init__(self, x, y, mode=None, relative = False, *args, **kwargs):
+        self.x = x
+        self.y = y
+        self.relative = relative
+        self.mode = mode
+        super(Plot, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Plot")
+        writer.WriteStartAttribute("relative")
+        writer.WriteString(str(self.relative))
+        writer.WriteEndAttribute()
+        writer.WriteStartElement("X")
+        self.x.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Y")
+        self.y.xml(writer)
+        writer.WriteEndElement()
+        if self.mode:
+            writer.WriteStartElement("Mode")
+            self.mode.xml(writer)
+            writer.WriteEndElement()            
+        writer.WriteEndElement()
+
 class Print(AstNode):
     def __init__(self, print_list=None, *args, **kwargs):
         self.print_list = print_list

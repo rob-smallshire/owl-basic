@@ -72,7 +72,6 @@ def p_stmt_terminator(p):
                  | chain_stmt
                  | dim_stmt
                  | envelope_stmt   IAN
-                 | fill_stmt       IAN
                  | gosub_stmt
                  | goto_stmt       
                  | input_stmt
@@ -82,7 +81,6 @@ def p_stmt_terminator(p):
                  | mode_stmt
                  | mouse_stmt
                  | oscli_stmt
-                 | plot_stmt       IAN
                  | proc_stmt
                  | quit_stmt
                  | read_stmt
@@ -129,6 +127,7 @@ def p_stmt_body(p):
                  | def_stmt
                  | draw_stmt
                  | ellipse_stmt
+                 | fill_stmt
                  | gcol_stmt
                  | if_stmt
                  | for_stmt
@@ -136,6 +135,7 @@ def p_stmt_body(p):
                  | move_stmt
                  | origin_stmt
                  | next_stmt
+                 | plot_stmt
                  | print_stmt
                  | rectangle_stmt
                  | vdu_stmt'''
@@ -292,6 +292,14 @@ def p_ellipse_stmt(p):
     elif len(p) == 10:
         p[0] = Ellipse(p[3], p[5], p[7], p[9],fill=True)
 
+def p_fill_stmt(p):
+    '''fill_stmt : FILL expr COMMA expr
+                 | FILL BY expr COMMA expr'''
+    if len(p) == 5:
+        p[0] = Fill(p[2], p[4])
+    elif len(p) == 6:
+        p[0] = Fill(p[3], p[5], True)
+
 def p_gcol_stmt(p):
     '''gcol_stmt : GCOL expr
                  | GCOL expr COMMA expr'''
@@ -390,7 +398,20 @@ def p_move_stmt(p):
 def p_origin_stmt(p):
     '''origin_stmt : ORIGIN expr COMMA expr'''
     p[0] = Origin(p[2], p[4])
-        
+
+def p_plot_stmt(p):
+    '''plot_stmt : PLOT expr COMMA expr
+                 | PLOT expr COMMA expr COMMA expr
+                 | PLOT BY expr COMMA expr'''
+    if len(p) == 5:
+        #PLOT expr COMMA expr
+        p[0] = Plot(p[2], p[4])
+    elif len(p) == 6:
+        #PLOT BY expr COMMA expr
+        p[0] = Plot(p[3], p[5], relative=True)
+    elif len(p) == 7:
+        #PLOT expr COMMA expr COMMA expr
+        p[0] = Plot(p[4], p[6], p[2])
 # Print related rules       
         
 def p_print_stmt(p):
