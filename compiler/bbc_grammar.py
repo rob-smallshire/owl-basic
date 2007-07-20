@@ -226,6 +226,7 @@ def p_colour_stmt(p):
     '''colour_stmt : COLOUR expr
                    | COLOUR expr COMMA expr
                    | COLOUR expr COMMA expr COMMA expr COMMA expr'''
+#                   | COLOUR expr TINT expr
     if len(p) == 3:
         p[0] = Colour(p[2])
     elif len(p) == 5:
