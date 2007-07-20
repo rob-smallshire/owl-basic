@@ -68,6 +68,7 @@ tokens = (
     'ASN',
     'ATN',
     'BGET',
+    'BEATS',
     'COS',
     'COUNT',
     'DEG',
@@ -308,6 +309,10 @@ def t_REPEAT(t):
 
 def t_ADVAL(t):
     r'ADVAL'
+    return t
+
+def t_BEATS(t):
+    r'BEATS'
     return t
 
 def t_CHAIN(t):

@@ -34,7 +34,7 @@ class StatementList(AstNode):
     
     def append(self, statement):
         self.statements.append(statement)
-        
+
     def xml(self, writer):
         writer.WriteStartElement("StatementList")
         for statement in self.statements:
@@ -42,9 +42,20 @@ class StatementList(AstNode):
                 statement.xml(writer)
         writer.WriteEndElement()
 
+class Beats(AstNode):
+    def __init__(self, expression, *args, **kwargs):
+        self.expression = expression
+        super(Beats, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Beats")
+        self.expression.xml(writer)
+        writer.WriteEndElement()
+
 class Channel(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
+        super(Channel, self).__init__(*args, **kwargs)
         
     def xml(self, writer):
         writer.WriteStartElement("Channel")

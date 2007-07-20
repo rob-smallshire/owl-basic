@@ -1,0 +1,6 @@
+REM test the beats Statement
+
+BEATS x
+BEATS 1000
+
+REM a=BEATS

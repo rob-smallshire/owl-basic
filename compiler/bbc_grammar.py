@@ -68,8 +68,7 @@ def p_stmt_terminator(p):
 #    p[0] = p[1]
                 
 # TODO: Statements to be implemented
-    '''stmt_body : beats_stmt
-                 | chain_stmt
+    '''stmt_body : chain_stmt
                  | dim_stmt
                  | gosub_stmt
                  | goto_stmt       
@@ -79,13 +78,14 @@ def p_stmt_terminator(p):
                  | local_stmt
                  | oscli_stmt
                  | proc_stmt
+                 | point_stmt      Ian this does exist in basic V to plot a point as well as function
                  | quit_stmt
                  | read_stmt
                  | repeat_stmt
                  | report_stmt
-                 | restore_stmt
+                 | restore_stmt    PAGE 69 BBCBASIC.PDF - RESTORE +offset???
                  | return_stmt
-                 | swap_stmt       IAN
+                 | swap_stmt       IAN    statement to swap the values of two variables or arrays.
                  | sys_stmt        
                  | tempo_stmt
                  | tint_stmt
@@ -111,6 +111,7 @@ def p_lone_stmt_body(p):
 # or in compound statements on one line
 def p_stmt_body(p):
     '''stmt_body : empty_stmt
+                 | beats_stmt
                  | bput_stmt
                  | call_stmt
                  | circle_stmt
@@ -186,6 +187,10 @@ def p_when_clause(p):
         p[0] = OtherwiseClause(p[2])
 
 # TODO CHAIN stmt
+
+def p_beats_stmt(p):
+    '''beats_stmt : BEATS expr'''
+    p[0] = Beats(p[2])
 
 # CIRCLE stmt
 def p_circle_stmt(p):
