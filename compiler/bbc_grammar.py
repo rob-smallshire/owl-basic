@@ -306,7 +306,10 @@ def p_ellipse_stmt(p): # BBC BASIC V also supports rotation of an ellipse
         p[0] = Ellipse(p[2], p[4], p[6], p[8], p[10], fill=True)
     elif len(p) == 12:
         p[0] = Ellipse(p[3], p[5], p[7], p[9], p[11], fill=True)
-
+def p_error_stmt(p):
+    '''errpr_stmt : ERROR expr COMMA expr'''
+    p[0] = GenerateError(p[2], p[4])
+    
 def p_envelope_stmt(p):
     '''envelope_stmt : ENVELOPE expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr'''
     p[0] = Envelope(p[2],p[4],p[6],p[8],p[10],p[12],p[14],p[16],p[18],p[20],p[22],p[24],p[26],p[28] )

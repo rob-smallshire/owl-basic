@@ -233,6 +233,21 @@ class Ellipse(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
+class GenerateError(AstNode):
+    def __init__(self, errNo, errDesc, *args, **kwargs):
+        self.errNo = errNo
+        self.errDesc = errDesc
+        super(GenerateError, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Envelope")
+        writer.WriteStartElement("N")
+        self.n.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("T")
+        self.t.xml(writer)
+        writer.WriteEndElement()
+
 class Envelope(AstNode):
     def __init__(self, n, t, pitch1, pitch2, pitch3, pNum1, pNum2, pNum3, ampAttack, ampDecay, ampSustain, ampRelease, ala, ald, *args, **kwargs):
         self.n=n
