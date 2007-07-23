@@ -422,6 +422,10 @@ def t_LINE(t):
     r'LINE'
     return t
 
+def t_LIBRARY(t):
+    r'LIBRARY'
+    return t
+
 def t_MODE(t):
     r'MODE'
     return t
