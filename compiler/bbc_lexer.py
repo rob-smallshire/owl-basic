@@ -149,6 +149,7 @@ tokens = (
     'IF',
     'INPUT',
     'LET',
+    'LIBRARY',
     'LOCAL',
     'MODE',
     'MOVE',

@@ -73,7 +73,6 @@ def p_stmt_terminator(p):
                  | gosub_stmt
                  | goto_stmt       
                  | input_stmt
-                 | library_stmt
                  | line_stmt
                  | local_stmt
                  | oscli_stmt
@@ -125,10 +124,13 @@ def p_stmt_body(p):
                  | draw_stmt
                  | ellipse_stmt
                  | envelope_stmt
+                 | error_stmt
                  | fill_stmt
                  | gcol_stmt
+                 | install_stmt
                  | if_stmt
                  | for_stmt
+                 | library_stmt
                  | let_stmt
                  | mode_stmt
                  | mouse_stmt
@@ -307,7 +309,7 @@ def p_ellipse_stmt(p): # BBC BASIC V also supports rotation of an ellipse
     elif len(p) == 12:
         p[0] = Ellipse(p[3], p[5], p[7], p[9], p[11], fill=True)
 def p_error_stmt(p):
-    '''errpr_stmt : ERROR expr COMMA expr'''
+    '''error_stmt : ERROR expr COMMA expr'''
     p[0] = GenerateError(p[2], p[4])
     
 def p_envelope_stmt(p):
@@ -329,6 +331,12 @@ def p_gcol_stmt(p):
         p[0] = Gcol(p[2])
     elif len(p) == 5:
         p[0] = Gcol(p[4], p[2])
+
+def p_install_stmt(p):
+    '''install_stmt : INSTALL expr'''
+    if len(p) == 3:
+        #INSTALL expression
+        p[0] = Install(p[2])
 
 # IF statements
 
@@ -399,6 +407,10 @@ def p_variable_list(p):
         p[0] = p[1]
     
 # Assignment
+
+def p_library_stmt(p):
+    '''library_stmt : LIBRARY expr'''
+    p[0] = AddLibrary(p[2])
 
 def p_let_stmt(p):
     '''let_stmt : LET variable EQ expr

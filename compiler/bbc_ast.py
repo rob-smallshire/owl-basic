@@ -350,6 +350,18 @@ class Gcol(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
+class Install(AstNode):
+    def __init__(self, expression, *args, **kwargs):
+        self.expression = expression
+        super(Install, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Install")
+        writer.WriteStartElement("expression")
+        self.expression.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
 class If(AstNode):
     def __init__(self, condition, true_clause, false_clause, *args, **kwargs):
         self.condition = expression
@@ -367,6 +379,18 @@ class If(AstNode):
         writer.WriteEndElement()
         writer.WriteStartElement("FalseClause")
         self.false_clause.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+class AddLibrary(AstNode):
+    def __init__(self, expression, *args, **kwargs):
+        self.expression = expression
+        super(AddLibrary, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Library")
+        writer.WriteStartElement("expression")
+        self.expression.xml(writer)
         writer.WriteEndElement()
         writer.WriteEndElement()
 
