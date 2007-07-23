@@ -152,8 +152,12 @@ def p_empty_stmt(p):
 
 # BPUT statement
 def p_bput_stmt(p):
-    '''bput_stmt : BPUT channel COMMA expr'''
-    p[0] = Bput(p[2], p[4])
+    '''bput_stmt : BPUT channel COMMA expr
+                 | BPUT channel COMMA expr SEMICOLON'''
+    if len(p) == 5:
+        p[0] = Bput(p[2], p[4], newline=True)
+    elif len(p) == 6:
+        p[0] = Bput(p[2], p[4], newline=False)
     
 # CALL statement
 def p_call_stmt(p):
@@ -831,6 +835,7 @@ def p_expr_group(p):
 
 # TODO: Functions to be implemented
 '''    expr_function : adval_func
+                     | beat_func
                      | deg_func
                      | dim_func
                      | end_func

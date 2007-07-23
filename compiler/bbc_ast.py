@@ -79,17 +79,25 @@ class Assignment(AstNode):
         writer.WriteEndElement()
 
 class Bput(AstNode):
-    def __init__(self, channel, expression, *args, **kwargs):
+    def __init__(self, channel, expression, newline=False, *args, **kwargs):
         self.channel = channel
         self.expr = expression
+        # TODO: Whether newline is True or False depends on
+        #       the type of expression.  If expr is a number,
+        #       we default to False, if expr is a string we
+        #       default to True.
+        self.newline = newline
         super(Bput, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
         writer.WriteStartElement("Bput")
         self.channel.xml(writer)
-        writer.WriteStartElement("Byte")
+        writer.WriteStartElement("Bytes")
         self.expr.xml(writer)
         writer.WriteEndElement()
+        writer.WriteStartAttribute("newline")
+        writer.WriteString(str(self.newline))
+        writer.WriteEndAttribute()
         writer.WriteEndElement()  
         
 class Case(AstNode):
