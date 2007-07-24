@@ -837,30 +837,221 @@ class ExpressionList(AstNode):
             expr.xml(writer)
         writer.WriteEndElement()
         
-class UnaryOp(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(UnaryOp, self).__init__(*args, **kwargs)
-    
-class BinaryMathOp(AstNode):
+class UnaryPlus(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        super(UnaryPlus, self).__init__(*args, **kwargs)
+        self.expr = expr
+        
+    def xml(self, writer):
+        writer.WriteStartElement("UnaryPlus")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
+
+class UnaryMinus(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        super(UnaryMinus, self).__init__(*args, **kwargs)
+        self.expr = expr
+        
+    def xml(self, writer):
+        writer.WriteStartElement("UnaryMinus")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
+
+class UnaryByteIndirection(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(UnaryByteIndirection, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("UnaryByteIndirection")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
+
+class UnaryIntegerIndirection(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(UnaryIntegerIndirection, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("UnaryIntegerIndirection")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
+
+class UnaryStringIndirection(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(UnaryStringIndirection, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("UnaryStringIndirection")
+        self.expr.xml(writer)
+        writer.WriteEndElement()    
+
+class UnaryFloatIndirection(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(UnaryFloatIndirection, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("UnaryFloatIndirection")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
+
+class DyadicByteIndirection(AstNode):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        self.lhs = lhs
+        self.rhs = rhs
+        super(DyadicByteIndirection, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("DyadicByteIndirection")
+        writer.WriteStartElement("Left")
+        self.lhs.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Right")
+        self.rhs.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+class DyadicIntegerIndirection(AstNode):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        self.lhs = lhs
+        self.rhs = rhs
+        super(DyadicIntegerIndirection, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("DyadicIntegerIndirection")
+        writer.WriteStartElement("Left")
+        self.lhs.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Right")
+        self.rhs.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+class Not(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(Not, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Not")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
+
+class BinaryOperator(AstNode):
     def __init__(self, operator, lhs, rhs, *args, **kwargs):
         self.op = operator
         self.lhs = lhs
         self.rhs = rhs
-        super(BinaryMathOp, self).__init__(*args, **kwargs)
+        super(BinaryOperator, self).__init__(*args, **kwargs)
     
     def xml(self, writer):
         writer.WriteStartElement("BinaryOperator")
         writer.WriteStartAttribute("operator")
-        writer.WriteString(self.op)
+        writer.WriteString(str(self.op))
         writer.WriteEndAttribute()
-        writer.WriteStartAttribute("Left")
+        writer.WriteStartElement("Left")
         self.lhs.xml(writer)
         writer.WriteEndElement()
-        writer.WriteStartAttribute("Right")
+        writer.WriteStartElement("Right")
         self.rhs.xml(writer)
         writer.WriteEndElement()
         writer.WriteEndElement()
-    
+
+class Plus(BinaryOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(Plus, self).__init__('plus', lhs, rhs)
+
+class Minus(BinaryOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(Minus, self).__init__('minus', lhs, rhs)
+
+class Multiply(BinaryOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(Multiply, self).__init__('multiply', lhs, rhs)
+        
+class Divide(BinaryOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(Divide, self).__init__('divide', lhs, rhs)
+
+class IntegerDivide(BinaryOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(IntegerDivide, self).__init__('div', lhs, rhs)
+        
+class IntegerModulus(BinaryOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(IntegerModulus, self).__init__('mod', lhs, rhs)
+
+class Power(BinaryOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(Power, self).__init__('power', lhs, rhs)    
+
+class RelationalOperator(BinaryOperator):
+    def __init__(self, operator, lhs, rhs, *args, **kwargs):
+        super(RelationalOperator, self).__init__(operator, lhs, rhs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("RelationalOperator")
+        writer.WriteStartAttribute("operator")
+        writer.WriteString(str(self.op))
+        writer.WriteEndAttribute()
+        writer.WriteStartElement("Left")
+        self.lhs.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Right")
+        self.rhs.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+class Equal(RelationalOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(RelationalOperator, self).__init__('eq', lhs, rhs)
+
+class NotEqual(RelationalOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(RelationalOperator, self).__init__('ne', lhs, rhs)
+
+class LessThan(RelationalOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(RelationalOperator, self).__init__('lt', lhs, rhs)
+
+class LessThanEqual(RelationalOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(RelationalOperator, self).__init__('lte', lhs, rhs)
+
+class GreaterThan(RelationalOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(RelationalOperator, self).__init__('gt', lhs, rhs)
+
+class GreatThanEqual(RelationalOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(RelationalOperator, self).__init__('gte', lhs, rhs)
+
+class ShiftLeft(BinaryOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(ShiftLeft, self).__init__('shift_left', lhs, rhs)
+
+class ShiftRight(BinaryOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(ShiftRight, self).__init__('shift_right', lhs, rhs)
+        
+class ShiftRightUnsigned(BinaryOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(ShiftRightUnsigned, self).__init__('shift_right_unsigned', lhs, rhs)
+
+class And(BinaryOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(And, self).__init__('and', lhs, rhs)
+
+class Or(BinaryOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(Or, self).__init__('and', lhs, rhs)
+        
+class Eor(BinaryOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(Eor, self).__init__('and', lhs, rhs)
+
 class AbsFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr

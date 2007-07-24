@@ -1,0 +1,4 @@
+BPUT#outputfile,byte%
+BPUT#channel,ASC(MID$(name$,pos,1))
+BPUT#file,"Hello"
+BPUT#chan,A$+B$;

@@ -12,7 +12,7 @@ precedence = (
              ('left', 'PLUS', 'MINUS'),
              ('left', 'TIMES', 'DIVIDE', 'MOD', 'DIV'),
              ('left', 'CARET'),
-             ('left', 'PLING', 'QUERY', 'PIPE', 'DOLLAR'),  # Binary indirection operators
+             ('left', 'PLING', 'QUERY'),  # Binary indirection operators
              ('right', 'FUNCTION', 'NOT', 'UPLUS', 'UMINUS', 'UPLING', 'UQUERY', 'UPIPE', 'UDOLLAR', 'UHASH'), # Unary operators
              )
 
@@ -671,164 +671,100 @@ def p_expr_list(p):
 def p_expr(p):
     '''expr : expr_function
             | expr_group
-            | expr_unary_op
-            | expr_binary_op
+            | expr PLUS expr
+            | expr MINUS expr
+            | expr TIMES expr
+            | expr DIVIDE expr
+            | expr MOD expr
+            | expr DIV expr
+            | expr CARET expr
+            | expr EQ expr
+            | expr NE expr
+            | expr LTE expr
+            | expr GTE expr
+            | expr LT expr
+            | expr GT expr
+            | expr SHIFT_LEFT expr
+            | expr SHIFT_RIGHT expr
+            | expr SHIFT_RIGHT_UNSIGNED expr
+            | expr AND expr
+            | expr OR expr
+            | expr EOR expr
+            | expr QUERY expr
+            | expr PLING expr
+            | QUERY expr %prec UQUERY
+            | PLING expr %prec UPLING
+            | PIPE expr %prec UPIPE
+            | DOLLAR expr %prec UDOLLAR 
+            | PLUS expr %prec UPLUS
+            | MINUS expr %prec UMINUS
+            | NOT expr
             | variable
             | literal'''
-    p[0] = p[1]
+    if len(p) == 4:
+        if p[2] == '+':
+            p[0] = Plus(p[1], p[3])
+        elif p[2] == '-':
+            p[0] = Minus(p[1], p[3])
+        elif p[2] == '*':
+            p[0] = Multiply(p[1], p[3])
+        elif p[2] == '/':
+            p[0] = Divide(p[1], p[3])
+        elif p[2] == 'DIV':
+            p[0] = IntegerDivide(p[1], p[3])
+        elif p[2] == 'MOD':
+            p[0] = IntegerModulus(p[1], p[3])
+        elif p[2] == '^':
+            p[0] = Power(p[1], p[3])
+        elif p[2] == '=':
+            p[0] = Equal(p[1], p[3])
+        elif p[2] == '<>':
+            p[0] = NotEqual(p[1], p[3])
+        elif p[2] == '<':
+            p[0] = LessThan(p[1], p[3])
+        elif p[2] == '<=':
+            p[0] = LessThanEqual(p[1], p[3])
+        elif p[2] == '>':
+            p[0] = GreaterThan(p[1], p[3])
+        elif p[2] == '>=':
+            p[0] = GreaterThanEqual(p[1], p[3])
+        elif p[2] == '<<':
+            p[0] = ShiftLeft(p[1], p[3])
+        elif p[2] == '>>':
+            p[0] = ShiftRight(p[1], p[3])
+        elif p[2] == '>>>':
+            p[0] = ShiftRightUnsigned(p[1], p[3])
+        elif p[2] == '?':
+            # TODO: Ideally we would want to require that the LHS
+            #       of the dyadic indirection operators is a simple
+            #       variable.  Doesn't work yet, though.
+            p[0] = DyadicByteIndirection(p[1], p[3])
+        elif p[2] == '!':
+            p[0] = DyanicIntegerIndirection(p[1], p[3])
+        elif p[2] == 'AND':
+            p[0] = And(p[1], p[3])
+        elif p[2] == 'OR':
+            p[0] = Or(p[1], p[3])
+        elif p[2] == 'EOR':
+            p[0] = Eor(p[1], p[3])
+    elif len(p) == 3:
+        if p[1] == '+':
+            p[0] = UnaryPlus(p[2])
+        elif p[1] == '-':
+            p[0] = UnaryMinus(p[2])
+        elif p[1] == '?':
+            p[0] = UnaryByteIndirection(p[2])
+        elif p[1] == '!':
+            p[0] = UnaryIntegerIndirection(p[2])
+        elif p[1] == '$':
+            p[0] = UnaryStringIndirection(p[2])
+        elif p[1] == '|':
+            p[0] = UnaryFloatIndirection(p[2])
+        elif p[1] == 'NOT':
+            p[0] = Not(p[2])
+    elif len(p) == 2:   
+        p[0] = p[1]
 
-def p_expr_unary_op(p):
-    '''expr_unary_op : unary_query
-                     | unary_pling
-                     | unary_pipe
-                     | unary_dollar
-                     | unary_not
-                     | unary_plus
-                     | unary_minus'''
-    p[0] = p[1]
-    
-def p_unary_query(p):
-    'unary_query : QUERY expr %prec UQUERY'
-    p[0] = IndirectByte(p[2])
-    
-def p_unary_pling(p):
-    'unary_pling : PLING expr %prec UPLING'
-    p[0] = IndirectInteger(p[2])
-    
-def p_unary_pipe(p):
-    'unary_pipe : PIPE expr %prec UPIPE'
-    p[0] = IndirectFloat(p[2])
-    
-def p_unary_dollar(p):
-    'unary_dollar : DOLLAR expr %prec UDOLLAR'
-    p[0] = IndirectString(p[2])
-    
-def p_unary_minus(p):
-    'unary_minus : MINUS expr %prec UMINUS'
-    p[0] = UnaryMinus(p[2])
-    
-def p_unary_plus(p):
-    'unary_plus : PLUS expr %prec UPLUS'
-    p[0] = UnaryPlus(p[2])
-    
-def p_unary_not(p):
-    'unary_not : NOT expr %prec NOT'
-    p[0] = Not(p[2])    
-
-def p_expr_binary_op(p):
-    '''expr_binary_op : binary_indirection_op
-                      | binary_math_op'''
-    p[0] = p[1]
-
-def p_binary_indirection_op(p):
-    '''binary_indirection_op : variable QUERY expr
-                             | variable PLING expr
-                             | variable PIPE expr
-                             | variable DOLLAR expr'''
-    p[0] = BinaryIndirectionOp(p[2], p[1], p[3])
-
-def p_binary_math_op(p):
-    '''binary_math_op : expr PLUS expr'''
-    p[0] = BinaryMathOp(p[2], p[1], p[3])
-
-#def p_binary_math_op(p):
-#    '''binary_math_op : binary_plus_expr
-#                      | binary_minus_expr
-#                      | binary_times_expr
-#                      | binary_divide_expr
-#                      | binary_mod_expr
-#                      | binary_div_expr
-#                      | binary_power_expr
-#                      | binary_eq_expr
-#                      | binary_ne_expr
-#                      | binary_lte_expr
-#                      | binary_gte_expr
-#                      | binary_lt_expr
-#                      | binary_gt_expr
-#                      | binary_shift_left_expr
-#                      | binary_shift_right_expr
-#                      | binary_shift_right_unsigned_expr
-#                      | binary_and_expr
-#                      | binary_or_expr
-#                      | binary_eor_expr'''
-#    p[0] = p[1]
-
-#def binary_plus_expr(p):
-#    'binary_plus_expr : expr PLUS expr'
-#    p[0] = BinaryPlus(p[1], p[3])
-#    
-#def binary_minus_expr(p):
-#    'binary_minus_expr : expr MINUS expr'
-#    p[0] = BinaryMinus(p[1], p[3])
-#
-#def binary_times_expr(p):
-#    'binary_times_expr : expr TIMES expr'
-#    p[0] = BinaryTimes(p[1], p[3])
-#     
-#def binary_divide_expr(p):
-#    'binary_divide_expr : expr DIVIDE expr'
-#    p[0] = BinaryDivide(p[1], p[3])
-#    
-#def binary_mod_expr(p):
-#    'binary_mod_expr : expr MOD expr'
-#    p[0] = BinaryMod(p[1], p[3])
-#
-#def binary_div_expr(p):
-#    'binary_div_expr : expr DIV expr'
-#    p[0] = BinaryDiv(p[1], p[3])
-#
-#def binary_power_expr(p):
-#    'binary_power_expr : expr CARET expr'
-#    p[0] = BinaryPower(p[1], p[3])
-#
-#def binary_eq_expr(p):
-#    'binary_eq_expr : expr EQ expr'
-#    p[0] = BinaryEqual(p[1], p[3])
-#
-#def binary_ne_expr(p):
-#    'binary_ne_expr : expr NE expr'
-#    p[0] = BinaryNotEqual(p[1], p[3])
-#
-#def binary_lte_expr(p):
-#    'binary_lte_expr : expr LTE expr'
-#    p[0] = BinaryLessThanEqual(p[1], p[3])
-#
-#def binary_gte_expr(p):
-#    'binary_gte_expr : expr GTE expr'
-#    p[0] = BinaryGreaterThanEqual(p[1], p[3])
-#
-#def binary_lt_expr(p):
-#    'binary_lt_expr : expr LT expr'
-#    p[0] = BinaryLessThan([1], p[3])
-#
-#def binary_gt_expr(p):
-#    'binary_gt_expr : expr GT expr'
-#    p[0] = BinaryGreaterThan(p[1], p[3])
-#
-#def binary_shift_left_expr(p):
-#    'binary_shift_left_expr : expr SHIFT_LEFT expr'
-#    p[0] = BinaryShiftLeft(p[1], p[3])
-#
-#def binary_shift_right_expr(p):
-#    'binary_shift_right_expr : expr SHIFT_RIGHT expr'
-#    p[0] = BinaryPlus(p[1], p[3])
-#
-#def binary_shift_right_unsigned_expr(p):
-#    'binary_shift_right_unsigned_expr : expr SHIFT_RIGHT_UNSIGNED expr'
-#    p[0] = BinaryShiftRightUnsigned(p[1], p[3])
-#
-#def binary_and_expr(p):
-#    'binary_and_expr : expr AND expr'
-#    p[0] = BinaryAnd(p[1], p[3])
-#
-#def binary_or_expr(p):
-#    'binary_or_expr : expr OR expr'
-#    p[0] = BinaryOr(p[1], p[3])
-#
-#def binary_eor_expr(p):
-#    'binary_eor_expr : expr EOR expr'
-#    p[0] = BinaryEor(p[1], p[3])
-#    
 def p_expr_group(p):
     'expr_group : LPAREN expr RPAREN'
     p[0] = p[2]
@@ -871,10 +807,9 @@ def p_expr_group(p):
                      | usr_func
                      | val_func
                      | vpos_func'''
-    
+
 def p_expr_function(p):
-    '''expr_function : user_func
-                     | abs_func
+    '''expr_function : abs_func
                      | acs_func
                      | asc_func
                      | asn_func
@@ -885,9 +820,9 @@ def p_expr_function(p):
                      | str_str_func'''
     p[0] = p[1]
 
-def p_user_func(p):
-    'user_func : FN ID LPAREN actual_arg_list RPAREN %prec FUNCTION'
-    p[0] = UserFunc(p[2], p[3])
+#def p_user_func(p):
+#    'user_func : FN ID LPAREN actual_arg_list RPAREN %prec FUNCTION'
+#    p[0] = UserFunc(p[2], p[3])
      
 def p_abs_func(p):
     'abs_func : ABS expr %prec FUNCTION'
@@ -963,9 +898,7 @@ def p_variable(p):
     'variable : ID'
     p[0] = Variable(p[1])
 
-
 # Error rule for syntax errors
 def p_error(p):
     print "Syntax error in input!"
-
-        
+    print p
