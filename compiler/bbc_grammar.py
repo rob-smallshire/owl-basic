@@ -416,15 +416,51 @@ def p_library_stmt(p):
     '''library_stmt : LIBRARY expr'''
     p[0] = AddLibrary(p[2])
 
+
 def p_let_stmt(p):
-    '''let_stmt : LET variable EQ expr
-                | variable EQ expr'''
+    '''let_stmt : assignment
+                | increment
+                | decrement'''
+    p[0] = p[1]
+    
+def p_assignment(p):
+    '''assignment : LET variable EQ expr
+                  | LET array EQ array_expr
+                  | LET indexer EQ expr
+                  | variable EQ expr
+                  | array EQ array_expr
+                  | indexer EQ expr
+                  | '''
     if len(p) == 5:
         p[0] = Assignment(p[2], p[4])
     elif len(p) == 4:
         p[0] = Assignment(p[1], p[3])
+
+def p_increment(p):
+    '''increment : LET variable PLUS_ASSIGN expr
+                 | LET array PLUS_ASSIGN expr
+                 | LET indexer PLUS_ASSIGN expr
+                 | variable PLUS_ASSIGN expr
+                 | array PLUS_ASSIGN expr
+                 | indexer PLUS_ASSIGN expr'''
+    if len(p) == 5:
+        p[0] = Increment(p[2], p[4])
+    elif len(p) == 4:
+        p[0] = Increment(p[1], p[3])
+
+def p_decrement(p):
+    '''decrement : LET variable MINUS_ASSIGN expr
+                 | LET array MINUS_ASSIGN expr
+                 | LET indexer MINUS_ASSIGN expr
+                 | variable MINUS_ASSIGN expr
+                 | array MINUS_ASSIGN expr
+                 | indexer MINUS_ASSIGN expr'''
+    if len(p) == 5:
+        p[0] = Decrement(p[2], p[4])
+    elif len(p) == 4:
+        p[0] = Decrement(p[1], p[3])
         
-        # DRAW statements
+# MOVE statement
 def p_move_stmt(p):
     '''move_stmt : MOVE expr COMMA expr
                  | MOVE BY expr COMMA expr'''
@@ -659,6 +695,34 @@ def p_formal_arg(p):
 
 # Expressions
 
+def p_factor(p):
+    '''factor : literal
+              | variable
+              | expr_group
+              | expr_function
+              | indexer
+              | QUERY expr %prec UQUERY
+              | PLING expr %prec UPLING
+              | PIPE expr %prec UPIPE
+              | DOLLAR expr %prec UDOLLAR 
+              | PLUS expr %prec UPLUS
+              | MINUS expr %prec UMINUS'''
+    if len(p) == 2:
+        p[0] = p[1]
+    elif len(p) == 3:
+        if p[1] == '+':
+            p[0] = UnaryPlus(p[2])
+        elif p[1] == '-':
+            p[0] = UnaryMinus(p[2])
+        elif p[1] == '?':
+            p[0] = UnaryByteIndirection(p[2])
+        elif p[1] == '!':
+            p[0] = UnaryIntegerIndirection(p[2])
+        elif p[1] == '$':
+            p[0] = UnaryStringIndirection(p[2])
+        elif p[1] == '|':
+            p[0] = UnaryFloatIndirection(p[2])
+
 def p_expr_list(p):
     '''expr_list : expr
                  | expr_list COMMA expr'''
@@ -668,9 +732,9 @@ def p_expr_list(p):
         p[1].append(p[3])
         p[0] = p[1]
 
+# TODO : Should any of these expressions take factors rather than expr as operands
 def p_expr(p):
-    '''expr : expr_function
-            | expr_group
+    '''expr : factor
             | expr PLUS expr
             | expr MINUS expr
             | expr TIMES expr
@@ -691,17 +755,10 @@ def p_expr(p):
             | expr OR expr
             | expr EOR expr
             | expr QUERY expr
-            | expr PLING expr
-            | QUERY expr %prec UQUERY
-            | PLING expr %prec UPLING
-            | PIPE expr %prec UPIPE
-            | DOLLAR expr %prec UDOLLAR 
-            | PLUS expr %prec UPLUS
-            | MINUS expr %prec UMINUS
-            | NOT expr
-            | variable
-            | literal'''
-    if len(p) == 4:
+            | expr PLING expr'''
+    if len(p) == 2:
+        p[0] = p[1]
+    elif len(p) == 4:
         if p[2] == '+':
             p[0] = Plus(p[1], p[3])
         elif p[2] == '-':
@@ -747,23 +804,7 @@ def p_expr(p):
             p[0] = Or(p[1], p[3])
         elif p[2] == 'EOR':
             p[0] = Eor(p[1], p[3])
-    elif len(p) == 3:
-        if p[1] == '+':
-            p[0] = UnaryPlus(p[2])
-        elif p[1] == '-':
-            p[0] = UnaryMinus(p[2])
-        elif p[1] == '?':
-            p[0] = UnaryByteIndirection(p[2])
-        elif p[1] == '!':
-            p[0] = UnaryIntegerIndirection(p[2])
-        elif p[1] == '$':
-            p[0] = UnaryStringIndirection(p[2])
-        elif p[1] == '|':
-            p[0] = UnaryFloatIndirection(p[2])
-        elif p[1] == 'NOT':
-            p[0] = Not(p[2])
-    elif len(p) == 2:   
-        p[0] = p[1]
+        
 
 def p_expr_group(p):
     'expr_group : LPAREN expr RPAREN'
@@ -794,7 +835,6 @@ def p_expr_group(p):
                      | pi_func
                      | point_func
                      | pos_func
-                     | rad_func
                      | report_str_func
                      | rnd_func
                      | sgn_func
@@ -817,7 +857,13 @@ def p_expr_function(p):
                      | chr_str_func
                      | cos_func
                      | count_func
-                     | str_str_func'''
+                     | mod_func
+                     | not_func
+                     | sin_func
+                     | rad_func
+                     | str_str_func
+                     | sum_func
+                     | sumlen_func'''
     p[0] = p[1]
 
 #def p_user_func(p):
@@ -825,15 +871,15 @@ def p_expr_function(p):
 #    p[0] = UserFunc(p[2], p[3])
      
 def p_abs_func(p):
-    'abs_func : ABS expr %prec FUNCTION'
+    'abs_func : ABS factor %prec FUNCTION'
     p[0] = AbsFunc(p[2])
     
 def p_acs_func(p):
-    'acs_func : ACS expr %prec FUNCTION'
+    'acs_func : ACS factor %prec FUNCTION'
     p[0] = AcsFunc(p[2])
 
 def p_asn_func(p):
-    'asn_func : ASN expr %prec FUNCTION'
+    'asn_func : ASN factor %prec FUNCTION'
     p[0] = AsnFunc(p[2])
 
 def p_str_str_func(p):
@@ -872,9 +918,80 @@ def p_count_func(p):
     'count_func : COUNT %prec FUNCTION'
     p[0] = CountFunc(p[2])  
 
+def p_mod_func(p):
+    'mod_func : MOD array %prec FUNCTION'
+    p[0] = ArrayRootMeanSquare(p[2])
+
+def p_not_func(p):
+    'not_func : NOT factor %prec FUNCTION'
+    p[0] = Not(p[2])
+
+def p_rad_func(p):
+    'rad_func : RAD factor %prec FUNCTION'
+    p[0] = RadFunc(p[2])
+
+def p_sin_func(p):
+    'sin_func : SIN factor %prec FUNCTION'
+    p[0] = SinFunc(p[2])
+
+def p_sum_func(p):
+    'sum_func : SUM array %prec FUNCTION'
+    p[0] = ArraySum(p[2])
+    
+def p_sumlen_func(p):
+    'sumlen_func : SUMLEN array %prec FUNCTION'
+    p[0] = ArraySumLen(p[2])
+
+# Channels
 def p_channel(p):
-    '''channel : HASH expr %prec UHASH'''
+    '''channel : HASH factor %prec UHASH'''
     p[0] = Channel(p[2])
+
+# Array support
+def p_array(p):
+    'array : ARRAYID_LPAREN RPAREN'
+    p[0] = Array(p[1])
+    
+def p_array_indexer(p):
+    'indexer : ARRAYID_LPAREN expr_list RPAREN'
+    p[0] = Indexer(p[1], p[2])
+    
+# TODO: Is PLUS array for unary plus allowed?
+def p_array_expr(p):
+    '''array_expr : array
+                  | factor
+                  | expr_list
+                  | MINUS array
+                  | array PLUS array
+                  | array MINUS array
+                  | array TIMES array
+                  | array DIVIDE array
+                  | array PLUS factor
+                  | factor PLUS array
+                  | array MINUS factor
+                  | factor MINUS array
+                  | array TIMES factor
+                  | factor TIMES array
+                  | array DIVIDE factor
+                  | factor DIVIDE array
+                  | array DOT array
+                  | '''
+    if len(p) == 2:
+        p[0] = p[1]
+    elif len(p) == 3:
+        if p[1] == '-':
+            p[0] = UnaryMinus(p[2])
+    elif len(p) == 4:
+        if p[2] == '+':
+            p[0] = Plus(p[1], p[3])
+        elif p[2] == '-':
+            p[0] = Minus(p[1], p[3])
+        elif p[2] == '*':
+            p[0] = Multiply(p[1], p[3])
+        elif p[2] == '/':
+            p[0] = Divide(p[1], p[3])
+        elif p[2] == '.':
+            p[0] = MatrixMultiply(p[1], p[3])
 
 def p_literal(p):
     '''literal : literal_string

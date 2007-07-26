@@ -1,13 +1,13 @@
 REM Some sample envelopes from the BBC Guide
-REM ENVELOPE 1,1,0,0,0,0,0,0,2,0,-10,-5,120,0
-REM ENVELOPE 2,3,0,0,0,0,0,0,121,-10,-5,-2,120,120
-REM ENVELOPE 3,7,2,1,1,1,1,1,121,-10,-5,-2,120,120
-REM ENVELOPE 4,1,0,0,0,0,0,0,61,0,-10,-120,120,0
+ENVELOPE 1,1,0,0,0,0,0,0,2,0,-10,-5,120,0
+ENVELOPE 2,3,0,0,0,0,0,0,121,-10,-5,-2,120,120
+ENVELOPE 3,7,2,1,1,1,1,1,121,-10,-5,-2,120,120
+ENVELOPE 4,1,0,0,0,0,0,0,61,0,-10,-120,120,0
 
 REM two test lines here bottom one passes top one dosnt
 REM i think its to do with 'expr' not accepting prefix of minus
 
-REM ENVELOPE 1,8,1,-1,1,1,1,1,121,-10,-5,-2,120,1
+ENVELOPE 1,8,1,-1,1,1,1,1,121,-10,-5,-2,120,1
 ENVELOPE 1,8,1,1,1,1,1,1,121,10,5,2,120,1
 
 ENVELOPE N, T, PI1, PI2, PI3, PN1, PN2, PN3, AA, AD, AS, AR, ALA, ALD

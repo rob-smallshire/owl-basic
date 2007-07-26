@@ -3,6 +3,7 @@
 tokens = (
     'EOL',
     'ID',
+    'ARRAYID_LPAREN',
     'LITERAL_STRING',
     'LITERAL_FLOAT',
     'LITERAL_INTEGER',
@@ -114,6 +115,7 @@ tokens = (
     'STRING_STR_LPAREN',
     'EOF',
     'SUM',
+    'SUMLEN',
     'WHILE',
     'CASE',
     'WHEN',
@@ -304,6 +306,10 @@ def t_POINT_LPAREN(t):
 
 def t_REPEAT(t):
     r'REPEAT'
+    return t
+
+def t_SUMLEN(t):
+    r'SUMLEN'
     return t
 
 # Five letter keywords
@@ -691,16 +697,18 @@ reserved = {
 
 # Identifiers
 
+def t_ARRAYID_LPAREN(t):
+    r'[a-zA-Z_`][a-zA-Z_0-9`]*[$%&]?\('
+    t.type = reserved.get(t.value, 'ARRAYID_LPAREN')
+    return t
+
+# TODO: Cannot use @ symbol at the beginning of
+#       any variable name. @% is a special variable
 def t_ID(t):
     r'[@a-zA-Z_`][a-zA-Z_0-9`]*[$%&]?'
     # Ampersand and hash suffixes only apply to BBC BASIC for Windows
     t.type = reserved.get(t.value, 'ID') # Check for reserved identifiers
     return t
-
-# Keywords after this point are allowed at
-# the start of variable names
-
-
 
 # Operators
 t_QUERY = r'\?'

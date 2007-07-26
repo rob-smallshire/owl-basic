@@ -78,6 +78,38 @@ class Assignment(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
+class Increment(AstNode):
+    def __init__(self, identifier, expression, *args, **kwargs):
+        self.lvalue = identifier
+        self.rvalue = expression
+        super(Increment, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Increment")
+        writer.WriteStartElement("LValue")
+        self.lvalue.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("RValue")
+        self.rvalue.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+class Decrement(AstNode):
+    def __init__(self, identifier, expression, *args, **kwargs):
+        self.lvalue = identifier
+        self.rvalue = expression
+        super(Decrement, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Decrement")
+        writer.WriteStartElement("LValue")
+        self.lvalue.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("RValue")
+        self.rvalue.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+        
 class Bput(AstNode):
     def __init__(self, channel, expression, newline=False, *args, **kwargs):
         self.channel = channel
@@ -780,6 +812,32 @@ class Variable(AstNode):
         writer.WriteEndAttribute()
         writer.WriteEndElement()
 
+class Array(AstNode):
+    def __init__(self, name, *args, **kwargs):
+        self.name = name
+        super(Array, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Array")
+        writer.WriteStartAttribute("name")
+        writer.WriteString(self.name)
+        writer.WriteEndAttribute()
+        writer.WriteEndElement()
+        
+class Indexer(AstNode):
+    def __init__(self, name, indices, *args, **kwargs):
+        self.name = name
+        self.indices = indices
+        super(Indexer, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Indexer")
+        writer.WriteStartAttribute("name")
+        writer.WriteString(self.name)
+        writer.WriteEndAttribute()
+        self.indices.xml(writer)
+        writer.WriteEndElement()    
+
 class Vdu(AstNode):
     def __init__(self, list=None, *args, **kwargs):
         self.list = list
@@ -975,6 +1033,10 @@ class Divide(BinaryOperator):
     def __init__(self, lhs, rhs, *args, **kwargs):
         super(Divide, self).__init__('divide', lhs, rhs)
 
+class MatrixMultiply(BinaryOperator):
+    def __init__(self, lhs, rhs, *args, **kwargs):
+        super(MatrixMultiply, self).__init__('matrix_multiply', lhs, rhs)
+
 class IntegerDivide(BinaryOperator):
     def __init__(self, lhs, rhs, *args, **kwargs):
         super(IntegerDivide, self).__init__('div', lhs, rhs)
@@ -1131,6 +1193,26 @@ class CountFunc(AstNode):
         writer.WriteStartElement("Count")
         self.expr.xml(writer)
         writer.WriteEndElement()  
+
+class RadFunc(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(RadFunc, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Rad")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
+
+class SinFunc(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(SinFunc, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Sin")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
         
 class StrStringFunc(AstNode):
     def __init__(self, expr, base=10, *args, **kwargs):
@@ -1145,7 +1227,7 @@ class StrStringFunc(AstNode):
         writer.WriteEndElement()
         self.expr.xml(writer)
         writer.WriteEndElement()
-        
+
 class LiteralString(AstNode):
     def __init__(self, value, *args, **kwargs):
         self.value = value
