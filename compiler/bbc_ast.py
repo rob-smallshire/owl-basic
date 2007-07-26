@@ -185,6 +185,16 @@ class OtherwiseClause(AstNode):
         self.statement_list.xml(writer)
         writer.WriteEndElement()
 
+class Data(AstNode):
+    def __init__(self, data, *args, **kwargs):
+        self.data = data
+        super(Data, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Data")
+        writer.WriteString(str(self.data))
+        writer.WriteEndElement()
+
 class ForToStep(AstNode):
     def __init__(self, identifier, start, end, step, *args, **kwargs):
         self.identifier = identifier

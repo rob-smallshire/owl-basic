@@ -242,26 +242,8 @@ def p_colour_stmt(p):
                    
 # DATA
 def p_data_statement(p):
-    'data_stmt : DATA data_list'
-    p[0] = Data(p[2])
-
-# TODO: There is a serious challenge here, since the DATA list items
-#       may consist of unquoted keywords such as PRINT    
-def p_data_list(p):
-    '''data_list : data_item
-                 | data_list COMMA data_item'''
-    if len(p) == 2:
-        p[0] = DataList(p[1])
-    elif len(p) == 4:
-        p[0] = DataList(p[1], p[2])
-
-# The manual says that "numeric values may include a calculation
-# so long as there are no keywords
-def p_data_item(p):
-    '''data_item : LITERAL_INTEGER
-                 | LITERAL_FLOAT
-                 | LITERAL_STRING
-                 | ID''' # Symbols converted into non-quoted strings
+    'data_stmt : DATA'
+    p[0] = Data(p[1])
 
 def p_def_stmt(p):
     '''def_stmt : def_fn_stmt

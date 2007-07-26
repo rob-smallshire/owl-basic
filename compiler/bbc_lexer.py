@@ -1,5 +1,7 @@
 # BBC BASIC Lexer
 
+import re
+
 tokens = (
     'EOL',
     'ID',
@@ -393,7 +395,16 @@ def t_CHR_STR(t):
     return t
 
 def t_DATA(t):
-    r'DATA'
+    r'DATA[^\n]*'
+    # Note: Data captures everything until the
+    #       end of the line. The data items are
+    #       not tokenized at this point.
+    print ">>>%s<<<" % t.value
+    # TODO Strip trailing whitespace before the
+    # line end
+    m = re.match(r'DATA\s+([^\n]+)', t.value)
+    print m
+    t.value = m.group(1)
     return t
 
 def t_DRAW(t):
