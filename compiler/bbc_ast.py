@@ -1,6 +1,6 @@
 # Abstract Syntax Tree for BBC# Basic
 
-#import csv
+import re
 
 class AstNode(object):
     def __init__(self, *args, **kwargs):
@@ -194,12 +194,25 @@ class Data(AstNode):
     
     def parse(self, data):
         "Parse the text following a DATA statement into items"
-        reader = csv.reader([data])
-        self.items = reader.next()
+        # Break the data into fields
+        raw_items = re.findall(r'(?:\s*"((?:[^"]+|"")*)"(?!")\s*)|([^,]+)', data)
+        items = []
+        for i, (quoted, unquoted) in enumerate(raw_items):
+            if quoted:
+                item = quoted.replace('""', '"')
+            else:
+                item = unquoted.lstrip()
+                # If its the last item on the line, strip trailing space
+                if i == len(raw_items) - 1:
+                    item = item.rstrip()
+            items.append(item)
+        print items
+        return items
+        
         
     def xml(self, writer):
         writer.WriteStartElement("Data")
-        for item in items:
+        for item in self.items:
             writer.WriteStartElement("Item")
             writer.WriteString(str(item))
             writer.WriteEndElement()
