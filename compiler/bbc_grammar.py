@@ -807,7 +807,7 @@ def p_expr_group(p):
 '''    expr_function : 
                      
                      
-                     | dim_func
+                     
                      | end_func
                      | eof_func
                      | erl_func
@@ -849,10 +849,11 @@ def p_expr_function(p):
                      | asn_func
                      | beat_func
                      | bget_func
-                     | deg_func
                      | chr_str_func
                      | cos_func
                      | count_func
+                     | deg_func
+                     | dim_func
                      | mod_func
                      | not_func
                      | sin_func
@@ -909,6 +910,15 @@ def p_count_func(p):
 def p_deg_func(p):
     'deg_func : DEG factor %prec FUNCTION'
     p[0] = DegFunc(p[2])
+
+def p_dim_func(p):
+    '''dim_func : DIM_LPAREN array RPAREN
+                | DIM_LPAREN array COMMA expr RPAREN'''
+    if len(p) == 4:
+        p[0] = DimensionsFunc(p[2])
+    elif len(p) == 6:
+        p[0] = DimensionSizeFunc(p[2], p[4])
+    
 
 def p_mod_func(p):
     'mod_func : MOD array %prec FUNCTION'

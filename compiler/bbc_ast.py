@@ -1275,6 +1275,30 @@ class DegFunc(AstNode):
         self.expr.xml(writer)
         writer.WriteEndElement()
 
+class DimensionsFunc(AstNode):
+    def __init__(self, array, *args, **kwargs):
+        self.array = array
+        super(DimensionsFunc, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("DimensionsFunc")
+        self.array.xml(writer)
+        writer.WriteEndElement()
+        
+class DimensionSizeFunc(AstNode):
+    def __init__(self, array, expr, *args, **kwargs):
+        self.array = array
+        self.expr = expr
+        super(DimensionSizeFunc, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("DimensionSizeFunc")
+        self.array.xml(writer)
+        writer.WriteStartElement("Dimension")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
 class RadFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr

@@ -142,6 +142,7 @@ tokens = (
     'DATA',
     'DEF',
     'DIM',
+    'DIM_LPAREN',
     'DRAW',
     'END',
     'ENDPROC',
@@ -403,12 +404,12 @@ def t_DATA(t):
     # Note: Data captures everything until the
     #       end of the line. The data items are
     #       not tokenized at this point.
-    print ">>>%s<<<" % t.value
-    # TODO Strip trailing whitespace before the
-    # line end
     m = re.match(r'DATA\s+([^\n]+)', t.value)
-    print m
     t.value = m.group(1)
+    return t
+
+def t_DIM_LPAREN(t):
+    r'DIM\('
     return t
 
 def t_DRAW(t):
