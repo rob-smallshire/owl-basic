@@ -69,9 +69,7 @@ def p_stmt_terminator(p):
                 
 # TODO: Statements to be implemented
     '''stmt_body : chain_stmt
-                 | dim_stmt
-                 | gosub_stmt
-                 | goto_stmt       
+                 | dim_stmt    
                  | input_stmt
                  | line_stmt
                  | local_stmt
@@ -806,7 +804,7 @@ def p_expr_group(p):
     p[0] = p[2]
 
 # TODO: Functions to be implemented
-'''    expr_function : adval_func
+'''    expr_function : 
                      | beat_func
                      | deg_func
                      | dim_func
@@ -844,7 +842,8 @@ def p_expr_group(p):
                      | vpos_func'''
 
 def p_expr_function(p):
-    '''expr_function : abs_func
+    '''expr_function : adval_func
+                     | abs_func
                      | acs_func
                      | asc_func
                      | asn_func
@@ -872,6 +871,10 @@ def p_abs_func(p):
 def p_acs_func(p):
     'acs_func : ACS factor %prec FUNCTION'
     p[0] = AcsFunc(p[2])
+
+def p_adval_func(p):
+    'adval_func : ADVAL factor %prec FUNCTION'
+    p[0] = AdvalFunc(p[2])
 
 def p_asn_func(p):
     'asn_func : ASN factor %prec FUNCTION'

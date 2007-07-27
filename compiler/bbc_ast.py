@@ -1187,6 +1187,16 @@ class AcsFunc(AstNode):
         self.expr.xml(writer)
         writer.WriteEndElement()
 
+class AdvalFunc(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(AdvalFunc, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Adval")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
+
 class AscFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
