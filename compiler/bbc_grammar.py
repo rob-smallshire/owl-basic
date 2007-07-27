@@ -805,7 +805,7 @@ def p_expr_group(p):
 
 # TODO: Functions to be implemented
 '''    expr_function : 
-                     | beat_func
+                     
                      | deg_func
                      | dim_func
                      | end_func
@@ -847,6 +847,7 @@ def p_expr_function(p):
                      | acs_func
                      | asc_func
                      | asn_func
+                     | beat_func
                      | bget_func
                      | chr_str_func
                      | cos_func
@@ -879,26 +880,14 @@ def p_adval_func(p):
 def p_asn_func(p):
     'asn_func : ASN factor %prec FUNCTION'
     p[0] = AsnFunc(p[2])
-
-def p_str_str_func(p):
-    '''str_str_func : str_str_dec_func
-                    | str_str_hex_func'''
-    if len(p) == 3:
-        p[0] = StrStringFunc(p[2])
-    elif len(p) == 4:
-        p[0] = StrStringFunc(p[3], 16) # Base 16 conversion
-
-def p_str_str_dec_func(p):
-    'str_str_dec_func : STR_STR expr %prec FUNCTION'
-    p[0] = StrStringFunc(p[2], 10)
-    
-def p_str_str_hex_func(p):
-    'str_str_hex_func : STR_STR TILDE expr %prec FUNCTION'
-    p[0] = StrStringFunc(p[2], 16)
            
 def p_asc_func(p):
     'asc_func : ASC expr %prec FUNCTION'
     p[0] = AscFunc(p[2])
+    
+def p_beat_func(p):
+    'beat_func : BEAT %prec FUNCTION'
+    p[0] = BeatFunc()
     
 def p_bget_func(p):
     'bget_func : BGET channel %prec FUNCTION'
@@ -931,7 +920,22 @@ def p_rad_func(p):
 def p_sin_func(p):
     'sin_func : SIN factor %prec FUNCTION'
     p[0] = SinFunc(p[2])
+    
+def p_str_str_func(p):
+    '''str_str_func : str_str_dec_func
+                    | str_str_hex_func'''
+    if len(p) == 3:
+        p[0] = StrStringFunc(p[2])
+    elif len(p) == 4:
+        p[0] = StrStringFunc(p[3], 16) # Base 16 conversion
 
+def p_str_str_dec_func(p):
+    'str_str_dec_func : STR_STR expr %prec FUNCTION'
+    p[0] = StrStringFunc(p[2], 10)
+    
+def p_str_str_hex_func(p):
+    'str_str_hex_func : STR_STR TILDE expr %prec FUNCTION'
+    p[0] = StrStringFunc(p[2], 16)
 def p_sum_func(p):
     'sum_func : SUM array %prec FUNCTION'
     p[0] = ArraySum(p[2])

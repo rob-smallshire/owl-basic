@@ -9,7 +9,6 @@ tokens = (
     'LITERAL_STRING',
     'LITERAL_FLOAT',
     'LITERAL_INTEGER',
- #   'LITERAL_WORD_STRING',
     'QUERY',
     'PLING',
     'PIPE',
@@ -71,6 +70,7 @@ tokens = (
     'ASN',
     'ATN',
     'BGET',
+    'BEAT',
     'BEATS',
     'COS',
     'COUNT',
@@ -385,6 +385,10 @@ def t_WIDTH(t):
     return t
 
 # Four letter keywords
+
+def t_BEAT(t):
+    r'BEAT'
+    return t
 
 def t_CASE(t):
     r'CASE'

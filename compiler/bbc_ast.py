@@ -1216,7 +1216,15 @@ class AsnFunc(AstNode):
         writer.WriteStartElement("Asn")
         self.expr.xml(writer)
         writer.WriteEndElement()
- 
+
+class BeatFunc(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(BeatFunc, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Beat")
+        writer.WriteEndElement()
+
 class BgetFunc(AstNode):
     def __init__(self, channel, *args, **kwargs):
         self.channel = expr
