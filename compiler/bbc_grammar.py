@@ -806,7 +806,7 @@ def p_expr_group(p):
 # TODO: Functions to be implemented
 '''    expr_function : 
                      
-                     | deg_func
+                     
                      | dim_func
                      | end_func
                      | eof_func
@@ -849,6 +849,7 @@ def p_expr_function(p):
                      | asn_func
                      | beat_func
                      | bget_func
+                     | deg_func
                      | chr_str_func
                      | cos_func
                      | count_func
@@ -904,6 +905,10 @@ def p_cos_func(p):
 def p_count_func(p):
     'count_func : COUNT %prec FUNCTION'
     p[0] = CountFunc(p[2])  
+
+def p_deg_func(p):
+    'deg_func : DEG factor %prec FUNCTION'
+    p[0] = DegFunc(p[2])
 
 def p_mod_func(p):
     'mod_func : MOD array %prec FUNCTION'

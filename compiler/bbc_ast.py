@@ -1265,6 +1265,16 @@ class CountFunc(AstNode):
         self.expr.xml(writer)
         writer.WriteEndElement()  
 
+class DegFunc(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(DegFunc, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Deg")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
+
 class RadFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
