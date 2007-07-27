@@ -1,5 +1,7 @@
 # Abstract Syntax Tree for BBC# Basic
 
+#import csv
+
 class AstNode(object):
     def __init__(self, *args, **kwargs):
         pass
@@ -187,12 +189,20 @@ class OtherwiseClause(AstNode):
 
 class Data(AstNode):
     def __init__(self, data, *args, **kwargs):
-        self.data = data
+        self.items = self.parse(data)
         super(Data, self).__init__(*args, **kwargs)
+    
+    def parse(self, data):
+        "Parse the text following a DATA statement into items"
+        reader = csv.reader([data])
+        self.items = reader.next()
         
     def xml(self, writer):
         writer.WriteStartElement("Data")
-        writer.WriteString(str(self.data))
+        for item in items:
+            writer.WriteStartElement("Item")
+            writer.WriteString(str(item))
+            writer.WriteEndElement()
         writer.WriteEndElement()
 
 class ForToStep(AstNode):
@@ -398,6 +408,26 @@ class Gcol(AstNode):
             writer.WriteStartElement("Mode")
             self.mode.xml(writer)
             writer.WriteEndElement()
+        writer.WriteEndElement()
+
+class Goto(AstNode):
+    def __init__(self, line, *args, **kwargs):
+        self.line = line
+        super(Goto, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Goto")
+        self.line.xml(writer)
+        writer.WriteEndElement()
+
+class Gosub(AstNode):
+    def __init__(self, line, *args, **kwargs):
+        self.line = line
+        super(Gosub, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Gosub")
+        self.line.xml(writer)
         writer.WriteEndElement()
 
 class Install(AstNode):

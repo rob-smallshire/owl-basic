@@ -127,6 +127,8 @@ def p_stmt_body(p):
                  | error_stmt
                  | fill_stmt
                  | gcol_stmt
+                 | goto_stmt
+                 | gosub_stmt
                  | install_stmt
                  | if_stmt
                  | for_stmt
@@ -324,6 +326,16 @@ def p_install_stmt(p):
         #INSTALL expression
         p[0] = Install(p[2])
 
+# GOTO statement
+def p_goto_stmt(p):
+    '''goto_stmt : GOTO factor'''
+    p[0] = Goto(p[2])
+    
+# GOSUB statement
+def p_gosub(p):
+    '''gosub_stmt : GOSUB factor'''
+    p[0] = Gosub(p[2])
+
 # IF statements
 
 def p_if_stmt(p):
@@ -350,7 +362,8 @@ def p_if_single_stmt(p):
 # is interpreted as a line number to GOTO    
 def p_clause(p):
     '''clause : compound_statement
-              | expr'''
+              | factor'''
+    # TODO If is a factor - insert a Goto node
     p[0] = p[1]
                           
 def p_if_multi_stmt(p):
