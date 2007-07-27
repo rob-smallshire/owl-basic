@@ -17,6 +17,8 @@ import ply.yacc as yacc
 import bbc_lexer
 import bbc_grammar
 
+from errors import warning
+
 def tokenize(data):
     # Give the lexer some input
     lex.input(data)
@@ -40,6 +42,11 @@ if __name__ == '__main__':
     f = open(filename, 'r')
     data = f.read()
     f.close()
+    
+    if not data.endswith('\n'):
+        warning(1, "Missing newline at end of file")
+        data += '\n'
+    
     
     # Build the lexer and parser
     lex.lex(bbc_lexer)
