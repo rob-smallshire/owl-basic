@@ -1,0 +1,3 @@
+A = ADVAL-1
+A = ADVAL(-10)
+A = ADVAL(2+3)

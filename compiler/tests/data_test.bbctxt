@@ -1,0 +1,3 @@
+DATA Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec
+DATA 3.26,4,4.3,0
+DATA   3,   434342   , "string" , "string with ""quotes"", and comma", 57.3  

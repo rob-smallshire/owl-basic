@@ -1,0 +1,21 @@
+A(A(X)) = 7
+foo$(0) = "FRED"
+name$(0,0,0) = "JIM"
+a(100*(SINRADangle+1))=a(100*(SINRADangle+1))+increment
+a(100*(SINRADangle+1)) += increment
+A() = (3*n%)
+REM Next line does not work
+A() = 3 + n%()
+a() = 1,2,3,4
+b() = 6,5,4,3,2,1
+A() = A() + (n%*n%)
+A() = A() - m%
+B() = A() * 6
+B() = B() / n%
+A() += n%*n%
+A() -= m%
+A() = A() + B()
+C() = A().B()
+a() = b()*b()
+a() = a()+c()
+

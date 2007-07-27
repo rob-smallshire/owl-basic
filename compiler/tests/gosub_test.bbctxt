@@ -1,0 +1,2 @@
+GOSUB 230
+GOSUB (2300+20*opt)
