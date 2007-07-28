@@ -93,6 +93,7 @@ tokens = (
     'OPENUP',
     'OPENOUT',
     'PI',
+    'POINT',
     'POINT_LPAREN',
     'POS',
     'RAD',
@@ -359,6 +360,10 @@ def t_MOUSE(t):
 
 def t_OSCLI(t):
     r'OSCLI'
+    return t
+
+def t_POINT(t):
+    r'POINT'
     return t
 
 def t_PRINT(t):

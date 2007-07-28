@@ -682,6 +682,28 @@ class Plot(AstNode):
             writer.WriteEndElement()            
         writer.WriteEndElement()
 
+class Point(AstNode):
+    def __init__(self, x, y, by=None, *args, **kwargs):
+        self.x = x
+        self.y = y
+        self.by = by
+        super(Point, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Point")
+        if self.by:
+            writer.WriteStartAttribute("PointType")
+            writer.WriteString(str(self.by))
+            writer.WriteEndAttribute()
+        writer.WriteStartElement("x")
+        self.x.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("y")
+        self.y.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+
 class Print(AstNode):
     def __init__(self, print_list=None, *args, **kwargs):
         self.print_list = print_list

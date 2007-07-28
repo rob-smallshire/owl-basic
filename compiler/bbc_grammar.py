@@ -75,7 +75,6 @@ def p_stmt_terminator(p):
                  | local_stmt
                  | oscli_stmt
                  | proc_stmt
-                 | point_stmt      Ian this does exist in basic V to plot a point as well as function
                  | quit_stmt
                  | read_stmt
                  | repeat_stmt
@@ -138,6 +137,7 @@ def p_stmt_body(p):
                  | origin_stmt
                  | next_stmt
                  | plot_stmt
+                 | point_stmt
                  | print_stmt
                  | rectangle_stmt
                  | sound_stmt
@@ -535,6 +535,18 @@ def p_plot_stmt(p):
         #PLOT expr COMMA expr COMMA expr
         p[0] = Plot(p[4], p[6], p[2])
 # Print related rules       
+
+def p_point_stmt(p):
+    '''point_stmt : POINT expr COMMA expr
+                  | POINT BY expr COMMA expr
+                  | POINT TO expr COMMA expr'''
+    if len(p) == 5:
+        #POINT x COMMA y
+        p[0] = Point(p[2] ,p[4] )
+    elif len(p) == 6:
+        #POINT BY x COMMA y
+        #POINT TO x COMMA y
+        p[0] = Point(p[3] ,p[5] ,p[2] )
         
 def p_print_stmt(p):
     '''print_stmt : PRINT
