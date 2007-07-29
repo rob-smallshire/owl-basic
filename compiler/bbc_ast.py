@@ -823,6 +823,23 @@ class Sound(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
+class Swap(AstNode):
+    def __init__(self, var1, var2, *args, **kwargs): # may need to detect differance between array and vars
+        self.var1 = var1
+        self.var2 = var2
+        super(Swap, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Swap")
+        writer.WriteStartElement("var1")
+        self.var1.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("var2")
+        self.var2.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+
 class TabH(AstNode):
     def __init__(self, h, *args, **kwargs):
         self.h_expr = h

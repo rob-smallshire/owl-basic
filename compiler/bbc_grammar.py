@@ -81,7 +81,6 @@ def p_stmt_terminator(p):
                  | report_stmt
                  | restore_stmt    PAGE 69 BBCBASIC.PDF - RESTORE +offset???
                  | return_stmt
-                 | swap_stmt       IAN    statement to swap the values of two variables or arrays.
                  | sys_stmt        
                  | tempo_stmt
                  | tint_stmt
@@ -141,6 +140,7 @@ def p_stmt_body(p):
                  | print_stmt
                  | rectangle_stmt
                  | sound_stmt
+                 | swap_stmt
                  | vdu_stmt'''
     if p[1]:
         p[0] = Statement(p[1])
@@ -629,7 +629,14 @@ def p_sound_stmt(p):
         p[0] = Sound(p[2], p[4], p[6], p[8])
     elif len(p) == 3:
         p[0] = Sound(off=True)
-                    
+             
+def p_swap_stmt(p):
+    '''swap_stmt : SWAP variable COMMA variable
+                 | SWAP array COMMA array'''
+    #SWAP var1 COMMA var2
+    #SWAP array1 COMMA array2
+    p[0] = Swap(p[2] ,p[4] )             
+       
 def p_tab(p):
     '''tab : TAB_LPAREN expr RPAREN
            | TAB_LPAREN expr COMMA expr RPAREN'''
