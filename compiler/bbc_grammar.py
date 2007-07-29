@@ -69,7 +69,8 @@ def p_stmt_terminator(p):
                 
 # TODO: Statements to be implemented
     '''stmt_body : chain_stmt
-                 | dim_stmt    
+                 | dim_stmt
+                 | endwhile_stmt  
                  | input_stmt
                  | line_stmt
                  | local_stmt
@@ -85,6 +86,7 @@ def p_stmt_terminator(p):
                  | tempo_stmt
                  | tint_stmt
                  | trace_stmt
+                 | until_stmt
                  | voice_stmt
                  | voices_stmt
                  | while_stmt
