@@ -826,10 +826,7 @@ def p_expr_group(p):
 
 # TODO: Functions to be implemented
 '''    expr_function : 
-                     
-                     
-                     
-                     | end_func
+
                      | eof_func
                      | erl_func
                      | err_func
@@ -875,6 +872,7 @@ def p_expr_function(p):
                      | count_func
                      | deg_func
                      | dim_func
+                     | end_func
                      | mod_func
                      | not_func
                      | sin_func
@@ -940,6 +938,9 @@ def p_dim_func(p):
     elif len(p) == 6:
         p[0] = DimensionSizeFunc(p[2], p[4])
     
+def p_end_func(p):
+    'end_func : END'
+    p[0] = EndFunc()
 
 def p_mod_func(p):
     'mod_func : MOD array %prec FUNCTION'

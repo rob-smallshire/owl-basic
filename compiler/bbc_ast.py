@@ -1338,6 +1338,14 @@ class DimensionSizeFunc(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
+class EndFunc(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(EndFunc, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("EndFunc")
+        writer.WriteEndElement()
+
 class RadFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
