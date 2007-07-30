@@ -172,6 +172,7 @@ tokens = (
     'RETURN',
     'RUN',
     'STOP',
+    'TEMPO',
     'COLOUR',
     'TRACE',
     'UNTIL',
@@ -376,6 +377,10 @@ def t_SOUND(t):
 
 def t_TRACE(t):
     r'TRACE'
+    return t
+
+def t_TEMPO(t):
+    r'TEMPO'
     return t
 
 def t_UNTIL(t):

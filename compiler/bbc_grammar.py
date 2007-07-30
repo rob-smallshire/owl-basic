@@ -82,10 +82,8 @@ def p_stmt_terminator(p):
                  | restore_stmt    PAGE 69 BBCBASIC.PDF - RESTORE +offset???
                  | return_stmt
                  | sys_stmt        
-                 | tempo_stmt
                  | tint_stmt
                  | trace_stmt
-                 | until_stmt
                  | voice_stmt
                  | voices_stmt
                  | while_stmt
@@ -143,6 +141,8 @@ def p_stmt_body(p):
                  | report_stmt
                  | sound_stmt
                  | swap_stmt
+                 | tempo_stmt
+                 | until_stmt
                  | vdu_stmt'''
     if p[1]:
         p[0] = Statement(p[1])
@@ -651,9 +651,20 @@ def p_tab(p):
     elif len(p) == 6:
         p[0] = TabXY(p[2], p[4])                           
 
+def p_tempo_stmt(p):
+    '''tempo_stmt : TEMPO expr'''
+    if len(p) == 3:
+        #TEMPO expression
+        p[0] = Tempo(p[2] )
+
 def p_spc(p):
     '''spc : SPC expr'''
     p[0] = Spc(p[2])
+
+def p_until_stmt(p):
+    '''until_stmt : UNTIL expr'''
+    #UNTIL expression
+    p[0] = Until(p[2] )
 
 # VDU
 

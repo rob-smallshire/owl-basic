@@ -874,6 +874,19 @@ class TabXY(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
         
+class Tempo(AstNode):
+    def __init__(self, expression, *args, **kwargs):
+        self.expression = expression
+        super(Tempo, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Tempo")
+        writer.WriteStartElement("expression")
+        self.expression.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+        
 class Spc(AstNode):
     def __init__(self, spaces, *args, **kwargs):
         self.expr = spaces
@@ -937,6 +950,18 @@ class Indexer(AstNode):
         writer.WriteEndAttribute()
         self.indices.xml(writer)
         writer.WriteEndElement()    
+
+class Until(AstNode):
+    def __init__(self, expression, *args, **kwargs):
+        self.expression = expression
+        super(Until, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Until")
+        writer.WriteStartElement("expression")
+        self.expression.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
 
 class Vdu(AstNode):
     def __init__(self, list=None, *args, **kwargs):
