@@ -59,13 +59,8 @@ def p_stmt_terminator(p):
     'stmt_terminator : EOL'
     p[0] = p[1]
 
-#def p_compoundable_stmt_body(p):
-#    'compoundable_stmt_body : stmt_body'
-#    p[0] = p[1]
-#    
-#def p_non_compoundable_stmt_body(p):
-#    '''non_compoundable_stmt_body : case_stmt'''
-#    p[0] = p[1]
+#=============================================================================#
+# STATEMENTS
                 
 # TODO: Statements to be implemented
     '''stmt_body : chain_stmt
@@ -74,6 +69,10 @@ def p_stmt_terminator(p):
                  | input_stmt
                  | line_stmt
                  | local_stmt
+                 | off_stmt
+                 | on_stmt
+                 | on_error_stmt
+                 | oscli_stmt
                  | proc_stmt
                  | quit_stmt
                  | read_stmt
@@ -422,7 +421,7 @@ def p_assignment(p):
     '''assignment : LET variable EQ expr
                   | LET array EQ array_expr
                   | LET indexer EQ expr
-                  | variable EQ expr
+                  | lvalue EQ expr
                   | array EQ array_expr
                   | indexer EQ expr
                   | '''
@@ -704,7 +703,9 @@ def p_vdu_separator(p):
                      | PIPE'''
     p[0] = p[1]
 
-# Arguments
+#=============================================================================#
+# ARGUMENTS
+#
 
 def p_actual_arg_list(p):
     '''actual_arg_list : expr_list'''
@@ -726,11 +727,14 @@ def p_formal_arg(p):
     elif len(p) == 3:
         p[0] = FormalReferenceArgument(p[2]) 
 
-# Expressions
+#=============================================================================#
+# FACTORS and EXPRESSIONS
+#
 
 def p_factor(p):
     '''factor : literal
               | variable
+              | pseudovariable
               | expr_group
               | expr_function
               | indexer
@@ -843,9 +847,60 @@ def p_expr_group(p):
     'expr_group : LPAREN expr RPAREN'
     p[0] = p[2]
 
+#=============================================================================#
+# VALUES
+#
+
+# This contains all of the lvalues which can occur on the
+# left-hand-side on an assignment operator (without the LET).
+def p_lvalue(p):
+    '''lvalue : variable
+              | pseudovariable
+              | mid_str_lvalue'''
+    #         | right_str_lvalue
+    #         | left_str_lvalue'''
+    p[0] = p[1]
+    
+def p_mid_str_lvalue(p):
+    '''mid_str_lvalue : MID_STR_LPAREN variable COMMA expr RPAREN
+                      | MID_STR_LPAREN variable COMMA expr COMMA expr RPAREN'''
+    if len(p) == 6:
+        p[0] = MidStringValue(p[2], p[4])
+    elif len(p) == 8:
+        p[0] = MidStringValue(p[2], p[4], p[6])
+
+#=============================================================================#
+# PSEUDOVARIABLES
+#
+
+def p_pseudovariable(p):
+    '''pseudovariable : end_value
+                      | ext_value'''
+    #                 | himem_value
+    #                 | lomem_value
+    #                 | page_value
+    #                 | ptr_value
+    #                 | time_value
+    #                 | time_str_value'''
+    p[0] = p[1]
+
+# END is not officially a pseudovariable, although it can be used like one,
+# although it may also be used as a statement
+
+def p_end_value(p):
+    'end_value : END'
+    p[0] = EndValue()
+    
+def p_ext(p):
+    '''ext_value : EXT channel'''
+    p[0] = ExtValue(p[2])
+
+#=============================================================================#
+# FUNCTIONS
+#
+
 # TODO: Functions to be implemented
 '''    expr_function : 
-
                      | eof_func
                      | erl_func
                      | err_func
@@ -891,7 +946,7 @@ def p_expr_function(p):
                      | count_func
                      | deg_func
                      | dim_func
-                     | end_func
+                     | mid_str_func
                      | mod_func
                      | not_func
                      | sin_func
@@ -956,10 +1011,14 @@ def p_dim_func(p):
         p[0] = DimensionsFunc(p[2])
     elif len(p) == 6:
         p[0] = DimensionSizeFunc(p[2], p[4])
-    
-def p_end_func(p):
-    'end_func : END'
-    p[0] = EndFunc()
+
+def p_mid_str_func(p):
+    '''mid_str_func : MID_STR_LPAREN expr COMMA expr RPAREN
+                     | MID_STR_LPAREN expr COMMA expr COMMA expr RPAREN'''
+    if len(p) == 6:
+        p[0] = MidStringFunc(p[2], p[4])
+    elif len(p) == 8:
+        p[0] = MidStringFunc(p[2], p[4], p[6])
 
 def p_mod_func(p):
     'mod_func : MOD array %prec FUNCTION'
@@ -1000,10 +1059,24 @@ def p_sumlen_func(p):
     'sumlen_func : SUMLEN array %prec FUNCTION'
     p[0] = ArraySumLen(p[2])
 
+#=============================================================================#
+# CHANNEL
+#
+
 # Channels
 def p_channel(p):
     '''channel : HASH factor %prec UHASH'''
     p[0] = Channel(p[2])
+
+#=============================================================================#
+# VARIABLE
+
+def p_variable(p):
+    'variable : ID'
+    p[0] = Variable(p[1])
+
+#=============================================================================#
+# ARRAYS
 
 # Array support
 def p_array(p):
@@ -1051,6 +1124,9 @@ def p_array_expr(p):
         elif p[2] == '.':
             p[0] = MatrixMultiply(p[1], p[3])
 
+#=============================================================================#
+# LITERALS
+
 def p_literal(p):
     '''literal : literal_string
                | literal_integer
@@ -1069,9 +1145,8 @@ def p_literal_float(p):
     'literal_float : LITERAL_FLOAT'
     p[0] = LiteralFloat(p[1])
 
-def p_variable(p):
-    'variable : ID'
-    p[0] = Variable(p[1])
+#=============================================================================#
+# ERRORS
 
 # Error rule for syntax errors
 def p_error(p):

@@ -1260,6 +1260,45 @@ class AbsFunc(AstNode):
         writer.WriteStartElement("Abs")
         self.expr.xml(writer)
         writer.WriteEndElement()
+
+class EndValue(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(EndValue, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("EndValue")
+        writer.WriteEndElement()
+        
+class ExtValue(AstNode):
+    def __init__(self, channel, *args, **kwargs):
+        self.channel = channel
+        super(EndValue, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("ExtValue")
+        self.channel.xml(writer)
+        writer.WriteEndElement()
+
+class MidStringLValue(AstNode):
+    def __init__(self, target, position, length=None, *args, **kwargs):
+        self.target = target
+        self.position = position
+        self.length = length
+        super(EndValue, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("MidStringLValue")
+        writer.WriteStartElement("Target")
+        self.target.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Position")
+        self.position.xml(writer)
+        writer.WriteEndElement()
+        if self.length:
+            writer.WriteStartElement("Length")
+            self.length.xml(writer)
+            writer.WriteEndElement()
+        writer.WriteEndElement()    
         
 class AcsFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
@@ -1383,13 +1422,26 @@ class DimensionSizeFunc(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class EndFunc(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(EndFunc, self).__init__(*args, **kwargs)
+class MidStringFunc(AstNode):
+    def __init__(self, source, position, length=None, *args, **kwargs):
+        self.source = source
+        self.position = position
+        self.length = length
+        super(MidStringFunc, self).__init__(*args, **kwargs)
         
     def xml(self, writer):
-        writer.WriteStartElement("EndFunc")
+        writer.WriteStartElement("MidStringFunc")
+        writer.WriteStartElement("Source")
+        self.source.xml(writer)
         writer.WriteEndElement()
+        writer.WriteStartElement("Position")
+        self.position.xml(writer)
+        writer.WriteEndElement()
+        if self.length:
+            writer.WriteStartElement("Length")
+            self.length.xml(writer)
+            writer.WriteEndElement()
+        writer.WriteEndElement()    
 
 class RadFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
