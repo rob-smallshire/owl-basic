@@ -657,6 +657,18 @@ class Origin(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
+class Oscli(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(Oscli, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Oscli")
+        writer.WriteStartElement("expr")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
 class Plot(AstNode):
     def __init__(self, x, y, mode=None, relative = False, *args, **kwargs):
         self.x = x

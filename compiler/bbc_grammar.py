@@ -74,7 +74,6 @@ def p_stmt_terminator(p):
                  | input_stmt
                  | line_stmt
                  | local_stmt
-                 | oscli_stmt
                  | proc_stmt
                  | quit_stmt
                  | read_stmt
@@ -133,6 +132,7 @@ def p_stmt_body(p):
                  | mouse_stmt
                  | move_stmt
                  | origin_stmt
+                 | oscli_stmt
                  | next_stmt
                  | plot_stmt
                  | point_stmt
@@ -522,6 +522,10 @@ def p_mouse_stmt(p):
 def p_origin_stmt(p):
     '''origin_stmt : ORIGIN expr COMMA expr'''
     p[0] = Origin(p[2], p[4])
+
+def p_oscli_stmt(p):
+    '''oscli_stmt : OSCLI expr'''
+    p[0] = Oscli(p[2] )
 
 def p_plot_stmt(p):
     '''plot_stmt : PLOT expr COMMA expr
