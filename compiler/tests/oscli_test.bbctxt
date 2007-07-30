@@ -1,0 +1,3 @@
+OSCLI "test"
+OSCLI expression$
+OSCLI "LOAD file "+"HEX address"

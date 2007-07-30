@@ -1,0 +1,42 @@
+<!--XML Parse Tree-->
+<Program>
+  <StatementList>
+    <StatementList />
+    <StatementList>
+      <Statement>
+        <Swap>
+          <var1>
+            <Variable name="a" />
+          </var1>
+          <var2>
+            <Variable name="b" />
+          </var2>
+        </Swap>
+      </Statement>
+    </StatementList>
+    <StatementList>
+      <Statement>
+        <Swap>
+          <var1>
+            <Variable name="Coat$" />
+          </var1>
+          <var2>
+            <Variable name="Hat$" />
+          </var2>
+        </Swap>
+      </Statement>
+    </StatementList>
+    <StatementList>
+      <Statement>
+        <Swap>
+          <var1>
+            <Array name="A$(" />
+          </var1>
+          <var2>
+            <Array name="B$(" />
+          </var2>
+        </Swap>
+      </Statement>
+    </StatementList>
+  </StatementList>
+</Program>
