@@ -116,6 +116,7 @@ def p_stmt_body(p):
                  | def_stmt
                  | draw_stmt
                  | ellipse_stmt
+                 | end_stmt
                  | envelope_stmt
                  | error_stmt
                  | fill_stmt
@@ -281,6 +282,11 @@ def p_draw_stmt(p):
     elif len(p) == 6:
         p[0] = Draw(p[3], p[5], True)
 
+# END statement
+def p_end_stmt(p):
+    '''end_stmt : END'''
+    p[0] = End()
+    
 def p_ellipse_stmt(p): # BBC BASIC V also supports rotation of an ellipse
     '''ellipse_stmt : ELLIPSE expr COMMA expr COMMA expr COMMA expr
                     | ELLIPSE FILL expr COMMA expr COMMA expr COMMA expr

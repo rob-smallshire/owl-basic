@@ -321,6 +321,14 @@ class GenerateError(AstNode):
         self.t.xml(writer)
         writer.WriteEndElement()
 
+class End(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(End, self).__init__(args, kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("End")
+        writer.WriteEndElement()
+
 class Envelope(AstNode):
     def __init__(self, n, t, pitch1, pitch2, pitch3, pNum1, pNum2, pNum3, ampAttack, ampDecay, ampSustain, ampRelease, ala, ald, *args, **kwargs):
         self.n=n
