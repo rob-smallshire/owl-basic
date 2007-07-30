@@ -1280,7 +1280,7 @@ class EndValue(AstNode):
 class ExtValue(AstNode):
     def __init__(self, channel, *args, **kwargs):
         self.channel = channel
-        super(EndValue, self).__init__(*args, **kwargs)
+        super(ExtValue, self).__init__(*args, **kwargs)
         
     def xml(self, writer):
         writer.WriteStartElement("ExtValue")
