@@ -72,7 +72,6 @@ def p_stmt_terminator(p):
                  | off_stmt
                  | on_stmt
                  | on_error_stmt
-                 | oscli_stmt
                  | proc_stmt
                  | quit_stmt
                  | read_stmt
@@ -82,9 +81,6 @@ def p_stmt_terminator(p):
                  | sys_stmt        
                  | tint_stmt
                  | trace_stmt
-                 | voice_stmt
-                 | voices_stmt
-                 | while_stmt
                  | width_stmt'''
 
 # All statements
@@ -143,7 +139,9 @@ def p_stmt_body(p):
                  | swap_stmt
                  | tempo_stmt
                  | until_stmt
-                 | vdu_stmt'''
+                 | vdu_stmt
+                 | voices_stmt
+                 | while_stmt'''
     if p[1]:
         p[0] = Statement(p[1])
 
@@ -708,6 +706,15 @@ def p_vdu_separator(p):
                      | SEMICOLON
                      | PIPE'''
     p[0] = p[1]
+
+def p_voices_stmt(p):
+    '''voices_stmt : VOICES expr'''
+    #VOICES expression
+    p[0] = Voices(p[2] )
+
+def p_while_stmt(p):
+    '''while_stmt : WHILE expr'''
+    p[0] = While(p[2] )
 
 #=============================================================================#
 # ARGUMENTS

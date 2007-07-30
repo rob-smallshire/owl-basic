@@ -162,6 +162,7 @@ tokens = (
     'NEXT',
     'ON',
     'VDU',
+    'VOICES',
     'PLOT',
     'PRINT',
     'PROC',
@@ -315,6 +316,10 @@ def t_REPEAT(t):
 
 def t_SUMLEN(t):
     r'SUMLEN'
+    return t
+
+def t_VOICES(t):
+    r'VOICES'
     return t
 
 # Five letter keywords

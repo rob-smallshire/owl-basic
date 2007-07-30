@@ -983,6 +983,18 @@ class Until(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
+class Voices(AstNode):
+    def __init__(self, expression, *args, **kwargs):
+        self.expression = expression
+        super(Voices, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Voices")
+        writer.WriteStartElement("expression")
+        self.expression.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
 class Vdu(AstNode):
     def __init__(self, list=None, *args, **kwargs):
         self.list = list
@@ -1022,6 +1034,18 @@ class VduItem(AstNode):
         writer.WriteString(str(self.separator))
         writer.WriteEndAttribute()
         self.expr.xml(writer)
+        writer.WriteEndElement()
+
+class While(AstNode):
+    def __init__(self, expression, *args, **kwargs):
+        self.expression = expression
+        super(While, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("While")
+        writer.WriteStartElement("expression")
+        self.expression.xml(writer)
+        writer.WriteEndElement()
         writer.WriteEndElement()
 
 class ExpressionList(AstNode):
