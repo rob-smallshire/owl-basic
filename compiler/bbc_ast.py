@@ -793,6 +793,14 @@ class Rectangle(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()        
 
+class Report(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(Report, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Report")
+        writer.WriteEndElement()
+
 class Sound(AstNode):
     def __init__(self, channel = None, amplitude = None, pitch = None, duration = None, off=False, *args, **kwargs):
         self.channel = channel

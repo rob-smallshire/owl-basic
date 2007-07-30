@@ -79,7 +79,6 @@ def p_stmt_terminator(p):
                  | quit_stmt
                  | read_stmt
                  | repeat_stmt
-                 | report_stmt
                  | restore_stmt    PAGE 69 BBCBASIC.PDF - RESTORE +offset???
                  | return_stmt
                  | sys_stmt        
@@ -141,6 +140,7 @@ def p_stmt_body(p):
                  | point_stmt
                  | print_stmt
                  | rectangle_stmt
+                 | report_stmt
                  | sound_stmt
                  | swap_stmt
                  | vdu_stmt'''
@@ -624,6 +624,10 @@ def p_rectangle_stmt(p):
         #RECTANGLE SWAP expr COMMA expr COMMA expr COMMA expr TO expr COMMA expr
         p[0] = Rectangle(p[3], p[5], p[7], p[9], p[11], p[13], p[2])
 
+def p_report_stmt(p):
+    '''report_stmt : REPORT'''
+    p[0] = Report()
+        
 def p_sound_stmt(p):
     '''sound_stmt : SOUND expr COMMA expr COMMA expr COMMA expr
                   | SOUND OFF'''
