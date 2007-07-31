@@ -265,12 +265,12 @@ def p_def_fn_stmt(p):
         p[0] = DefineFunction(p[3], p[5], p[7], p[9])
                        
 def p_def_proc_stmt(p):
-    '''def_proc_stmt : DEF PROC ID statement_list ENDPROC
-                     | DEF PROC ID LPAREN formal_arg_list RPAREN statement_list ENDPROC'''
+    '''def_proc_stmt : DEF PROC ID
+                     | DEF PROC ID LPAREN formal_arg_list RPAREN'''
     if len(p) == 6:
-        p[0] = DefineProcedure(p[3], None, p[4])
+        p[0] = DefineProcedure(p[3])
     elif len(p) == 9:
-        p[0] = DefineProcedure(p[3], p[5], p[7])
+        p[0] = DefineProcedure(p[3], p[5])
 
 def p_proc_stmt(p):
     '''proc_stmt : PROC ID

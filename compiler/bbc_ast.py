@@ -218,6 +218,20 @@ class Data(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
+class DefProc(AstNode):
+    def __init__(self, id, arg_list=None):
+        self.id = id
+        self.arg_list = arg_list
+        super(DefProc, self).__init__(*args, **kwargs)
+        
+    def xml(self):
+        writer.WriteStartElement("DefProc")
+        writer.WriteStartAttribute("name")
+        writer.WriteString(str(self.id))
+        writer.WriteEndAttribute()
+        self.arg_list.xml(writer)
+        writer.WriteEndElement()
+
 class ForToStep(AstNode):
     def __init__(self, identifier, start, end, step, *args, **kwargs):
         self.identifier = identifier
