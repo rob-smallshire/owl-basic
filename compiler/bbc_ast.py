@@ -648,7 +648,23 @@ class MouseRectangle(AstNode):
             self.height.xml(writer)
             writer.WriteEndElement()            
         writer.WriteEndElement()
-            
+
+class On(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(On, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("On")
+        writer.WriteEndElement()
+
+class Off(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(Off, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Off")
+        writer.WriteEndElement()
+   
 class Origin(AstNode):
     def __init__(self, x, y, *args, **kwargs):
         self.x = x
@@ -1076,7 +1092,18 @@ class Width(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
+class Wait(AstNode):
+    def __init__(self, expr=None, *args, **kwargs):
+        self.expr = expr
+        super(Wait, self).__init__(*args, **kwargs)
 
+    def xml(self, writer):
+        writer.WriteStartElement("Wait")
+        if self.expr:
+            writer.WriteStartElement("expr")
+            self.expr.xml(writer)
+            writer.WriteEndElement()
+        writer.WriteEndElement()
 
 
 class ExpressionList(AstNode):

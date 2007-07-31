@@ -68,13 +68,10 @@ def p_stmt_terminator(p):
                  | input_stmt
                  | line_stmt
                  | local_stmt
-                 | off_stmt
-                 | on_stmt
                  | on_error_stmt
                  | proc_stmt
                  | quit_stmt
                  | read_stmt
-                 | repeat_stmt
                  | restore_stmt    PAGE 69 BBCBASIC.PDF - RESTORE +offset???
                  | return_stmt
                  | sys_stmt        
@@ -125,6 +122,8 @@ def p_stmt_body(p):
                  | mode_stmt
                  | mouse_stmt
                  | move_stmt
+                 | off_stmt
+                 | on_stmt
                  | origin_stmt
                  | oscli_stmt
                  | next_stmt
@@ -132,6 +131,7 @@ def p_stmt_body(p):
                  | point_stmt
                  | print_stmt
                  | rectangle_stmt
+                 | repeat_stmt
                  | report_stmt
                  | sound_stmt
                  | swap_stmt
@@ -141,6 +141,7 @@ def p_stmt_body(p):
                  | voices_stmt
                  | while_stmt
                  | width_stmt
+                 | wait_stmt
                  | endwhile_stmt'''
     if p[1]:
         p[0] = Statement(p[1])
@@ -522,6 +523,15 @@ def p_mouse_stmt(p):
             #MOUSE variable COMMA variable COMMA variable COMMA variable
             p[0] = Mouse(p[2], p[4], p[6], p[8])
 
+
+def p_on_stmt(p):
+    '''on_stmt : ON'''
+    p[0] = On()
+
+def p_off_stmt(p):
+    '''off_stmt : OFF'''
+    p[0] = Off()
+
 def p_origin_stmt(p):
     '''origin_stmt : ORIGIN expr COMMA expr'''
     p[0] = Origin(p[2], p[4])
@@ -728,6 +738,16 @@ def p_endwhile_stmt(p):
 def p_width_stmt(p):
     '''width_stmt : WIDTH expr'''
     p[0] = Width(p[2] )
+
+def p_wait_stmt(p):
+    '''wait_stmt : WAIT
+                 | WAIT expr'''
+    if len(p) == 2:
+        #WAIT
+        p[0] = Wait()
+    elif len(p) == 3:
+        #WAIT expr
+        p[0] = Wait(expr=p[2] )
 
 #=============================================================================#
 # ARGUMENTS

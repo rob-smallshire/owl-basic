@@ -515,6 +515,10 @@ def t_TINT(t):
     r'TINT'
     return t
 
+def t_WAIT(t):
+    r'WAIT'
+    return t
+
 def t_WHEN(t):
     r'WHEN'
     return t
@@ -607,6 +611,10 @@ def t_MOD(t):
 
 def t_NOT(t):
     r'NOT'
+    return t
+
+def t_OFF(t):
+    r'OFF'
     return t
 
 def t_RAD(t):
