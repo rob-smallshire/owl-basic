@@ -254,33 +254,26 @@ def p_def_stmt(p):
 # The statement list needs to be modified so there can be more
 # than one point of return form functions
 def p_def_fn_stmt(p):
-    '''def_fn_stmt : DEF FN ID EQ expr
-                   | DEF FN ID LPAREN formal_arg_list RPAREN EQ expr
-                   | DEF FN ID LPAREN formal_arg_list RPAREN statement_list EQ expr'''
-    if len(p) == 6:
-        p[0] = DefineFunction(p[3], None, None, expr)
-    elif len(p) == 9:
-        p[0] = DefineFunction(p[3], p[5], None, p[8])
-    elif len(p) == 10:
-        p[0] = DefineFunction(p[3], p[5], p[7], p[9])
+    '''def_fn_stmt : DEF FN_ID LPAREN formal_arg_list RPAREN statement_list'''
+    p[0] = DefineFunction(p[2], p[4])
                        
 def p_def_proc_stmt(p):
-    '''def_proc_stmt : DEF PROC ID
-                     | DEF PROC ID LPAREN formal_arg_list RPAREN'''
-    if len(p) == 6:
-        p[0] = DefineProcedure(p[3])
-    elif len(p) == 9:
-        p[0] = DefineProcedure(p[3], p[5])
+    '''def_proc_stmt : DEF PROC_ID
+                     | DEF PROC_ID LPAREN formal_arg_list RPAREN'''
+    if len(p) == 2:
+        p[0] = DefineProcedure(p[2])
+    elif len(p) == 6:
+        p[0] = DefineProcedure(p[2], p[4])
 
 def p_proc_stmt(p):
-    '''proc_stmt : PROC ID
-                 | PROC ID  LPAREN formal_arg_list RPAREN'''
-    if len(p) == 3:
+    '''proc_stmt : PROC_ID
+                 | PROC_ID LPAREN formal_arg_list RPAREN'''
+    if len(p) == 2:
         #PROC id
-        p[0] = Proc(p[2] )
-    elif len(p) == 6:
+        p[0] = Proc(p[1])
+    elif len(p) == 5:
         #PROC id (parameter-list)
-        p[0] = Proc(p[2] ,p[4])
+        p[0] = Proc(p[1], p[3])
 
 # DRAW statements
 def p_draw_stmt(p):
@@ -800,7 +793,7 @@ def p_formal_arg_list(p):
     '''formal_arg_list : formal_arg
                        | formal_arg_list COMMA formal_arg'''
     if len(p) == 2:
-        p[0] = FormalArgumentList(p[1])
+        p[0] = FormalArgList(p[1])
     if len(p) == 4:
         p[1].append(p[3])
         p[0] = p[1]

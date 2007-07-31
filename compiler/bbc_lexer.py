@@ -4,8 +4,10 @@ import re
 
 tokens = (
     'EOL',
-    'ID',
     'ARRAYID_LPAREN',
+    'PROC_ID',
+    'FN_ID',
+    'ID',
     'LITERAL_STRING',
     'LITERAL_FLOAT',
     'LITERAL_INTEGER',
@@ -81,7 +83,6 @@ tokens = (
     'EXP',
     'EXT',
     'FALSE',
-    'FN',
     'GET',
     'INKEY',
     'INSTR',
@@ -165,7 +166,6 @@ tokens = (
     'VOICES',
     'PLOT',
     'PRINT',
-    'PROC',
     'READ',
     'REPEAT',
     'REPORT',
@@ -487,10 +487,6 @@ def t_PLOT(t):
     r'PLOT'
     return t
 
-def t_PROC(t):
-    r'PROC'
-    return t
-
 def t_QUIT(t):
     r'QUIT'
     return t
@@ -675,10 +671,6 @@ def t_VDU(t):
 
 # Two letter keywords
 
-def t_FN(t):
-    r'FN'
-    return t
-
 def t_IF(t):
     r'IF'
     return t
@@ -747,6 +739,16 @@ reserved = {
             }
 
 # Identifiers
+
+def t_PROC_ID(t):
+    r'PROC[a-zA-Z_`][a-zA-Z_0-9`]*[$%&]?'
+    t.type = 'PROC_ID'
+    return t.value[4:]
+
+def t_FN_ID(t):
+    r'FN[a-zA-Z_`][a-zA-Z_0-9`]*[$%&]?'
+    t.type = 'FN_ID'
+    return t.value[2:]
 
 def t_ARRAYID_LPAREN(t):
     r'[a-zA-Z_`][a-zA-Z_0-9`]*[$%&]?\('

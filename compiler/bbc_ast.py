@@ -218,6 +218,20 @@ class Data(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
+class DefFn(AstNode):
+    def __init__(self, id, arg_list=None):
+        self.id = id
+        self.arg_list = arg_list
+        super(DefFn, self).__init__(*args, **kwargs)
+        
+    def xml(self):
+        writer.WriteStartElement("DefFn")
+        writer.WriteStartAttribute("name")
+        writer.WriteString(str(self.id))
+        writer.WriteEndAttribute()
+        self.arg_list.xml(writer)
+        writer.WriteEndElement()
+
 class DefProc(AstNode):
     def __init__(self, id, arg_list=None):
         self.id = id
@@ -817,20 +831,18 @@ class PrintManipulator(AstNode):
         writer.WriteEndElement()
 
 class Proc(AstNode):
-    def __init__(self, id, parameterList=None, *args, **kwargs):
+    def __init__(self, id, parameter_list=None, *args, **kwargs):
         self.id = id
-        self.parameterList = parameterList
+        self.parameter_list = parameter_list
         super(Proc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
         writer.WriteStartElement("Proc")
-        writer.WriteStartElement("id")
+        writer.WriteStartAttribute("name")
         self.id.xml(writer)
         writer.WriteEndElement()
         if self.parameterList:
-            writer.WriteStartElement("parameterList")
             self.parameterList.xml(writer)
-            writer.WriteEndElement()
         writer.WriteEndElement()
 
 class Quit(AstNode):
@@ -1198,12 +1210,32 @@ class FormalArgList(AstNode):
         super(FormalArgList, self).__init__(*args, **kwargs)
         
     def append(self, arg):
-        self.args.append(args)
+        self.args.append(arg)
         
     def xml(self, writer):
         writer.WriteStartElement("FormalArgList")
         for arg in self.args:
             arg.xml(writer)
+        writer.WriteEndElement()
+
+class FormalArgument(AstNode):
+    def __init__(self, arg, *args, **kwargs):
+        self.arg = arg
+        super(FormalArgument, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("FormalArgument")
+        self.arg.xml(writer)
+        writer.WriteEndElement()
+        
+class FormalReference(AstNode):
+    def __init__(self, arg, *args, **kwargs):
+        self.arg = arg
+        super(FormalReferenceArgument, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("FormalReferenceArgument")
+        self.arg.xml(writer)
         writer.WriteEndElement()
               
 class UnaryPlus(AstNode):
