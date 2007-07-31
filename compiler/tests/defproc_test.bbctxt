@@ -1,0 +1,4 @@
+DEF PROCalpha
+DEFPROCbravo
+DEF PROCcharlie(A%, A$, A(), A)
+DEFPROCdelta(A%,A%,A(),A)
