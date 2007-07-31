@@ -242,6 +242,10 @@ def t_ENVELOPE(t):
     r'ENVELOPE'
     return t
 
+def t_ENDWHILE(t):
+    r'ENDWHILE'
+    return t
+
 # Seven letter keywords
 
 def t_ELLIPSE(t):

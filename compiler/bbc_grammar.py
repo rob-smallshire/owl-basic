@@ -65,7 +65,6 @@ def p_stmt_terminator(p):
 # TODO: Statements to be implemented
     '''stmt_body : chain_stmt
                  | dim_stmt
-                 | endwhile_stmt  
                  | input_stmt
                  | line_stmt
                  | local_stmt
@@ -141,7 +140,8 @@ def p_stmt_body(p):
                  | until_stmt
                  | vdu_stmt
                  | voices_stmt
-                 | while_stmt'''
+                 | while_stmt
+                 | endwhile_stmt'''
     if p[1]:
         p[0] = Statement(p[1])
 
@@ -715,6 +715,10 @@ def p_voices_stmt(p):
 def p_while_stmt(p):
     '''while_stmt : WHILE expr'''
     p[0] = While(p[2] )
+
+def p_endwhile_stmt(p):
+    '''endwhile_stmt : ENDWHILE'''
+    p[0] = Endwhile()
 
 #=============================================================================#
 # ARGUMENTS
