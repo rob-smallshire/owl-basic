@@ -634,6 +634,11 @@ def p_rectangle_stmt(p):
 def p_report_stmt(p):
     '''report_stmt : REPORT'''
     p[0] = Report()
+
+def p_repeat_stmt(p):
+    '''repeat_stmt : REPEAT''' # bbc basic also allows REPEAT UNTIL expr. unsure how to impliment this
+    p[0] = Repeat()
+    #to impliment the rest of the until line can i do p[1] = and call the until function
         
 def p_sound_stmt(p):
     '''sound_stmt : SOUND expr COMMA expr COMMA expr COMMA expr
