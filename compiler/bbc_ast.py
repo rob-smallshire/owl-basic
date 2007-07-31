@@ -1456,11 +1456,11 @@ class And(BinaryOperator):
 
 class Or(BinaryOperator):
     def __init__(self, lhs, rhs, *args, **kwargs):
-        super(Or, self).__init__('and', lhs, rhs)
+        super(Or, self).__init__('or', lhs, rhs)
         
 class Eor(BinaryOperator):
     def __init__(self, lhs, rhs, *args, **kwargs):
-        super(Eor, self).__init__('and', lhs, rhs)
+        super(Eor, self).__init__('eor', lhs, rhs)
 
 class AbsFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
