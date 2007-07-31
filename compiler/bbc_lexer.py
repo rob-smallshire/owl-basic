@@ -742,13 +742,13 @@ reserved = {
 
 def t_PROC_ID(t):
     r'PROC[a-zA-Z_`][a-zA-Z_0-9`]*[$%&]?'
-    t.type = 'PROC_ID'
-    return t.value[4:]
+    t.value = t.value[4:]
+    return t
 
 def t_FN_ID(t):
     r'FN[a-zA-Z_`][a-zA-Z_0-9`]*[$%&]?'
-    t.type = 'FN_ID'
-    return t.value[2:]
+    t.value = t.value[2:]
+    return t
 
 def t_ARRAYID_LPAREN(t):
     r'[a-zA-Z_`][a-zA-Z_0-9`]*[$%&]?\('

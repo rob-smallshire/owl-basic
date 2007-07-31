@@ -34,6 +34,9 @@ class StatementList(AstNode):
             self.statements.append(first_statement)
         super(StatementList, self).__init__(*args, **kwargs)
     
+    def prepend(self, statement):
+        self.statements.insert(0, statement)
+    
     def append(self, statement):
         self.statements.append(statement)
 
@@ -218,28 +221,28 @@ class Data(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
-class DefFn(AstNode):
-    def __init__(self, id, arg_list=None):
+class DefineFunction(AstNode):
+    def __init__(self, id, arg_list=None, *args, **kwargs):
         self.id = id
         self.arg_list = arg_list
-        super(DefFn, self).__init__(*args, **kwargs)
+        super(DefineFunction, self).__init__(*args, **kwargs)
         
     def xml(self):
-        writer.WriteStartElement("DefFn")
+        writer.WriteStartElement("DefineFunction")
         writer.WriteStartAttribute("name")
         writer.WriteString(str(self.id))
         writer.WriteEndAttribute()
         self.arg_list.xml(writer)
         writer.WriteEndElement()
 
-class DefProc(AstNode):
-    def __init__(self, id, arg_list=None):
+class DefineProcedure(AstNode):
+    def __init__(self, id, arg_list=None, *args, **kwargs):
         self.id = id
         self.arg_list = arg_list
-        super(DefProc, self).__init__(*args, **kwargs)
+        super(DefineProcedure, self).__init__(*args, **kwargs)
         
     def xml(self):
-        writer.WriteStartElement("DefProc")
+        writer.WriteStartElement("DefineProcedure")
         writer.WriteStartAttribute("name")
         writer.WriteString(str(self.id))
         writer.WriteEndAttribute()
@@ -830,14 +833,14 @@ class PrintManipulator(AstNode):
         writer.WriteEndAttribute()
         writer.WriteEndElement()
 
-class Proc(AstNode):
+class CallProcedure(AstNode):
     def __init__(self, id, parameter_list=None, *args, **kwargs):
         self.id = id
         self.parameter_list = parameter_list
-        super(Proc, self).__init__(*args, **kwargs)
+        super(CallProcedure, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
-        writer.WriteStartElement("Proc")
+        writer.WriteStartElement("CallProcedure")
         writer.WriteStartAttribute("name")
         self.id.xml(writer)
         writer.WriteEndElement()

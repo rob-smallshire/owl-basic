@@ -254,8 +254,14 @@ def p_def_stmt(p):
 # The statement list needs to be modified so there can be more
 # than one point of return form functions
 def p_def_fn_stmt(p):
-    '''def_fn_stmt : DEF FN_ID LPAREN formal_arg_list RPAREN statement_list'''
-    p[0] = DefineFunction(p[2], p[4])
+    '''def_fn_stmt : DEF FN_ID statement_list
+                   | DEF FN_ID LPAREN formal_arg_list RPAREN statement_list'''
+    if len(p) == 2:
+        p[3].prepend(DefineFunction(p[2])) 
+        p[0] = p[3]
+    elif len(p) == 7:
+        p[3].prepend(DefineFunction(p[2], p[4]))
+        p[0] = p[3]
                        
 def p_def_proc_stmt(p):
     '''def_proc_stmt : DEF PROC_ID
@@ -270,10 +276,10 @@ def p_proc_stmt(p):
                  | PROC_ID LPAREN formal_arg_list RPAREN'''
     if len(p) == 2:
         #PROC id
-        p[0] = Proc(p[1])
+        p[0] = CallProcedure(p[1])
     elif len(p) == 5:
         #PROC id (parameter-list)
-        p[0] = Proc(p[1], p[3])
+        p[0] = CallProcedure(p[1], p[3])
 
 # DRAW statements
 def p_draw_stmt(p):
@@ -668,9 +674,8 @@ def p_report_stmt(p):
 
 def p_repeat_stmt(p):
     '''repeat_stmt : REPEAT compound_statement'''
-    statements = StatementList(Repeat())
-    statements.append(p[2])
-    p[0] = statements
+    p[2].prepend(Repeat())
+    p[0] = p[2]
         
 def p_sound_stmt(p):
     '''sound_stmt : SOUND expr COMMA expr COMMA expr COMMA expr
