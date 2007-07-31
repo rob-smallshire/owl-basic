@@ -741,12 +741,12 @@ reserved = {
 # Identifiers
 
 def t_PROC_ID(t):
-    r'PROC[a-zA-Z_`][a-zA-Z_0-9`]*[$%&]?'
+    r'PROC[a-zA-Z_0-9`@]+'
     t.value = t.value[4:]
     return t
 
 def t_FN_ID(t):
-    r'FN[a-zA-Z_`][a-zA-Z_0-9`]*[$%&]?'
+    r'FN[a-zA-Z_0-9`@]+'
     t.value = t.value[2:]
     return t
 
