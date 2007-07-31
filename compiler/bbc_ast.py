@@ -451,6 +451,19 @@ class Gosub(AstNode):
         self.line.xml(writer)
         writer.WriteEndElement()
 
+class Return(AstNode):
+    def __init__(self, parameter=None, *args, **kwargs):
+        self.parameter = parameter
+        super(Return, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Return")
+        if self.parameter:
+            writer.WriteStartElement("parameter")
+            self.parameter.xml(writer)
+            writer.WriteEndElement()
+        writer.WriteEndElement()
+
 class Install(AstNode):
     def __init__(self, expression, *args, **kwargs):
         self.expression = expression

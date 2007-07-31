@@ -73,7 +73,6 @@ def p_stmt_terminator(p):
                  | quit_stmt
                  | read_stmt
                  | restore_stmt    PAGE 69 BBCBASIC.PDF - RESTORE +offset???
-                 | return_stmt
                  | sys_stmt        
                  | tint_stmt
                  | trace_stmt'''
@@ -133,6 +132,7 @@ def p_stmt_body(p):
                  | rectangle_stmt
                  | repeat_stmt
                  | report_stmt
+                 | return_stmt
                  | sound_stmt
                  | swap_stmt
                  | tempo_stmt
@@ -339,6 +339,18 @@ def p_goto_stmt(p):
 def p_gosub(p):
     '''gosub_stmt : GOSUB factor'''
     p[0] = Gosub(p[2])
+
+def p_return_stmt(p):
+    '''return_stmt : RETURN
+                   | RETURN variable
+                   | RETURN array'''
+    if len(p) == 2:
+        #RETURN
+        p[0] = Return()
+    elif len(p) == 3: # used in DEF PROC/FN to return params (not sure if it is needed here)
+        #RETURN variable
+        #RETURN array
+        p[0] = Return(p[2])
 
 # IF statements
 

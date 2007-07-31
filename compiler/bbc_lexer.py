@@ -318,6 +318,10 @@ def t_REPEAT(t):
     r'REPEAT'
     return t
 
+def t_RETURN(t):
+    r'RETURN'
+    return t
+
 def t_SUMLEN(t):
     r'SUMLEN'
     return t
