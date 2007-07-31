@@ -227,7 +227,7 @@ class DefineFunction(AstNode):
         self.arg_list = arg_list
         super(DefineFunction, self).__init__(*args, **kwargs)
         
-    def xml(self):
+    def xml(self, writer):
         writer.WriteStartElement("DefineFunction")
         writer.WriteStartAttribute("name")
         writer.WriteString(str(self.id))
@@ -241,7 +241,7 @@ class DefineProcedure(AstNode):
         self.arg_list = arg_list
         super(DefineProcedure, self).__init__(*args, **kwargs)
         
-    def xml(self):
+    def xml(self, writer):
         writer.WriteStartElement("DefineProcedure")
         writer.WriteStartAttribute("name")
         writer.WriteString(str(self.id))
