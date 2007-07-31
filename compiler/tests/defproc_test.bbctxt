@@ -1,5 +1,5 @@
 DEF PROCalpha
 DEFPROCbravo
-REM DEF PROCtesting(a%)
-REM DEF PROCcharlie(A%, A$, A, A)
-REM DEFPROCdelta(A%,A%,A,A)
+DEF PROCtesting(a%)
+DEF PROCcharlie(A%, B, A(), A)
+DEFPROCdelta(A%,A%,A(), B)

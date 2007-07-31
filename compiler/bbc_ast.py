@@ -232,7 +232,8 @@ class DefineFunction(AstNode):
         writer.WriteStartAttribute("name")
         writer.WriteString(str(self.id))
         writer.WriteEndAttribute()
-        self.arg_list.xml(writer)
+        if self.arg_list:
+            self.arg_list.xml(writer)
         writer.WriteEndElement()
 
 class DefineProcedure(AstNode):
@@ -246,7 +247,8 @@ class DefineProcedure(AstNode):
         writer.WriteStartAttribute("name")
         writer.WriteString(str(self.id))
         writer.WriteEndAttribute()
-        self.arg_list.xml(writer)
+        if self.arg_list:
+            self.arg_list.xml(writer)
         writer.WriteEndElement()
 
 class ForToStep(AstNode):
