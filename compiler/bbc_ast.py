@@ -1159,7 +1159,39 @@ class ExpressionList(AstNode):
         for expr in self.expressions:
             expr.xml(writer)
         writer.WriteEndElement()
+
+class ActualArgList(AstNode):
+    def __init__(self, first_arg=None, *args, **kwargs):
+        self.args = []
+        if first_arg:
+            self.args.append(first_arg)
+        super(ActualArgList, self).__init__(*args, **kwargs)
         
+    def append(self, arg):
+        self.args.append(args)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("ActualArgList")
+        for arg in self.args:
+            arg.xml(writer)
+        writer.WriteEndElement()
+
+class FormalArgList(AstNode):
+    def __init__(self, first_arg=None, *args, **kwargs):
+        self.args = []
+        if first_arg:
+            self.args.append(first_arg)
+        super(FormalArgList, self).__init__(*args, **kwargs)
+        
+    def append(self, arg):
+        self.args.append(args)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("FormalArgList")
+        for arg in self.args:
+            arg.xml(writer)
+        writer.WriteEndElement()
+              
 class UnaryPlus(AstNode):
     def __init__(self, expr, *args, **kwargs):
         super(UnaryPlus, self).__init__(*args, **kwargs)

@@ -280,7 +280,7 @@ def p_proc_stmt(p):
         p[0] = Proc(p[2] )
     elif len(p) == 6:
         #PROC id (parameter-list)
-        p[0] = Proc(p[2] ,p[4] )
+        p[0] = Proc(p[2] ,p[4])
 
 # DRAW statements
 def p_draw_stmt(p):
@@ -678,7 +678,6 @@ def p_repeat_stmt(p):
     statements = StatementList(Repeat())
     statements.append(p[2])
     p[0] = statements
-    #to impliment the rest of the until line can i do p[1] = and call the until function
         
 def p_sound_stmt(p):
     '''sound_stmt : SOUND expr COMMA expr COMMA expr COMMA expr
@@ -784,7 +783,17 @@ def p_wait_stmt(p):
 #
 
 def p_actual_arg_list(p):
-    '''actual_arg_list : expr_list'''
+    '''actual_arg_list : actual_arg
+                       | actual_arg_list COMMA actual_arg'''
+    if len(p) == 2:
+        p[0] = ActualArgList(p[1])
+    if len(p) == 4:
+        p[1].append(p[3])
+        p[0] = p[1]
+
+def p_actual_arg(p):
+    '''actual_arg : expr
+                  | array'''
     p[0] = p[1]
 
 def p_formal_arg_list(p):
@@ -793,7 +802,8 @@ def p_formal_arg_list(p):
     if len(p) == 2:
         p[0] = FormalArgumentList(p[1])
     if len(p) == 4:
-        p[0] = FormalArgumentList(p[1], p[3])
+        p[1].append(p[3])
+        p[0] = p[1]
     
 def p_formal_arg(p):
     '''formal_arg : variable
