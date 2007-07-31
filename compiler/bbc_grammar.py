@@ -794,8 +794,10 @@ def p_formal_arg_list(p):
         p[0] = FormalArgumentList(p[1], p[3])
     
 def p_formal_arg(p):
-    '''formal_arg : ID
-                  | RETURN ID'''
+    '''formal_arg : variable
+                  | array
+                  | RETURN variable
+                  | RETURN array'''
     if len(p) == 2:
         p[0] = FormalArgument(p[1])
     elif len(p) == 3:
