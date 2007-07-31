@@ -491,6 +491,10 @@ def t_PROC(t):
     r'PROC'
     return t
 
+def t_QUIT(t):
+    r'QUIT'
+    return t
+
 def t_READ(t):
     r'READ'
     return t

@@ -802,6 +802,31 @@ class PrintManipulator(AstNode):
         writer.WriteEndAttribute()
         writer.WriteEndElement()
 
+class Proc(AstNode):
+    def __init__(self, id, parameterList=None, *args, **kwargs):
+        self.id = id
+        self.parameterList = parameterList
+        super(Proc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Proc")
+        writer.WriteStartElement("id")
+        self.id.xml(writer)
+        writer.WriteEndElement()
+        if self.parameterList:
+            writer.WriteStartElement("parameterList")
+            self.parameterList.xml(writer)
+            writer.WriteEndElement()
+        writer.WriteEndElement()
+
+class Quit(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(Quit, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Quit")
+        writer.WriteEndElement()
+
 class Rectangle(AstNode):
     def __init__(self, x1, y1, width, height, x2=None, y2=None, rectType=None, *args, **kwargs):
         # if height is NONE then it is a square

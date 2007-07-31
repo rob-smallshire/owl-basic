@@ -69,8 +69,6 @@ def p_stmt_terminator(p):
                  | line_stmt
                  | local_stmt
                  | on_error_stmt
-                 | proc_stmt
-                 | quit_stmt
                  | read_stmt
                  | restore_stmt    PAGE 69 BBCBASIC.PDF - RESTORE +offset???
                  | sys_stmt        
@@ -129,6 +127,8 @@ def p_stmt_body(p):
                  | plot_stmt
                  | point_stmt
                  | print_stmt
+                 | proc_stmt
+                 | quit_stmt
                  | rectangle_stmt
                  | repeat_stmt
                  | report_stmt
@@ -262,7 +262,7 @@ def p_def_fn_stmt(p):
     elif len(p) == 9:
         p[0] = DefineFunction(p[3], p[5], None, p[8])
     elif len(p) == 10:
-        p[0] = DefinieFunction(p[3], p[5], p[7], p[9])
+        p[0] = DefineFunction(p[3], p[5], p[7], p[9])
                        
 def p_def_proc_stmt(p):
     '''def_proc_stmt : DEF PROC ID statement_list ENDPROC
@@ -271,6 +271,16 @@ def p_def_proc_stmt(p):
         p[0] = DefineProcedure(p[3], None, p[4])
     elif len(p) == 9:
         p[0] = DefineProcedure(p[3], p[5], p[7])
+
+def p_proc_stmt(p):
+    '''proc_stmt : PROC ID
+                 | PROC ID  LPAREN formal_arg_list RPAREN'''
+    if len(p) == 3:
+        #PROC id
+        p[0] = Proc(p[2] )
+    elif len(p) == 6:
+        #PROC id (parameter-list)
+        p[0] = Proc(p[2] ,p[4] )
 
 # DRAW statements
 def p_draw_stmt(p):
@@ -613,6 +623,12 @@ def p_print_manipulator(p):
                          | COMMA
                          | SEMICOLON'''
     p[0] = PrintManipulator(p[1])
+
+
+
+def p_quit_stmt(p):
+    '''quit_stmt : QUIT'''
+    p[0] = Quit()
     
 def p_rectangle_stmt(p):
     '''rectangle_stmt : RECTANGLE expr COMMA expr COMMA expr
