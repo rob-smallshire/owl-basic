@@ -674,8 +674,10 @@ def p_report_stmt(p):
     p[0] = Report()
 
 def p_repeat_stmt(p):
-    '''repeat_stmt : REPEAT''' # bbc basic also allows REPEAT UNTIL expr. unsure how to impliment this
-    p[0] = Repeat()
+    '''repeat_stmt : REPEAT compound_statement'''
+    statements = StatementList(Repeat())
+    statements.append(p[2])
+    p[0] = statements
     #to impliment the rest of the until line can i do p[1] = and call the until function
         
 def p_sound_stmt(p):
