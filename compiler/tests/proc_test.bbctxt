@@ -1,0 +1,10 @@
+REM test PROC
+PROCtesta
+PROCtestb(x)
+PROCtestc(x,y)
+PROCtestd(x,RETURN y)
+PROCteste(RETURN x)
+PROCtestf(RETURN x, RETURN y)
+PROCtestg(100,100)
+PROCtesth(x,100,5,32,7,3,7,4)
+PROCtesti(TIME,x,RETURN y)
