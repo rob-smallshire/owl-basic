@@ -1056,6 +1056,21 @@ class Endwhile(AstNode):
         writer.WriteStartElement("Endwhile")
         writer.WriteEndElement()
 
+class Width(AstNode):
+    def __init__(self, expression, *args, **kwargs):
+        self.expression = expression
+        super(Width, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Width")
+        writer.WriteStartElement("expression")
+        self.expression.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+
+
+
 class ExpressionList(AstNode):
     def __init__(self, first_expr=None, *args, **kwargs):
         self.expressions = []

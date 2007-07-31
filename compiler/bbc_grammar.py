@@ -79,8 +79,7 @@ def p_stmt_terminator(p):
                  | return_stmt
                  | sys_stmt        
                  | tint_stmt
-                 | trace_stmt
-                 | width_stmt'''
+                 | trace_stmt'''
 
 # All statements
 def p_any_stmt_body(p):
@@ -141,6 +140,7 @@ def p_stmt_body(p):
                  | vdu_stmt
                  | voices_stmt
                  | while_stmt
+                 | width_stmt
                  | endwhile_stmt'''
     if p[1]:
         p[0] = Statement(p[1])
@@ -719,6 +719,10 @@ def p_while_stmt(p):
 def p_endwhile_stmt(p):
     '''endwhile_stmt : ENDWHILE'''
     p[0] = Endwhile()
+
+def p_width_stmt(p):
+    '''width_stmt : WIDTH expr'''
+    p[0] = Width(p[2] )
 
 #=============================================================================#
 # ARGUMENTS
