@@ -844,10 +844,10 @@ class CallProcedure(AstNode):
     def xml(self, writer):
         writer.WriteStartElement("CallProcedure")
         writer.WriteStartAttribute("name")
-        self.id.xml(writer)
-        writer.WriteEndElement()
-        if self.parameterList:
-            self.parameterList.xml(writer)
+        writer.WriteString(str(self.id))
+        writer.WriteEndAttribute()
+        if self.parameter_list:
+            self.parameter_list.xml(writer)
         writer.WriteEndElement()
 
 class Quit(AstNode):
@@ -1199,7 +1199,7 @@ class ActualArgList(AstNode):
         super(ActualArgList, self).__init__(*args, **kwargs)
         
     def append(self, arg):
-        self.args.append(args)
+        self.args.append(arg)
         
     def xml(self, writer):
         writer.WriteStartElement("ActualArgList")
@@ -1233,7 +1233,7 @@ class FormalArgument(AstNode):
         self.arg.xml(writer)
         writer.WriteEndElement()
         
-class FormalReference(AstNode):
+class FormalReferenceArgument(AstNode):
     def __init__(self, arg, *args, **kwargs):
         self.arg = arg
         super(FormalReferenceArgument, self).__init__(*args, **kwargs)

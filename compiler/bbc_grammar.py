@@ -273,7 +273,7 @@ def p_def_proc_stmt(p):
 
 def p_proc_stmt(p):
     '''proc_stmt : PROC_ID
-                 | PROC_ID LPAREN formal_arg_list RPAREN'''
+                 | PROC_ID LPAREN actual_arg_list RPAREN'''
     if len(p) == 2:
         #PROC id
         p[0] = CallProcedure(p[1])
