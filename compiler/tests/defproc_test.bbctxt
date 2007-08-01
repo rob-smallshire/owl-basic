@@ -1,5 +1,13 @@
 DEF PROCalpha
+ENDPROC
 DEFPROCbravo
+ENDPROC
 DEF PROCtesting(A)
+ENDPROC
+
 DEF PROCcharlie(A%, B, A(), A)
+ENDPROC
+
 DEFPROCdelta(A%,A%,A(), B)
+ENDPROC
+

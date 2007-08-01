@@ -236,6 +236,16 @@ class DefineFunction(AstNode):
             self.arg_list.xml(writer)
         writer.WriteEndElement()
 
+class ReturnFromFunction(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(ReturnFromFunction, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("ReturnFromFunction")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
+
 class DefineProcedure(AstNode):
     def __init__(self, id, arg_list=None, *args, **kwargs):
         self.id = id
@@ -249,6 +259,14 @@ class DefineProcedure(AstNode):
         writer.WriteEndAttribute()
         if self.arg_list:
             self.arg_list.xml(writer)
+        writer.WriteEndElement()
+
+class ReturnFromProcedure(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(ReturnFromProcedure, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("ReturnFromProcedure")
         writer.WriteEndElement()
 
 class ForToStep(AstNode):

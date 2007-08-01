@@ -1,0 +1,8 @@
+DEF FNpi = 3.141
+
+DEFFNfoo(A$) = "foo" + A$ + "foo"
+
+DEFFNmultiply(a, b)
+  result = a * b
+=result
+

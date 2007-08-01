@@ -105,6 +105,8 @@ def p_stmt_body(p):
                  | draw_stmt
                  | ellipse_stmt
                  | end_stmt
+                 | end_fn_stmt
+                 | endproc_stmt
                  | envelope_stmt
                  | error_stmt
                  | fill_stmt
@@ -262,7 +264,11 @@ def p_def_fn_stmt(p):
     elif len(p) == 7:
         p[3].prepend(DefineFunction(p[2], p[4]))
         p[0] = p[3]
-                       
+
+def p_end_fn_stmt(p):
+    '''end_fn_stmt : EQ expr'''
+    p[0] = ReturnFromFunction(p[2])
+                    
 def p_def_proc_stmt(p):
     '''def_proc_stmt : DEF PROC_ID
                      | DEF PROC_ID LPAREN formal_arg_list RPAREN'''
@@ -270,6 +276,10 @@ def p_def_proc_stmt(p):
         p[0] = DefineProcedure(p[2])
     elif len(p) == 6:
         p[0] = DefineProcedure(p[2], p[4])
+
+def p_endproc_stmt(p):
+    '''endproc_stmt : ENDPROC'''
+    p[0] = ReturnFromProcedure()
 
 def p_proc_stmt(p):
     '''proc_stmt : PROC_ID
