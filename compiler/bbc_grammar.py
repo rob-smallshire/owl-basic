@@ -1039,7 +1039,8 @@ def p_expr_function(p):
                      | rad_func
                      | str_str_func
                      | sum_func
-                     | sumlen_func'''
+                     | sumlen_func
+                     | width_func'''
     p[0] = p[1]
 
 #def p_user_func(p):
@@ -1144,6 +1145,10 @@ def p_sum_func(p):
 def p_sumlen_func(p):
     'sumlen_func : SUMLEN array %prec FUNCTION'
     p[0] = ArraySumLen(p[2])
+    
+def p_width_func(p):
+    'width_func : WIDTH %prec FUNCTION'
+    p[0] = WidthFunc()
 
 #=============================================================================#
 # CHANNEL

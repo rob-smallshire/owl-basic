@@ -1688,6 +1688,15 @@ class StrStringFunc(AstNode):
         self.expr.xml(writer)
         writer.WriteEndElement()
 
+class WidthFunc(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(WidthFunc, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Width")
+        writer.WriteEndElement()
+    
+
 class LiteralString(AstNode):
     def __init__(self, value, *args, **kwargs):
         self.value = value
