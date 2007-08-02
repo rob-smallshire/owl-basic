@@ -128,13 +128,13 @@ class Bput(AstNode):
 
     def xml(self, writer):
         writer.WriteStartElement("Bput")
+        writer.WriteStartAttribute("newline")   #
+        writer.WriteString(str(self.newline))   # these 3 lines have been moved to stop ivnalid xml error
+        writer.WriteEndAttribute()              # 
         self.channel.xml(writer)
         writer.WriteStartElement("Bytes")
         self.expr.xml(writer)
         writer.WriteEndElement()
-        writer.WriteStartAttribute("newline")
-        writer.WriteString(str(self.newline))
-        writer.WriteEndAttribute()
         writer.WriteEndElement()  
         
 class Case(AstNode):
@@ -188,6 +188,18 @@ class OtherwiseClause(AstNode):
     def xml(self, writer):
         writer.WriteStartElement("OtherwiseClause")
         self.statement_list.xml(writer)
+        writer.WriteEndElement()
+
+class Close(AstNode):
+    def __init__(self, channel, *args, **kwargs):
+        self.channel = channel
+        super(Close, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Close")
+        writer.WriteStartElement("channel")
+        self.channel.xml(writer)
+        writer.WriteEndElement()
         writer.WriteEndElement()
 
 class Data(AstNode):
@@ -1579,8 +1591,8 @@ class BeatFunc(AstNode):
 
 class BgetFunc(AstNode):
     def __init__(self, channel, *args, **kwargs):
-        self.channel = expr
-        super(AscFunc, self).__init__(*args, **kwargs)
+        self.channel = channel
+        super(BgetFunc, self).__init__(*args, **kwargs)
         
     def xml(self, writer):
         writer.WriteStartElement("Bget")
@@ -1651,6 +1663,16 @@ class DimensionSizeFunc(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
+class EofFunc(AstNode):
+    def __init__(self, channel, *args, **kwargs):
+        self.channel = channel
+        super(EofFunc, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("EofFunc")
+        self.channel.xml(writer)
+        writer.WriteEndElement()
+
 class ErlFunc(AstNode):
     def __init__(self, *args, **kwargs):
         super(ErlFunc, self).__init__(*args, **kwargs)
@@ -1685,6 +1707,14 @@ class GetFunc(AstNode):
 
     def xml(self, writer):
         writer.WriteStartElement("GetFunc")
+        writer.WriteEndElement()
+
+class Get_strFunc(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(Get_strFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Get_strFunc")
         writer.WriteEndElement()
 
 class InkeyFunc(AstNode):
@@ -1737,6 +1767,31 @@ class LenFunc(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
+class LnFunc(AstNode):
+    def __init__(self, factor, *args, **kwargs):
+        self.factor = factor
+        super(LnFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("LnFunc")
+        writer.WriteStartElement("factor")
+        self.factor.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+class LogFunc(AstNode):
+    def __init__(self, factor, *args, **kwargs):
+        self.factor = factor
+        super(LogFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("LogFunc")
+        writer.WriteStartElement("factor")
+        self.factor.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+
 class MidStringFunc(AstNode):
     def __init__(self, source, position, length=None, *args, **kwargs):
         self.source = source
@@ -1758,6 +1813,74 @@ class MidStringFunc(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()    
 
+class OpeninFunc(AstNode):
+    def __init__(self, factor, *args, **kwargs):
+        self.factor = factor
+        super(OpeninFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("OpeninFunc")
+        writer.WriteStartElement("factor")
+        self.factor.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+        
+class OpenoutFunc(AstNode):
+    def __init__(self, factor, *args, **kwargs):
+        self.factor = factor
+        super(OpenoutFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("OpenoutFunc")
+        writer.WriteStartElement("factor")
+        self.factor.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+        
+class OpenupFunc(AstNode):
+    def __init__(self, factor, *args, **kwargs):
+        self.factor = factor
+        super(OpenupFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("OpenupFunc")
+        writer.WriteStartElement("factor")
+        self.factor.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+class PosFunc(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(PosFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("PosFunc")
+        writer.WriteEndElement()
+        
+class PiFunc(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(PiFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("PiFunc")
+        writer.WriteEndElement()
+
+class PointFunc(AstNode):
+    def __init__(self, x, y, *args, **kwargs):
+        self.x = x
+        self.y = y
+        super(PointFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("PointFunc")
+        writer.WriteStartElement("x")
+        self.x.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("y")
+        self.y.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
 class RadFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
@@ -1766,6 +1889,19 @@ class RadFunc(AstNode):
     def xml(self, writer):
         writer.WriteStartElement("Rad")
         self.expr.xml(writer)
+        writer.WriteEndElement()
+
+class RndFunc(AstNode):
+    def __init__(self, expression=None, *args, **kwargs):
+        self.expression = expression
+        super(RndFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("RndFunc")
+        if self.expression:
+            writer.WriteStartElement("expression")
+            self.expression.xml(writer)
+            writer.WriteEndElement()
         writer.WriteEndElement()
 
 class SinFunc(AstNode):
@@ -1777,7 +1913,27 @@ class SinFunc(AstNode):
         writer.WriteStartElement("Sin")
         self.expr.xml(writer)
         writer.WriteEndElement()
+
+class SgnFunc(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(SgnFunc, self).__init__(*args, **kwargs)
         
+    def xml(self, writer):
+        writer.WriteStartElement("Sgn")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
+
+class SqrFunc(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(SqrFunc, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Sqr")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
+
 class StrStringFunc(AstNode):
     def __init__(self, expr, base=10, *args, **kwargs):
         self.expr = expr
@@ -1789,6 +1945,16 @@ class StrStringFunc(AstNode):
         writer.WriteStartAttribute("base")
         writer.WriteString(self.base)
         writer.WriteEndElement()
+        self.expr.xml(writer)
+        writer.WriteEndElement()
+
+class TanFunc(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(TanFunc, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("Tan")
         self.expr.xml(writer)
         writer.WriteEndElement()
 

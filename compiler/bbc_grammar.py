@@ -986,10 +986,12 @@ def p_pseudovariable(p):
 def p_end_value(p):
     'end_value : END'
     p[0] = EndValue()
-    
+
 def p_ext(p):
     '''ext_value : EXT channel'''
     p[0] = ExtValue(p[2])
+
+
 
 #=============================================================================#
 # FUNCTIONS
@@ -997,25 +999,10 @@ def p_ext(p):
 
 # TODO: Functions to be implemented
 '''    expr_function : 
-                     | eof_func
                      | eval_func
-                     | get_str_func
-                     | ln_func
-                     | log_func
-                     | openin_func
-                     | openout_func
-                     | openup_func
-                     | pi_func
-                     | point_func
-                     | pos_func
                      | report_str_func
-                     | rnd_func
-                     | sgn_func
-                     | sin_func
-                     | sqr_func
                      | string_str_func
                      | sum_func
-                     | tan_func
                      | tempo_func
                      | usr_func
                      | val_func
@@ -1037,16 +1024,30 @@ def p_expr_function(p):
                      | err_func
                      | erl_func
                      | exp_func
+                     | eof_func
                      | get_func
+                     | get_str_func
                      | inkey_func
                      | inkey_str_func
                      | int_func
                      | len_func
+                     | ln_func
+                     | log_func
                      | mid_str_func
                      | mod_func
                      | not_func
+                     | openin_func
+                     | openout_func
+                     | openup_func
+                     | pi_func
+                     | pos_func
+                     | point_func
                      | sin_func
+                     | sgn_func
+                     | sqr_func
+                     | tan_func
                      | rad_func
+                     | rnd_func
                      | str_str_func
                      | sum_func
                      | sumlen_func
@@ -1113,6 +1114,10 @@ def p_erl_func(p):
     '''erl_func : ERL %prec FUNCTION'''
     p[0] = ErlFunc()
 
+def p_eof(p):
+    '''eof_func : EOF channel'''
+    p[0] = EofFunc(p[2])
+
 def p_err_func(p):
     '''err_func : ERR %prec FUNCTION'''
     p[0] = ErrFunc()
@@ -1124,6 +1129,10 @@ def p_exp_func(p):
 def p_get_func(p):
     '''get_func : GET %prec FUNCTION'''
     p[0] = GetFunc()
+
+def p_get_str_func(p):
+    '''get_str_func : GET_STR %prec FUNCTION'''
+    p[0] = Get_strFunc()
 
 def p_inkey_func(p):
     '''inkey_func : INKEY factor %prec FUNCTION'''
@@ -1146,6 +1155,15 @@ def p_len_func(p):
         #LEN factor
         p[0] = LenFunc(p[2] )
 
+def p_ln_func(p):
+    '''ln_func : LN factor %prec FUNCTION'''
+    p[0] = LnFunc(p[2] )
+
+def p_log_func(p):
+    '''log_func : LOG factor %prec FUNCTION'''
+    p[0] = LogFunc(p[2] )
+
+
 def p_mid_str_func(p):       # note for rob - is this missing %prec FUNCTION
     '''mid_str_func : MID_STR_LPAREN expr COMMA expr RPAREN
                      | MID_STR_LPAREN expr COMMA expr COMMA expr RPAREN'''
@@ -1162,13 +1180,55 @@ def p_not_func(p):
     'not_func : NOT factor %prec FUNCTION'
     p[0] = Not(p[2])
 
+def p_openin_func(p):
+    '''openin_func : OPENIN factor %prec FUNCTION'''
+    p[0] = OpeninFunc(p[2])
+        
+def p_openout_func(p):
+    '''openout_func : OPENOUT factor %prec FUNCTION'''
+    p[0] = OpenoutFunc(p[2])
+        
+def p_openup_func(p):
+    '''openup_func : OPENUP factor %prec FUNCTION'''
+    p[0] = OpenupFunc(p[2])
+
+def p_pos_func(p):
+    '''pos_func : POS %prec FUNCTION'''
+    p[0] = PosFunc()
+        
+def p_pi_func(p):
+    '''pi_func : PI %prec FUNCTION'''
+    p[0] = PiFunc()
+
+def p_point_func(p):
+    '''point_func : POINT_LPAREN expr COMMA expr RPAREN %prec FUNCTION'''
+    p[0] = PointFunc(p[3] ,p[5] )
+
 def p_rad_func(p):
     'rad_func : RAD factor %prec FUNCTION'
     p[0] = RadFunc(p[2])
 
+def p_rnd_func(p):
+    '''rnd_func : RND %prec FUNCTION
+                | RND expr %prec FUNCTION'''
+    if len(p) == 2:
+        #RND
+        p[0] = RndFunc()
+    elif len(p) == 3:
+        #RND expression
+        p[0] = RndFunc(expression=p[2] )
+
 def p_sin_func(p):
     'sin_func : SIN factor %prec FUNCTION'
     p[0] = SinFunc(p[2])
+    
+def p_sgn_func(p):
+    'sgn_func : SGN factor %prec FUNCTION'
+    p[0] = SgnFunc(p[2])
+
+def p_sqr_func(p):
+    'sqr_func : SQR factor %prec FUNCTION'
+    p[0] = SqrFunc(p[2])
     
 def p_str_str_func(p):
     '''str_str_func : str_str_dec_func
@@ -1192,6 +1252,10 @@ def p_sum_func(p):
 def p_sumlen_func(p):
     'sumlen_func : SUMLEN array %prec FUNCTION'
     p[0] = ArraySumLen(p[2])
+
+def p_tan_func(p):
+    'tan_func : TAN factor %prec FUNCTION'
+    p[0] = TanFunc(p[2])
     
 def p_width_func(p):
     'width_func : WIDTH %prec FUNCTION'
