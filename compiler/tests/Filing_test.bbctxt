@@ -11,7 +11,8 @@ BPUT#A,Z$
 
 CLOSE#B
 x=EOF#C
-REM y$=GET$#C #unknown problem
+
+y$=GET$#C
 
 REM these need to be sorted
 REM EXT#

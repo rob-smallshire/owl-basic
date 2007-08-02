@@ -1717,6 +1717,18 @@ class Get_strFunc(AstNode):
         writer.WriteStartElement("Get_strFunc")
         writer.WriteEndElement()
 
+class Get_strFileFunc(AstNode):
+    def __init__(self, channel, *args, **kwargs):
+        self.channel = channel
+        super(Get_strFileFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Get_strFileFunc")
+        writer.WriteStartElement("channel")
+        self.channel.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
 class InkeyFunc(AstNode):
     def __init__(self, factor, *args, **kwargs):
         self.factor = factor

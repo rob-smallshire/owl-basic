@@ -1027,6 +1027,7 @@ def p_expr_function(p):
                      | eof_func
                      | get_func
                      | get_str_func
+                     | get_str_file_func
                      | inkey_func
                      | inkey_str_func
                      | int_func
@@ -1133,6 +1134,10 @@ def p_get_func(p):
 def p_get_str_func(p):
     '''get_str_func : GET_STR %prec FUNCTION'''
     p[0] = Get_strFunc()
+
+def p_get_str_file_func(p):
+    '''get_str_file_func : GET_STR channel %prec FUNCTION'''
+    p[0] = Get_strFileFunc(p[2])
 
 def p_inkey_func(p):
     '''inkey_func : INKEY factor %prec FUNCTION'''
