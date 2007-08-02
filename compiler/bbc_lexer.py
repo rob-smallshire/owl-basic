@@ -581,6 +581,14 @@ def t_EOR(t):
     r'EOR'
     return t
 
+def t_ERL(t):
+    r'ERL'
+    return t
+
+def t_ERR(t):
+    r'ERR'
+    return t
+
 def t_EXP(t):
     r'EXP'
     return t

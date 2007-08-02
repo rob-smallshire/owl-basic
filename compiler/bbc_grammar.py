@@ -998,16 +998,8 @@ def p_ext(p):
 # TODO: Functions to be implemented
 '''    expr_function : 
                      | eof_func
-                     | erl_func
-                     | err_func
                      | eval_func
-                     | exp_func
-                     | get_func
                      | get_str_func
-                     | inkey_func
-                     | inkey_str_func
-                     | int_func
-                     | len_func
                      | ln_func
                      | log_func
                      | openin_func
@@ -1042,6 +1034,14 @@ def p_expr_function(p):
                      | count_func
                      | deg_func
                      | dim_func
+                     | err_func
+                     | erl_func
+                     | exp_func
+                     | get_func
+                     | inkey_func
+                     | inkey_str_func
+                     | int_func
+                     | len_func
                      | mid_str_func
                      | mod_func
                      | not_func
@@ -1109,7 +1109,44 @@ def p_dim_func(p):
     elif len(p) == 6:
         p[0] = DimensionSizeFunc(p[2], p[4])
 
-def p_mid_str_func(p):
+def p_erl_func(p):
+    '''erl_func : ERL %prec FUNCTION'''
+    p[0] = ErlFunc()
+
+def p_err_func(p):
+    '''err_func : ERR %prec FUNCTION'''
+    p[0] = ErrFunc()
+
+def p_exp_func(p):
+    '''exp_func : EXP factor %prec FUNCTION'''
+    p[0] = ExpFunc(p[2] )
+
+def p_get_func(p):
+    '''get_func : GET %prec FUNCTION'''
+    p[0] = GetFunc()
+
+def p_inkey_func(p):
+    '''inkey_func : INKEY factor %prec FUNCTION'''
+    #if factor 0<= then wait for any key and return keycode
+    #if factor 0>  then return true or false on that keycode
+    #if factor = -256 return a number for OS version
+    p[0] = InkeyFunc(p[2] )
+
+def p_inkey_str_func(p):
+    '''inkey_str_func : INKEY_STR factor %prec FUNCTION'''
+    p[0] = Inkey_strFunc(p[2] )
+
+def p_int_func(p):
+    '''int_func : INT factor %prec FUNCTION'''
+    p[0] = IntFunc(p[2] )
+
+def p_len_func(p):
+    '''len_func : LEN factor %prec FUNCTION'''
+    if len(p) == 3:
+        #LEN factor
+        p[0] = LenFunc(p[2] )
+
+def p_mid_str_func(p):       # note for rob - is this missing %prec FUNCTION
     '''mid_str_func : MID_STR_LPAREN expr COMMA expr RPAREN
                      | MID_STR_LPAREN expr COMMA expr COMMA expr RPAREN'''
     if len(p) == 6:

@@ -1651,6 +1651,92 @@ class DimensionSizeFunc(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
+class ErlFunc(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(ErlFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("ErlFunc")
+        writer.WriteEndElement()
+
+class ErrFunc(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(ErrFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("ErrFunc")
+        writer.WriteEndElement()
+
+class ExpFunc(AstNode):
+    def __init__(self, factor, *args, **kwargs):
+        self.factor = factor
+        super(ExpFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("ExpFunc")
+        writer.WriteStartElement("factor")
+        self.factor.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+class GetFunc(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(GetFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("GetFunc")
+        writer.WriteEndElement()
+
+class InkeyFunc(AstNode):
+    def __init__(self, factor, *args, **kwargs):
+        self.factor = factor
+        super(InkeyFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("InkeyFunc")
+        writer.WriteStartElement("factor")
+        self.factor.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+class Inkey_strFunc(AstNode):
+    def __init__(self, factor, *args, **kwargs):
+        self.factor = factor
+        super(Inkey_strFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Inkey_strFunc")
+        writer.WriteStartElement("factor")
+        self.factor.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+
+
+class IntFunc(AstNode):
+    def __init__(self, factor, *args, **kwargs):
+        self.factor = factor
+        super(IntFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("IntFunc")
+        writer.WriteStartElement("factor")
+        self.factor.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+        
+class LenFunc(AstNode):
+    def __init__(self, factor, *args, **kwargs):
+        self.factor = factor
+        super(LenFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("LenFunc")
+        writer.WriteStartElement("factor")
+        self.factor.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
 class MidStringFunc(AstNode):
     def __init__(self, source, position, length=None, *args, **kwargs):
         self.source = source
