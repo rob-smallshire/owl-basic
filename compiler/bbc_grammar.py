@@ -244,7 +244,7 @@ def p_colour_stmt(p):
             p[0] = Colour(p[2], p[4])
         else:
             p[0] = Palette(logical = p[2], physical = p[4])
-    elif len(p) == 7:
+    elif len(p) == 9:
         p[0] = Palette(logical = p[2], red = p[4], green = p[6], blue = p[8])
                    
 # DATA
