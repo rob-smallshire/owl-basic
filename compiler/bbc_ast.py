@@ -137,6 +137,18 @@ class Bput(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()  
 
+class Call(AstNode): 
+    def __init__(self, arglist, *args, **kwargs):
+        self.arglist = arglist # unsure if you want to deal with this like this
+        super(Call, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Call")
+        writer.WriteStartElement("Arglist")
+        self.arglist.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
 class Cls(AstNode):
     def __init__(self, *args, **kwargs):
         super(Cls, self).__init__(*args, **kwargs)
