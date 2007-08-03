@@ -283,8 +283,8 @@ def t_CIRCLE(t):
     return t
 
 def t_COLOUR(t):
-    r'COLOU?R'
-    return 'COLOUR'
+    r'COLOU?R'    #major error here. cannot return a string. 
+    return t # have removed the return of 'COLOUR' due to tokenising failure
 
 def t_INKEY_STR(t):
     r'INKEY\$'
