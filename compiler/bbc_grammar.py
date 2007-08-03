@@ -163,7 +163,7 @@ def p_bput_stmt(p):
         p[0] = Bput(p[2], p[4], newline=False)
     
 # CALL statement
-def p_call_stmt(p):
+def p_call_stmt(p): 
     '''call_stmt : CALL actual_arg_list'''
     p[0] = Call(p[2])
 
@@ -228,18 +228,22 @@ def p_clg_stmt(p):
 # CLS    
 def p_cls_stmt(p):
     'cls_stmt : CLS'
-    p[0] = Clg() 
+    p[0] = Cls() 
 
 # COLOUR
 def p_colour_stmt(p):
     '''colour_stmt : COLOUR expr
                    | COLOUR expr COMMA expr
+                   | COLOUR expr TINT expr
                    | COLOUR expr COMMA expr COMMA expr COMMA expr'''
 #                   | COLOUR expr TINT expr
     if len(p) == 3:
         p[0] = Colour(p[2])
     elif len(p) == 5:
-        p[0] = Palette(logical = p[2], physical = p[4])
+        if p[3] == "TINT":
+            p[0] = Colour(p[2], p[4])
+        else:
+            p[0] = Palette(logical = p[2], physical = p[4])
     elif len(p) == 7:
         p[0] = Palette(logical = p[2], red = p[4], green = p[6], blue = p[8])
                    

@@ -136,7 +136,72 @@ class Bput(AstNode):
         self.expr.xml(writer)
         writer.WriteEndElement()
         writer.WriteEndElement()  
-        
+
+class Cls(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(Cls, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Cls")
+        writer.WriteEndElement()  
+
+class Clg(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(Cls, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Clg")
+        writer.WriteEndElement()  
+
+class Colour(AstNode): 
+    def __init__(self, logical, tint=None, *args, **kwargs):
+        self.logical = logical
+        self.tint = tint
+        super(Colour, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Colour")
+        writer.WriteStartElement("Logical")
+        self.logical.xml(writer)
+        writer.WriteEndElement()
+        if self.tint:
+            writer.WriteStartElement("Tint")
+            self.tint.xml(writer)
+            writer.WriteEndElement()
+        writer.WriteEndElement()
+
+class Palette(AstNode):
+    def __init__(self, logical, physical=None, red=None, green=None, blue=None, *args, **kwargs):
+        self.logical = logical
+        self.physical = physical
+        self.red = red
+        self.green = green
+        self.blue = blue
+        super(Palette, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Palette")
+        writer.WriteStartElement("Logical")
+        self.logical.xml(writer)
+        writer.WriteEndElement()
+        if self.physical:
+            writer.WriteStartElement("Physical")
+            self.physical.xml(writer)
+            writer.WriteEndElement()
+        if self.red:
+            writer.WriteStartElement("Red")
+            self.red.xml(writer)
+            writer.WriteEndElement()
+        if self.green:
+            writer.WriteStartElement("Green")
+            self.green.xml(writer)
+            writer.WriteEndElement()
+        if self.blue:
+            writer.WriteStartElement("Blue")
+            self.blue.xml(writer)
+            writer.WriteEndElement()
+        writer.WriteEndElement()
+
 class Case(AstNode):
     def __init__(self, expr, when_list, *args, **kwargs):
         self.expr = expr
