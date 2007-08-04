@@ -1,0 +1,12 @@
+IF number% >= 0 AND number% <= 9 THEN
+IF A%(number%) = 0 THEN
+PRINT "Thank you"
+A%(number%) = 1 : count% = count% + 1
+ELSE
+PRINT "You’ve already had that number"
+ENDIF
+ELSE
+PRINT number% " is not between 0 and 9 !"
+ENDIF
+IF count% < 10 GOTO 30
+IF count% > 5 THEN 50 ELSE 20

@@ -401,9 +401,12 @@ def p_if_single_stmt(p):
 # is interpreted as a line number to GOTO    
 def p_clause(p):
     '''clause : compound_statement
-              | factor'''
-    # TODO If is a factor - insert a Goto node
+              | implicit_goto'''
     p[0] = p[1]
+
+def p_implicit_goto(p):
+    '''implicit_goto : factor'''
+    p[0] = Goto(p[1])
                           
 def p_if_multi_stmt(p):
     '''if_multi_stmt : IF expr THEN statement_list ENDIF
@@ -411,7 +414,7 @@ def p_if_multi_stmt(p):
     if len(p) == 6:
         p[0] = If(p[2], p[4])
     elif len(p) == 8:
-        p[0] = If(p[2], p[4], p[5])
+        p[0] = If(p[2], p[4], p[6])
 
 
 # The syntax ruls for FOR..NEXT loops are not implemented by the

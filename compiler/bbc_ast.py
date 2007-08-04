@@ -642,8 +642,8 @@ class Install(AstNode):
         writer.WriteEndElement()
 
 class If(AstNode):
-    def __init__(self, condition, true_clause, false_clause, *args, **kwargs):
-        self.condition = expression
+    def __init__(self, condition, true_clause=None, false_clause=None, *args, **kwargs):
+        self.condition = condition
         self.true_clause = true_clause
         self.false_clause = false_clause
         super(If, self).__init__(*args, **kwargs)
@@ -653,12 +653,14 @@ class If(AstNode):
         writer.WriteStartElement("Condition")
         self.condition.xml(writer)
         writer.WriteEndElement()
-        writer.WriteStartElement("TrueClause")
-        self.true_clause.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("FalseClause")
-        self.false_clause.xml(writer)
-        writer.WriteEndElement()
+        if self.true_clause:
+            writer.WriteStartElement("TrueClause")
+            self.true_clause.xml(writer)
+            writer.WriteEndElement()
+        if self.false_clause:
+            writer.WriteStartElement("FalseClause")
+            self.false_clause.xml(writer)
+            writer.WriteEndElement()
         writer.WriteEndElement()
 
 class AddLibrary(AstNode):
@@ -1566,7 +1568,7 @@ class GreaterThan(RelationalOperator):
     def __init__(self, lhs, rhs, *args, **kwargs):
         super(RelationalOperator, self).__init__('gt', lhs, rhs)
 
-class GreatThanEqual(RelationalOperator):
+class GreaterThanEqual(RelationalOperator):
     def __init__(self, lhs, rhs, *args, **kwargs):
         super(RelationalOperator, self).__init__('gte', lhs, rhs)
 
