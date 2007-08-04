@@ -320,7 +320,7 @@ def p_ellipse_stmt(p): # BBC BASIC V also supports rotation of an ellipse
     elif len(p) == 10:
         p[0] = Ellipse(p[3], p[5], p[7], p[9],fill=True)
     elif len(p) == 11:
-        p[0] = Ellipse(p[2], p[4], p[6], p[8], p[10], fill=True)
+        p[0] = Ellipse(p[2], p[4], p[6], p[8], p[10])
     elif len(p) == 12:
         p[0] = Ellipse(p[3], p[5], p[7], p[9], p[11], fill=True)
 def p_error_stmt(p):
