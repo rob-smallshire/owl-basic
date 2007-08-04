@@ -184,7 +184,7 @@ class Cls(AstNode):
 
 class Clg(AstNode):
     def __init__(self, *args, **kwargs):
-        super(Cls, self).__init__(*args, **kwargs)
+        super(Clg, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
         writer.WriteStartElement("Clg")
