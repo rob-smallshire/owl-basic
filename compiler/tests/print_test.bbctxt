@@ -16,3 +16,25 @@ PRINT TAB(10);A$;TAB(20);B$
 PRINT TAB(5);foo$'SPC5;bar$
 
 
+PRINT " @ @ @ @ @ @ @ @ @ "
+PRINT "  @     @ @     @  "
+PRINT " @   @   @   @   @ "
+PRINT "    @ @     @ @    "
+PRINT " @   @       @   @ "
+PRINT "  @     @ @     @  "
+PRINT " @ @     @     @ @ "
+PRINT "  @ @         @    "
+PRINT " @ @ @ @ @ @ @   @ "
+PRINT "  @ @ @ @          "
+PRINT " @ @ @ @ @       @ "
+PRINT "  @ @ @ @          "
+PRINT "   @ @ @ @       @ "
+PRINT "    @ @ @ @        "
+PRINT "     @ @ @ @     @ "
+PRINT "      @ @ @ @      "
+PRINT "       @ @ @ @   @ "
+PRINT "        @   @ @    "
+PRINT "       @   @   @ @ "
+PRINT "  @ @ @ @ @ @   @  "
+PRINT "                 @ "
+

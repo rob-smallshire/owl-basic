@@ -149,6 +149,31 @@ class Call(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
+class Circle(AstNode):
+    def __init__(self, x, y, rad, fill=None, *args, **kwargs):
+        self.x = x
+        self.y = y
+        self.rad = rad
+        self.fill = fill
+        super(Circle, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Circle")
+        if self.fill:
+            writer.WriteStartAttribute("fill")
+            writer.WriteString(str(self.fill))
+            writer.WriteEndAttribute()
+        writer.WriteStartElement("x")
+        self.x.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("y")
+        self.y.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("rad")
+        self.rad.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
 class Cls(AstNode):
     def __init__(self, *args, **kwargs):
         super(Cls, self).__init__(*args, **kwargs)
