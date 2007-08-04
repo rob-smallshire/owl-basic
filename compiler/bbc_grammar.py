@@ -1021,7 +1021,9 @@ def p_expr_function(p):
                      | acs_func
                      | asc_func
                      | asn_func
+                     | atn_func
                      | beat_func
+                     | beats_func
                      | bget_func
                      | chr_str_func
                      | cos_func
@@ -1043,6 +1045,7 @@ def p_expr_function(p):
                      | log_func
                      | mid_str_func
                      | mod_func
+                     | mode_func
                      | not_func
                      | openin_func
                      | openout_func
@@ -1059,6 +1062,10 @@ def p_expr_function(p):
                      | str_str_func
                      | sum_func
                      | sumlen_func
+                     | tempo_func
+                     | tint_func
+                     | val_func
+                     | vpos_func
                      | width_func'''
     p[0] = p[1]
 
@@ -1085,11 +1092,19 @@ def p_asn_func(p):
 def p_asc_func(p):
     'asc_func : ASC expr %prec FUNCTION'
     p[0] = AscFunc(p[2])
-    
+
+def p_atn_func(p):
+    '''atn_func : ATN factor %prec FUNCTION'''
+    p[0] = AtnFunc(p[2] )
+
 def p_beat_func(p):
     'beat_func : BEAT %prec FUNCTION'
     p[0] = BeatFunc()
-    
+
+def p_beats_func(p):
+    '''beats_func : BEATS %prec FUNCTION'''
+    p[0] = BeatsFunc()
+
 def p_bget_func(p):
     'bget_func : BGET channel %prec FUNCTION'
     p[0] = BgetFunc(p[2])
@@ -1188,6 +1203,10 @@ def p_mod_func(p):
     'mod_func : MOD array %prec FUNCTION'
     p[0] = ArrayRootMeanSquare(p[2])
 
+def p_mode_func(p):
+    '''mode_func : MODE %prec FUNCTION'''
+    p[0] = ModeFunc()
+
 def p_not_func(p):
     'not_func : NOT factor %prec FUNCTION'
     p[0] = Not(p[2])
@@ -1268,7 +1287,29 @@ def p_sumlen_func(p):
 def p_tan_func(p):
     'tan_func : TAN factor %prec FUNCTION'
     p[0] = TanFunc(p[2])
-    
+
+def p_tempo_func(p):
+    '''tempo_func : TEMPO %prec FUNCTION'''
+    p[0] = TempoFunc()
+
+def p_tint_func(p):
+    '''tint_func : TINT expr COMMA expr %prec FUNCTION
+                 | TINT LPAREN expr COMMA expr RPAREN %prec FUNCTION'''
+    if len(p) == 5:
+        #TINT layer COMMA tint
+        p[0] = TintFunc(layer=p[2] ,tint=p[4] )
+    elif len(p) == 7:
+        #TINT ( x COMMA y )
+        p[0] = TintFunc(x=p[3] ,y=p[5] )
+
+def p_val_func(p):
+    '''val_func : VAL expr %prec FUNCTION'''
+    p[0] = ValFunc(p[2] )
+
+def p_vpos_func(p):
+    '''vpos_func : VPOS %prec FUNCTION'''
+    p[0] = VposFunc()
+
 def p_width_func(p):
     'width_func : WIDTH %prec FUNCTION'
     p[0] = WidthFunc()

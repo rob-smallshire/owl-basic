@@ -519,6 +519,10 @@ def t_TINT(t):
     r'TINT'
     return t
 
+def t_VPOS(t):
+    r'VPOS'
+    return t
+
 def t_WAIT(t):
     r'WAIT'
     return t

@@ -1685,12 +1685,32 @@ class AsnFunc(AstNode):
         self.expr.xml(writer)
         writer.WriteEndElement()
 
+class AtnFunc(AstNode):
+    def __init__(self, factor, *args, **kwargs):
+        self.factor = factor
+        super(AtnFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("AtnFunc")
+        writer.WriteStartElement("factor")
+        self.factor.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
 class BeatFunc(AstNode):
     def __init__(self, *args, **kwargs):
         super(BeatFunc, self).__init__(*args, **kwargs)
         
     def xml(self, writer):
         writer.WriteStartElement("Beat")
+        writer.WriteEndElement()
+
+class BeatsFunc(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(BeatsFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("BeatsFunc")
         writer.WriteEndElement()
 
 class BgetFunc(AstNode):
@@ -1929,6 +1949,14 @@ class MidStringFunc(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()    
 
+class ModeFunc(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(ModeFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("ModeFunc")
+        writer.WriteEndElement()
+
 class OpeninFunc(AstNode):
     def __init__(self, factor, *args, **kwargs):
         self.factor = factor
@@ -2072,6 +2100,62 @@ class TanFunc(AstNode):
     def xml(self, writer):
         writer.WriteStartElement("Tan")
         self.expr.xml(writer)
+        writer.WriteEndElement()
+
+class TempoFunc(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(TempoFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("TempoFunc")
+        writer.WriteEndElement()
+
+class TintFunc(AstNode):
+    def __init__(self, layer=None, tint=None, x=None, y=None, *args, **kwargs):
+        self.layer = layer
+        self.tint = tint
+        self.x = x
+        self.y = y
+        super(TintFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("TintFunc")
+        if self.type:
+            writer.WriteStartElement("layer")
+            self.layer.xml(writer)
+            writer.WriteEndElement()
+        if self.tint:
+            writer.WriteStartElement("tint")
+            self.tint.xml(writer)
+            writer.WriteEndElement()
+        if self.x:
+            writer.WriteStartElement("x")
+            self.x.xml(writer)
+            writer.WriteEndElement()
+        if self.y:
+            writer.WriteStartElement("y")
+            self.y.xml(writer)
+            writer.WriteEndElement()
+        writer.WriteEndElement()
+
+class ValFunc(AstNode):
+    def __init__(self, expr, *args, **kwargs):
+        self.expr = expr
+        super(ValFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("ValFunc")
+        writer.WriteStartElement("expr")
+        self.expr.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
+
+class VposFunc(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(VposFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("VposFunc")
         writer.WriteEndElement()
 
 class WidthFunc(AstNode):
