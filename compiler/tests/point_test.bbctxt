@@ -1,9 +1,9 @@
 REM Test of BBC Basic POINT function
-REM 
-REM colour = POINT(640, 512)
-REM X = 100
-REM Y = 200
-REM shade = POINT(X, Y)
+
+colour = POINT(640, 512)
+X = 100
+Y = 200
+shade = POINT(X, Y)
 POINT X,Y
 POINT BY X,Y
 POINT TO X,Y

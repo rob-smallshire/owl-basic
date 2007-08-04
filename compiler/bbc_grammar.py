@@ -1211,7 +1211,7 @@ def p_pi_func(p):
 
 def p_point_func(p):
     '''point_func : POINT_LPAREN expr COMMA expr RPAREN %prec FUNCTION'''
-    p[0] = PointFunc(p[3] ,p[5] )
+    p[0] = PointFunc(p[2] ,p[4] )
 
 def p_rad_func(p):
     'rad_func : RAD factor %prec FUNCTION'

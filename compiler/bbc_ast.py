@@ -1980,18 +1980,18 @@ class PiFunc(AstNode):
         writer.WriteEndElement()
 
 class PointFunc(AstNode):
-    def __init__(self, x, y, *args, **kwargs):
-        self.x = x
-        self.y = y
+    def __init__(self, xexpr, yexpr, *args, **kwargs):
+        self.xexpr = xexpr
+        self.yexpr = yexpr
         super(PointFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
         writer.WriteStartElement("PointFunc")
-        writer.WriteStartElement("x")
-        self.x.xml(writer)
+        writer.WriteStartElement("X")
+        self.xexpr.xml(writer)
         writer.WriteEndElement()
-        writer.WriteStartElement("y")
-        self.y.xml(writer)
+        writer.WriteStartElement("Y")
+        self.yexpr.xml(writer)
         writer.WriteEndElement()
         writer.WriteEndElement()
 
