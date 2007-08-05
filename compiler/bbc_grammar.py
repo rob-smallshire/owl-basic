@@ -136,6 +136,8 @@ def p_stmt_body(p):
                  | report_stmt
                  | return_stmt
                  | sound_stmt
+                 | stop_stmt
+                 | stereo_stmt
                  | swap_stmt
                  | tempo_stmt
                  | until_stmt
@@ -701,6 +703,10 @@ def p_sound_stmt(p):
         p[0] = Sound(p[2], p[4], p[6], p[8])
     elif len(p) == 3:
         p[0] = Sound(off=True)
+
+def p_stereo_stmt(p):
+    '''stereo_stmt : STEREO expr COMMA expr'''
+    p[0] = Stereo(p[2] ,p[4] )
              
 def p_swap_stmt(p):
     '''swap_stmt : SWAP variable COMMA variable
@@ -722,6 +728,10 @@ def p_tempo_stmt(p):
     if len(p) == 3:
         #TEMPO expression
         p[0] = Tempo(p[2] )
+
+def p_stop_stmt(p):
+    '''stop_stmt : STOP'''
+    p[0] = Stop()
 
 def p_spc(p):
     '''spc : SPC expr'''
@@ -983,8 +993,8 @@ def p_pseudovariable(p):
                       | lomem_value
                       | ptr_value
                       | time_value'''
-    #                  | time_str_value'''
-    #                  | page_value'''
+    #                  | time_str_value''' # not working - unknown reason
+    #                  | page_value'''     #
 
     p[0] = p[1]
 
@@ -1056,6 +1066,7 @@ def p_expr_function(p):
                      | erl_func
                      | exp_func
                      | eof_func
+                     | false_func
                      | get_func
                      | get_str_func
                      | get_str_file_func
@@ -1086,6 +1097,8 @@ def p_expr_function(p):
                      | sumlen_func
                      | tempo_func
                      | tint_func
+                     | top_func
+                     | true_func
                      | val_func
                      | vpos_func
                      | width_func'''
@@ -1170,6 +1183,10 @@ def p_err_func(p):
 def p_exp_func(p):
     '''exp_func : EXP factor %prec FUNCTION'''
     p[0] = ExpFunc(p[2] )
+
+def p_false_func(p):
+    '''false_func : FALSE'''
+    p[0] = FalseFunc()
 
 def p_get_func(p):
     '''get_func : GET %prec FUNCTION'''
@@ -1323,6 +1340,14 @@ def p_tint_func(p):
     elif len(p) == 7:
         #TINT ( x COMMA y )
         p[0] = TintFunc(x=p[3] ,y=p[5] )
+
+def p_top_func(p):
+    '''top_func : TOP'''
+    p[0] = TopFunc()
+        
+def p_true_func(p):
+    '''true_func : TRUE'''
+    p[0] = TrueFunc()
 
 def p_val_func(p):
     '''val_func : VAL expr %prec FUNCTION'''

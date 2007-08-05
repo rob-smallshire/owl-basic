@@ -60,6 +60,7 @@ tokens = (
     'LINE',
     'OFF',
     'STEP',
+    'STEREO',
     'SPC',
     'TAB_LPAREN',
     'ELSE',
@@ -324,6 +325,10 @@ def t_RETURN(t):
 
 def t_SUMLEN(t):
     r'SUMLEN'
+    return t
+
+def t_STEREO(t):
+    r'STEREO'
     return t
 
 def t_VOICES(t):

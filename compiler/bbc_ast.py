@@ -1094,6 +1094,29 @@ class Swap(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
+class Stop(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(Stop, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Stop")
+        writer.WriteEndElement()
+
+class Stereo(AstNode):
+    def __init__(self, expression1, expression2, *args, **kwargs):
+        self.expression1 = expression1
+        self.expression2 = expression2
+        super(Stereo, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("Stereo")
+        writer.WriteStartElement("Channel")
+        self.expression1.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteStartElement("Balance")
+        self.expression2.xml(writer)
+        writer.WriteEndElement()
+        writer.WriteEndElement()
 
 class TabH(AstNode):
     def __init__(self, h, *args, **kwargs):
@@ -1875,6 +1898,14 @@ class ExpFunc(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
+class FalseFunc(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(FalseFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("FalseFunc")
+        writer.WriteEndElement()
+
 class GetFunc(AstNode):
     def __init__(self, *args, **kwargs):
         super(GetFunc, self).__init__(*args, **kwargs)
@@ -2186,6 +2217,22 @@ class TintFunc(AstNode):
             writer.WriteStartElement("y")
             self.y.xml(writer)
             writer.WriteEndElement()
+        writer.WriteEndElement()
+
+class TopFunc(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(TopFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("TopFunc")
+        writer.WriteEndElement()
+        
+class TrueFunc(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(TrueFunc, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        writer.WriteStartElement("TrueFunc")
         writer.WriteEndElement()
 
 class ValFunc(AstNode):
