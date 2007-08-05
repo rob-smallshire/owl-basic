@@ -1624,6 +1624,56 @@ class ExtValue(AstNode):
         self.channel.xml(writer)
         writer.WriteEndElement()
 
+class HimemValue(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(HimemValue, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("HimemValue")
+        writer.WriteEndElement()
+
+class LomemValue(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(LomemValue, self).__init__(*args, **kwargs)
+       
+    def xml(self, writer):
+        writer.WriteStartElement("LomemValue")
+        writer.WriteEndElement()
+
+#class PageValue(AstNode):
+#    def __init__(self, *args, **kwargs):
+#        super(PageValue, self).__init__(*args, **kwargs)
+#        
+#    def xml(self, writer):
+#        writer.WriteStartElement("PageValue")
+#        writer.WriteEndElement()
+
+class TimeValue(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(TimeValue, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("TimeValue")
+        writer.WriteEndElement()
+
+#class TimeStrValue(AstNode):
+#    def __init__(self, *args, **kwargs):
+#        super(TimeStrValue, self).__init__(*args, **kwargs)
+#        
+#    def xml(self, writer):
+#        writer.WriteStartElement("TimeStrValue")
+#        writer.WriteEndElement()
+        
+class PtrValue(AstNode):
+    def __init__(self, channel, *args, **kwargs):
+        self.channel = channel
+        super(PtrValue, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        writer.WriteStartElement("PtrValue")
+        self.channel.xml(writer)
+        writer.WriteEndElement()
+
 class MidStringLValue(AstNode):
     def __init__(self, target, position, length=None, *args, **kwargs):
         self.target = target

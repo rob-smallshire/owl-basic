@@ -352,6 +352,10 @@ def t_GOSUB(t):
     r'GOSUB'
     return t
 
+def t_HIMEM(t):
+    r'HIMEM'
+    return t
+
 def t_INKEY(t):
     r'INKEY'
     return t
@@ -362,6 +366,10 @@ def t_INPUT(t):
 
 def t_LOCAL(t):
     r'LOCAL'
+    return t
+
+def t_LOMEM(t):
+    r'LOMEM'
     return t
 
 def t_MID_STR_LPAREN(t):
@@ -394,6 +402,10 @@ def t_TRACE(t):
 
 def t_TEMPO(t):
     r'TEMPO'
+    return t
+
+def t_TIME_STR(t):
+    r'TIME\$'
     return t
 
 def t_UNTIL(t):
@@ -487,6 +499,10 @@ def t_PLOT(t):
     r'PLOT'
     return t
 
+def t_PAGE(t):
+    r'PAGE'
+    return t
+
 def t_QUIT(t):
     r'QUIT'
     return t
@@ -513,6 +529,10 @@ def t_TAB_LPAREN(t):
 
 def t_THEN(t):
     r'THEN'
+    return t
+
+def t_TIME(t):
+    r'TIME'
     return t
 
 def t_TINT(t):
@@ -631,6 +651,10 @@ def t_NOT(t):
 
 def t_OFF(t):
     r'OFF'
+    return t
+
+def t_PTR(t):
+    r'PTR'
     return t
 
 def t_RAD(t):

@@ -978,13 +978,14 @@ def p_mid_str_lvalue(p):
 
 def p_pseudovariable(p):
     '''pseudovariable : end_value
-                      | ext_value'''
-    #                 | himem_value
-    #                 | lomem_value
-    #                 | page_value
-    #                 | ptr_value
-    #                 | time_value
-    #                 | time_str_value'''
+                      | ext_value
+                      | himem_value
+                      | lomem_value
+                      | ptr_value
+                      | time_value'''
+    #                  | time_str_value'''
+    #                  | page_value'''
+
     p[0] = p[1]
 
 # END is not officially a pseudovariable, although it can be used like one,
@@ -998,6 +999,30 @@ def p_ext(p):
     '''ext_value : EXT channel'''
     p[0] = ExtValue(p[2])
 
+def p_himem_value(p):
+    'himem_value : HIMEM'
+    p[0] = HimemValue()
+
+def p_lomem_value(p):
+    'lomem_value : LOMEM'
+    p[0] = LomemValue()
+
+#def p_page_value(p):
+#    'page_value : PAGE'
+#    p[0] = PageValue()
+
+def p_ptr_value(p):
+    'ptr_value : PTR channel'
+    p[0] = PtrValue(p[2])
+
+def p_time_value(p):
+    'time_value : TIME'
+    p[0] = TimeValue()
+
+#def p_time_str_value(p):
+#    'time_str_value : TIME_STR'
+#    p[0] = TimeStrValue()
+    
 
 
 #=============================================================================#
@@ -1010,10 +1035,7 @@ def p_ext(p):
                      | report_str_func
                      | string_str_func
                      | sum_func
-                     | tempo_func
-                     | usr_func
-                     | val_func
-                     | vpos_func'''
+                     | usr_func'''
 
 def p_expr_function(p):
     '''expr_function : adval_func
