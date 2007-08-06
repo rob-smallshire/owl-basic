@@ -6,6 +6,7 @@ from bbc_ast import *
 
 # Precedence table for the above operators
 precedence = (
+             ('right', 'UEQUAL'),
              ('left', 'EOR', 'OR'),
              ('left', 'AND'),
              ('nonassoc', 'EQ' 'NE', 'LTE', 'GTE', 'LT', 'GT', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'SHIFT_RIGHT_UNSIGNED'),
@@ -264,15 +265,17 @@ def p_def_stmt(p):
 def p_def_fn_stmt(p):
     '''def_fn_stmt : DEF FN_ID statement_list
                    | DEF FN_ID LPAREN formal_arg_list RPAREN statement_list'''
+    print "p_def_fn_stmt"
     if len(p) == 4:
         p[3].prepend(DefineFunction(p[2])) 
         p[0] = p[3]
     elif len(p) == 7:
-        p[3].prepend(DefineFunction(p[2], p[4]))
-        p[0] = p[3]
+        p[6].prepend(DefineFunction(p[2], p[4]))
+        p[0] = p[6]
 
 def p_end_fn_stmt(p):
-    '''end_fn_stmt : EQ expr'''
+    '''end_fn_stmt : EQ expr %prec UEQUAL'''
+    print "p_end_fn_stmt"
     p[0] = ReturnFromFunction(p[2])
                     
 def p_def_proc_stmt(p):
