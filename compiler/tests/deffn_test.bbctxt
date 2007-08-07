@@ -1,8 +1,8 @@
-REM DEF FNpi = 3.141
+DEF FNpi = 3.141
 
-REM DEFFNfoo(A$) = "foo" + A$ + "foo"
+DEFFNfoo(A$) = "foo" + A$ + "foo"
 
 DEFFNmultiply(a, b)
-REM  result = a * b
-=result
+   result = a * b
+= result
 

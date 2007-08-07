@@ -35,7 +35,7 @@ def p_statement_list(p):
 def p_statement(p):
     '''statement : any_stmt_body stmt_terminator
                  | compound_statement stmt_terminator'''
-    p[0] = p[1]
+    p[0] = p[2]
 
 # TODO: Need to separate statements which can be used within
 #       compound statements, from statemenst which can
@@ -263,9 +263,8 @@ def p_def_stmt(p):
 # The statement list needs to be modified so there can be more
 # than one point of return form functions
 def p_def_fn_stmt(p):
-    '''def_fn_stmt : DEF FN_ID statement_list
-                   | DEF FN_ID LPAREN formal_arg_list RPAREN statement_list'''
-    print "p_def_fn_stmt"
+    '''def_fn_stmt : DEF FN_ID compound_statement
+                   | DEF FN_ID LPAREN formal_arg_list RPAREN compound_statement'''
     if len(p) == 4:
         p[3].prepend(DefineFunction(p[2])) 
         p[0] = p[3]
@@ -275,7 +274,6 @@ def p_def_fn_stmt(p):
 
 def p_end_fn_stmt(p):
     '''end_fn_stmt : EQ expr %prec UEQUAL'''
-    print "p_end_fn_stmt"
     p[0] = ReturnFromFunction(p[2])
                     
 def p_def_proc_stmt(p):

@@ -50,7 +50,6 @@ tokens = (
     'CARET',
     'TILDE',
     'DOT',
-    'BACKSLASH',
     'AND',
     'DIV',
     'EOR',
@@ -91,7 +90,6 @@ tokens = (
     'LEN',
     'LN',
     'LOG',
-    'OT',
     'OPENUP',
     'OPENOUT',
     'PI',
@@ -126,6 +124,7 @@ tokens = (
     'WHEN',
     'OF',
     'ENDCASE',
+    'ENDFUNC',
     'OTHERWISE',
     'ENDIF',
     'ENDWHILE',
@@ -843,7 +842,6 @@ t_LBRAC = r'\['
 t_RBRAC = r'\]'
 t_CARET = r'\^'
 t_TILDE = r'~'
-t_BACKSLASH = r'\\'
 t_DOT = r'\.'
 
 
