@@ -124,13 +124,13 @@ tokens = (
     'WHEN',
     'OF',
     'ENDCASE',
-    'ENDFUNC',
     'OTHERWISE',
     'ENDIF',
     'ENDWHILE',
     'PTR',
     'PAGE',
     'TIME',
+    'TIME_STR',
     'LOMEM',
     'HIMEM',
     'SOUND',
@@ -283,7 +283,8 @@ def t_CIRCLE(t):
     return t
 
 def t_COLOUR(t):
-    r'COLOU?R'    #major error here. cannot return a string. 
+    r'COLOU?R'    #major error here. cannot return a string.
+    t.type = 'COLOUR' 
     return t # have removed the return of 'COLOUR' due to tokenising failure
 
 def t_INKEY_STR(t):

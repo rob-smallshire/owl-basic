@@ -1,17 +1,19 @@
 # Abstract Syntax Tree for BBC# Basic
 
+import logging
 import re
 
 class AstNode(object):
     def __init__(self, *args, **kwargs):
         pass
-    
+
 class Program(AstNode):
     def __init__(self, statement_list, *args, **kwargs):
         self.statement_list = statement_list
         super(Program, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Program")
         self.statement_list.xml(writer)
         writer.WriteEndElement()
@@ -22,6 +24,7 @@ class Statement(AstNode):
         super(Statement, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Statement")
         if self.body:
             self.body.xml(writer)
@@ -33,17 +36,19 @@ class StatementList(AstNode):
         if first_statement:
             self.statements.append(first_statement)
         super(StatementList, self).__init__(*args, **kwargs)
-    
+
     def prepend(self, statement):
         self.statements.insert(0, statement)
-    
+
     def append(self, statement):
         self.statements.append(statement)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("StatementList")
         for statement in self.statements:
             if statement:
+                logging.debug("statement = >>%s<<", statement)
                 statement.xml(writer)
         writer.WriteEndElement()
 
@@ -51,8 +56,9 @@ class Beats(AstNode):
     def __init__(self, expression, *args, **kwargs):
         self.expression = expression
         super(Beats, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Beats")
         self.expression.xml(writer)
         writer.WriteEndElement()
@@ -61,8 +67,9 @@ class Channel(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(Channel, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Channel")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -72,8 +79,9 @@ class Assignment(AstNode):
         self.lvalue = identifier
         self.rvalue = expression
         super(Assignment, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Assignment")
         writer.WriteStartElement("LValue")
         self.lvalue.xml(writer)
@@ -88,8 +96,9 @@ class Increment(AstNode):
         self.lvalue = identifier
         self.rvalue = expression
         super(Increment, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Increment")
         writer.WriteStartElement("LValue")
         self.lvalue.xml(writer)
@@ -104,8 +113,9 @@ class Decrement(AstNode):
         self.lvalue = identifier
         self.rvalue = expression
         super(Decrement, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Decrement")
         writer.WriteStartElement("LValue")
         self.lvalue.xml(writer)
@@ -114,7 +124,7 @@ class Decrement(AstNode):
         self.rvalue.xml(writer)
         writer.WriteEndElement()
         writer.WriteEndElement()
-        
+
 class Bput(AstNode):
     def __init__(self, channel, expression, newline=False, *args, **kwargs):
         self.channel = channel
@@ -127,22 +137,24 @@ class Bput(AstNode):
         super(Bput, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Bput")
         writer.WriteStartAttribute("newline")   #
         writer.WriteString(str(self.newline))   # these 3 lines have been moved to stop ivnalid xml error
-        writer.WriteEndAttribute()              # 
+        writer.WriteEndAttribute()              #
         self.channel.xml(writer)
         writer.WriteStartElement("Bytes")
         self.expr.xml(writer)
         writer.WriteEndElement()
-        writer.WriteEndElement()  
+        writer.WriteEndElement()
 
-class Call(AstNode): 
+class Call(AstNode):
     def __init__(self, arglist, *args, **kwargs):
         self.arglist = arglist # unsure if you want to deal with this like this
         super(Call, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Call")
         writer.WriteStartElement("Arglist")
         self.arglist.xml(writer)
@@ -158,6 +170,7 @@ class Circle(AstNode):
         super(Circle, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Circle")
         if self.fill:
             writer.WriteStartAttribute("fill")
@@ -179,24 +192,27 @@ class Cls(AstNode):
         super(Cls, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Cls")
-        writer.WriteEndElement()  
+        writer.WriteEndElement()
 
 class Clg(AstNode):
     def __init__(self, *args, **kwargs):
         super(Clg, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Clg")
-        writer.WriteEndElement()  
+        writer.WriteEndElement()
 
-class Colour(AstNode): 
+class Colour(AstNode):
     def __init__(self, logical, tint=None, *args, **kwargs):
         self.logical = logical
         self.tint = tint
         super(Colour, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Colour")
         writer.WriteStartElement("Logical")
         self.logical.xml(writer)
@@ -217,6 +233,7 @@ class Palette(AstNode):
         super(Palette, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Palette")
         writer.WriteStartElement("Logical")
         self.logical.xml(writer)
@@ -243,8 +260,9 @@ class Case(AstNode):
     def __init__(self, expr, when_list, *args, **kwargs):
         self.expr = expr
         self.when_list = when_list
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Case")
         writer.WriteStartElement("Test")
         self.expr.xml(writer)
@@ -258,11 +276,12 @@ class WhenClauseList(AstNode):
         if first_clause:
             self.clauses.append(first_clause)
         super(WhenClauseList, self).__init__(*args, **kwargs)
-        
+
     def append(self, when_clause):
         self.clauses.append(when_clause)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("WhenClauseList")
         for clause in self.clauses:
             print self.clauses
@@ -274,8 +293,9 @@ class WhenClause(AstNode):
         self.expr_list = expr_list
         self.statement_list = statement_list
         super(WhenClause, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("WhenClause")
         print self.expr_list
         self.expr_list.xml(writer)
@@ -286,8 +306,9 @@ class OtherwiseClause(AstNode):
     def __init__(self, statement_list, *args, **kwargs):
         self.statement_list = statement_list
         super(OtherwiseClause, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("OtherwiseClause")
         self.statement_list.xml(writer)
         writer.WriteEndElement()
@@ -298,6 +319,7 @@ class Close(AstNode):
         super(Close, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Close")
         writer.WriteStartElement("channel")
         self.channel.xml(writer)
@@ -308,7 +330,7 @@ class Data(AstNode):
     def __init__(self, data, *args, **kwargs):
         self.items = self.parse(data)
         super(Data, self).__init__(*args, **kwargs)
-    
+
     def parse(self, data):
         "Parse the text following a DATA statement into items"
         # Break the data into fields
@@ -325,9 +347,10 @@ class Data(AstNode):
             items.append(item)
         print items
         return items
-        
-        
+
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Data")
         for item in self.items:
             writer.WriteStartElement("Item")
@@ -340,8 +363,9 @@ class DefineFunction(AstNode):
         self.id = id
         self.arg_list = arg_list
         super(DefineFunction, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("DefineFunction")
         writer.WriteStartAttribute("name")
         writer.WriteString(str(self.id))
@@ -354,8 +378,9 @@ class ReturnFromFunction(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(ReturnFromFunction, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("ReturnFromFunction")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -365,8 +390,9 @@ class DefineProcedure(AstNode):
         self.id = id
         self.arg_list = arg_list
         super(DefineProcedure, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("DefineProcedure")
         writer.WriteStartAttribute("name")
         writer.WriteString(str(self.id))
@@ -378,8 +404,9 @@ class DefineProcedure(AstNode):
 class ReturnFromProcedure(AstNode):
     def __init__(self, *args, **kwargs):
         super(ReturnFromProcedure, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("ReturnFromProcedure")
         writer.WriteEndElement()
 
@@ -390,8 +417,9 @@ class ForToStep(AstNode):
         self.end = end
         self.step = step
         super(ForToStep, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("For")
         writer.WriteStartElement("LValue")
         self.identifier.xml(writer)
@@ -406,13 +434,14 @@ class ForToStep(AstNode):
         self.step.xml(writer)
         writer.WriteEndElement()
         writer.WriteEndElement()
-    
+
 class Next(AstNode):
     def __init__(self, var_list, *args, **kwargs):
         self.var_list = var_list
         super(Next, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Next")
         if self.var_list:
             self.var_list.xml(writer)
@@ -424,8 +453,9 @@ class Draw(AstNode):
         self.y = y
         self.relative = relative
         super(Draw, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Draw")
         writer.WriteStartAttribute("relative")
         writer.WriteString(str(self.relative))
@@ -447,8 +477,9 @@ class Ellipse(AstNode):
         self.fill = fill
         self.rotate = rotate
         super(Ellipse, self).__init__(*args, **kwargs)
-               
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Ellipse")
         writer.WriteStartAttribute("Fill")
         writer.WriteString(str(self.fill))
@@ -478,6 +509,7 @@ class GenerateError(AstNode):
         super(GenerateError, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Envelope")
         writer.WriteStartElement("N")
         self.n.xml(writer)
@@ -489,8 +521,9 @@ class GenerateError(AstNode):
 class End(AstNode):
     def __init__(self, *args, **kwargs):
         super(End, self).__init__(args, kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("End")
         writer.WriteEndElement()
 
@@ -511,8 +544,9 @@ class Envelope(AstNode):
         self.ala = ala
         self.ald = ald
         super(Envelope, self).__init__(*args, **kwargs)
-               
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Envelope")
         writer.WriteStartElement("N")
         self.n.xml(writer)
@@ -564,8 +598,9 @@ class Fill(AstNode):
         self.y = y
         self.relative = relative
         super(Fill, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Fill")
         writer.WriteStartAttribute("relative")
         writer.WriteString(str(self.relative))
@@ -584,8 +619,9 @@ class Gcol(AstNode):
         self.mode = mode
         self.col = col
         super(Gcol, self).__init__(*args, **kwargs)
-          
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Gcol")
         writer.WriteStartElement("Col")
         self.col.xml(writer)
@@ -600,8 +636,9 @@ class Goto(AstNode):
     def __init__(self, line, *args, **kwargs):
         self.line = line
         super(Goto, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Goto")
         self.line.xml(writer)
         writer.WriteEndElement()
@@ -610,8 +647,9 @@ class Gosub(AstNode):
     def __init__(self, line, *args, **kwargs):
         self.line = line
         super(Gosub, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Gosub")
         self.line.xml(writer)
         writer.WriteEndElement()
@@ -622,6 +660,7 @@ class Return(AstNode):
         super(Return, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Return")
         if self.parameter:
             writer.WriteStartElement("parameter")
@@ -635,6 +674,7 @@ class Install(AstNode):
         super(Install, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Install")
         writer.WriteStartElement("expression")
         self.expression.xml(writer)
@@ -647,8 +687,9 @@ class If(AstNode):
         self.true_clause = true_clause
         self.false_clause = false_clause
         super(If, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("If")
         writer.WriteStartElement("Condition")
         self.condition.xml(writer)
@@ -669,6 +710,7 @@ class AddLibrary(AstNode):
         super(AddLibrary, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Library")
         writer.WriteStartElement("expression")
         self.expression.xml(writer)
@@ -681,8 +723,9 @@ class Move(AstNode):
         self.y = y
         self.relative = relative
         super(Move, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Move")
         writer.WriteStartAttribute("relative")
         writer.WriteString(str(self.relative))
@@ -699,8 +742,9 @@ class Mode(AstNode):
     def __init__(self, mode, *args, **kwargs):
         self.mode = mode
         super(Mode, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Mode")
         self.mode.xml(writer)
         writer.WriteEndElement()
@@ -712,8 +756,9 @@ class Mouse(AstNode):
         self.b = b
         self.t = t
         super(Mouse, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Mouse")
         writer.WriteStartElement("X")
         self.x.xml(writer)
@@ -727,7 +772,7 @@ class Mouse(AstNode):
         if self.t:
             writer.WriteStartElement("Time")
             self.t.xml(writer)
-            writer.WriteEndElement()            
+            writer.WriteEndElement()
         writer.WriteEndElement()
 
 class MouseStep(AstNode):
@@ -735,8 +780,9 @@ class MouseStep(AstNode):
         self.x = x
         self.y = y
         super(MouseStep, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("MouseStep")
         writer.WriteStartElement("X")
         self.x.xml(writer)
@@ -754,8 +800,9 @@ class MouseColour(AstNode):
         self.g = g
         self.b = b
         super(MouseColour, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("MouseColour")
         writer.WriteStartElement("Attrib")
         self.attrib.xml(writer)
@@ -768,7 +815,7 @@ class MouseColour(AstNode):
         writer.WriteEndElement()
         writer.WriteStartElement("B")
         self.b.xml(writer)
-        writer.WriteEndElement()            
+        writer.WriteEndElement()
         writer.WriteEndElement()
 
 class MousePointer(AstNode):
@@ -778,8 +825,9 @@ class MousePointer(AstNode):
         self.pointer = pointer
         self.off = off
         super(MousePointer, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("MousePointer")
         if self.toX:
             writer.WriteStartElement("ToX")
@@ -796,7 +844,7 @@ class MousePointer(AstNode):
         if self.off:
             writer.WriteStartElement("Off")
             #self.off.xml(writer)              #unsure if tag here is enough
-            writer.WriteEndElement()            
+            writer.WriteEndElement()
         writer.WriteEndElement()
 
 class MouseRectangle(AstNode):
@@ -807,8 +855,9 @@ class MouseRectangle(AstNode):
         self.height = height
         self.off = off
         super(MouseRectangle, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("MouseRectangle")
         if self.off:
            writer.WriteStartAttribute("OFF")
@@ -826,7 +875,7 @@ class MouseRectangle(AstNode):
             writer.WriteEndElement()
             writer.WriteStartElement("Height")
             self.height.xml(writer)
-            writer.WriteEndElement()            
+            writer.WriteEndElement()
         writer.WriteEndElement()
 
 class On(AstNode):
@@ -834,6 +883,7 @@ class On(AstNode):
         super(On, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("On")
         writer.WriteEndElement()
 
@@ -842,16 +892,18 @@ class Off(AstNode):
         super(Off, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Off")
         writer.WriteEndElement()
-   
+
 class Origin(AstNode):
     def __init__(self, x, y, *args, **kwargs):
         self.x = x
         self.y = y
         super(Origin, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Origin")
         writer.WriteStartElement("X")
         self.x.xml(writer)
@@ -867,6 +919,7 @@ class Oscli(AstNode):
         super(Oscli, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Oscli")
         writer.WriteStartElement("expr")
         self.expr.xml(writer)
@@ -880,8 +933,9 @@ class Plot(AstNode):
         self.relative = relative
         self.mode = mode
         super(Plot, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Plot")
         writer.WriteStartAttribute("relative")
         writer.WriteString(str(self.relative))
@@ -895,7 +949,7 @@ class Plot(AstNode):
         if self.mode:
             writer.WriteStartElement("Mode")
             self.mode.xml(writer)
-            writer.WriteEndElement()            
+            writer.WriteEndElement()
         writer.WriteEndElement()
 
 class Point(AstNode):
@@ -906,6 +960,7 @@ class Point(AstNode):
         super(Point, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Point")
         if self.by:
             writer.WriteStartAttribute("PointType")
@@ -924,8 +979,9 @@ class Print(AstNode):
     def __init__(self, print_list=None, *args, **kwargs):
         self.print_list = print_list
         super(Print, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Print")
         if self.print_list:
             self.print_list.xml(writer)
@@ -937,11 +993,12 @@ class PrintList(AstNode):
         if first_item:
             self.print_items.append(first_item)
         super(PrintList, self).__init__(*args, **kwargs)
-    
+
     def append(self, item):
         self.print_items.append(item)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("PrintList")
         for item in self.print_items:
             item.xml(writer)
@@ -953,6 +1010,7 @@ class PrintItem(AstNode):
         super(PrintItem, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("PrintItem")
         self.item.xml(writer)
         writer.WriteEndElement()
@@ -961,8 +1019,9 @@ class PrintManipulator(AstNode):
     def __init__(self, manip, *args, **kwargs):
         self.manip = manip
         super(PrintManipulator, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("PrintManipulator")
         writer.WriteStartAttribute("type")
         writer.WriteString(self.manip)
@@ -976,6 +1035,7 @@ class CallProcedure(AstNode):
         super(CallProcedure, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("CallProcedure")
         writer.WriteStartAttribute("name")
         writer.WriteString(str(self.id))
@@ -989,6 +1049,7 @@ class Quit(AstNode):
         super(Quit, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Quit")
         writer.WriteEndElement()
 
@@ -1004,8 +1065,9 @@ class Rectangle(AstNode):
         self.y2 = y2
         self.rectType = rectType
         super(Rectangle, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Rectangle")
         writer.WriteStartAttribute("rectType")
         writer.WriteString(str(self.rectType))
@@ -1030,13 +1092,14 @@ class Rectangle(AstNode):
             writer.WriteStartElement("DestY")            #'DestY' will work but 'Y2' wont.
             self.y2.xml(writer)                          # Unknown Why this fails
             writer.WriteEndElement()
-        writer.WriteEndElement()        
+        writer.WriteEndElement()
 
 class Report(AstNode):
     def __init__(self, *args, **kwargs):
         super(Report, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Report")
         writer.WriteEndElement()
 
@@ -1045,6 +1108,7 @@ class Repeat(AstNode):
         super(Repeat, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Repeat")
         writer.WriteEndElement()
 
@@ -1056,8 +1120,9 @@ class Sound(AstNode):
         self.duration = duration
         self.off = off
         super(Sound, self).__init__(*args, **kwargs)
-               
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Sound")
         if self.off:
             writer.WriteStartAttribute("OFF")
@@ -1085,6 +1150,7 @@ class Swap(AstNode):
         super(Swap, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Swap")
         writer.WriteStartElement("var1")
         self.var1.xml(writer)
@@ -1099,6 +1165,7 @@ class Stop(AstNode):
         super(Stop, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Stop")
         writer.WriteEndElement()
 
@@ -1109,6 +1176,7 @@ class Stereo(AstNode):
         super(Stereo, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Stereo")
         writer.WriteStartElement("Channel")
         self.expression1.xml(writer)
@@ -1122,19 +1190,21 @@ class TabH(AstNode):
     def __init__(self, h, *args, **kwargs):
         self.h_expr = h
         super(TabH, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("TabH")
         self.h_expr.xml(writer)
         writer.WriteEndElement()
-        
+
 class TabXY(AstNode):
     def __init__(self, x, y, *args, **kwargs):
         self.x_expr = x
         self.y_expr = y
         super(TabXY, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("TabXY")
         writer.WriteStartElement("X")
         self.x_expr.xml(writer)
@@ -1143,41 +1213,44 @@ class TabXY(AstNode):
         self.y_expr.xml(writer)
         writer.WriteEndElement()
         writer.WriteEndElement()
-        
+
 class Tempo(AstNode):
     def __init__(self, expression, *args, **kwargs):
         self.expression = expression
         super(Tempo, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Tempo")
         writer.WriteStartElement("expression")
         self.expression.xml(writer)
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-        
+
 class Spc(AstNode):
     def __init__(self, spaces, *args, **kwargs):
         self.expr = spaces
         super(Spc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Spc")
         self.expr.xml(writer)
         writer.WriteEndElement()
-        
+
 class VariableList(AstNode):
     def __init__(self, first_variable=None, *args, **kwargs):
         self.variables = []
         if first_variable:
             self.variables.append(first_variable)
         super(VariableList, self).__init__(*args, **kwargs)
-    
+
     def append(self, variable):
         self.variables.append(variable)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("VariableList")
         for variable in self.variables:
             variable.xml(writer)
@@ -1187,8 +1260,9 @@ class Variable(AstNode):
     def __init__(self, name, *args, **kwargs):
         self.name = name
         super(Variable, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Variable")
         writer.WriteStartAttribute("name")
         writer.WriteString(self.name)
@@ -1199,27 +1273,29 @@ class Array(AstNode):
     def __init__(self, name, *args, **kwargs):
         self.name = name
         super(Array, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Array")
         writer.WriteStartAttribute("name")
         writer.WriteString(self.name)
         writer.WriteEndAttribute()
         writer.WriteEndElement()
-        
+
 class Indexer(AstNode):
     def __init__(self, name, indices, *args, **kwargs):
         self.name = name
         self.indices = indices
         super(Indexer, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Indexer")
         writer.WriteStartAttribute("name")
         writer.WriteString(self.name)
         writer.WriteEndAttribute()
         self.indices.xml(writer)
-        writer.WriteEndElement()    
+        writer.WriteEndElement()
 
 class Until(AstNode):
     def __init__(self, expression, *args, **kwargs):
@@ -1227,6 +1303,7 @@ class Until(AstNode):
         super(Until, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Until")
         writer.WriteStartElement("expression")
         self.expression.xml(writer)
@@ -1239,6 +1316,7 @@ class Voices(AstNode):
         super(Voices, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Voices")
         writer.WriteStartElement("expression")
         self.expression.xml(writer)
@@ -1249,12 +1327,13 @@ class Vdu(AstNode):
     def __init__(self, list=None, *args, **kwargs):
         self.list = list
         super(Vdu, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Vdu")
         if self.list:
             self.list.xml(writer)
-        writer.WriteEndElement()       
+        writer.WriteEndElement()
 
 class VduList(AstNode):
     def __init__(self, first_item=None, *args, **kwargs):
@@ -1262,11 +1341,12 @@ class VduList(AstNode):
         if first_item:
             self.items.append(first_item)
         super(VduList, self).__init__(*args, **kwargs)
-    
+
     def append(self, item):
         self.items.append(item)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("VduList")
         for item in self.items:
             item.xml(writer)
@@ -1277,8 +1357,9 @@ class VduItem(AstNode):
         self.expr = expr
         self.separator = separator
         super(VduItem, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("VduItem")
         writer.WriteStartAttribute("separator")
         writer.WriteString(str(self.separator))
@@ -1292,6 +1373,7 @@ class While(AstNode):
         super(While, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("While")
         writer.WriteStartElement("expression")
         self.expression.xml(writer)
@@ -1303,6 +1385,7 @@ class Endwhile(AstNode):
         super(Endwhile, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Endwhile")
         writer.WriteEndElement()
 
@@ -1312,6 +1395,7 @@ class Width(AstNode):
         super(Width, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Width")
         writer.WriteStartElement("expression")
         self.expression.xml(writer)
@@ -1324,6 +1408,7 @@ class Wait(AstNode):
         super(Wait, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Wait")
         if self.expr:
             writer.WriteStartElement("expr")
@@ -1338,11 +1423,12 @@ class ExpressionList(AstNode):
         if first_expr:
             self.expressions.append(first_expr)
         super(ExpressionList, self).__init__(*args, **kwargs)
-        
+
     def append(self, expr):
-        self.expressions.append(expr) 
-        
+        self.expressions.append(expr)
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("ExpressionList")
         for expr in self.expressions:
             expr.xml(writer)
@@ -1354,11 +1440,12 @@ class ActualArgList(AstNode):
         if first_arg:
             self.args.append(first_arg)
         super(ActualArgList, self).__init__(*args, **kwargs)
-        
+
     def append(self, arg):
         self.args.append(arg)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("ActualArgList")
         for arg in self.args:
             arg.xml(writer)
@@ -1370,11 +1457,12 @@ class FormalArgList(AstNode):
         if first_arg:
             self.args.append(first_arg)
         super(FormalArgList, self).__init__(*args, **kwargs)
-        
+
     def append(self, arg):
         self.args.append(arg)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("FormalArgList")
         for arg in self.args:
             arg.xml(writer)
@@ -1384,28 +1472,31 @@ class FormalArgument(AstNode):
     def __init__(self, arg, *args, **kwargs):
         self.arg = arg
         super(FormalArgument, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("FormalArgument")
         self.arg.xml(writer)
         writer.WriteEndElement()
-        
+
 class FormalReferenceArgument(AstNode):
     def __init__(self, arg, *args, **kwargs):
         self.arg = arg
         super(FormalReferenceArgument, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("FormalReferenceArgument")
         self.arg.xml(writer)
         writer.WriteEndElement()
-              
+
 class UnaryPlus(AstNode):
     def __init__(self, expr, *args, **kwargs):
         super(UnaryPlus, self).__init__(*args, **kwargs)
         self.expr = expr
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("UnaryPlus")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -1414,8 +1505,9 @@ class UnaryMinus(AstNode):
     def __init__(self, expr, *args, **kwargs):
         super(UnaryMinus, self).__init__(*args, **kwargs)
         self.expr = expr
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("UnaryMinus")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -1426,6 +1518,7 @@ class UnaryByteIndirection(AstNode):
         super(UnaryByteIndirection, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("UnaryByteIndirection")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -1436,6 +1529,7 @@ class UnaryIntegerIndirection(AstNode):
         super(UnaryIntegerIndirection, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("UnaryIntegerIndirection")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -1446,9 +1540,10 @@ class UnaryStringIndirection(AstNode):
         super(UnaryStringIndirection, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("UnaryStringIndirection")
         self.expr.xml(writer)
-        writer.WriteEndElement()    
+        writer.WriteEndElement()
 
 class UnaryFloatIndirection(AstNode):
     def __init__(self, expr, *args, **kwargs):
@@ -1456,6 +1551,7 @@ class UnaryFloatIndirection(AstNode):
         super(UnaryFloatIndirection, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("UnaryFloatIndirection")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -1465,8 +1561,9 @@ class DyadicByteIndirection(AstNode):
         self.lhs = lhs
         self.rhs = rhs
         super(DyadicByteIndirection, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("DyadicByteIndirection")
         writer.WriteStartElement("Left")
         self.lhs.xml(writer)
@@ -1481,8 +1578,9 @@ class DyadicIntegerIndirection(AstNode):
         self.lhs = lhs
         self.rhs = rhs
         super(DyadicIntegerIndirection, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("DyadicIntegerIndirection")
         writer.WriteStartElement("Left")
         self.lhs.xml(writer)
@@ -1498,6 +1596,7 @@ class Not(AstNode):
         super(Not, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Not")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -1508,8 +1607,9 @@ class BinaryOperator(AstNode):
         self.lhs = lhs
         self.rhs = rhs
         super(BinaryOperator, self).__init__(*args, **kwargs)
-    
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("BinaryOperator")
         writer.WriteStartAttribute("operator")
         writer.WriteString(str(self.op))
@@ -1533,7 +1633,7 @@ class Minus(BinaryOperator):
 class Multiply(BinaryOperator):
     def __init__(self, lhs, rhs, *args, **kwargs):
         super(Multiply, self).__init__('multiply', lhs, rhs)
-        
+
 class Divide(BinaryOperator):
     def __init__(self, lhs, rhs, *args, **kwargs):
         super(Divide, self).__init__('divide', lhs, rhs)
@@ -1545,20 +1645,21 @@ class MatrixMultiply(BinaryOperator):
 class IntegerDivide(BinaryOperator):
     def __init__(self, lhs, rhs, *args, **kwargs):
         super(IntegerDivide, self).__init__('div', lhs, rhs)
-        
+
 class IntegerModulus(BinaryOperator):
     def __init__(self, lhs, rhs, *args, **kwargs):
         super(IntegerModulus, self).__init__('mod', lhs, rhs)
 
 class Power(BinaryOperator):
     def __init__(self, lhs, rhs, *args, **kwargs):
-        super(Power, self).__init__('power', lhs, rhs)    
+        super(Power, self).__init__('power', lhs, rhs)
 
 class RelationalOperator(BinaryOperator):
     def __init__(self, operator, lhs, rhs, *args, **kwargs):
         super(RelationalOperator, self).__init__(operator, lhs, rhs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("RelationalOperator")
         writer.WriteStartAttribute("operator")
         writer.WriteString(str(self.op))
@@ -1602,7 +1703,7 @@ class ShiftLeft(BinaryOperator):
 class ShiftRight(BinaryOperator):
     def __init__(self, lhs, rhs, *args, **kwargs):
         super(ShiftRight, self).__init__('shift_right', lhs, rhs)
-        
+
 class ShiftRightUnsigned(BinaryOperator):
     def __init__(self, lhs, rhs, *args, **kwargs):
         super(ShiftRightUnsigned, self).__init__('shift_right_unsigned', lhs, rhs)
@@ -1614,7 +1715,7 @@ class And(BinaryOperator):
 class Or(BinaryOperator):
     def __init__(self, lhs, rhs, *args, **kwargs):
         super(Or, self).__init__('or', lhs, rhs)
-        
+
 class Eor(BinaryOperator):
     def __init__(self, lhs, rhs, *args, **kwargs):
         super(Eor, self).__init__('eor', lhs, rhs)
@@ -1623,8 +1724,9 @@ class AbsFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(AbsFunc, self).__init__(*args, **kwargs)
-    
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Abs")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -1632,17 +1734,19 @@ class AbsFunc(AstNode):
 class EndValue(AstNode):
     def __init__(self, *args, **kwargs):
         super(EndValue, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("EndValue")
         writer.WriteEndElement()
-        
+
 class ExtValue(AstNode):
     def __init__(self, channel, *args, **kwargs):
         self.channel = channel
         super(ExtValue, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("ExtValue")
         self.channel.xml(writer)
         writer.WriteEndElement()
@@ -1650,49 +1754,55 @@ class ExtValue(AstNode):
 class HimemValue(AstNode):
     def __init__(self, *args, **kwargs):
         super(HimemValue, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("HimemValue")
         writer.WriteEndElement()
 
 class LomemValue(AstNode):
     def __init__(self, *args, **kwargs):
         super(LomemValue, self).__init__(*args, **kwargs)
-       
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("LomemValue")
         writer.WriteEndElement()
 
-#class PageValue(AstNode):
-#    def __init__(self, *args, **kwargs):
-#        super(PageValue, self).__init__(*args, **kwargs)
-#        
-#    def xml(self, writer):
-#        writer.WriteStartElement("PageValue")
-#        writer.WriteEndElement()
+class PageValue(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(PageValue, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
+        writer.WriteStartElement("PageValue")
+        writer.WriteEndElement()
 
 class TimeValue(AstNode):
     def __init__(self, *args, **kwargs):
         super(TimeValue, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("TimeValue")
         writer.WriteEndElement()
 
-#class TimeStrValue(AstNode):
-#    def __init__(self, *args, **kwargs):
-#        super(TimeStrValue, self).__init__(*args, **kwargs)
-#        
-#    def xml(self, writer):
-#        writer.WriteStartElement("TimeStrValue")
-#        writer.WriteEndElement()
-        
+class TimeStrValue(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(TimeStrValue, self).__init__(*args, **kwargs)
+
+    def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
+        writer.WriteStartElement("TimeStrValue")
+        writer.WriteEndElement()
+
 class PtrValue(AstNode):
     def __init__(self, channel, *args, **kwargs):
         self.channel = channel
         super(PtrValue, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("PtrValue")
         self.channel.xml(writer)
         writer.WriteEndElement()
@@ -1703,8 +1813,9 @@ class MidStringLValue(AstNode):
         self.position = position
         self.length = length
         super(EndValue, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("MidStringLValue")
         writer.WriteStartElement("Target")
         self.target.xml(writer)
@@ -1716,14 +1827,15 @@ class MidStringLValue(AstNode):
             writer.WriteStartElement("Length")
             self.length.xml(writer)
             writer.WriteEndElement()
-        writer.WriteEndElement()    
-        
+        writer.WriteEndElement()
+
 class AcsFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(AcsFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Acs")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -1732,8 +1844,9 @@ class AdvalFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(AdvalFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Adval")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -1742,8 +1855,9 @@ class AscFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(AscFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Asc")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -1752,8 +1866,9 @@ class AsnFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(AsnFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Asn")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -1764,6 +1879,7 @@ class AtnFunc(AstNode):
         super(AtnFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("AtnFunc")
         writer.WriteStartElement("factor")
         self.factor.xml(writer)
@@ -1773,8 +1889,9 @@ class AtnFunc(AstNode):
 class BeatFunc(AstNode):
     def __init__(self, *args, **kwargs):
         super(BeatFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Beat")
         writer.WriteEndElement()
 
@@ -1783,6 +1900,7 @@ class BeatsFunc(AstNode):
         super(BeatsFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("BeatsFunc")
         writer.WriteEndElement()
 
@@ -1790,18 +1908,20 @@ class BgetFunc(AstNode):
     def __init__(self, channel, *args, **kwargs):
         self.channel = channel
         super(BgetFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Bget")
         self.channel.xml(writer)
-        writer.WriteEndElement()  
+        writer.WriteEndElement()
 
 class ChrStrFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(AscFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("ChrStr")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -1810,8 +1930,9 @@ class CosFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(CosFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Cos")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -1822,16 +1943,18 @@ class CountFunc(AstNode):
         super(CountFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Count")
         self.expr.xml(writer)
-        writer.WriteEndElement()  
+        writer.WriteEndElement()
 
 class DegFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(DegFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Deg")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -1840,19 +1963,21 @@ class DimensionsFunc(AstNode):
     def __init__(self, array, *args, **kwargs):
         self.array = array
         super(DimensionsFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("DimensionsFunc")
         self.array.xml(writer)
         writer.WriteEndElement()
-        
+
 class DimensionSizeFunc(AstNode):
     def __init__(self, array, expr, *args, **kwargs):
         self.array = array
         self.expr = expr
         super(DimensionSizeFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("DimensionSizeFunc")
         self.array.xml(writer)
         writer.WriteStartElement("Dimension")
@@ -1864,8 +1989,9 @@ class EofFunc(AstNode):
     def __init__(self, channel, *args, **kwargs):
         self.channel = channel
         super(EofFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("EofFunc")
         self.channel.xml(writer)
         writer.WriteEndElement()
@@ -1875,6 +2001,7 @@ class ErlFunc(AstNode):
         super(ErlFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("ErlFunc")
         writer.WriteEndElement()
 
@@ -1883,6 +2010,7 @@ class ErrFunc(AstNode):
         super(ErrFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("ErrFunc")
         writer.WriteEndElement()
 
@@ -1892,6 +2020,7 @@ class ExpFunc(AstNode):
         super(ExpFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("ExpFunc")
         writer.WriteStartElement("factor")
         self.factor.xml(writer)
@@ -1903,6 +2032,7 @@ class FalseFunc(AstNode):
         super(FalseFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("FalseFunc")
         writer.WriteEndElement()
 
@@ -1911,6 +2041,7 @@ class GetFunc(AstNode):
         super(GetFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("GetFunc")
         writer.WriteEndElement()
 
@@ -1919,6 +2050,7 @@ class Get_strFunc(AstNode):
         super(Get_strFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Get_strFunc")
         writer.WriteEndElement()
 
@@ -1928,6 +2060,7 @@ class Get_strFileFunc(AstNode):
         super(Get_strFileFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Get_strFileFunc")
         writer.WriteStartElement("channel")
         self.channel.xml(writer)
@@ -1940,6 +2073,7 @@ class InkeyFunc(AstNode):
         super(InkeyFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("InkeyFunc")
         writer.WriteStartElement("factor")
         self.factor.xml(writer)
@@ -1952,6 +2086,7 @@ class Inkey_strFunc(AstNode):
         super(Inkey_strFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Inkey_strFunc")
         writer.WriteStartElement("factor")
         self.factor.xml(writer)
@@ -1966,18 +2101,20 @@ class IntFunc(AstNode):
         super(IntFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("IntFunc")
         writer.WriteStartElement("factor")
         self.factor.xml(writer)
         writer.WriteEndElement()
         writer.WriteEndElement()
-        
+
 class LenFunc(AstNode):
     def __init__(self, factor, *args, **kwargs):
         self.factor = factor
         super(LenFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("LenFunc")
         writer.WriteStartElement("factor")
         self.factor.xml(writer)
@@ -1990,6 +2127,7 @@ class LnFunc(AstNode):
         super(LnFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("LnFunc")
         writer.WriteStartElement("factor")
         self.factor.xml(writer)
@@ -2002,6 +2140,7 @@ class LogFunc(AstNode):
         super(LogFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("LogFunc")
         writer.WriteStartElement("factor")
         self.factor.xml(writer)
@@ -2015,8 +2154,9 @@ class MidStringFunc(AstNode):
         self.position = position
         self.length = length
         super(MidStringFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("MidStringFunc")
         writer.WriteStartElement("Source")
         self.source.xml(writer)
@@ -2028,13 +2168,14 @@ class MidStringFunc(AstNode):
             writer.WriteStartElement("Length")
             self.length.xml(writer)
             writer.WriteEndElement()
-        writer.WriteEndElement()    
+        writer.WriteEndElement()
 
 class ModeFunc(AstNode):
     def __init__(self, *args, **kwargs):
         super(ModeFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("ModeFunc")
         writer.WriteEndElement()
 
@@ -2044,30 +2185,33 @@ class OpeninFunc(AstNode):
         super(OpeninFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("OpeninFunc")
         writer.WriteStartElement("factor")
         self.factor.xml(writer)
         writer.WriteEndElement()
         writer.WriteEndElement()
-        
+
 class OpenoutFunc(AstNode):
     def __init__(self, factor, *args, **kwargs):
         self.factor = factor
         super(OpenoutFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("OpenoutFunc")
         writer.WriteStartElement("factor")
         self.factor.xml(writer)
         writer.WriteEndElement()
         writer.WriteEndElement()
-        
+
 class OpenupFunc(AstNode):
     def __init__(self, factor, *args, **kwargs):
         self.factor = factor
         super(OpenupFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("OpenupFunc")
         writer.WriteStartElement("factor")
         self.factor.xml(writer)
@@ -2079,14 +2223,16 @@ class PosFunc(AstNode):
         super(PosFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("PosFunc")
         writer.WriteEndElement()
-        
+
 class PiFunc(AstNode):
     def __init__(self, *args, **kwargs):
         super(PiFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("PiFunc")
         writer.WriteEndElement()
 
@@ -2097,6 +2243,7 @@ class PointFunc(AstNode):
         super(PointFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("PointFunc")
         writer.WriteStartElement("X")
         self.xexpr.xml(writer)
@@ -2110,8 +2257,9 @@ class RadFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(RadFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Rad")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -2122,6 +2270,7 @@ class RndFunc(AstNode):
         super(RndFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("RndFunc")
         if self.expression:
             writer.WriteStartElement("expression")
@@ -2133,8 +2282,9 @@ class SinFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(SinFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Sin")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -2143,8 +2293,9 @@ class SgnFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(SgnFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Sgn")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -2153,8 +2304,9 @@ class SqrFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(SqrFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Sqr")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -2164,8 +2316,9 @@ class StrStringFunc(AstNode):
         self.expr = expr
         self.base = base
         super(StrStringFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("StrString")
         writer.WriteStartAttribute("base")
         writer.WriteString(self.base)
@@ -2177,8 +2330,9 @@ class TanFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(TanFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Tan")
         self.expr.xml(writer)
         writer.WriteEndElement()
@@ -2188,6 +2342,7 @@ class TempoFunc(AstNode):
         super(TempoFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("TempoFunc")
         writer.WriteEndElement()
 
@@ -2200,6 +2355,7 @@ class TintFunc(AstNode):
         super(TintFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("TintFunc")
         if self.type:
             writer.WriteStartElement("layer")
@@ -2224,14 +2380,16 @@ class TopFunc(AstNode):
         super(TopFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("TopFunc")
         writer.WriteEndElement()
-        
+
 class TrueFunc(AstNode):
     def __init__(self, *args, **kwargs):
         super(TrueFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("TrueFunc")
         writer.WriteEndElement()
 
@@ -2241,6 +2399,7 @@ class ValFunc(AstNode):
         super(ValFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("ValFunc")
         writer.WriteStartElement("expr")
         self.expr.xml(writer)
@@ -2252,24 +2411,27 @@ class VposFunc(AstNode):
         super(VposFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("VposFunc")
         writer.WriteEndElement()
 
 class WidthFunc(AstNode):
     def __init__(self, *args, **kwargs):
         super(WidthFunc, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Width")
         writer.WriteEndElement()
-    
+
 
 class LiteralString(AstNode):
     def __init__(self, value, *args, **kwargs):
         self.value = value
         super(LiteralString, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("String")
         writer.WriteStartAttribute("value")
         writer.WriteString(self.value)
@@ -2280,24 +2442,26 @@ class LiteralInteger(AstNode):
     def __init__(self, value, *args, **kwargs):
         self.value = value
         super(LiteralInteger, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Integer")
         writer.WriteStartAttribute("value")
         writer.WriteString(str(self.value))
         writer.WriteEndAttribute()
         writer.WriteEndElement()
-    
+
 class LiteralFloat(AstNode):
     def __init__(self, value, *args, **kwargs):
         self.value = value
         super(LiteralFloat, self).__init__(*args, **kwargs)
-        
+
     def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Float")
         writer.WriteStartAttribute("value")
         writer.WriteString(str(self.value))
         writer.WriteEndAttribute()
-        writer.WriteEndElement()        
-        
- 
+        writer.WriteEndElement()
+
+
