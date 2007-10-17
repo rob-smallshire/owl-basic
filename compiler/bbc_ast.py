@@ -1186,6 +1186,29 @@ class Stereo(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
+class Sys(AstNode):
+    def __init__(self, arg_list, variable_list=None, flags=None, *args, **kwargs):
+        self.args = arg_list
+        self.variable_list = variable_list
+        self.flags = flags
+        super(Sys, self).__init__(*args, **kwargs)
+        
+    def xml(self, writer):
+        logging.debug("%s.xml()", self.__class__.__name__)
+        writer.WriteStartElement("Sys")
+        writer.WriteStartElement("Arguments")
+        self.args.xml(writer)
+        writer.WriteEndElement()
+        if self.variable_list:
+            writer.WriteStartElement("Variables")
+            self.variable_list.xml(writer)
+            writer.WriteEndElement()
+        if self.flags:
+            writer.WriteStartElement("Flags")
+            self.flags.xml(writer)
+            writer.WriteEndElement()
+        writer.WriteEndElement()
+
 class TabH(AstNode):
     def __init__(self, h, *args, **kwargs):
         self.h_expr = h
@@ -1253,7 +1276,11 @@ class VariableList(AstNode):
         logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("VariableList")
         for variable in self.variables:
-            variable.xml(writer)
+            if variable:
+                variable.xml(writer)
+            else:
+                writer.WriteStartElement("None")
+                writer.WriteEndElement()
         writer.WriteEndElement()
 
 class Variable(AstNode):
@@ -1431,7 +1458,11 @@ class ExpressionList(AstNode):
         logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("ExpressionList")
         for expr in self.expressions:
-            expr.xml(writer)
+            if expr:
+                expr.xml(writer)
+            else:
+                writer.WriteStartElement("None")
+                writer.WriteEndElement()
         writer.WriteEndElement()
 
 class ActualArgList(AstNode):
@@ -1918,7 +1949,7 @@ class BgetFunc(AstNode):
 class ChrStrFunc(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
-        super(AscFunc, self).__init__(*args, **kwargs)
+        super(ChrStrFunc, self).__init__(*args, **kwargs)
 
     def xml(self, writer):
         logging.debug("%s.xml()", self.__class__.__name__)

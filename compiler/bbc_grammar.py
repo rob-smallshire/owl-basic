@@ -80,7 +80,6 @@ def p_stmt_terminator(p):
                  | on_error_stmt
                  | read_stmt
                  | restore_stmt    PAGE 69 BBCBASIC.PDF - RESTORE +offset???
-                 | sys_stmt
                  | tint_stmt
                  | trace_stmt'''
 
@@ -150,6 +149,7 @@ def p_stmt_body(p):
                  | stop_stmt
                  | stereo_stmt
                  | swap_stmt
+                 | sys_stmt
                  | tempo_stmt
                  | until_stmt
                  | vdu_stmt
@@ -478,25 +478,12 @@ def p_for_stmt(p):
 
 # Rule for dealing with unmatched NEXT statements
 def p_next_stmt(p):
-    '''next_stmt : NEXT variable_list
+    '''next_stmt : NEXT nullable_variable_list
                  | NEXT'''
     if len(p) == 3:
         p[0] = Next(p[2])
     elif len(p) == 2:
         p[0] = Next(None)
-    logging.debug("p[0] = %s", p[0])
-
-def p_variable_list(p):
-    '''variable_list : variable
-                     | variable_list COMMA variable'''
-    if len(p) == 2:
-        p[0] = VariableList(p[1])
-    elif len(p) == 4:
-        p[1].append(p[3])
-        p[0] = p[1]
-    logging.debug("p[0] = %s", p[0])
-
-# Assignment
     logging.debug("p[0] = %s", p[0])
 
 def p_library_stmt(p):
@@ -783,6 +770,18 @@ def p_swap_stmt(p):
     p[0] = Swap(p[2] ,p[4] )
     logging.debug("p[0] = %s", p[0])
 
+def p_sys_stmt(p):
+    '''sys_stmt : SYS nullable_expr_list
+                | SYS nullable_expr_list TO nullable_variable_list
+                | SYS nullable_expr_list TO nullable_variable_list SEMICOLON variable'''
+    if len(p) == 3:
+        p[0] = Sys(p[2])
+    elif len(p) == 5:
+        p[0] = Sys(p[2], p[4])
+    elif len(p) == 7:
+        p[0] = Sys(p[2], p[4], p[6])
+    logging.debug("p[0] = %s", p[0])
+    
 def p_tab(p):
     '''tab : TAB_LPAREN expr RPAREN
            | TAB_LPAREN expr COMMA expr RPAREN'''
@@ -967,6 +966,28 @@ def p_expr_list(p):
         p[1].append(p[3])
         p[0] = p[1]
     logging.debug("p[0] = %s", p[0])
+
+def p_nullable_expr(p):
+    '''nullable_expr : expr
+                     | empty_expr'''
+    p[0] = p[1]
+    logging.debug("p[0] = %s", p[0])
+
+def p_empty_expr(p):
+    '''empty_expr :'''
+    logging.debug("p[0] = %s", p[0])
+    pass
+
+def p_nullable_expr_list(p):
+    '''nullable_expr_list : nullable_expr
+                          | nullable_expr_list COMMA nullable_expr'''
+    if len(p) == 2:
+        p[0] = ExpressionList(p[1])
+    elif len(p) == 4:
+        p[1].append(p[3])
+        p[0] = p[1]
+    logging.debug("p[0] = %s", p[0])
+
 
 # TODO : Should any of these expressions take factors rather than expr as operands
 def p_expr(p):
@@ -1529,7 +1550,29 @@ def p_channel(p):
 def p_variable(p):
     'variable : ID'
     p[0] = Variable(p[1])
+    logging.debug("p[0] = %s [%s]", p[0], str(p[1]))
+
+def p_empty_variable(p):
+    '''empty_variable :'''
     logging.debug("p[0] = %s", p[0])
+    pass
+
+def p_nullable_variable(p):
+    '''nullable_variable : variable
+                         | empty_variable'''
+    p[0] = p[1]
+    logging.debug("p[0] = %s", p[0])
+
+def p_nullable_variable_list(p):
+    '''nullable_variable_list : nullable_variable
+                              | nullable_variable_list COMMA nullable_variable'''
+    if len(p) == 2:
+        p[0] = VariableList(p[1])
+    elif len(p) == 4:
+        p[1].append(p[3])
+        p[0] = p[1]
+    logging.debug("p[0] = %s", p[0])
+
 
 #=============================================================================#
 # ARRAYS
@@ -1591,26 +1634,23 @@ def p_literal(p):
                | literal_integer
                | literal_float'''
     p[0] = p[1]
-    logging.debug("p[0] = %s", p[0])
+    logging.debug("p[0] = %s [%s]", p[0], p[1])
 
 def p_literal_string(p):
     'literal_string : LITERAL_STRING'
     p[0] = LiteralString(p[1])
-    logging.debug("p[0] = %s", p[0])
 
 def p_literal_integer(p):
     'literal_integer : LITERAL_INTEGER'
     p[0] = LiteralInteger(p[1])
-    logging.debug("p[0] = %s", p[0])
 
 def p_literal_float(p):
     'literal_float : LITERAL_FLOAT'
     p[0] = LiteralFloat(p[1])
-    logging.debug("p[0] = %s", p[0])
 
 #=============================================================================#
 # ERRORS
 
 # Error rule for syntax errors
 def p_error(p):
-    logging.error("Syntax error %s at physical line ", p, p[1].lineno)
+    logging.error("Syntax error %s at physical line %s", p, p.lineno)
