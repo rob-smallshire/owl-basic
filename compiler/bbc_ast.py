@@ -3,14 +3,29 @@
 import logging
 import re
 
+class Void:
+    pass
+
+void = Void()
+
 class AstNode(object):
     def __init__(self, *args, **kwargs):
         pass
+    
+class AstStatement(AstNode):
+    def __init__(self, *args, **kwargs):
+        super(AstStatement, self).__init__(*args, **kwargs)
+        
+    def type(self):
+        return void;
 
 class Program(AstNode):
     def __init__(self, statement_list, *args, **kwargs):
         self.statement_list = statement_list
         super(Program, self).__init__(*args, **kwargs)
+
+    def type(self):
+        return void
 
     def xml(self, writer):
         logging.debug("%s.xml()", self.__class__.__name__)
@@ -18,11 +33,11 @@ class Program(AstNode):
         self.statement_list.xml(writer)
         writer.WriteEndElement()
 
-class Statement(AstNode):
+class Statement(AstStatement):
     def __init__(self, body=None, *args, **kwargs):
         self.body = body
         super(Statement, self).__init__(*args, **kwargs)
-
+        
     def xml(self, writer):
         logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Statement")
@@ -43,6 +58,9 @@ class StatementList(AstNode):
     def append(self, statement):
         self.statements.append(statement)
 
+    def type(self):
+        return void
+
     def xml(self, writer):
         logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("StatementList")
@@ -51,8 +69,8 @@ class StatementList(AstNode):
                 logging.debug("statement = >>%s<<", statement)
                 statement.xml(writer)
         writer.WriteEndElement()
-
-class Beats(AstNode):
+        
+class Beats(AstStatement):
     def __init__(self, expression, *args, **kwargs):
         self.expression = expression
         super(Beats, self).__init__(*args, **kwargs)
@@ -63,7 +81,7 @@ class Beats(AstNode):
         self.expression.xml(writer)
         writer.WriteEndElement()
 
-class Channel(AstNode):
+class Channel(AstStatement):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(Channel, self).__init__(*args, **kwargs)
@@ -74,7 +92,7 @@ class Channel(AstNode):
         self.expr.xml(writer)
         writer.WriteEndElement()
 
-class Assignment(AstNode):
+class Assignment(AstStatement):
     def __init__(self, identifier, expression, *args, **kwargs):
         self.lvalue = identifier
         self.rvalue = expression
@@ -91,7 +109,7 @@ class Assignment(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Increment(AstNode):
+class Increment(AstStatement):
     def __init__(self, identifier, expression, *args, **kwargs):
         self.lvalue = identifier
         self.rvalue = expression
@@ -108,7 +126,7 @@ class Increment(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Decrement(AstNode):
+class Decrement(AstStatement):
     def __init__(self, identifier, expression, *args, **kwargs):
         self.lvalue = identifier
         self.rvalue = expression
@@ -125,7 +143,7 @@ class Decrement(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Bput(AstNode):
+class Bput(AstStatement):
     def __init__(self, channel, expression, newline=False, *args, **kwargs):
         self.channel = channel
         self.expr = expression
@@ -148,7 +166,7 @@ class Bput(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Call(AstNode):
+class Call(AstStatement):
     def __init__(self, arglist, *args, **kwargs):
         self.arglist = arglist # unsure if you want to deal with this like this
         super(Call, self).__init__(*args, **kwargs)
@@ -161,7 +179,7 @@ class Call(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Circle(AstNode):
+class Circle(AstStatement):
     def __init__(self, x, y, rad, fill=None, *args, **kwargs):
         self.x = x
         self.y = y
@@ -187,7 +205,7 @@ class Circle(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Cls(AstNode):
+class Cls(AstStatement):
     def __init__(self, *args, **kwargs):
         super(Cls, self).__init__(*args, **kwargs)
 
@@ -196,7 +214,7 @@ class Cls(AstNode):
         writer.WriteStartElement("Cls")
         writer.WriteEndElement()
 
-class Clg(AstNode):
+class Clg(AstStatement):
     def __init__(self, *args, **kwargs):
         super(Clg, self).__init__(*args, **kwargs)
 
@@ -205,7 +223,7 @@ class Clg(AstNode):
         writer.WriteStartElement("Clg")
         writer.WriteEndElement()
 
-class Colour(AstNode):
+class Colour(AstStatement):
     def __init__(self, logical, tint=None, *args, **kwargs):
         self.logical = logical
         self.tint = tint
@@ -223,7 +241,7 @@ class Colour(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Palette(AstNode):
+class Palette(AstStatement):
     def __init__(self, logical, physical=None, red=None, green=None, blue=None, *args, **kwargs):
         self.logical = logical
         self.physical = physical
@@ -256,7 +274,7 @@ class Palette(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Case(AstNode):
+class Case(AstStatement):
     def __init__(self, expr, when_list, *args, **kwargs):
         self.expr = expr
         self.when_list = when_list
@@ -313,7 +331,7 @@ class OtherwiseClause(AstNode):
         self.statement_list.xml(writer)
         writer.WriteEndElement()
 
-class Close(AstNode):
+class Close(AstStatement):
     def __init__(self, channel, *args, **kwargs):
         self.channel = channel
         super(Close, self).__init__(*args, **kwargs)
@@ -326,7 +344,7 @@ class Close(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Data(AstNode):
+class Data(AstStatement):
     def __init__(self, data, *args, **kwargs):
         self.items = self.parse(data)
         super(Data, self).__init__(*args, **kwargs)
@@ -358,7 +376,7 @@ class Data(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
-class DefineFunction(AstNode):
+class DefineFunction(AstStatement):
     def __init__(self, id, arg_list=None, *args, **kwargs):
         self.id = id
         self.arg_list = arg_list
@@ -374,7 +392,7 @@ class DefineFunction(AstNode):
             self.arg_list.xml(writer)
         writer.WriteEndElement()
 
-class ReturnFromFunction(AstNode):
+class ReturnFromFunction(AstStatement):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(ReturnFromFunction, self).__init__(*args, **kwargs)
@@ -385,7 +403,7 @@ class ReturnFromFunction(AstNode):
         self.expr.xml(writer)
         writer.WriteEndElement()
 
-class DefineProcedure(AstNode):
+class DefineProcedure(AstStatement):
     def __init__(self, id, arg_list=None, *args, **kwargs):
         self.id = id
         self.arg_list = arg_list
@@ -401,7 +419,7 @@ class DefineProcedure(AstNode):
             self.arg_list.xml(writer)
         writer.WriteEndElement()
 
-class ReturnFromProcedure(AstNode):
+class ReturnFromProcedure(AstStatement):
     def __init__(self, *args, **kwargs):
         super(ReturnFromProcedure, self).__init__(*args, **kwargs)
 
@@ -410,7 +428,7 @@ class ReturnFromProcedure(AstNode):
         writer.WriteStartElement("ReturnFromProcedure")
         writer.WriteEndElement()
 
-class ForToStep(AstNode):
+class ForToStep(AstStatement):
     def __init__(self, identifier, start, end, step, *args, **kwargs):
         self.identifier = identifier
         self.start = start
@@ -435,7 +453,7 @@ class ForToStep(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Next(AstNode):
+class Next(AstStatement):
     def __init__(self, var_list, *args, **kwargs):
         self.var_list = var_list
         super(Next, self).__init__(*args, **kwargs)
@@ -447,7 +465,7 @@ class Next(AstNode):
             self.var_list.xml(writer)
         writer.WriteEndElement()
 
-class Draw(AstNode):
+class Draw(AstStatement):
     def __init__(self, x, y, relative = False, *args, **kwargs):
         self.x = x
         self.y = y
@@ -468,7 +486,7 @@ class Draw(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Ellipse(AstNode):
+class Ellipse(AstStatement):
     def __init__(self, x, y, hrad, vrad, rotate=None, fill=False, *args, **kwargs):
         self.x = x
         self.y = y
@@ -518,7 +536,7 @@ class GenerateError(AstNode):
         self.t.xml(writer)
         writer.WriteEndElement()
 
-class End(AstNode):
+class End(AstStatement):
     def __init__(self, *args, **kwargs):
         super(End, self).__init__(args, kwargs)
 
@@ -527,7 +545,7 @@ class End(AstNode):
         writer.WriteStartElement("End")
         writer.WriteEndElement()
 
-class Envelope(AstNode):
+class Envelope(AstStatement):
     def __init__(self, n, t, pitch1, pitch2, pitch3, pNum1, pNum2, pNum3, ampAttack, ampDecay, ampSustain, ampRelease, ala, ald, *args, **kwargs):
         self.n=n
         self.t=t
@@ -592,7 +610,7 @@ class Envelope(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Fill(AstNode):
+class Fill(AstStatement):
     def __init__(self, x, y, relative = False, *args, **kwargs):
         self.x = x
         self.y = y
@@ -613,7 +631,7 @@ class Fill(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Gcol(AstNode):
+class Gcol(AstStatement):
     #arguments on this class are transposed in comparison to BBC Basic
     def __init__(self, col, mode=None, *args, **kwargs):
         self.mode = mode
@@ -632,7 +650,7 @@ class Gcol(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Goto(AstNode):
+class Goto(AstStatement):
     def __init__(self, line, *args, **kwargs):
         self.line = line
         super(Goto, self).__init__(*args, **kwargs)
@@ -643,7 +661,7 @@ class Goto(AstNode):
         self.line.xml(writer)
         writer.WriteEndElement()
 
-class Gosub(AstNode):
+class Gosub(AstStatement):
     def __init__(self, line, *args, **kwargs):
         self.line = line
         super(Gosub, self).__init__(*args, **kwargs)
@@ -654,7 +672,7 @@ class Gosub(AstNode):
         self.line.xml(writer)
         writer.WriteEndElement()
 
-class Return(AstNode):
+class Return(AstStatement):
     def __init__(self, parameter=None, *args, **kwargs):
         self.parameter = parameter
         super(Return, self).__init__(*args, **kwargs)
@@ -668,7 +686,7 @@ class Return(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Install(AstNode):
+class Install(AstStatement):
     def __init__(self, expression, *args, **kwargs):
         self.expression = expression
         super(Install, self).__init__(*args, **kwargs)
@@ -681,7 +699,7 @@ class Install(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class If(AstNode):
+class If(AstStatement):
     def __init__(self, condition, true_clause=None, false_clause=None, *args, **kwargs):
         self.condition = condition
         self.true_clause = true_clause
@@ -704,7 +722,7 @@ class If(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
-class AddLibrary(AstNode):
+class AddLibrary(AstStatement):
     def __init__(self, expression, *args, **kwargs):
         self.expression = expression
         super(AddLibrary, self).__init__(*args, **kwargs)
@@ -717,7 +735,7 @@ class AddLibrary(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Move(AstNode):
+class Move(AstStatement):
     def __init__(self, x, y, relative = False, *args, **kwargs):
         self.x = x
         self.y = y
@@ -738,7 +756,7 @@ class Move(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Mode(AstNode):
+class Mode(AstStatement):
     def __init__(self, mode, *args, **kwargs):
         self.mode = mode
         super(Mode, self).__init__(*args, **kwargs)
@@ -749,7 +767,7 @@ class Mode(AstNode):
         self.mode.xml(writer)
         writer.WriteEndElement()
 
-class Mouse(AstNode):
+class Mouse(AstStatement):
     def __init__(self, x, y, b, t=None, *args, **kwargs):
         self.x = x
         self.y = y
@@ -775,7 +793,7 @@ class Mouse(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
-class MouseStep(AstNode):
+class MouseStep(AstStatement):
     def __init__(self, x, y=None, *args, **kwargs):
         self.x = x
         self.y = y
@@ -793,7 +811,7 @@ class MouseStep(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
-class MouseColour(AstNode):
+class MouseColour(AstStatement):
     def __init__(self, attrib, r, g, b, *args, **kwargs):
         self.attrib = attrib
         self.r = r
@@ -818,7 +836,7 @@ class MouseColour(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class MousePointer(AstNode):
+class MousePointer(AstStatement):
     def __init__(self, toX=None, toY=None, pointer= None, off=None, *args, **kwargs):
         self.toX = toX
         self.toY = toY
@@ -847,7 +865,7 @@ class MousePointer(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
-class MouseRectangle(AstNode):
+class MouseRectangle(AstStatement):
     def __init__(self, left=None, bottom=None, width=None, height=None, off=None, *args, **kwargs):
         self.left = left
         self.bottom = bottom
@@ -878,7 +896,7 @@ class MouseRectangle(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
-class On(AstNode):
+class On(AstStatement):
     def __init__(self, *args, **kwargs):
         super(On, self).__init__(*args, **kwargs)
 
@@ -887,7 +905,7 @@ class On(AstNode):
         writer.WriteStartElement("On")
         writer.WriteEndElement()
 
-class Off(AstNode):
+class Off(AstStatement):
     def __init__(self, *args, **kwargs):
         super(Off, self).__init__(*args, **kwargs)
 
@@ -896,7 +914,7 @@ class Off(AstNode):
         writer.WriteStartElement("Off")
         writer.WriteEndElement()
 
-class Origin(AstNode):
+class Origin(AstStatement):
     def __init__(self, x, y, *args, **kwargs):
         self.x = x
         self.y = y
@@ -913,7 +931,7 @@ class Origin(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Oscli(AstNode):
+class Oscli(AstStatement):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(Oscli, self).__init__(*args, **kwargs)
@@ -926,7 +944,7 @@ class Oscli(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Plot(AstNode):
+class Plot(AstStatement):
     def __init__(self, x, y, mode=None, relative = False, *args, **kwargs):
         self.x = x
         self.y = y
@@ -952,7 +970,7 @@ class Plot(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Point(AstNode):
+class Point(AstStatement):
     def __init__(self, x, y, by=None, *args, **kwargs):
         self.x = x
         self.y = y
@@ -975,7 +993,7 @@ class Point(AstNode):
         writer.WriteEndElement()
 
 
-class Print(AstNode):
+class Print(AstStatement):
     def __init__(self, print_list=None, *args, **kwargs):
         self.print_list = print_list
         super(Print, self).__init__(*args, **kwargs)
@@ -1028,7 +1046,7 @@ class PrintManipulator(AstNode):
         writer.WriteEndAttribute()
         writer.WriteEndElement()
 
-class CallProcedure(AstNode):
+class CallProcedure(AstStatement):
     def __init__(self, id, parameter_list=None, *args, **kwargs):
         self.id = id
         self.parameter_list = parameter_list
@@ -1044,7 +1062,7 @@ class CallProcedure(AstNode):
             self.parameter_list.xml(writer)
         writer.WriteEndElement()
 
-class Quit(AstNode):
+class Quit(AstStatement):
     def __init__(self, *args, **kwargs):
         super(Quit, self).__init__(*args, **kwargs)
 
@@ -1053,7 +1071,7 @@ class Quit(AstNode):
         writer.WriteStartElement("Quit")
         writer.WriteEndElement()
 
-class Rectangle(AstNode):
+class Rectangle(AstStatement):
     def __init__(self, x1, y1, width, height, x2=None, y2=None, rectType=None, *args, **kwargs):
         # if height is NONE then it is a square
         # unsure if need to check that SWAP has a TO
@@ -1094,7 +1112,7 @@ class Rectangle(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Report(AstNode):
+class Report(AstStatement):
     def __init__(self, *args, **kwargs):
         super(Report, self).__init__(*args, **kwargs)
 
@@ -1103,7 +1121,7 @@ class Report(AstNode):
         writer.WriteStartElement("Report")
         writer.WriteEndElement()
 
-class Repeat(AstNode):
+class Repeat(AstStatement):
     def __init__(self, *args, **kwargs):
         super(Repeat, self).__init__(*args, **kwargs)
 
@@ -1112,7 +1130,7 @@ class Repeat(AstNode):
         writer.WriteStartElement("Repeat")
         writer.WriteEndElement()
 
-class Sound(AstNode):
+class Sound(AstStatement):
     def __init__(self, channel = None, amplitude = None, pitch = None, duration = None, off=False, *args, **kwargs):
         self.channel = channel
         self.amplitude = amplitude
@@ -1143,7 +1161,7 @@ class Sound(AstNode):
             writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Swap(AstNode):
+class Swap(AstStatement):
     def __init__(self, var1, var2, *args, **kwargs): # may need to detect differance between array and vars
         self.var1 = var1
         self.var2 = var2
@@ -1160,7 +1178,7 @@ class Swap(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Stop(AstNode):
+class Stop(AstStatement):
     def __init__(self, *args, **kwargs):
         super(Stop, self).__init__(*args, **kwargs)
 
@@ -1169,7 +1187,7 @@ class Stop(AstNode):
         writer.WriteStartElement("Stop")
         writer.WriteEndElement()
 
-class Stereo(AstNode):
+class Stereo(AstStatement):
     def __init__(self, expression1, expression2, *args, **kwargs):
         self.expression1 = expression1
         self.expression2 = expression2
@@ -1186,7 +1204,7 @@ class Stereo(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Sys(AstNode):
+class Sys(AstStatement):
     def __init__(self, arg_list, variable_list=None, flags=None, *args, **kwargs):
         self.args = arg_list
         self.variable_list = variable_list
@@ -1237,7 +1255,7 @@ class TabXY(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Tempo(AstNode):
+class Tempo(AstStatement):
     def __init__(self, expression, *args, **kwargs):
         self.expression = expression
         super(Tempo, self).__init__(*args, **kwargs)
@@ -1324,7 +1342,7 @@ class Indexer(AstNode):
         self.indices.xml(writer)
         writer.WriteEndElement()
 
-class Until(AstNode):
+class Until(AstStatement):
     def __init__(self, expression, *args, **kwargs):
         self.expression = expression
         super(Until, self).__init__(*args, **kwargs)
@@ -1337,7 +1355,7 @@ class Until(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Voices(AstNode):
+class Voices(AstStatement):
     def __init__(self, expression, *args, **kwargs):
         self.expression = expression
         super(Voices, self).__init__(*args, **kwargs)
@@ -1350,7 +1368,7 @@ class Voices(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Vdu(AstNode):
+class Vdu(AstStatement):
     def __init__(self, list=None, *args, **kwargs):
         self.list = list
         super(Vdu, self).__init__(*args, **kwargs)
@@ -1394,7 +1412,7 @@ class VduItem(AstNode):
         self.expr.xml(writer)
         writer.WriteEndElement()
 
-class While(AstNode):
+class While(AstStatement):
     def __init__(self, expression, *args, **kwargs):
         self.expression = expression
         super(While, self).__init__(*args, **kwargs)
@@ -1407,7 +1425,7 @@ class While(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Endwhile(AstNode):
+class Endwhile(AstStatement):
     def __init__(self, *args, **kwargs):
         super(Endwhile, self).__init__(*args, **kwargs)
 
@@ -1416,7 +1434,7 @@ class Endwhile(AstNode):
         writer.WriteStartElement("Endwhile")
         writer.WriteEndElement()
 
-class Width(AstNode):
+class Width(AstStatement):
     def __init__(self, expression, *args, **kwargs):
         self.expression = expression
         super(Width, self).__init__(*args, **kwargs)
@@ -1429,7 +1447,7 @@ class Width(AstNode):
         writer.WriteEndElement()
         writer.WriteEndElement()
 
-class Wait(AstNode):
+class Wait(AstStatement):
     def __init__(self, expr=None, *args, **kwargs):
         self.expr = expr
         super(Wait, self).__init__(*args, **kwargs)
@@ -1537,6 +1555,10 @@ class UnaryMinus(AstNode):
         super(UnaryMinus, self).__init__(*args, **kwargs)
         self.expr = expr
 
+    def type(self):
+        # TODO: Check that expression is Number
+        return expr.type
+
     def xml(self, writer):
         logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("UnaryMinus")
@@ -1547,6 +1569,9 @@ class UnaryByteIndirection(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(UnaryByteIndirection, self).__init__(*args, **kwargs)
+
+    def type(self):
+        return Byte
 
     def xml(self, writer):
         logging.debug("%s.xml()", self.__class__.__name__)
@@ -1559,6 +1584,9 @@ class UnaryIntegerIndirection(AstNode):
         self.expr = expr
         super(UnaryIntegerIndirection, self).__init__(*args, **kwargs)
 
+    def type(self):
+        return Integer
+
     def xml(self, writer):
         logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("UnaryIntegerIndirection")
@@ -1570,6 +1598,9 @@ class UnaryStringIndirection(AstNode):
         self.expr = expr
         super(UnaryStringIndirection, self).__init__(*args, **kwargs)
 
+    def type(self):
+        return String
+
     def xml(self, writer):
         logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("UnaryStringIndirection")
@@ -1580,6 +1611,9 @@ class UnaryFloatIndirection(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(UnaryFloatIndirection, self).__init__(*args, **kwargs)
+
+    def type(self):
+        return Float
 
     def xml(self, writer):
         logging.debug("%s.xml()", self.__class__.__name__)
@@ -1625,6 +1659,9 @@ class Not(AstNode):
     def __init__(self, expr, *args, **kwargs):
         self.expr = expr
         super(Not, self).__init__(*args, **kwargs)
+
+    def type(self):
+        return Integer
 
     def xml(self, writer):
         logging.debug("%s.xml()", self.__class__.__name__)
@@ -1887,6 +1924,9 @@ class AscFunc(AstNode):
         self.expr = expr
         super(AscFunc, self).__init__(*args, **kwargs)
 
+    def type(self):
+        return Float
+
     def xml(self, writer):
         logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Asc")
@@ -1898,6 +1938,9 @@ class AsnFunc(AstNode):
         self.expr = expr
         super(AsnFunc, self).__init__(*args, **kwargs)
 
+    def type(self):
+        return Float
+
     def xml(self, writer):
         logging.debug("%s.xml()", self.__class__.__name__)
         writer.WriteStartElement("Asn")
@@ -1908,6 +1951,9 @@ class AtnFunc(AstNode):
     def __init__(self, factor, *args, **kwargs):
         self.factor = factor
         super(AtnFunc, self).__init__(*args, **kwargs)
+
+    def type(self):
+        return Float
 
     def xml(self, writer):
         logging.debug("%s.xml()", self.__class__.__name__)
