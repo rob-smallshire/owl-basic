@@ -11,21 +11,39 @@ class Node(object):
     def __init__(self, type):
         self.type = type
 
-class BoolOption(object):
+class Option(object):
+    pass
+
+class BoolOption(Option):
     def __init__(self, default):
         self.value = default
 
 class AstMeta(type):
     def __init__(cls, name, bases, dict):
+        """
+        Configure the class that is being created by introspecting its
+        'declaration' and creating getters, setters and properties for its
+        data memebers.
+        """
         super(AstMeta, cls).__init__(name, bases, dict)
+        print "AstMeta.__init__"
+        cls._createChildProperties(name, bases, dict)
+        cls._createOptionProperties(name, bases, dict)
+    
+    def _createChildProperties(cls, name, bases, dict):    
+        """
+        Introspect the class being created to look for class members which
+        contain 'declarative' Node objects. Move these declarations into the
+        child_infos class member, and create getters, setters and properties
+        to provide access to each of the child members.
+        """
         cls.child_infos = {}
         for info_name, v in dict.items():
             if isinstance(v, Node):
                cls.child_infos[info_name] = v
-        
+                
         removal = []
         for info_name in cls.child_infos.keys():
-           # Create lowerCamelCase accessor
            property_name = underscoresToCamelCase(info_name)
            if info_name != property_name:
                removal.append(info_name)
@@ -34,14 +52,45 @@ class AstMeta(type):
            def _setProperty(self, value, info_name=info_name):
                self._children[info_name] = value
            setattr(cls, property_name, property(_getProperty, _setProperty))
-           #dict[property_name] = property(_getProperty, _setProperty)
+                        
+        for info_name in removal:
+            delattr(cls, info_name)
+    
+    def _createOptionProperties(cls, name, bases, dict):
+        """
+        Introspect the class being created to look for class members which
+        contain 'declarative' Option objects. Move these declarations into the
+        option_infos class member, and create getters, setters and properties
+        to provide access to each of the child members.
+        """
+        cls.option_infos = {}
+        for info_name, v in dict.items():
+            if isinstance(v, Option):
+               cls.option_infos[info_name] = v
                 
+        removal = []
+        for info_name in cls.option_infos.keys():
+           property_name = underscoresToCamelCase(info_name)
+           if info_name != property_name:
+               removal.append(info_name)
+           def _getProperty(self, info_name=info_name):
+               return self._options[info_name]
+           def _setProperty(self, value, info_name=info_name):
+               self._options[info_name] = value
+           setattr(cls, property_name, property(_getProperty, _setProperty))
+                        
         for info_name in removal:
             delattr(cls, info_name)
     
     def __call__(cls, *args, **kwargs):
+        """
+        Called when instances of classes with this metaclass. i.e. AstNodes.
+        Consume keyword arguments with the same name as child properties and options then
+        set the appropriate attributes.
+        """
         print "cls = %s" % cls
         print "kwargs = %s" % str(kwargs)
+        print "self.__dict__ = %s" % str(cls.__dict__)
         
         # First create the object
         obj = type.__call__(cls, *args)
@@ -65,10 +114,11 @@ class AstNode(object):
         # Initialise children
         self._children = {}
         for info_name in self.child_infos.keys():
-            print "info_name = %s" % info_name
             self._children[info_name] = None
         
         self._options = {}
+        for info_name, option in self.option_infos.items():
+            self._options[info_name] = option.value
         
     # Children accessor
     
@@ -103,7 +153,7 @@ class Envelope(AstNode):
 class Bput(AstNode):
     channel = Node(ChannelType)
     data    = Node(IntegerType)
-    newline = BoolOption
+    newline = BoolOption(false)
 
 class Circle(AstNode):
     x_coord = Node(IntegerType)
