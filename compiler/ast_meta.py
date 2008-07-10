@@ -32,7 +32,10 @@ class AstMeta(type):
         """
         super(AstMeta, cls).__init__(name, bases, dict)
         cls._createChildProperties(name, bases, dict)
+        cls._createChildListProperties(name, bases, dict)
         cls._createOptionProperties(name, bases, dict)
+    
+    # TODO: These methods have a lot of common code.
     
     def _createChildProperties(cls, name, bases, dict):    
         """
@@ -44,6 +47,32 @@ class AstMeta(type):
         cls.child_infos = {}
         for info_name, v in dict.items():
             if isinstance(v, Node):
+               cls.child_infos[info_name] = v
+                
+        removal = []
+        for info_name in cls.child_infos.keys():
+           property_name = underscoresToCamelCase(info_name)
+           if info_name != property_name:
+               removal.append(info_name)
+           def _getProperty(self, info_name=info_name):
+               return self._children[info_name]
+           def _setProperty(self, value, info_name=info_name):
+               self._children[info_name] = value
+           setattr(cls, property_name, property(_getProperty, _setProperty))
+                        
+        for info_name in removal:
+            delattr(cls, info_name)
+    
+    def _createChildListProperties(cls, name, bases, dict):    
+        """
+        Introspect the class being created to look for class members which
+        contain 'declarative' [Node] objects. Move these declarations into the
+        child_infos class member, and create getters, setters and properties
+        to provide access to each of the child members.
+        """
+        cls.child_infos = {}
+        for info_name, v in dict.items():
+            if isinstance(v, list) and isinstance(v[0], Node):
                cls.child_infos[info_name] = v
                 
         removal = []
@@ -109,8 +138,11 @@ class AstNode(object):
     def __init__(self):
         # Initialise children
         self._children = {}
-        for info_name in self.child_infos.keys():
-            self._children[info_name] = None
+        for info_name, info in self.child_infos.items():
+            if isinstance(info, Node):
+                self._children[info_name] = None
+            elif isinstance(info, list):
+                self._children[info_name] = []
         
         self._options = {}
         for info_name, option in self.option_infos.items():
