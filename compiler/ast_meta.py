@@ -1,4 +1,5 @@
 import re
+import sys
 
 from bbc_types import *
 
@@ -8,14 +9,18 @@ def underscoresToCamelCase(s):
     return u
 
 class Node(object):
-    def __init__(self, type):
+    def __init__(self, type=None):
         self.type = type
 
 class Option(object):
     pass
 
 class BoolOption(Option):
-    def __init__(self, default):
+    def __init__(self, default=None):
+        self.value = default
+        
+class IntegerOption(Option):
+    def __init__(self, default=None):
         self.value = default
 
 class AstMeta(type):
@@ -26,7 +31,6 @@ class AstMeta(type):
         data memebers.
         """
         super(AstMeta, cls).__init__(name, bases, dict)
-        print "AstMeta.__init__"
         cls._createChildProperties(name, bases, dict)
         cls._createOptionProperties(name, bases, dict)
     
@@ -87,19 +91,12 @@ class AstMeta(type):
         Called when instances of classes with this metaclass. i.e. AstNodes.
         Consume keyword arguments with the same name as child properties and options then
         set the appropriate attributes.
-        """
-        print "cls = %s" % cls
-        print "kwargs = %s" % str(kwargs)
-        print "self.__dict__ = %s" % str(cls.__dict__)
-        
+        """        
         # First create the object
         obj = type.__call__(cls, *args)
-        
-        print obj
-        
+                
         for kwarg in kwargs:
             if kwarg in cls.__dict__ and isinstance(cls.__dict__[kwarg], property):
-                print "Setting %s to %s" % (kwarg, kwargs[kwarg])
                 setattr(obj, kwarg, kwargs[kwarg])
         
         # Should remove consumed kwargs here
@@ -110,7 +107,6 @@ class AstNode(object):
     __metaclass__ = AstMeta
     
     def __init__(self):
-        print "AstNode.__init__()"
         # Initialise children
         self._children = {}
         for info_name in self.child_infos.keys():
@@ -149,7 +145,7 @@ class AstNode(object):
         does not exist, then it recursively attempts to call the visitor
         method on the superclass.
         """
-        visitor_method = getattr(visitor, "visis%s" % klass.__name__, None)
+        visitor_method = getattr(visitor, "visit%s" % klass.__name__, None)
         if visitor_method is None:
             bases = klass.__bases__
             last = None
@@ -158,6 +154,83 @@ class AstNode(object):
             return last
         else:
             return visitor_method(self)
+
+# ================================================================
+
+# Visitors for testing
+
+from visitor import Visitor
+
+class XmlVisitor(Visitor):
+    """
+    AST visitor for converting the AST into an XML representation.
+    """
+    def __init__(self, filename):
+        # .NET Framework
+        import clr
+        clr.AddReference('System.Xml')
+        from System.Xml import XmlTextWriter, Formatting
+        
+        self.writer = XmlTextWriter(filename, None)
+        self.writer.Formatting = Formatting.Indented
+        self.writer.WriteComment("XML Parse Tree")
+        
+    def close(self):
+        self.writer.Flush()
+        self.writer.Close()
+
+    def beginElement(self, node):
+        name = node.__class__.__name__
+        self.writer.WriteStartElement(name)
+        
+    def endElement(self):
+        self.writer.WriteEndElement()
+    
+    def childElement(self, name, node):
+        self.writer.WriteStartElement(name)
+        self.visit(node)
+        self.writer.WriteEndElement()
+    
+    def childTextElement(self, name, text):
+        self.writer.WriteStartElement(name)
+        self.writer.WriteString(str(text))
+        self.writer.WriteEndElement()
+    
+    def childAttribute(self, name, value):
+        self.writer.WriteStartAttribute(name)
+        self.writer.WriteString(str(value))
+        self.writer.WriteEndAttribute()
+
+    def visitAstNode(self, node):
+        self.beginElement(node)
+        for name, value in node.options.items():
+            self.childAttribute(name, value)
+        for name, child in node.children.items():
+            self.childElement(name, child)
+        self.endElement()
+
+class BasicVisitor(Visitor):
+    """
+    AST visitor for converting the AST into back into OWL BASIC.
+    """
+    def __init__(self):
+        pass
+        
+    def visitLiteralInteger(self, integer):
+        sys.stdout.write(str(integer.value))
+        
+    def visitCircle(self, circle):
+        sys.stdout.write("CIRCLE ")
+        if circle.fill:
+            sys.stdout.write("FILL ")
+        self.visit(circle.xCoord)
+        sys.stdout.write(", ")
+        self.visit(circle.yCoord)
+        sys.stdout.write(", ")
+        self.visit(circle.radius)
+        sys.stdout.write('\n')
+
+# ================================================================
         
 class Envelope(AstNode):
     n                 = Node(IntegerType)
@@ -185,16 +258,19 @@ class Circle(AstNode):
     y_coord = Node(IntegerType)
     radius  = Node(IntegerType)
     fill    = BoolOption(False)
-    
-#class Case(AstNode):
-#    condition    = Node(ScalarType)
-#    when_clauses = Node(WhenClauseList)
 
-#class WhenClauseList(AstNode):
-#    clauses = [Node(StatementList)]
-#    
-#    def append(self, when_clause):
-#        self.clauses.append(when_clause)
+class LiteralInteger(AstNode):
+    value = IntegerOption()
+
+class Case(AstNode):
+    condition    = Node(ScalarType)
+    when_clauses = Node()
+
+class WhenClauseList(AstNode):
+    clauses = [Node()]
+    
+    def append(self, when_clause):
+        self.clauses.append(when_clause)
     
 class Data(AstNode):
     data = Node(ScalarType)
