@@ -50,7 +50,10 @@ if __name__ == '__main__':
         clr.AddReference('System.Xml')
         from System.Xml import XmlTextWriter, Formatting
 
-        
+    if len(args) == 0:
+        sys.stderr.write("No filename supplied.\n")
+        sys.exit(1)
+            
     filename = args[0]
     
     # Read the file - processing it for line numbers if necessary
