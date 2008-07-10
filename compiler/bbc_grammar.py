@@ -179,8 +179,12 @@ def p_bput_stmt(p):
 
 # CALL statement
 def p_call_stmt(p):
-    '''call_stmt : CALL actual_arg_list'''
-    p[0] = Call(p[2])
+    '''call_stmt : CALL expr
+                 | CALL expr COMMA variable_list'''
+    if len(p) == 3:
+        p[0] = Call(p[2])
+    elif len(p) == 5:
+        p[0] = Call(p[2], p[4])
     logging.debug("p[0] = %s", p[0])
 
 # TODO CASE stmt
@@ -359,8 +363,14 @@ def p_ellipse_stmt(p): # BBC BASIC V also supports rotation of an ellipse
     logging.debug("p[0] = %s", p[0])
 
 def p_error_stmt(p):
-    '''error_stmt : ERROR expr COMMA expr'''
-    p[0] = GenerateError(p[2], p[4])
+    '''error_stmt : ERROR expr COMMA expr
+                  | ERROR EXT expr COMMA expr'''
+    # TODO: Needs to handle the EXT keyword for returning an external error code
+    #       ERROR EXT ERR, REPORT$ : REM pass on the error
+    if len(p) == 5:
+        p[0] = GenerateError(p[2], p[4])
+    elif len(p) == 6:
+        p[0] = ReturnError(p[2], p[4])
     logging.debug("p[0] = %s", p[0])
 
 def p_envelope_stmt(p):
@@ -1551,6 +1561,16 @@ def p_variable(p):
     'variable : ID'
     p[0] = Variable(p[1])
     logging.debug("p[0] = %s [%s]", p[0], str(p[1]))
+
+def p_variable_list(p):
+    '''variable_list : variable
+                     | variable_list COMMA variable'''
+    if len(p) == 2:
+        p[0] = VariableList(p[1])
+    elif len(p) == 4:
+        p[1].append(p[3])
+        p[0] = p[1]
+    logging.debug("p[0] = %s", p[0])
 
 def p_empty_variable(p):
     '''empty_variable :'''
