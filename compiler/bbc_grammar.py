@@ -64,7 +64,6 @@ def p_stmt_terminator(p):
 
 # TODO: Statements to be implemented
     '''stmt_body : chain_stmt
-                 | dim_stmt
                  | input_stmt
                  | line_stmt
                  | local_stmt
@@ -100,6 +99,7 @@ def p_stmt_body(p):
                  | colour_stmt
                  | data_stmt
                  | def_stmt
+                 | dim_stmt
                  | draw_stmt
                  | ellipse_stmt
                  | end_stmt
@@ -287,6 +287,29 @@ def p_proc_stmt(p):
         p[0] = CallProcedure(name = p[1])
     elif len(p) == 5:
         p[0] = CallProcedure(name = p[1], actualParameters = p[3])
+
+def p_dim_statement(p):
+    '''dim_stmt : DIM dim_list'''
+    p[0] = Dim(items = p[1])
+
+def p_dim_list(p):
+    '''dim_list : dim_item
+                | dim_list COMMA dim_item'''
+    if len(p) == 2:
+        p[0] = DimList()
+        p[0].append(p[1])
+    elif len(p) == 3:
+        p[1].append(p[3])
+        p[0] = p[1]
+        
+def p_dim_item(p):
+    # TODO: BB4W structures would be added here
+    '''dim_item : ARRAYID_LPAREN expr_list RPAREN
+                | variable expr'''
+    if len(p) == 4:
+        p[0] = AllocateArray(identifier = p[1], dimensions = p[2])
+    elif len(p) == 3:
+        p[0] = AllocateBlock(identifier = p[1], size = p[2])
     
 def p_draw_stmt(p):
     '''draw_stmt : DRAW expr COMMA expr
@@ -309,7 +332,7 @@ def p_ellipse_stmt(p): # BBC BASIC V also supports rotation of an ellipse
     if len(p) == 9:
         p[0] = Ellipse(xCoord = p[2], yCoord = p[4], semiMajor = p[6], semiMinor = p[8])
     elif len(p) == 10:
-        p[0] = Ellipse(xCoord = p[3], yCoord = p[5], semiMajor = p[7], semiMinor = p[9],fill=True)
+        p[0] = Ellipse(xCoord = p[3], yCoord = p[5], semiMajor = p[7], semiMinor = p[9], fill=True)
     elif len(p) == 11:
         p[0] = Ellipse(xCoord = p[2], yCoord = p[4], semiMajor = p[6], semiMinor = p[8], radians = p[10])
     elif len(p) == 12:

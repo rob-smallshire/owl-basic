@@ -1,3 +1,10 @@
+DIM A$(5)
+DIM B%(34)
+DIM C(512)
+DIM E$(5), F%(6), G(7)
+DIM block% 1023
+DIM block% 1023, buffer% 2047
+DIM buffer% 4095, H(23)  
 N = DIM(A$())
 N0 = DIM(A$(), 0)
 NN = DIM(A$(), N+5)

@@ -137,7 +137,6 @@ class AstMeta(type):
            def _getProperty(self, info_name=info_name):
                return self._options[info_name]
            def _setProperty(self, value, info_name=info_name):
-               print "info_name = %s" % info_name
                self._options[info_name] = value
            setattr(cls, property_name, property(_getProperty, _setProperty))
                         
@@ -168,7 +167,7 @@ class AstMeta(type):
 class AstNode(object):
     __metaclass__ = AstMeta
     
-    #child_infos = {}
+    type = None
     
     def __init__(self):
         # Initialise children
@@ -197,6 +196,17 @@ class AstNode(object):
         return self._options
     
     options = property(_getOptions)
+    
+    def forEachChild(self, f):
+        # TODO: Move this method to the AstNode class
+        for child in self.children.values():
+            if isinstance(child, list):
+                for subchild in child:
+                    print subchild
+                    f(subchild)
+            else:
+                print child
+                f(child) 
     
     def accept(self, visitor):
         """

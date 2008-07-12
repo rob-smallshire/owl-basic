@@ -6,15 +6,18 @@ import re
 from ast_meta import *
     
 class AstStatement(AstNode):
-    pass
+    type = VoidType
         
 class Program(AstNode):
+    type = None
     statement_list = Node()
 
 class Statement(AstStatement):
+    type = None
     body = Node()
             
 class StatementList(AstNode):
+    type = None
     statements = [Node()]
 
     def prepend(self, statement):
@@ -28,6 +31,24 @@ class Beats(AstStatement):
     
 class Channel(AstStatement):
     channel = Node(type=IntegerType)
+
+class Dim(AstStatement):
+    items = Node()
+    
+class DimList(AstNode):
+    type = None
+    items = [Node()]
+    
+    def append(self, node):
+        self.items.append(node)
+
+class AllocateArray(AstNode):
+    identifier = Node()
+    dimensions = Node()
+    
+class AllocateBlock(AstNode):
+    identifier = Node()
+    size       = Node(type = IntegerType)
 
 class Assignment(AstStatement):
     l_value = Node()
@@ -54,7 +75,7 @@ class Call(AstStatement):
     address = Node()    # TODO: AddressType?
     parameters = Node() # TODO: Needs handling in grammar
     
-class Circle(AstNode):
+class Circle(AstStatement):
     x_coord = Node(type=IntegerType)
     y_coord = Node(type=IntegerType)
     radius  = Node(type=IntegerType)
@@ -127,7 +148,7 @@ class DefineFunction(AstStatement):
     formalParameters = Node()
 
 class ReturnFromFunction(AstStatement):
-    return_value = Node()
+    return_value = Node(type=ScalarType) # TODO: Can functions return arrays 
 
 class DefineProcedure(AstStatement):
     name = StringOption()
@@ -309,6 +330,7 @@ class CallProcedure(AstStatement):
     actualParameters = Node()
 
 class Quit(AstStatement):
+    # TODO: Iyonix BASIC support exit value
     pass
 
 class Rectangle(AstStatement):
@@ -457,31 +479,40 @@ class FormalReferenceArgument(AstNode):
 
 class UnaryPlus(AstNode):
     expression = Node(type=NumericType)
+    #type = TypeOf(expression)
 
 class UnaryMinus(AstNode):
     expression = Node(type=NumericType)
+    #type = TypeOf(expression)
 
 class UnaryByteIndirection(AstNode):
+    type = IntegerType
     expression = Node(type=IntegerType)
 
 class UnaryIntegerIndirection(AstNode):
+    type = IntegerType
     expression = Node(type=IntegerType)
 
 class UnaryStringIndirection(AstNode):
+    type = StringType
     expression = Node(type=IntegerType)
 
 class UnaryFloatIndirection(AstNode):
+    type = FloatType
     expression = Node(type=IntegerType)
 
 class DyadicByteIndirection(AstNode):
+    type = IntegerType
     base   = Node()
     offset = Node()
 
 class DyadicIntegerIndirection(AstNode):
+    type = IntegerType
     base  = Node()
     offset = Node()
 
 class Not(AstNode):
+    type = IntegerType
     factor = Node()
 
 class BinaryOperator(AstNode):
@@ -553,26 +584,34 @@ class Eor(BinaryOperator):
 
 class AbsFunc(AstNode):
     factor = Node()
+    #type = TypeOf(factor)
 
 class EndValue(AstNode):
+    type = IntegerType
     expression = Node()
 
 class ExtValue(AstNode):
+    type = IntegerType
     channel = Node()
 
 class HimemValue(AstNode):
+    type = IntegerType
     pass
 
 class LomemValue(AstNode):
+    type = IntegerType
     pass
 
 class PageValue(AstNode):
+    type = IntegerType
     pass
 
 class TimeValue(AstNode):
+    type = IntegerType
     pass
 
 class TimeStrValue(AstNode):
+    type = StringType
     pass
 
 class PtrValue(AstNode):
@@ -592,182 +631,223 @@ class LeftStrLValue(AstNode):
     length = Node(type=IntegerType)
     
 class AcsFunc(AstNode):
+    type = FloatType
     factor = Node()
 
 class AdvalFunc(AstNode):
+    type = IntegerType
     factor = Node()
 
 class AscFunc(AstNode):
-    factor = Node()
+    type = IntegerType
+    factor = Node(type=StringType)
 
 class AsnFunc(AstNode):
+    type = FloatType
     factor = Node()
 
 class AtnFunc(AstNode):
+    type = FloatType
     factor = Node()
 
 class BeatFunc(AstNode):
-    pass
+    type = IntegerType
 
 class BeatsFunc(AstNode):
-    pass
+    type = IntegerType
 
 class BgetFunc(AstNode):
+    type = IntegerType
     channel = Node()
 
 class ChrStrFunc(AstNode):
+    type = StringType
     factor = Node()
 
 class CosFunc(AstNode):
+    type = FloatType
     radians = Node()
 
 class CountFunc(AstNode):
-    pass
+    type = IntegerType
 
 class DegFunc(AstNode):
-    radians = Node()
+    type = FloatType
+    radians = Node(type=NumericType)
 
 class DimensionsFunc(AstNode):
+    type = IntegerType
     array = Node()
 
 class DimensionSizeFunc(AstNode):
+    type = IntegerType
     array = Node()
-    dimension = Node()
+    dimension = Node(type=IntegerType)
 
 class EofFunc(AstNode):
-    channel = Node()
+    type = IntegerType
+    channel = Node(type=ChannelType)
 
 class ErlFunc(AstNode):
-    pass
+    type = IntegerType
 
 class ErrFunc(AstNode):
-    pass
+    type = IntegerType
 
 class ExpFunc(AstNode):
-    factor = Node()
+    type = FloatType
+    factor = Node(type=NumericType)
 
 class FalseFunc(AstNode):
-    pass
+    type = IntegerType
 
 class GetFunc(AstNode):
-    pass
+    type = IntegerType
 
 class GetStrFunc(AstNode):
-    pass
+    type = StringType
 
-class Get_strFileFunc(AstNode):
+class GetStrFileFunc(AstNode):
+    type = StringType
     channel = Node(type=ChannelType)
 
 class InkeyFunc(AstNode):
+    type = IntegerType
     factor = Node(type = IntegerType)
 
 class InkeyStrFunc(AstNode):
+    type = StringType
     factor = Node(type=IntegerType)
 
 class IntFunc(AstNode):
+    type = IntegerType
     factor = Node(type=NumericType)
 
 class LeftStrFunc(AstNode):
+    type = StringType
     source = Node()
     length = Node(type=IntegerType)
 
 class LenFunc(AstNode):
+    type = IntegerType
     factor = Node(type=StringType)
 
 class LnFunc(AstNode):
+    type = FloatType
     factor = Node(type=NumericType)
 
 class LogFunc(AstNode):
+    type = FloatType
     factor = Node(type=NumericType)
 
 class MidStrFunc(AstNode):
+    type = StringType
     source   = Node()
     position = Node(type=IntegerType)
     length   = Node(type=IntegerType)
     
 class ModeFunc(AstNode):
-    pass
+    type = IntegerType
 
 class OpeninFunc(AstNode):
+    type = ChannelType
     filename = Node(type=StringType)
 
 class OpenoutFunc(AstNode):
+    type = ChannelType
     filename = Node(type=StringType)
 
 class OpenupFunc(AstNode):
+    type = ChannelType
     filename = Node(type=StringType)
 
 class PosFunc(AstNode):
-    pass
+    type = IntegerType
 
 class PiFunc(AstNode):
-    pass
+    type = FloatType
 
 class PointFunc(AstNode):
+    type = IntegerType
     x_coord = Node(type=IntegerType)
     y_coord = Node(type=IntegerType)
 
 class RadFunc(AstNode):
+    type = FloatType
     degrees = Node(type=NumericType)
 
 class RightStrFunc(AstNode):
+    type = StringType
     source = Node()
     length = Node(type=IntegerType)
 
 class RndFunc(AstNode):
+    type = NumericType
     option = Node(type=IntegerType)
 
 class SinFunc(AstNode):
+    type = FloatType
     radians = Node(type=NumericType)
 
 class SgnFunc(AstNode):
+    type = IntegerType
     factor = Node(type=NumericType)
 
 class SqrFunc(AstNode):
+    type = FloatType
     factor = Node(type=NumericType)
 
 class StrStringFunc(AstNode):
+    type = StringType
     base   = IntegerOption(10)
     factor = Node(type=NumericType)
 
 class Sum(AstNode):
-    array = Node()
+    type = IntegerType
+    array = Node(type=ArrayType)
 
 class SumLenFunc(AstNode):
-    array = Node()
+    type = IntegerType
+    array = Node(type=ArrayType)
 
 class TanFunc(AstNode):
+    type = FloatType
     factor = Node(type=NumericType)
 
 class TempoFunc(AstNode):
-    pass
+    type = IntegerType
 
 class TintFunc(AstNode):
+    type = IntegerType
     xCoord = Node(type=IntegerType)
     yCoord = Node(type=IntegerType)
     
 class TopFunc(AstNode):
-    pass
+    type = IntegerType
 
 class TrueFunc(AstNode):
-    pass
+    type = IntegerType
 
 class ValFunc(AstNode):
+    type = NumericType
     factor = Node(type=StringType)
 
 class VposFunc(AstNode):
-    pass
+    type = IntegerType
 
 class WidthFunc(AstNode):
-    pass
+    type = IntegerType
 
 class LiteralString(AstNode):
+    type = StringType
     value = StringOption()
 
 class LiteralInteger(AstNode):
+    type = IntegerType
     value = IntegerOption()
 
 class LiteralFloat(AstNode):
+    type = FloatType
     value = FloatOption()
 
 
