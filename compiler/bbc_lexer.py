@@ -98,6 +98,7 @@ tokens = (
     'POS',
     'RAD',
     'RND',
+    'RND_LPAREN',
     'SGN',
     'SIN',
     'SQR',
@@ -516,6 +517,10 @@ def t_READ(t):
     r'READ'
     return t
 
+def t_RND_LPAREN(t):
+    r'RND\('
+    return t
+
 def t_STEP(t):
     r'STEP'
     return t
@@ -664,6 +669,10 @@ def t_PTR(t):
 
 def t_RAD(t):
     r'RAD'
+    return t
+
+def t_RND(t):
+    r'RND'
     return t
 
 def t_SGN(t):

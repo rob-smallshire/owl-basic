@@ -3,351 +3,108 @@
 import logging
 import re
 
-class Void:
-    pass
-
-void = Void()
-
-class AstNode(object):
-    def __init__(self, *args, **kwargs):
-        pass
+from ast_meta import *
     
 class AstStatement(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(AstStatement, self).__init__(*args, **kwargs)
+    pass
         
-    def type(self):
-        return void;
-
 class Program(AstNode):
-    def __init__(self, statement_list, *args, **kwargs):
-        self.statement_list = statement_list
-        super(Program, self).__init__(*args, **kwargs)
-
-    def type(self):
-        return void
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Program")
-        self.statement_list.xml(writer)
-        writer.WriteEndElement()
+    statement_list = Node()
 
 class Statement(AstStatement):
-    def __init__(self, body=None, *args, **kwargs):
-        self.body = body
-        super(Statement, self).__init__(*args, **kwargs)
-        
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Statement")
-        if self.body:
-            self.body.xml(writer)
-        writer.WriteEndElement()
-
+    body = Node()
+            
 class StatementList(AstNode):
-    def __init__(self, first_statement=None, *args, **kwargs):
-        self.statements = []
-        if first_statement:
-            self.statements.append(first_statement)
-        super(StatementList, self).__init__(*args, **kwargs)
+    statements = [Node()]
 
     def prepend(self, statement):
         self.statements.insert(0, statement)
 
     def append(self, statement):
         self.statements.append(statement)
-
-    def type(self):
-        return void
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("StatementList")
-        for statement in self.statements:
-            if statement:
-                logging.debug("statement = >>%s<<", statement)
-                statement.xml(writer)
-        writer.WriteEndElement()
         
 class Beats(AstStatement):
-    def __init__(self, expression, *args, **kwargs):
-        self.expression = expression
-        super(Beats, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Beats")
-        self.expression.xml(writer)
-        writer.WriteEndElement()
-
+    counter = Node(type=IntegerType)
+    
 class Channel(AstStatement):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(Channel, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Channel")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    channel = Node(type=IntegerType)
 
 class Assignment(AstStatement):
-    def __init__(self, identifier, expression, *args, **kwargs):
-        self.lvalue = identifier
-        self.rvalue = expression
-        super(Assignment, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Assignment")
-        writer.WriteStartElement("LValue")
-        self.lvalue.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("RValue")
-        self.rvalue.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
-
+    l_value = Node()
+    r_value = Node()
+    
 class Increment(AstStatement):
-    def __init__(self, identifier, expression, *args, **kwargs):
-        self.lvalue = identifier
-        self.rvalue = expression
-        super(Increment, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Increment")
-        writer.WriteStartElement("LValue")
-        self.lvalue.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("RValue")
-        self.rvalue.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    l_value = Node()
+    r_value = Node()
 
 class Decrement(AstStatement):
-    def __init__(self, identifier, expression, *args, **kwargs):
-        self.lvalue = identifier
-        self.rvalue = expression
-        super(Decrement, self).__init__(*args, **kwargs)
+    l_value = Node()
+    r_value = Node()
 
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Decrement")
-        writer.WriteStartElement("LValue")
-        self.lvalue.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("RValue")
-        self.rvalue.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
-
-class Bput(AstStatement):
-    def __init__(self, channel, expression, newline=False, *args, **kwargs):
-        self.channel = channel
-        self.expr = expression
-        # TODO: Whether newline is True or False depends on
-        #       the type of expression.  If expr is a number,
-        #       we default to False, if expr is a string we
-        #       default to True.
-        self.newline = newline
-        super(Bput, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Bput")
-        writer.WriteStartAttribute("newline")   #
-        writer.WriteString(str(self.newline))   # these 3 lines have been moved to stop ivnalid xml error
-        writer.WriteEndAttribute()              #
-        self.channel.xml(writer)
-        writer.WriteStartElement("Bytes")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+class Bput(AstNode):
+    channel = Node(type=ChannelType)
+    data    = Node(type=IntegerType)
+    # TODO: Whether newline is True or False depends on
+    #       the type of datan.  If data is a number,
+    #       we default to False, if data is a string we
+    #       default to True.
+    newline = BoolOption(False)
 
 class Call(AstStatement):
-    def __init__(self, arglist, *args, **kwargs):
-        self.arglist = arglist # unsure if you want to deal with this like this
-        super(Call, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Call")
-        writer.WriteStartElement("Arglist")
-        self.arglist.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
-
-class Circle(AstStatement):
-    def __init__(self, x, y, rad, fill=None, *args, **kwargs):
-        self.x = x
-        self.y = y
-        self.rad = rad
-        self.fill = fill
-        super(Circle, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Circle")
-        if self.fill:
-            writer.WriteStartAttribute("fill")
-            writer.WriteString(str(self.fill))
-            writer.WriteEndAttribute()
-        writer.WriteStartElement("x")
-        self.x.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("y")
-        self.y.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("rad")
-        self.rad.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    address = Node()    # TODO: AddressType?
+    parameters = Node() # TODO: Needs handling in grammar
+    
+class Circle(AstNode):
+    x_coord = Node(type=IntegerType)
+    y_coord = Node(type=IntegerType)
+    radius  = Node(type=IntegerType)
+    fill    = BoolOption(False)
 
 class Cls(AstStatement):
-    def __init__(self, *args, **kwargs):
-        super(Cls, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Cls")
-        writer.WriteEndElement()
+    pass
 
 class Clg(AstStatement):
-    def __init__(self, *args, **kwargs):
-        super(Clg, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Clg")
-        writer.WriteEndElement()
+    pass
 
 class Colour(AstStatement):
-    def __init__(self, logical, tint=None, *args, **kwargs):
-        self.logical = logical
-        self.tint = tint
-        super(Colour, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Colour")
-        writer.WriteStartElement("Logical")
-        self.logical.xml(writer)
-        writer.WriteEndElement()
-        if self.tint:
-            writer.WriteStartElement("Tint")
-            self.tint.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteEndElement()
+    colour = Node(type=IntegerType)
+    tint   = Node(type=IntegerType)
 
 class Palette(AstStatement):
-    def __init__(self, logical, physical=None, red=None, green=None, blue=None, *args, **kwargs):
-        self.logical = logical
-        self.physical = physical
-        self.red = red
-        self.green = green
-        self.blue = blue
-        super(Palette, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Palette")
-        writer.WriteStartElement("Logical")
-        self.logical.xml(writer)
-        writer.WriteEndElement()
-        if self.physical:
-            writer.WriteStartElement("Physical")
-            self.physical.xml(writer)
-            writer.WriteEndElement()
-        if self.red:
-            writer.WriteStartElement("Red")
-            self.red.xml(writer)
-            writer.WriteEndElement()
-        if self.green:
-            writer.WriteStartElement("Green")
-            self.green.xml(writer)
-            writer.WriteEndElement()
-        if self.blue:
-            writer.WriteStartElement("Blue")
-            self.blue.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteEndElement()
+    physical_colour = Node(type=IntegerType)
+    logical_colour  = Node(type=IntegerType)
+    red             = Node(type=IntegerType)
+    green           = Node(type=IntegerType)
+    blue            = Node(type=IntegerType)
 
 class Case(AstStatement):
-    def __init__(self, expr, when_list, *args, **kwargs):
-        self.expr = expr
-        self.when_list = when_list
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Case")
-        writer.WriteStartElement("Test")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
-        self.when_list.xml(writer)
-        writer.WriteEndElement()
-
+    condition    = Node(ScalarType)
+    when_clauses = Node()
+    
 class WhenClauseList(AstNode):
-    def __init__(self, first_clause=None, *args, **kwargs):
-        self.clauses = []
-        if first_clause:
-            self.clauses.append(first_clause)
-        super(WhenClauseList, self).__init__(*args, **kwargs)
-
+    clauses = [Node()]
+    
     def append(self, when_clause):
         self.clauses.append(when_clause)
 
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("WhenClauseList")
-        for clause in self.clauses:
-            print self.clauses
-            clause.xml(writer)
-        writer.WriteEndElement()
-
 class WhenClause(AstNode):
-    def __init__(self, expr_list, statement_list, *args, **kwargs):
-        self.expr_list = expr_list
-        self.statement_list = statement_list
-        super(WhenClause, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("WhenClause")
-        print self.expr_list
-        self.expr_list.xml(writer)
-        self.statement_list.xml(writer)
-        writer.WriteEndElement()
-
+    matches = Node()
+    statements = Node()
+    
 class OtherwiseClause(AstNode):
-    def __init__(self, statement_list, *args, **kwargs):
-        self.statement_list = statement_list
-        super(OtherwiseClause, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("OtherwiseClause")
-        self.statement_list.xml(writer)
-        writer.WriteEndElement()
+    statements = Node()
 
 class Close(AstStatement):
-    def __init__(self, channel, *args, **kwargs):
-        self.channel = channel
-        super(Close, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Close")
-        writer.WriteStartElement("channel")
-        self.channel.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    channel = Node(type=ChannelType)
 
 class Data(AstStatement):
-    def __init__(self, data, *args, **kwargs):
-        self.items = self.parse(data)
-        super(Data, self).__init__(*args, **kwargs)
+    # TODO: How to we represent the data list?
+    data = Node(ScalarType)
+
+    def __init__(self, data):
+        super(Data, self).__init__()
+        # TODO: Create the correct node types here
+        self.data = self.parse(data)
 
     def parse(self, data):
         "Parse the text following a DATA statement into items"
@@ -363,2182 +120,654 @@ class Data(AstStatement):
                 if i == len(raw_items) - 1:
                     item = item.rstrip()
             items.append(item)
-        print items
         return items
 
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Data")
-        for item in self.items:
-            writer.WriteStartElement("Item")
-            writer.WriteString(str(item))
-            writer.WriteEndElement()
-        writer.WriteEndElement()
-
 class DefineFunction(AstStatement):
-    def __init__(self, id, arg_list=None, *args, **kwargs):
-        self.id = id
-        self.arg_list = arg_list
-        super(DefineFunction, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("DefineFunction")
-        writer.WriteStartAttribute("name")
-        writer.WriteString(str(self.id))
-        writer.WriteEndAttribute()
-        if self.arg_list:
-            self.arg_list.xml(writer)
-        writer.WriteEndElement()
+    name = StringOption()
+    formalParameters = Node()
 
 class ReturnFromFunction(AstStatement):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(ReturnFromFunction, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("ReturnFromFunction")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    return_value = Node()
 
 class DefineProcedure(AstStatement):
-    def __init__(self, id, arg_list=None, *args, **kwargs):
-        self.id = id
-        self.arg_list = arg_list
-        super(DefineProcedure, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("DefineProcedure")
-        writer.WriteStartAttribute("name")
-        writer.WriteString(str(self.id))
-        writer.WriteEndAttribute()
-        if self.arg_list:
-            self.arg_list.xml(writer)
-        writer.WriteEndElement()
+    name = StringOption()
+    formalParameters = Node()
 
 class ReturnFromProcedure(AstStatement):
-    def __init__(self, *args, **kwargs):
-        super(ReturnFromProcedure, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("ReturnFromProcedure")
-        writer.WriteEndElement()
+    pass
 
 class ForToStep(AstStatement):
-    def __init__(self, identifier, start, end, step, *args, **kwargs):
-        self.identifier = identifier
-        self.start = start
-        self.end = end
-        self.step = step
-        super(ForToStep, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("For")
-        writer.WriteStartElement("LValue")
-        self.identifier.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("First")
-        self.start.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Last")
-        self.end.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Step")
-        self.step.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    identifer = Node()
+    first     = Node(type=NumericType)
+    last      = Node(type=NumericType)
+    step      = Node(type=NumericType)
 
 class Next(AstStatement):
-    def __init__(self, var_list, *args, **kwargs):
-        self.var_list = var_list
-        super(Next, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Next")
-        if self.var_list:
-            self.var_list.xml(writer)
-        writer.WriteEndElement()
+    identifers = Node()
 
 class Draw(AstStatement):
-    def __init__(self, x, y, relative = False, *args, **kwargs):
-        self.x = x
-        self.y = y
-        self.relative = relative
-        super(Draw, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Draw")
-        writer.WriteStartAttribute("relative")
-        writer.WriteString(str(self.relative))
-        writer.WriteEndAttribute()
-        writer.WriteStartElement("X")
-        self.x.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Y")
-        self.y.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    x_coord = Node(type=IntegerType)
+    y_coord = Node(type=IntegerType)
+    relative = BoolOption(False)
 
 class Ellipse(AstStatement):
-    def __init__(self, x, y, hrad, vrad, rotate=None, fill=False, *args, **kwargs):
-        self.x = x
-        self.y = y
-        self.hrad = hrad
-        self.vrad = vrad
-        self.fill = fill
-        self.rotate = rotate
-        super(Ellipse, self).__init__(*args, **kwargs)
+    x_coord    = Node(type=IntegerType)
+    y_coord    = Node(type=IntegerType)
+    semi_major = Node(type=IntegerType)
+    semi_minor = Node(type=IntegerType)
+    radians    = Node(type=IntegerType)
+    fill       = BoolOption(False)
 
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Ellipse")
-        writer.WriteStartAttribute("Fill")
-        writer.WriteString(str(self.fill))
-        writer.WriteEndAttribute()
-        writer.WriteStartElement("X")
-        self.x.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Y")
-        self.y.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("HRad")
-        self.hrad.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("VRad")
-        self.vrad.xml(writer)
-        writer.WriteEndElement()
-        if self.rotate:
-            writer.WriteStartElement("Rotate")
-            self.rotate.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteEndElement()
-
-class GenerateError(AstNode):
-    def __init__(self, errNo, errDesc, *args, **kwargs):
-        self.errNo = errNo
-        self.errDesc = errDesc
-        super(GenerateError, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Envelope")
-        writer.WriteStartElement("N")
-        self.n.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("T")
-        self.t.xml(writer)
-        writer.WriteEndElement()
+class GenerateError(AstStatement):
+    number      = Node(type=IntegerType)
+    description = Node(type=StringType)
+    
+class ReturnError(AstStatement):
+    number      = Node(type=IntegerType)
+    description = Node(type=StringType)      
 
 class End(AstStatement):
-    def __init__(self, *args, **kwargs):
-        super(End, self).__init__(args, kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("End")
-        writer.WriteEndElement()
+    pass
 
 class Envelope(AstStatement):
-    def __init__(self, n, t, pitch1, pitch2, pitch3, pNum1, pNum2, pNum3, ampAttack, ampDecay, ampSustain, ampRelease, ala, ald, *args, **kwargs):
-        self.n=n
-        self.t=t
-        self.pitch1 = pitch1
-        self.pitch2 = pitch2
-        self.pitch3 = pitch3
-        self.pNum1 = pNum1
-        self.pNum2 = pNum2
-        self.pNum3 = pNum3
-        self.ampAttack = ampAttack
-        self.ampDecay = ampDecay
-        self.ampSustain = ampSustain
-        self.ampRelease = ampRelease
-        self.ala = ala
-        self.ald = ald
-        super(Envelope, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Envelope")
-        writer.WriteStartElement("N")
-        self.n.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("T")
-        self.t.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Pitch1")
-        self.pitch1.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Pitch2")
-        self.pitch2.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Pitch3")
-        self.pitch3.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("PNum1")
-        self.pNum1.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("PNum2")
-        self.pNum2.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("PNum3")
-        self.pNum3.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("AmpAttack")
-        self.ampAttack.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("AmpDecay")
-        self.ampDecay.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("AmpSustain")
-        self.ampSustain.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("AmpRelease")
-        self.ampRelease.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Ala")
-        self.ala.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Ald")
-        self.ald.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    n                 = Node(type=IntegerType)
+    t                 = Node(type=IntegerType)
+    pitch1            = Node(type=IntegerType)
+    pitch2            = Node(type=IntegerType)
+    pitch3            = Node(type=IntegerType)
+    num_steps_1       = Node(type=IntegerType)
+    num_steps_2       = Node(type=IntegerType)
+    num_steps_3       = Node(type=IntegerType)
+    amplitude_attack  = Node(type=IntegerType)
+    amplitude_decay   = Node(type=IntegerType)
+    amplitude_sustain = Node(type=IntegerType)
+    amplitude_release = Node(type=IntegerType)
+    target_attack     = Node(type=IntegerType)
+    target_decay      = Node(type=IntegerType)
 
 class Fill(AstStatement):
-    def __init__(self, x, y, relative = False, *args, **kwargs):
-        self.x = x
-        self.y = y
-        self.relative = relative
-        super(Fill, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Fill")
-        writer.WriteStartAttribute("relative")
-        writer.WriteString(str(self.relative))
-        writer.WriteEndAttribute()
-        writer.WriteStartElement("X")
-        self.x.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Y")
-        self.y.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    x_coord = Node(type=IntegerType)
+    y_coord = Node(type=IntegerType)
+    relative = BoolOption(False)
 
 class Gcol(AstStatement):
-    #arguments on this class are transposed in comparison to BBC Basic
-    def __init__(self, col, mode=None, *args, **kwargs):
-        self.mode = mode
-        self.col = col
-        super(Gcol, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Gcol")
-        writer.WriteStartElement("Col")
-        self.col.xml(writer)
-        writer.WriteEndElement()
-        if self.mode:
-            writer.WriteStartElement("Mode")
-            self.mode.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteEndElement()
+    mode          = Node(type=IntegerType)
+    logicalColour = Node(type=IntegerType)
+    tint          = Node(type=IntegerType)
 
 class Goto(AstStatement):
-    def __init__(self, line, *args, **kwargs):
-        self.line = line
-        super(Goto, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Goto")
-        self.line.xml(writer)
-        writer.WriteEndElement()
+    line = Node(type=IntegerType)
 
 class Gosub(AstStatement):
-    def __init__(self, line, *args, **kwargs):
-        self.line = line
-        super(Gosub, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Gosub")
-        self.line.xml(writer)
-        writer.WriteEndElement()
+    line = Node(type=IntegerType)
 
 class Return(AstStatement):
-    def __init__(self, parameter=None, *args, **kwargs):
-        self.parameter = parameter
-        super(Return, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Return")
-        if self.parameter:
-            writer.WriteStartElement("parameter")
-            self.parameter.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteEndElement()
+    pass
 
 class Install(AstStatement):
-    def __init__(self, expression, *args, **kwargs):
-        self.expression = expression
-        super(Install, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Install")
-        writer.WriteStartElement("expression")
-        self.expression.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    filename = Node(type=StringType)
 
 class If(AstStatement):
-    def __init__(self, condition, true_clause=None, false_clause=None, *args, **kwargs):
-        self.condition = condition
-        self.true_clause = true_clause
-        self.false_clause = false_clause
-        super(If, self).__init__(*args, **kwargs)
+    condition = Node()
+    true_clause = Node()
+    false_clause = Node()
 
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("If")
-        writer.WriteStartElement("Condition")
-        self.condition.xml(writer)
-        writer.WriteEndElement()
-        if self.true_clause:
-            writer.WriteStartElement("TrueClause")
-            self.true_clause.xml(writer)
-            writer.WriteEndElement()
-        if self.false_clause:
-            writer.WriteStartElement("FalseClause")
-            self.false_clause.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteEndElement()
-
-class AddLibrary(AstStatement):
-    def __init__(self, expression, *args, **kwargs):
-        self.expression = expression
-        super(AddLibrary, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Library")
-        writer.WriteStartElement("expression")
-        self.expression.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+class LoadLibrary(AstStatement):
+    filename = Node(type=StringType)
 
 class Move(AstStatement):
-    def __init__(self, x, y, relative = False, *args, **kwargs):
-        self.x = x
-        self.y = y
-        self.relative = relative
-        super(Move, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Move")
-        writer.WriteStartAttribute("relative")
-        writer.WriteString(str(self.relative))
-        writer.WriteEndAttribute()
-        writer.WriteStartElement("X")
-        self.x.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Y")
-        self.y.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    x_coord = Node(type=IntegerType)
+    y_coord = Node(type=IntegerType)
+    relative = BoolOption(False)
 
 class Mode(AstStatement):
-    def __init__(self, mode, *args, **kwargs):
-        self.mode = mode
-        super(Mode, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Mode")
-        self.mode.xml(writer)
-        writer.WriteEndElement()
+    number         = Node(type=IntegerType)
+    width          = Node(type=IntegerType)
+    height         = Node(type=IntegerType)
+    bits_per_pixel = Node(type=IntegerType)
+    frame_rate     = Node(type=IntegerType) 
 
 class Mouse(AstStatement):
-    def __init__(self, x, y, b, t=None, *args, **kwargs):
-        self.x = x
-        self.y = y
-        self.b = b
-        self.t = t
-        super(Mouse, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Mouse")
-        writer.WriteStartElement("X")
-        self.x.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Y")
-        self.y.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Button")
-        self.b.xml(writer)
-        writer.WriteEndElement()
-        if self.t:
-            writer.WriteStartElement("Time")
-            self.t.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteEndElement()
+    x_coord = Node(type=IntegerType)
+    y_coord = Node(type=IntegerType)
+    buttons = Node(type=IntegerType)
+    time    = Node(type=IntegerType)
 
 class MouseStep(AstStatement):
-    def __init__(self, x, y=None, *args, **kwargs):
-        self.x = x
-        self.y = y
-        super(MouseStep, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("MouseStep")
-        writer.WriteStartElement("X")
-        self.x.xml(writer)
-        writer.WriteEndElement()
-        if self.y:
-            writer.WriteStartElement("Y")
-            self.y.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteEndElement()
+    x_coeff = Node(type=NumericType)
+    y_coeff = Node(type=NumericType)
 
 class MouseColour(AstStatement):
-    def __init__(self, attrib, r, g, b, *args, **kwargs):
-        self.attrib = attrib
-        self.r = r
-        self.g = g
-        self.b = b
-        super(MouseColour, self).__init__(*args, **kwargs)
+    logicalColour = Node(type=IntegerType)
+    red = Node(type=IntegerType)
+    green = Node(type=IntegerType)
+    blue = Node(type=IntegerType)
 
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("MouseColour")
-        writer.WriteStartElement("Attrib")
-        self.attrib.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("R")
-        self.r.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("G")
-        self.g.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("B")
-        self.b.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+class MousePosition(AstStatement):
+    x_coord     = Node(type=IntegerType)
+    y_coord     = Node(type=IntegerType)
+    moveMouse   = BoolOption(True)
+    movePointer = BoolOption(True)
 
 class MousePointer(AstStatement):
-    def __init__(self, toX=None, toY=None, pointer= None, off=None, *args, **kwargs):
-        self.toX = toX
-        self.toY = toY
-        self.pointer = pointer
-        self.off = off
-        super(MousePointer, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("MousePointer")
-        if self.toX:
-            writer.WriteStartElement("ToX")
-            self.toX.xml(writer)
-            writer.WriteEndElement()
-        if self.toY:
-            writer.WriteStartElement("ToY")
-            self.toY.xml(writer)
-            writer.WriteEndElement()
-        if self.pointer:
-            writer.WriteStartElement("Type")
-            self.pointer.xml(writer)
-            writer.WriteEndElement()
-        if self.off:
-            writer.WriteStartElement("Off")
-            #self.off.xml(writer)              #unsure if tag here is enough
-            writer.WriteEndElement()
-        writer.WriteEndElement()
-
-class MouseRectangle(AstStatement):
-    def __init__(self, left=None, bottom=None, width=None, height=None, off=None, *args, **kwargs):
-        self.left = left
-        self.bottom = bottom
-        self.width = width
-        self.height = height
-        self.off = off
-        super(MouseRectangle, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("MouseRectangle")
-        if self.off:
-           writer.WriteStartAttribute("OFF")
-           writer.WriteString(str(self.off))
-           writer.WriteEndAttribute()
-        if self.left and self.bottom and self.width and self.height:
-            writer.WriteStartElement("Left")
-            self.left.xml(writer)
-            writer.WriteEndElement()
-            writer.WriteStartElement("Bottom")
-            self.bottom.xml(writer)
-            writer.WriteEndElement()
-            writer.WriteStartElement("Width")
-            self.width.xml(writer)
-            writer.WriteEndElement()
-            writer.WriteStartElement("Height")
-            self.height.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteEndElement()
+    shape       = Node(type=IntegerType)
+    
+class MouseRectangleOn(AstStatement):
+    left   = Node(type=IntegerType)
+    bottom = Node(type=IntegerType)
+    right  = Node(type=IntegerType)
+    top    = Node(type=IntegerType)
+    
+class MouseRectangleOff(AstStatement):
+    pass
 
 class On(AstStatement):
-    def __init__(self, *args, **kwargs):
-        super(On, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("On")
-        writer.WriteEndElement()
+    pass
 
 class Off(AstStatement):
-    def __init__(self, *args, **kwargs):
-        super(Off, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Off")
-        writer.WriteEndElement()
+    pass
 
 class Origin(AstStatement):
-    def __init__(self, x, y, *args, **kwargs):
-        self.x = x
-        self.y = y
-        super(Origin, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Origin")
-        writer.WriteStartElement("X")
-        self.x.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Y")
-        self.y.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    x_coord = Node(type=IntegerType)
+    y_coord = Node(type=IntegerType)
 
 class Oscli(AstStatement):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(Oscli, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Oscli")
-        writer.WriteStartElement("expr")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    command = Node(type=StringType)
 
 class Plot(AstStatement):
-    def __init__(self, x, y, mode=None, relative = False, *args, **kwargs):
-        self.x = x
-        self.y = y
-        self.relative = relative
-        self.mode = mode
-        super(Plot, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Plot")
-        writer.WriteStartAttribute("relative")
-        writer.WriteString(str(self.relative))
-        writer.WriteEndAttribute()
-        writer.WriteStartElement("X")
-        self.x.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Y")
-        self.y.xml(writer)
-        writer.WriteEndElement()
-        if self.mode:
-            writer.WriteStartElement("Mode")
-            self.mode.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteEndElement()
+    mode    = Node(type=IntegerType)
+    x_coord = Node(type=IntegerType)
+    y_coord = Node(type=IntegerType)
+    relative = BoolOption(False)
 
 class Point(AstStatement):
-    def __init__(self, x, y, by=None, *args, **kwargs):
-        self.x = x
-        self.y = y
-        self.by = by
-        super(Point, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Point")
-        if self.by:
-            writer.WriteStartAttribute("PointType")
-            writer.WriteString(str(self.by))
-            writer.WriteEndAttribute()
-        writer.WriteStartElement("x")
-        self.x.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("y")
-        self.y.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
-
-
+    x_coord = Node(type=IntegerType)
+    y_coord = Node(type=IntegerType)
+    relative = BoolOption(False)
+    
 class Print(AstStatement):
-    def __init__(self, print_list=None, *args, **kwargs):
-        self.print_list = print_list
-        super(Print, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Print")
-        if self.print_list:
-            self.print_list.xml(writer)
-        writer.WriteEndElement()
+    print_list = Node()
 
 class PrintList(AstNode):
-    def __init__(self, first_item=None, *args, **kwargs):
-        self.print_items = []
-        if first_item:
-            self.print_items.append(first_item)
-        super(PrintList, self).__init__(*args, **kwargs)
-
-    def append(self, item):
-        self.print_items.append(item)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("PrintList")
-        for item in self.print_items:
-            item.xml(writer)
-        writer.WriteEndElement()
-
-class PrintItem(AstNode):
-    def __init__(self, item=None, *args, **kwargs):
-        self.item = item
-        super(PrintItem, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("PrintItem")
-        self.item.xml(writer)
-        writer.WriteEndElement()
-
-class PrintManipulator(AstNode):
-    def __init__(self, manip, *args, **kwargs):
-        self.manip = manip
-        super(PrintManipulator, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("PrintManipulator")
-        writer.WriteStartAttribute("type")
-        writer.WriteString(self.manip)
-        writer.WriteEndAttribute()
-        writer.WriteEndElement()
-
-class CallProcedure(AstStatement):
-    def __init__(self, id, parameter_list=None, *args, **kwargs):
-        self.id = id
-        self.parameter_list = parameter_list
-        super(CallProcedure, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("CallProcedure")
-        writer.WriteStartAttribute("name")
-        writer.WriteString(str(self.id))
-        writer.WriteEndAttribute()
-        if self.parameter_list:
-            self.parameter_list.xml(writer)
-        writer.WriteEndElement()
-
-class Quit(AstStatement):
-    def __init__(self, *args, **kwargs):
-        super(Quit, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Quit")
-        writer.WriteEndElement()
-
-class Rectangle(AstStatement):
-    def __init__(self, x1, y1, width, height, x2=None, y2=None, rectType=None, *args, **kwargs):
-        # if height is NONE then it is a square
-        # unsure if need to check that SWAP has a TO
-        self.x1 = x1
-        self.y1 = y1
-        self.width = width
-        self.height = height
-        self.x2 = x2
-        self.y2 = y2
-        self.rectType = rectType
-        super(Rectangle, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Rectangle")
-        writer.WriteStartAttribute("rectType")
-        writer.WriteString(str(self.rectType))
-        writer.WriteEndAttribute()
-        writer.WriteStartElement("X1")
-        self.x1.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Y1")
-        self.y1.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Width")
-        self.width.xml(writer)
-        writer.WriteEndElement()
-        if self.height:
-            writer.WriteStartElement("Height")
-            self.height.xml(writer)
-            writer.WriteEndElement()
-        if self.x2 and self.y2:
-            writer.WriteStartElement("DestX")            #'DestX' will work but 'X2' wont.
-            self.x2.xml(writer)                          # Unknown why this fails
-            writer.WriteEndElement()
-            writer.WriteStartElement("DestY")            #'DestY' will work but 'Y2' wont.
-            self.y2.xml(writer)                          # Unknown Why this fails
-            writer.WriteEndElement()
-        writer.WriteEndElement()
-
-class Report(AstStatement):
-    def __init__(self, *args, **kwargs):
-        super(Report, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Report")
-        writer.WriteEndElement()
-
-class Repeat(AstStatement):
-    def __init__(self, *args, **kwargs):
-        super(Repeat, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Repeat")
-        writer.WriteEndElement()
-
-class Sound(AstStatement):
-    def __init__(self, channel = None, amplitude = None, pitch = None, duration = None, off=False, *args, **kwargs):
-        self.channel = channel
-        self.amplitude = amplitude
-        self.pitch = pitch
-        self.duration = duration
-        self.off = off
-        super(Sound, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Sound")
-        if self.off:
-            writer.WriteStartAttribute("OFF")
-            writer.WriteString(str(self.off))
-            writer.WriteEndAttribute()
-        else:
-            writer.WriteStartElement("Channel")
-            self.channel.xml(writer)
-            writer.WriteEndElement()
-            writer.WriteStartElement("Amplitude")
-            self.amplitude.xml(writer)
-            writer.WriteEndElement()
-            writer.WriteStartElement("Pitch")
-            self.pitch.xml(writer)
-            writer.WriteEndElement()
-            writer.WriteStartElement("Duration")
-            self.duration.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteEndElement()
-
-class Swap(AstStatement):
-    def __init__(self, var1, var2, *args, **kwargs): # may need to detect differance between array and vars
-        self.var1 = var1
-        self.var2 = var2
-        super(Swap, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Swap")
-        writer.WriteStartElement("var1")
-        self.var1.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("var2")
-        self.var2.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
-
-class Stop(AstStatement):
-    def __init__(self, *args, **kwargs):
-        super(Stop, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Stop")
-        writer.WriteEndElement()
-
-class Stereo(AstStatement):
-    def __init__(self, expression1, expression2, *args, **kwargs):
-        self.expression1 = expression1
-        self.expression2 = expression2
-        super(Stereo, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Stereo")
-        writer.WriteStartElement("Channel")
-        self.expression1.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Balance")
-        self.expression2.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
-
-class Sys(AstStatement):
-    def __init__(self, arg_list, variable_list=None, flags=None, *args, **kwargs):
-        self.args = arg_list
-        self.variable_list = variable_list
-        self.flags = flags
-        super(Sys, self).__init__(*args, **kwargs)
-        
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Sys")
-        writer.WriteStartElement("Arguments")
-        self.args.xml(writer)
-        writer.WriteEndElement()
-        if self.variable_list:
-            writer.WriteStartElement("Variables")
-            self.variable_list.xml(writer)
-            writer.WriteEndElement()
-        if self.flags:
-            writer.WriteStartElement("Flags")
-            self.flags.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteEndElement()
-
-class TabH(AstNode):
-    def __init__(self, h, *args, **kwargs):
-        self.h_expr = h
-        super(TabH, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("TabH")
-        self.h_expr.xml(writer)
-        writer.WriteEndElement()
-
-class TabXY(AstNode):
-    def __init__(self, x, y, *args, **kwargs):
-        self.x_expr = x
-        self.y_expr = y
-        super(TabXY, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("TabXY")
-        writer.WriteStartElement("X")
-        self.x_expr.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Y")
-        self.y_expr.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
-
-class Tempo(AstStatement):
-    def __init__(self, expression, *args, **kwargs):
-        self.expression = expression
-        super(Tempo, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Tempo")
-        writer.WriteStartElement("expression")
-        self.expression.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
-
-
-class Spc(AstNode):
-    def __init__(self, spaces, *args, **kwargs):
-        self.expr = spaces
-        super(Spc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Spc")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
-
-class VariableList(AstNode):
-    def __init__(self, first_variable=None, *args, **kwargs):
-        self.variables = []
-        if first_variable:
-            self.variables.append(first_variable)
-        super(VariableList, self).__init__(*args, **kwargs)
-
-    def append(self, variable):
-        self.variables.append(variable)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("VariableList")
-        for variable in self.variables:
-            if variable:
-                variable.xml(writer)
-            else:
-                writer.WriteStartElement("None")
-                writer.WriteEndElement()
-        writer.WriteEndElement()
-
-class Variable(AstNode):
-    def __init__(self, name, *args, **kwargs):
-        self.name = name
-        super(Variable, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Variable")
-        writer.WriteStartAttribute("name")
-        writer.WriteString(self.name)
-        writer.WriteEndAttribute()
-        writer.WriteEndElement()
-
-class Array(AstNode):
-    def __init__(self, name, *args, **kwargs):
-        self.name = name
-        super(Array, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Array")
-        writer.WriteStartAttribute("name")
-        writer.WriteString(self.name)
-        writer.WriteEndAttribute()
-        writer.WriteEndElement()
-
-class Indexer(AstNode):
-    def __init__(self, name, indices, *args, **kwargs):
-        self.name = name
-        self.indices = indices
-        super(Indexer, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Indexer")
-        writer.WriteStartAttribute("name")
-        writer.WriteString(self.name)
-        writer.WriteEndAttribute()
-        self.indices.xml(writer)
-        writer.WriteEndElement()
-
-class Until(AstStatement):
-    def __init__(self, expression, *args, **kwargs):
-        self.expression = expression
-        super(Until, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Until")
-        writer.WriteStartElement("expression")
-        self.expression.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
-
-class Voices(AstStatement):
-    def __init__(self, expression, *args, **kwargs):
-        self.expression = expression
-        super(Voices, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Voices")
-        writer.WriteStartElement("expression")
-        self.expression.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
-
-class Vdu(AstStatement):
-    def __init__(self, list=None, *args, **kwargs):
-        self.list = list
-        super(Vdu, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Vdu")
-        if self.list:
-            self.list.xml(writer)
-        writer.WriteEndElement()
-
-class VduList(AstNode):
-    def __init__(self, first_item=None, *args, **kwargs):
-        self.items = []
-        if first_item:
-            self.items.append(first_item)
-        super(VduList, self).__init__(*args, **kwargs)
+    items = [Node()]
 
     def append(self, item):
         self.items.append(item)
 
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("VduList")
-        for item in self.items:
-            item.xml(writer)
-        writer.WriteEndElement()
+class PrintItem(AstNode):
+    item = Node()
+
+class PrintManipulator(AstNode):
+    manipulator = StringOption()
+
+class PrintFile(AstStatement):
+    channel = Node(type=ChannelType)
+    items = Node()
+
+class CallProcedure(AstStatement):
+    name = StringOption()
+    actualParameters = Node()
+
+class Quit(AstStatement):
+    pass
+
+class Rectangle(AstStatement):
+    x_coord = Node(type=IntegerType)
+    y_coord = Node(type=IntegerType)
+    width   = Node(type=IntegerType)
+    height  = Node(type=IntegerType) # None ==> square
+    fill    = BoolOption(False)
+
+class RectangleBlit(AstStatement):
+    x_coord_source = Node(type=IntegerType)
+    y_coord_source = Node(type=IntegerType)
+    width          = Node(type=IntegerType)
+    height         = Node(type=IntegerType) # None ==> square
+    x_coord_target = Node(type=IntegerType)
+    y_coord_target = Node(type=IntegerType)
+
+class CopyRectangle(RectangleBlit):
+    pass
+    
+class MoveRectangle(RectangleBlit):
+    pass
+    
+class SwapRectangle(RectangleBlit):
+    pass
+    
+class Report(AstStatement):
+    pass
+
+class Repeat(AstStatement):
+   pass
+
+class Sound(AstStatement):
+    channel = Node(type=IntegerType)
+    amplitude = Node(type=IntegerType)
+    pitch = Node(type=IntegerType)
+    duration = Node(type=IntegerType)
+    
+class Mute(AstStatement):
+    mute = BoolOption(False)
+
+class Swap(AstStatement):
+    identifier1 = StringOption()
+    identifier2 = StringOption()
+
+class Stop(AstStatement):
+    pass
+
+class Stereo(AstStatement):
+    channel =  Node(type=IntegerType)
+    position = Node(type=IntegerType)
+
+class Sys(AstStatement):
+    routine          = Node()
+    actualParameters = Node()
+    returnValues     = Node()
+    flags            = Node()
+
+class TabH(AstNode):
+    x_coord = Node(type=IntegerType)
+
+class TabXY(AstNode):
+    x_coord = Node(type=IntegerType)
+    y_coord = Node(type=IntegerType)
+
+class Tempo(AstStatement):
+    rate = Node(type=IntegerType)
+
+class Tint(AstStatement):
+    option = Node(type=IntegerType)
+    tint   = Node(type=IntegerType)
+
+class Spc(AstNode):
+    spaces = Node(type=IntegerType)
+
+class VariableList(AstNode):
+    variables = [Node()]
+
+    def append(self, variable):
+        self.variables.append(variable)
+
+class Variable(AstNode):
+    identifier = StringOption()
+
+class Array(AstNode):
+    identifer = StringOption()
+
+class Indexer(AstNode):
+    identifer = StringOption()
+    index = Node()
+
+class Until(AstStatement):
+    condition = Node()
+
+class Voices(AstStatement):
+    number_of_voices = Node()
+
+class Vdu(AstStatement):
+    codes = Node()
+
+class VduList(AstNode):
+    items = [Node()]
+
+    def append(self, item):
+        self.items.append(item)
 
 class VduItem(AstNode):
-    def __init__(self, expr, separator=',', *args, **kwargs):
-        self.expr = expr
-        self.separator = separator
-        super(VduItem, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("VduItem")
-        writer.WriteStartAttribute("separator")
-        writer.WriteString(str(self.separator))
-        writer.WriteEndAttribute()
-        self.expr.xml(writer)
-        writer.WriteEndElement()
-
+    item = Node()
+    separator = StringOption()
+    
 class While(AstStatement):
-    def __init__(self, expression, *args, **kwargs):
-        self.expression = expression
-        super(While, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("While")
-        writer.WriteStartElement("expression")
-        self.expression.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    condition = Node()
 
 class Endwhile(AstStatement):
-    def __init__(self, *args, **kwargs):
-        super(Endwhile, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Endwhile")
-        writer.WriteEndElement()
+    pass
 
 class Width(AstStatement):
-    def __init__(self, expression, *args, **kwargs):
-        self.expression = expression
-        super(Width, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Width")
-        writer.WriteStartElement("expression")
-        self.expression.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    line_width = Node()
 
 class Wait(AstStatement):
-    def __init__(self, expr=None, *args, **kwargs):
-        self.expr = expr
-        super(Wait, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Wait")
-        if self.expr:
-            writer.WriteStartElement("expr")
-            self.expr.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteEndElement()
-
+    centiseconds = Node()
 
 class ExpressionList(AstNode):
-    def __init__(self, first_expr=None, *args, **kwargs):
-        self.expressions = []
-        if first_expr:
-            self.expressions.append(first_expr)
-        super(ExpressionList, self).__init__(*args, **kwargs)
-
+    expressions = [Node()]
+    
     def append(self, expr):
         self.expressions.append(expr)
 
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("ExpressionList")
-        for expr in self.expressions:
-            if expr:
-                expr.xml(writer)
-            else:
-                writer.WriteStartElement("None")
-                writer.WriteEndElement()
-        writer.WriteEndElement()
-
 class ActualArgList(AstNode):
-    def __init__(self, first_arg=None, *args, **kwargs):
-        self.args = []
-        if first_arg:
-            self.args.append(first_arg)
-        super(ActualArgList, self).__init__(*args, **kwargs)
-
+    arguments = [Node()]
+    
     def append(self, arg):
-        self.args.append(arg)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("ActualArgList")
-        for arg in self.args:
-            arg.xml(writer)
-        writer.WriteEndElement()
+        self.arguments.append(arg)
 
 class FormalArgList(AstNode):
-    def __init__(self, first_arg=None, *args, **kwargs):
-        self.args = []
-        if first_arg:
-            self.args.append(first_arg)
-        super(FormalArgList, self).__init__(*args, **kwargs)
+    arguments = [Node()]
 
     def append(self, arg):
-        self.args.append(arg)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("FormalArgList")
-        for arg in self.args:
-            arg.xml(writer)
-        writer.WriteEndElement()
+        self.arguments.append(arg)
 
 class FormalArgument(AstNode):
-    def __init__(self, arg, *args, **kwargs):
-        self.arg = arg
-        super(FormalArgument, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("FormalArgument")
-        self.arg.xml(writer)
-        writer.WriteEndElement()
+    argument = Node()
 
 class FormalReferenceArgument(AstNode):
-    def __init__(self, arg, *args, **kwargs):
-        self.arg = arg
-        super(FormalReferenceArgument, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("FormalReferenceArgument")
-        self.arg.xml(writer)
-        writer.WriteEndElement()
+    argument = Node()
 
 class UnaryPlus(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        super(UnaryPlus, self).__init__(*args, **kwargs)
-        self.expr = expr
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("UnaryPlus")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    expression = Node(type=NumericType)
 
 class UnaryMinus(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        super(UnaryMinus, self).__init__(*args, **kwargs)
-        self.expr = expr
-
-    def type(self):
-        # TODO: Check that expression is Number
-        return expr.type
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("UnaryMinus")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    expression = Node(type=NumericType)
 
 class UnaryByteIndirection(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(UnaryByteIndirection, self).__init__(*args, **kwargs)
-
-    def type(self):
-        return Byte
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("UnaryByteIndirection")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    expression = Node(type=IntegerType)
 
 class UnaryIntegerIndirection(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(UnaryIntegerIndirection, self).__init__(*args, **kwargs)
-
-    def type(self):
-        return Integer
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("UnaryIntegerIndirection")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    expression = Node(type=IntegerType)
 
 class UnaryStringIndirection(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(UnaryStringIndirection, self).__init__(*args, **kwargs)
-
-    def type(self):
-        return String
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("UnaryStringIndirection")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    expression = Node(type=IntegerType)
 
 class UnaryFloatIndirection(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(UnaryFloatIndirection, self).__init__(*args, **kwargs)
-
-    def type(self):
-        return Float
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("UnaryFloatIndirection")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    expression = Node(type=IntegerType)
 
 class DyadicByteIndirection(AstNode):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        self.lhs = lhs
-        self.rhs = rhs
-        super(DyadicByteIndirection, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("DyadicByteIndirection")
-        writer.WriteStartElement("Left")
-        self.lhs.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Right")
-        self.rhs.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    base   = Node()
+    offset = Node()
 
 class DyadicIntegerIndirection(AstNode):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        self.lhs = lhs
-        self.rhs = rhs
-        super(DyadicIntegerIndirection, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("DyadicIntegerIndirection")
-        writer.WriteStartElement("Left")
-        self.lhs.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Right")
-        self.rhs.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    base  = Node()
+    offset = Node()
 
 class Not(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(Not, self).__init__(*args, **kwargs)
-
-    def type(self):
-        return Integer
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Not")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    factor = Node()
 
 class BinaryOperator(AstNode):
-    def __init__(self, operator, lhs, rhs, *args, **kwargs):
-        self.op = operator
-        self.lhs = lhs
-        self.rhs = rhs
-        super(BinaryOperator, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("BinaryOperator")
-        writer.WriteStartAttribute("operator")
-        writer.WriteString(str(self.op))
-        writer.WriteEndAttribute()
-        writer.WriteStartElement("Left")
-        self.lhs.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Right")
-        self.rhs.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    lhs = Node()
+    rhs = Node()
 
 class Plus(BinaryOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(Plus, self).__init__('plus', lhs, rhs)
+    pass
 
 class Minus(BinaryOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(Minus, self).__init__('minus', lhs, rhs)
+    pass
 
 class Multiply(BinaryOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(Multiply, self).__init__('multiply', lhs, rhs)
+    pass
 
 class Divide(BinaryOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(Divide, self).__init__('divide', lhs, rhs)
+    pass
 
 class MatrixMultiply(BinaryOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(MatrixMultiply, self).__init__('matrix_multiply', lhs, rhs)
+    pass
 
 class IntegerDivide(BinaryOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(IntegerDivide, self).__init__('div', lhs, rhs)
+    pass
 
 class IntegerModulus(BinaryOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(IntegerModulus, self).__init__('mod', lhs, rhs)
+    pass
 
 class Power(BinaryOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(Power, self).__init__('power', lhs, rhs)
+    pass
 
 class RelationalOperator(BinaryOperator):
-    def __init__(self, operator, lhs, rhs, *args, **kwargs):
-        super(RelationalOperator, self).__init__(operator, lhs, rhs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("RelationalOperator")
-        writer.WriteStartAttribute("operator")
-        writer.WriteString(str(self.op))
-        writer.WriteEndAttribute()
-        writer.WriteStartElement("Left")
-        self.lhs.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Right")
-        self.rhs.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    pass
 
 class Equal(RelationalOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(RelationalOperator, self).__init__('eq', lhs, rhs)
+    pass
 
 class NotEqual(RelationalOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(RelationalOperator, self).__init__('ne', lhs, rhs)
+    pass
 
 class LessThan(RelationalOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(RelationalOperator, self).__init__('lt', lhs, rhs)
+    pass
 
 class LessThanEqual(RelationalOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(RelationalOperator, self).__init__('lte', lhs, rhs)
+    pass
 
 class GreaterThan(RelationalOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(RelationalOperator, self).__init__('gt', lhs, rhs)
+    pass
 
 class GreaterThanEqual(RelationalOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(RelationalOperator, self).__init__('gte', lhs, rhs)
+    pass
 
 class ShiftLeft(BinaryOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(ShiftLeft, self).__init__('shift_left', lhs, rhs)
+    pass
 
 class ShiftRight(BinaryOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(ShiftRight, self).__init__('shift_right', lhs, rhs)
+    pass
 
 class ShiftRightUnsigned(BinaryOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(ShiftRightUnsigned, self).__init__('shift_right_unsigned', lhs, rhs)
+    pass
 
 class And(BinaryOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(And, self).__init__('and', lhs, rhs)
+    pass
 
 class Or(BinaryOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(Or, self).__init__('or', lhs, rhs)
+    pass
 
 class Eor(BinaryOperator):
-    def __init__(self, lhs, rhs, *args, **kwargs):
-        super(Eor, self).__init__('eor', lhs, rhs)
+    pass
 
 class AbsFunc(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(AbsFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Abs")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    factor = Node()
 
 class EndValue(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(EndValue, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("EndValue")
-        writer.WriteEndElement()
+    expression = Node()
 
 class ExtValue(AstNode):
-    def __init__(self, channel, *args, **kwargs):
-        self.channel = channel
-        super(ExtValue, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("ExtValue")
-        self.channel.xml(writer)
-        writer.WriteEndElement()
+    channel = Node()
 
 class HimemValue(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(HimemValue, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("HimemValue")
-        writer.WriteEndElement()
+    pass
 
 class LomemValue(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(LomemValue, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("LomemValue")
-        writer.WriteEndElement()
+    pass
 
 class PageValue(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(PageValue, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("PageValue")
-        writer.WriteEndElement()
+    pass
 
 class TimeValue(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(TimeValue, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("TimeValue")
-        writer.WriteEndElement()
+    pass
 
 class TimeStrValue(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(TimeStrValue, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("TimeStrValue")
-        writer.WriteEndElement()
+    pass
 
 class PtrValue(AstNode):
-    def __init__(self, channel, *args, **kwargs):
-        self.channel = channel
-        super(PtrValue, self).__init__(*args, **kwargs)
+    channel = Node()
 
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("PtrValue")
-        self.channel.xml(writer)
-        writer.WriteEndElement()
+class MidStrLValue(AstNode):
+    target = Node()
+    position = Node(type=IntegerType)
+    length = Node(type=IntegerType)
+    
+class RightStrLValue(AstNode):
+    target = Node()
+    length = Node(type=IntegerType)
 
-class MidStringLValue(AstNode):
-    def __init__(self, target, position, length=None, *args, **kwargs):
-        self.target = target
-        self.position = position
-        self.length = length
-        super(EndValue, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("MidStringLValue")
-        writer.WriteStartElement("Target")
-        self.target.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Position")
-        self.position.xml(writer)
-        writer.WriteEndElement()
-        if self.length:
-            writer.WriteStartElement("Length")
-            self.length.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteEndElement()
-
+class LeftStrLValue(AstNode):
+    target = Node()
+    length = Node(type=IntegerType)
+    
 class AcsFunc(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(AcsFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Acs")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    factor = Node()
 
 class AdvalFunc(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(AdvalFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Adval")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    factor = Node()
 
 class AscFunc(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(AscFunc, self).__init__(*args, **kwargs)
-
-    def type(self):
-        return Float
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Asc")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    factor = Node()
 
 class AsnFunc(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(AsnFunc, self).__init__(*args, **kwargs)
-
-    def type(self):
-        return Float
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Asn")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    factor = Node()
 
 class AtnFunc(AstNode):
-    def __init__(self, factor, *args, **kwargs):
-        self.factor = factor
-        super(AtnFunc, self).__init__(*args, **kwargs)
-
-    def type(self):
-        return Float
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("AtnFunc")
-        writer.WriteStartElement("factor")
-        self.factor.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    factor = Node()
 
 class BeatFunc(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(BeatFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Beat")
-        writer.WriteEndElement()
+    pass
 
 class BeatsFunc(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(BeatsFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("BeatsFunc")
-        writer.WriteEndElement()
+    pass
 
 class BgetFunc(AstNode):
-    def __init__(self, channel, *args, **kwargs):
-        self.channel = channel
-        super(BgetFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Bget")
-        self.channel.xml(writer)
-        writer.WriteEndElement()
+    channel = Node()
 
 class ChrStrFunc(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(ChrStrFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("ChrStr")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    factor = Node()
 
 class CosFunc(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(CosFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Cos")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    radians = Node()
 
 class CountFunc(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(CountFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Count")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    pass
 
 class DegFunc(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(DegFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Deg")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    radians = Node()
 
 class DimensionsFunc(AstNode):
-    def __init__(self, array, *args, **kwargs):
-        self.array = array
-        super(DimensionsFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("DimensionsFunc")
-        self.array.xml(writer)
-        writer.WriteEndElement()
+    array = Node()
 
 class DimensionSizeFunc(AstNode):
-    def __init__(self, array, expr, *args, **kwargs):
-        self.array = array
-        self.expr = expr
-        super(DimensionSizeFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("DimensionSizeFunc")
-        self.array.xml(writer)
-        writer.WriteStartElement("Dimension")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    array = Node()
+    dimension = Node()
 
 class EofFunc(AstNode):
-    def __init__(self, channel, *args, **kwargs):
-        self.channel = channel
-        super(EofFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("EofFunc")
-        self.channel.xml(writer)
-        writer.WriteEndElement()
+    channel = Node()
 
 class ErlFunc(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(ErlFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("ErlFunc")
-        writer.WriteEndElement()
+    pass
 
 class ErrFunc(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(ErrFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("ErrFunc")
-        writer.WriteEndElement()
+    pass
 
 class ExpFunc(AstNode):
-    def __init__(self, factor, *args, **kwargs):
-        self.factor = factor
-        super(ExpFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("ExpFunc")
-        writer.WriteStartElement("factor")
-        self.factor.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    factor = Node()
 
 class FalseFunc(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(FalseFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("FalseFunc")
-        writer.WriteEndElement()
+    pass
 
 class GetFunc(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(GetFunc, self).__init__(*args, **kwargs)
+    pass
 
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("GetFunc")
-        writer.WriteEndElement()
-
-class Get_strFunc(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(Get_strFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Get_strFunc")
-        writer.WriteEndElement()
+class GetStrFunc(AstNode):
+    pass
 
 class Get_strFileFunc(AstNode):
-    def __init__(self, channel, *args, **kwargs):
-        self.channel = channel
-        super(Get_strFileFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Get_strFileFunc")
-        writer.WriteStartElement("channel")
-        self.channel.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    channel = Node(type=ChannelType)
 
 class InkeyFunc(AstNode):
-    def __init__(self, factor, *args, **kwargs):
-        self.factor = factor
-        super(InkeyFunc, self).__init__(*args, **kwargs)
+    factor = Node(type = IntegerType)
 
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("InkeyFunc")
-        writer.WriteStartElement("factor")
-        self.factor.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
-
-class Inkey_strFunc(AstNode):
-    def __init__(self, factor, *args, **kwargs):
-        self.factor = factor
-        super(Inkey_strFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Inkey_strFunc")
-        writer.WriteStartElement("factor")
-        self.factor.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
-
-
+class InkeyStrFunc(AstNode):
+    factor = Node(type=IntegerType)
 
 class IntFunc(AstNode):
-    def __init__(self, factor, *args, **kwargs):
-        self.factor = factor
-        super(IntFunc, self).__init__(*args, **kwargs)
+    factor = Node(type=NumericType)
 
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("IntFunc")
-        writer.WriteStartElement("factor")
-        self.factor.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+class LeftStrFunc(AstNode):
+    source = Node()
+    length = Node(type=IntegerType)
 
 class LenFunc(AstNode):
-    def __init__(self, factor, *args, **kwargs):
-        self.factor = factor
-        super(LenFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("LenFunc")
-        writer.WriteStartElement("factor")
-        self.factor.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    factor = Node(type=StringType)
 
 class LnFunc(AstNode):
-    def __init__(self, factor, *args, **kwargs):
-        self.factor = factor
-        super(LnFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("LnFunc")
-        writer.WriteStartElement("factor")
-        self.factor.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    factor = Node(type=NumericType)
 
 class LogFunc(AstNode):
-    def __init__(self, factor, *args, **kwargs):
-        self.factor = factor
-        super(LogFunc, self).__init__(*args, **kwargs)
+    factor = Node(type=NumericType)
 
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("LogFunc")
-        writer.WriteStartElement("factor")
-        self.factor.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
-
-
-class MidStringFunc(AstNode):
-    def __init__(self, source, position, length=None, *args, **kwargs):
-        self.source = source
-        self.position = position
-        self.length = length
-        super(MidStringFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("MidStringFunc")
-        writer.WriteStartElement("Source")
-        self.source.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Position")
-        self.position.xml(writer)
-        writer.WriteEndElement()
-        if self.length:
-            writer.WriteStartElement("Length")
-            self.length.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteEndElement()
-
+class MidStrFunc(AstNode):
+    source   = Node()
+    position = Node(type=IntegerType)
+    length   = Node(type=IntegerType)
+    
 class ModeFunc(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(ModeFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("ModeFunc")
-        writer.WriteEndElement()
+    pass
 
 class OpeninFunc(AstNode):
-    def __init__(self, factor, *args, **kwargs):
-        self.factor = factor
-        super(OpeninFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("OpeninFunc")
-        writer.WriteStartElement("factor")
-        self.factor.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    filename = Node(type=StringType)
 
 class OpenoutFunc(AstNode):
-    def __init__(self, factor, *args, **kwargs):
-        self.factor = factor
-        super(OpenoutFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("OpenoutFunc")
-        writer.WriteStartElement("factor")
-        self.factor.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    filename = Node(type=StringType)
 
 class OpenupFunc(AstNode):
-    def __init__(self, factor, *args, **kwargs):
-        self.factor = factor
-        super(OpenupFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("OpenupFunc")
-        writer.WriteStartElement("factor")
-        self.factor.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    filename = Node(type=StringType)
 
 class PosFunc(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(PosFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("PosFunc")
-        writer.WriteEndElement()
+    pass
 
 class PiFunc(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(PiFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("PiFunc")
-        writer.WriteEndElement()
+    pass
 
 class PointFunc(AstNode):
-    def __init__(self, xexpr, yexpr, *args, **kwargs):
-        self.xexpr = xexpr
-        self.yexpr = yexpr
-        super(PointFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("PointFunc")
-        writer.WriteStartElement("X")
-        self.xexpr.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteStartElement("Y")
-        self.yexpr.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    x_coord = Node(type=IntegerType)
+    y_coord = Node(type=IntegerType)
 
 class RadFunc(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(RadFunc, self).__init__(*args, **kwargs)
+    degrees = Node(type=NumericType)
 
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Rad")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+class RightStrFunc(AstNode):
+    source = Node()
+    length = Node(type=IntegerType)
 
 class RndFunc(AstNode):
-    def __init__(self, expression=None, *args, **kwargs):
-        self.expression = expression
-        super(RndFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("RndFunc")
-        if self.expression:
-            writer.WriteStartElement("expression")
-            self.expression.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteEndElement()
+    option = Node(type=IntegerType)
 
 class SinFunc(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(SinFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Sin")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    radians = Node(type=NumericType)
 
 class SgnFunc(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(SgnFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Sgn")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    factor = Node(type=NumericType)
 
 class SqrFunc(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(SqrFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Sqr")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    factor = Node(type=NumericType)
 
 class StrStringFunc(AstNode):
-    def __init__(self, expr, base=10, *args, **kwargs):
-        self.expr = expr
-        self.base = base
-        super(StrStringFunc, self).__init__(*args, **kwargs)
+    base   = IntegerOption(10)
+    factor = Node(type=NumericType)
 
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("StrString")
-        writer.WriteStartAttribute("base")
-        writer.WriteString(self.base)
-        writer.WriteEndElement()
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+class Sum(AstNode):
+    array = Node()
+
+class SumLenFunc(AstNode):
+    array = Node()
 
 class TanFunc(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(TanFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Tan")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
+    factor = Node(type=NumericType)
 
 class TempoFunc(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(TempoFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("TempoFunc")
-        writer.WriteEndElement()
+    pass
 
 class TintFunc(AstNode):
-    def __init__(self, layer=None, tint=None, x=None, y=None, *args, **kwargs):
-        self.layer = layer
-        self.tint = tint
-        self.x = x
-        self.y = y
-        super(TintFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("TintFunc")
-        if self.type:
-            writer.WriteStartElement("layer")
-            self.layer.xml(writer)
-            writer.WriteEndElement()
-        if self.tint:
-            writer.WriteStartElement("tint")
-            self.tint.xml(writer)
-            writer.WriteEndElement()
-        if self.x:
-            writer.WriteStartElement("x")
-            self.x.xml(writer)
-            writer.WriteEndElement()
-        if self.y:
-            writer.WriteStartElement("y")
-            self.y.xml(writer)
-            writer.WriteEndElement()
-        writer.WriteEndElement()
-
+    xCoord = Node(type=IntegerType)
+    yCoord = Node(type=IntegerType)
+    
 class TopFunc(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(TopFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("TopFunc")
-        writer.WriteEndElement()
+    pass
 
 class TrueFunc(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(TrueFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("TrueFunc")
-        writer.WriteEndElement()
+    pass
 
 class ValFunc(AstNode):
-    def __init__(self, expr, *args, **kwargs):
-        self.expr = expr
-        super(ValFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("ValFunc")
-        writer.WriteStartElement("expr")
-        self.expr.xml(writer)
-        writer.WriteEndElement()
-        writer.WriteEndElement()
+    factor = Node(type=StringType)
 
 class VposFunc(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(VposFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("VposFunc")
-        writer.WriteEndElement()
+    pass
 
 class WidthFunc(AstNode):
-    def __init__(self, *args, **kwargs):
-        super(WidthFunc, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Width")
-        writer.WriteEndElement()
-
+    pass
 
 class LiteralString(AstNode):
-    def __init__(self, value, *args, **kwargs):
-        self.value = value
-        super(LiteralString, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("String")
-        writer.WriteStartAttribute("value")
-        writer.WriteString(self.value)
-        writer.WriteEndAttribute()
-        writer.WriteEndElement()
+    value = StringOption()
 
 class LiteralInteger(AstNode):
-    def __init__(self, value, *args, **kwargs):
-        self.value = value
-        super(LiteralInteger, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Integer")
-        writer.WriteStartAttribute("value")
-        writer.WriteString(str(self.value))
-        writer.WriteEndAttribute()
-        writer.WriteEndElement()
+    value = IntegerOption()
 
 class LiteralFloat(AstNode):
-    def __init__(self, value, *args, **kwargs):
-        self.value = value
-        super(LiteralFloat, self).__init__(*args, **kwargs)
-
-    def xml(self, writer):
-        logging.debug("%s.xml()", self.__class__.__name__)
-        writer.WriteStartElement("Float")
-        writer.WriteStartAttribute("value")
-        writer.WriteString(str(self.value))
-        writer.WriteEndAttribute()
-        writer.WriteEndElement()
+    value = FloatOption()
 
 

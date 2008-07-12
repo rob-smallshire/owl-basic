@@ -11,6 +11,7 @@ import ply.yacc as yacc
 
 import bbc_lexer
 import bbc_grammar
+import xml_visitor
 
 #from errors import warning
 
@@ -28,12 +29,9 @@ def tokenize(data):
         print tok
 
 def xml(tree, filename):
-    writer = XmlTextWriter(filename, None)
-    writer.Formatting = Formatting.Indented
-    writer.WriteComment("XML Parse Tree")
-    tree.xml(writer)
-    writer.Flush()
-    writer.Close()
+    xmlv = xml_visitor.XmlVisitor(filename)
+    tree.accept(xmlv)
+    xmlv.close()
 
 if __name__ == '__main__':
     
@@ -100,6 +98,7 @@ if __name__ == '__main__':
         
     if options.use_clr:
         output_filename = filename + ".xml"
+        print "Creating %s" % output_filename
         xml(parse_tree, output_filename)
     
     # Structural analysis

@@ -23,14 +23,36 @@ class IntegerOption(Option):
     def __init__(self, default=None):
         self.value = default
 
+class FloatOption(Option):
+    def __init__(self, default=None):
+        self.value = default
+
+class StringOption(Option):
+    def __init__(self, default=None):
+        self.value = default
+
 class AstMeta(type):
+    def __new__(cls, name, bases, dict):  
+        # Allocate child infos
+        dict["child_infos"] = {}
+        for base in bases:
+            if "child_infos" in base.__dict__:
+                dict["child_infos"].update(base.__dict__["child_infos"])
+        
+        # Allocate option infos        
+        dict["option_infos"] = {}
+        for base in bases:
+            if "option_infos" in base.__dict__:
+                dict["option_infos"].update(base.__dict__["option_infos"])
+                
+        return type.__new__(cls, name, bases, dict)
+        
     def __init__(cls, name, bases, dict):
         """
         Configure the class that is being created by introspecting its
         'declaration' and creating getters, setters and properties for its
         data memebers.
         """
-        super(AstMeta, cls).__init__(name, bases, dict)
         cls._createChildProperties(name, bases, dict)
         cls._createChildListProperties(name, bases, dict)
         cls._createOptionProperties(name, bases, dict)
@@ -44,24 +66,27 @@ class AstMeta(type):
         child_infos class member, and create getters, setters and properties
         to provide access to each of the child members.
         """
-        cls.child_infos = {}
+        node_infos = {}           
         for info_name, v in dict.items():
             if isinstance(v, Node):
-               cls.child_infos[info_name] = v
+               node_infos[info_name] = v
                 
         removal = []
-        for info_name in cls.child_infos.keys():
+        for info_name in node_infos.keys():
            property_name = underscoresToCamelCase(info_name)
            if info_name != property_name:
                removal.append(info_name)
            def _getProperty(self, info_name=info_name):
                return self._children[info_name]
            def _setProperty(self, value, info_name=info_name):
+               print "info_name = %s" % info_name
                self._children[info_name] = value
            setattr(cls, property_name, property(_getProperty, _setProperty))
                         
         for info_name in removal:
             delattr(cls, info_name)
+            
+        cls.child_infos.update(node_infos)
     
     def _createChildListProperties(cls, name, bases, dict):    
         """
@@ -70,24 +95,27 @@ class AstMeta(type):
         child_infos class member, and create getters, setters and properties
         to provide access to each of the child members.
         """
-        cls.child_infos = {}
+        list_infos = {}
         for info_name, v in dict.items():
             if isinstance(v, list) and isinstance(v[0], Node):
-               cls.child_infos[info_name] = v
+               list_infos[info_name] = v
                 
         removal = []
-        for info_name in cls.child_infos.keys():
+        for info_name in list_infos.keys():
            property_name = underscoresToCamelCase(info_name)
            if info_name != property_name:
                removal.append(info_name)
            def _getProperty(self, info_name=info_name):
                return self._children[info_name]
            def _setProperty(self, value, info_name=info_name):
+               print "info_name = %s" % info_name
                self._children[info_name] = value
            setattr(cls, property_name, property(_getProperty, _setProperty))
                         
         for info_name in removal:
             delattr(cls, info_name)
+    
+        cls.child_infos.update(list_infos)
     
     def _createOptionProperties(cls, name, bases, dict):
         """
@@ -96,24 +124,27 @@ class AstMeta(type):
         option_infos class member, and create getters, setters and properties
         to provide access to each of the child members.
         """
-        cls.option_infos = {}
+        infos = {}
         for info_name, v in dict.items():
             if isinstance(v, Option):
-               cls.option_infos[info_name] = v
+               infos[info_name] = v
                 
         removal = []
-        for info_name in cls.option_infos.keys():
+        for info_name in infos.keys():
            property_name = underscoresToCamelCase(info_name)
            if info_name != property_name:
                removal.append(info_name)
            def _getProperty(self, info_name=info_name):
                return self._options[info_name]
            def _setProperty(self, value, info_name=info_name):
+               print "info_name = %s" % info_name
                self._options[info_name] = value
            setattr(cls, property_name, property(_getProperty, _setProperty))
                         
         for info_name in removal:
             delattr(cls, info_name)
+            
+        cls.option_infos.update(infos)
     
     def __call__(cls, *args, **kwargs):
         """
@@ -125,18 +156,23 @@ class AstMeta(type):
         obj = type.__call__(cls, *args)
                 
         for kwarg in kwargs:
-            if kwarg in cls.__dict__ and isinstance(cls.__dict__[kwarg], property):
+            if hasattr(cls, kwarg): # TODO: How to we test this? and isinstance(cls.__dict__[kwarg], property):
                 setattr(obj, kwarg, kwargs[kwarg])
+            else:
+                raise AttributeError("No such property initialiser as '%s' on '%s'" % (kwarg, cls.__name__))
         
-        # Should remove consumed kwargs here
+        # TODO: Should remove consumed kwargs here
             
         return obj
             
 class AstNode(object):
     __metaclass__ = AstMeta
     
+    #child_infos = {}
+    
     def __init__(self):
         # Initialise children
+        
         self._children = {}
         for info_name, info in self.child_infos.items():
             if isinstance(info, Node):
@@ -186,144 +222,3 @@ class AstNode(object):
             return last
         else:
             return visitor_method(self)
-
-# ================================================================
-
-# Visitors for testing
-
-from visitor import Visitor
-
-class XmlVisitor(Visitor):
-    """
-    AST visitor for converting the AST into an XML representation.
-    """
-    def __init__(self, filename):
-        # .NET Framework
-        import clr
-        clr.AddReference('System.Xml')
-        from System.Xml import XmlTextWriter, Formatting
-        
-        self.writer = XmlTextWriter(filename, None)
-        self.writer.Formatting = Formatting.Indented
-        self.writer.WriteComment("XML Parse Tree")
-        
-    def close(self):
-        self.writer.Flush()
-        self.writer.Close()
-
-    def beginElement(self, node):
-        name = node.__class__.__name__
-        self.writer.WriteStartElement(name)
-        
-    def endElement(self):
-        self.writer.WriteEndElement()
-    
-    def childElement(self, name, node):
-        self.writer.WriteStartElement(name)
-        self.visit(node)
-        self.writer.WriteEndElement()
-    
-    def childTextElement(self, name, text):
-        self.writer.WriteStartElement(name)
-        self.writer.WriteString(str(text))
-        self.writer.WriteEndElement()
-    
-    def childAttribute(self, name, value):
-        self.writer.WriteStartAttribute(name)
-        self.writer.WriteString(str(value))
-        self.writer.WriteEndAttribute()
-
-    def visitAstNode(self, node):
-        self.beginElement(node)
-        for name, value in node.options.items():
-            self.childAttribute(name, value)
-        for name, child in node.children.items():
-            self.childElement(name, child)
-        self.endElement()
-
-class BasicVisitor(Visitor):
-    """
-    AST visitor for converting the AST into back into OWL BASIC.
-    """
-    def __init__(self):
-        pass
-        
-    def visitLiteralInteger(self, integer):
-        sys.stdout.write(str(integer.value))
-        
-    def visitCircle(self, circle):
-        sys.stdout.write("CIRCLE ")
-        if circle.fill:
-            sys.stdout.write("FILL ")
-        self.visit(circle.xCoord)
-        sys.stdout.write(", ")
-        self.visit(circle.yCoord)
-        sys.stdout.write(", ")
-        self.visit(circle.radius)
-        sys.stdout.write('\n')
-
-# ================================================================
-        
-class Envelope(AstNode):
-    n                 = Node(IntegerType)
-    t                 = Node(IntegerType)
-    pitch1            = Node(IntegerType)
-    pitch2            = Node(IntegerType)
-    pitch3            = Node(IntegerType)
-    num_steps_1       = Node(IntegerType)
-    num_steps_2       = Node(IntegerType)
-    num_steps_3       = Node(IntegerType)
-    amplitude_attack  = Node(IntegerType)
-    amplitude_decay   = Node(IntegerType)
-    amplitude_sustain = Node(IntegerType)
-    amplitude_release = Node(IntegerType)
-    target_attack     = Node(IntegerType)
-    target_decay      = Node(IntegerType)
-    
-class Bput(AstNode):
-    channel = Node(ChannelType)
-    data    = Node(IntegerType)
-    newline = BoolOption(False)
-
-class Circle(AstNode):
-    x_coord = Node(IntegerType)
-    y_coord = Node(IntegerType)
-    radius  = Node(IntegerType)
-    fill    = BoolOption(False)
-
-class LiteralInteger(AstNode):
-    value = IntegerOption()
-
-class Case(AstNode):
-    condition    = Node(ScalarType)
-    when_clauses = Node()
-
-class WhenClauseList(AstNode):
-    clauses = [Node()]
-    
-    def append(self, when_clause):
-        self.clauses.append(when_clause)
-    
-class Data(AstNode):
-    data = Node(ScalarType)
-    
-    def __init__(self, data):
-        super(Data, self).__init__()
-        self.data = self.parse(data)
-    
-    def parse(self, data):
-        "Parse the text following a DATA statement into items"
-        # Break the data into fields
-        raw_items = re.findall(r'(?:\s*"((?:[^"]+|"")*)"(?!")\s*)|([^,]+)', data)
-        items = []
-        for i, (quoted, unquoted) in enumerate(raw_items):
-            if quoted:
-                item = quoted.replace('""', '"')
-            else:
-                item = unquoted.lstrip()
-                # If its the last item on the line, strip trailing space
-                if i == len(raw_items) - 1:
-                    item = item.rstrip()
-            items.append(item)
-        print items
-        return items
