@@ -290,7 +290,7 @@ def p_proc_stmt(p):
 
 def p_dim_statement(p):
     '''dim_stmt : DIM dim_list'''
-    p[0] = Dim(items = p[1])
+    p[0] = Dim(items = p[2])
 
 def p_dim_list(p):
     '''dim_list : dim_item
@@ -298,7 +298,7 @@ def p_dim_list(p):
     if len(p) == 2:
         p[0] = DimList()
         p[0].append(p[1])
-    elif len(p) == 3:
+    elif len(p) == 4:
         p[1].append(p[3])
         p[0] = p[1]
         

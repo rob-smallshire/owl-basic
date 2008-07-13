@@ -43,7 +43,7 @@ class DimList(AstNode):
         self.items.append(node)
 
 class AllocateArray(AstNode):
-    identifier = Node()
+    identifier = StringOption()
     dimensions = Node()
     
 class AllocateBlock(AstNode):
