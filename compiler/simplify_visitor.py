@@ -90,4 +90,15 @@ class SimplificationVisitor(Visitor):
         expr_list.parent.child_infos[expr_list.parent_property] = []
         setattr(expr_list.parent, expr_list.parent_property, expr_list.expressions)
         
+    def visitVduList(self, vdu_list):
+        """
+        Remove VduList level from the AST by replacing the contents of
+        the owning attribute of its parents with the VduList's own list of items 
+        """
+        for item in vdu_list.items:
+            item.parent = vdu_list.parent
+            item.parent_property = vdu_list.parent_property
+            self.visit(item)
+        vdu_list.parent.child_infos[vdu_list.parent_property] = []
+        setattr(vdu_list.parent, vdu_list.parent_property, vdu_list.items)
             

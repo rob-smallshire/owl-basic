@@ -9,5 +9,5 @@ VDU
 VDU 23|
 VDU 23,224|23,0,R,X;
 REM This does not work
-REM VDU 23,224|23,0,R,X|
+VDU 23,224|23,0,R,X|
 

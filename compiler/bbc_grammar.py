@@ -865,7 +865,7 @@ def p_vdu_stmt(p):
     if len(p) == 2:
         p[0] = Vdu()
     elif len(p) == 3:
-        p[0] = Vdu(codes = p[2])
+        p[0] = Vdu(bytes = p[2])
     p[0].lineNum = p.lineno(1)
     
 def p_vdu_list(p):
@@ -884,13 +884,18 @@ def p_vdu_item(p):
     if len(p) == 2:
         p[0] = VduItem(item = p[1])
     elif len(p) == 3:
-        p[0] = VduItem(item = p[1], separator = p[2])
+        p[0] = VduItem(item = p[1], length = p[2])
     
 def p_vdu_separator(p):
     '''vdu_separator : COMMA
                      | SEMICOLON
                      | PIPE'''
-    p[0] = p[1]
+    if p[1] == ',':
+        p[0] = 1
+    elif p[1] == ';':
+        p[0] = 2
+    elif p[1] == '|':
+        p[0] = 9
     
 def p_voices_stmt(p):
     '''voices_stmt : VOICES expr'''

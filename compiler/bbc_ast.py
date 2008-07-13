@@ -429,7 +429,7 @@ class Voices(AstStatement):
     number_of_voices = Node()
 
 class Vdu(AstStatement):
-    codes = Node()
+    bytes = Node()
 
 class VduList(AstNode):
     items = [Node()]
@@ -439,7 +439,7 @@ class VduList(AstNode):
 
 class VduItem(AstNode):
     item = Node()
-    separator = StringOption()
+    length = IntegerOption()
     
 class While(AstStatement):
     condition = Node()
