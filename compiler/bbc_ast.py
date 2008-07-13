@@ -145,14 +145,14 @@ class Data(AstStatement):
 
 class DefineFunction(AstStatement):
     name = StringOption()
-    formalParameters = Node()
+    formal_parameters = Node()
 
 class ReturnFromFunction(AstStatement):
     return_value = Node(type=ScalarType) # TODO: Can functions return arrays 
 
 class DefineProcedure(AstStatement):
     name = StringOption()
-    formalParameters = Node()
+    formal_parameters = Node()
 
 class ReturnFromProcedure(AstStatement):
     pass
