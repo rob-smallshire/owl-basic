@@ -11,12 +11,25 @@ class SimplifyStatementListVisitor(Visitor):
     """
     def __init__(self):
         self._accumulated_statements = []
+    
+    def visitAstNode(self, node):
+        if node is not None:
+            self._accumulated_statements.append(node)
             
     def visitStatementList(self, statement_list):
-        statement_list.forEachChild(self.visit)
+        statement_list.forEachChild(self._safeVisit)
         
     def visitStatement(self, statement):
-        self._accumulated_statements.append(statement.body)
+        """
+        Append the body of the current statement, skipping the Statement node and
+        filtering out None (i.e empty) statements
+        """
+        if statement.body is not None:
+            self._accumulated_statements.append(statement.body)
+    
+    def _safeVisit(self, node):
+        if node is not None:
+            self.visit(node)
                 
     def _accumulatedStatements(self):
         return self._accumulated_statements;
@@ -49,7 +62,6 @@ class SimplificationVisitor(Visitor):
         # Locate this DIM in its parent statement list
         dim_index = dim.parent.statements.index(dim)
         dim.parent.statements.remove(dim)
-        print "items = %s" % items
         items.reverse()
         for item in items:
             dim.parent.statements.insert(dim_index, item)
