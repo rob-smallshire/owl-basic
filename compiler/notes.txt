@@ -1,0 +1,120 @@
+Ive made this so we can leave each other notes.
+
+I have downloaded the changelist for bbc basic from the source tree. Here is some of the interesting bits
+
+Partial setting of @% is supported:
+
+@%="+":REM turn on STR$
+@%="G":REM go to G format (turns off STR$)
+@%="10":REM set just the field width for current format (turns off STR$)
+@%=".5":REM set just the precision for current format (turns of STR$)
+@%="+F10":REM turn on STR$, go to F format and set field width 10
+@%="E10.3":REM go to E format, field width 10, 3 digits in total
+@%="+F20.4":REM turn on STR$, go to F, field width 20, 4 digits after '.'
+
+Spaces cannot be used. LET @%= does not cope with the string form. Replace
+"." with "," to get "," used as the decimal point character.
+
+
+
+TRACE to file
+
+TRACE output can be directed to a file with TRACE TO "<file name>": all TRACE
+output is sent to the file until TRACE CLOSE is issued [the interpreter will
+close the trace file before exit]. Note that errors found when writing to this
+file will result in it being closed and forgotten about. The variable TRACE
+allows the programmer to output other things to the trace file (e.g. with
+IF TRACE THEN BPUT#TRACE,"X is "+STR$X)
+
+Note that TRACE now allows line number and PROC tracing to be on together:
+TRACE PROC:TRACE ON (say).
+
+
+
+some original bugs in bbc basic and test code
+
+17-Nov-88   Fixed TAN1E-5 bug (misread the flow chart in Cody and Waite!)
+02-Dec-88   -1^-10 blew up
+14-Mar-89   " unlistable token " not terminated by >&7F
+15-Jun-89   F1XSUB, F1SUB could return -0 which various xxSTAs can't cope with
+17-Jul-89   Difference between IF THENELSE and IF THEN ELSE fixed
+18-Aug-89   Cache not being flushed on errors could cause problems with EVAL
+12-Oct-89   Bug in printing 0 in E mode removed
+17-Oct-89   INT-(3*2^30) didn't give error
+19-Oct-89   Assembler OPT not reset on -chain or -quit
+24-Oct-89   A()=B() messed up
+03-Nov-89   Change to ADVAL to return all 32 bits
+11-Dec-89   TRACE TO "printer:" didn't work because of the type setting
+
+Changes to TRACE such that line numbers and PROC/FN info produced
+
+(1) GCOLr,g,b and GCOL action,r,g,b call ColourTrans_SetGCOL
+(2) MODEn where n>255 calls OS_ScreenMode
+(3) MODE <string> calls *wimpmode <string>
+(4) COLOUR r,g,b calls ColourTrans_SetColour (note that it can't
+    do as well as (1) above since a four parameter COLOUR call
+    already exists)
+    
+* TRACE PROC (and the identical TRACE FN) now flushes the VCACHE when
+  it is encountered. This is important, because procedure and function
+  calls are normally cached to avoid looking-up the name and searching
+  for the location of the DEF.
+
+  When tracing is active, we don't add any procedure or function calls
+  to the cache, because we can't output the name to the trace output
+  (without parsing it - hence slowing-down cache behaviour).
+
+  So, we now flush the VCACHE at the start of PROC/FN tracing so that
+  all calls are reported (before, the cached ones would not appear in
+  the trace output).
+
+* TRACE ENDPROC has been implemented to allow the output of 'ENDPROC'
+  and 'ENDFN' in the trace output whenever a procedure or function is
+  exited. This complements the TRACE PROC/FN functionality.
+
+* QUIT <expression> has been added to allow a return code to be passed
+  back to the called when BASIC exits. This is the /only/ sensible way
+  for a BASIC program to set Sys$ReturnCode on exit (others get trashed
+  when BASIC removes it's environment handlers).
+
+* New syntax for MODE: MODE <width>,<height>,<bpp>[,<framerate>]
+
+  Uses OS_ScreenMode 0, rather than *WimpMode. bpp may be 1,2,4,6,8,16
+  or 32. 8 selects a full palette 256-colour mode, 6 an old-style one.
+
+* COLOUR and GCOL both allow colour numbers rather than old-style
+  colours. Also, background colours can be set with R,G,B forms.
+
+  COLOUR [OF f] [ON b]
+  COLOUR [[OF] r,g,b] [ON r,g,b]
+  GCOL [OF [<action>],f] [ON [<action>],b]
+  GCOL [[OF] [<action>,]r,g,b] [ON [<action>,]r,g,b]
+
+  For COLOUR R,G,B, the OF is unnecessary, but provided for uniformity.
+  For GCOL R,G,B, OF tightens up the usage of <action> - without it
+  <action>is passed in to both R3 and R4 of ColourTrans_SetGCOL for
+  backwards compatibility (some may have used GCOL 128,r,g,b to
+  set the background colour - although this ends up setting reserved
+  flags in the ColourTrans_SetGCOL call).
+
+  * Used as a function VDU n returns the value of the specified VDU
+  variable.
+  
+  * Added the DIM <var> LOCAL <expr> syntax which allows blocks to be
+  claimed local to a PROC/FN that are automatically released on exit
+  or error.
+  
+
+
+
+
+
+
+32bit line numbering
+
+if we impliment 32 bit line numbering we can make the file load on a 16 bit system by having a special header
+	\x00\x00\xf4 This file uses 32bit line numbering. Imposible to load on 16bit system\n\xff\xff
+this will produce the line:
+	0 REM This file uses 32bit line numbering. Imposible to load on 16bit system
+when listed and will not crash the old interpreter and allow the OWL compiler to detect 32 bit line numbering
+it is also possible to detect with a simpe IF stmt.
