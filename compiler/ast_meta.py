@@ -79,7 +79,6 @@ class AstMeta(type):
            def _getProperty(self, info_name=info_name):
                return self._children[info_name]
            def _setProperty(self, value, info_name=info_name):
-               print "info_name = %s" % info_name
                self._children[info_name] = value
            setattr(cls, property_name, property(_getProperty, _setProperty))
                         
@@ -168,6 +167,7 @@ class AstNode(object):
     __metaclass__ = AstMeta
     
     type = None
+    line_num = IntegerOption()
     
     def __init__(self):
         # Initialise children
