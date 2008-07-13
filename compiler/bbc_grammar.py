@@ -673,7 +673,7 @@ def p_print_stmt(p):
     if len(p) == 2:
         p[0] = Print()
     elif len(p) == 3:
-        p[0] = Print(print_list = p[2])
+        p[0] = Print(printList = p[2])
     elif len(p) == 4:
         p[0] = PrintFile(channel = p[2], items = p[3])
     p[0].lineNum = p.lineno(1)
