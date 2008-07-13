@@ -10,7 +10,7 @@ class AstStatement(AstNode):
         
 class Program(AstNode):
     type = None
-    statement_list = Node()
+    statements = Node()
 
 class Statement(AstStatement):
     type = None

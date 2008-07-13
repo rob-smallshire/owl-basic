@@ -21,7 +21,7 @@ precedence = (
 
 def p_program(p):
     'program : statement_list'
-    p[0] = Program(statementList = p[1])
+    p[0] = Program(statements = p[1])
 
 # TODO: Distinguish single-line compound statements
 

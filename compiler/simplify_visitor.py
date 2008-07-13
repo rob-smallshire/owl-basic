@@ -3,7 +3,6 @@
 from visitor import Visitor
 
 
-
 class SimplifyStatementListVisitor(Visitor):
     """
     Visitor for simplifying nested StatementList nodes by flattening the
@@ -17,7 +16,7 @@ class SimplifyStatementListVisitor(Visitor):
             self._accumulated_statements.append(node)
             
     def visitStatementList(self, statement_list):
-        statement_list.forEachChild(self._safeVisit)
+        statement_list.forEachChild(self.visit)
         
     def visitStatement(self, statement):
         """
@@ -26,11 +25,7 @@ class SimplifyStatementListVisitor(Visitor):
         """
         if statement.body is not None:
             self._accumulated_statements.append(statement.body)
-    
-    def _safeVisit(self, node):
-        if node is not None:
-            self.visit(node)
-                
+                    
     def _accumulatedStatements(self):
         return self._accumulated_statements;
     
@@ -46,6 +41,9 @@ class SimplificationVisitor(Visitor):
     
     def visitStatementList(self, statement_list):
         "Flatten nested StatementLists and remove Statement nodes."
+        if not hasattr(statement_list, "parent"):
+            print statement_list.statements
+            assert 0
         sslv = SimplifyStatementListVisitor()
         sslv.visit(statement_list)
         statement_list.statements = sslv.accumulatedStatements
@@ -53,6 +51,9 @@ class SimplificationVisitor(Visitor):
             statement.parent = statement_list
             self.visit(statement)
             
+        statement_list.parent.child_infos["statements"] = []
+        statement_list.parent.statements = statement_list.statements
+                        
     def visitDim(self, dim):
         """
         Convert DIM statements and their lists of arrays/blocks into
@@ -67,5 +68,26 @@ class SimplificationVisitor(Visitor):
             dim.parent.statements.insert(dim_index, item)
             item.parent = dim.parent
             item.lineNum = dim.lineNum
+            self.visit(item)
             
+    def visitCase(self, case):
+        "Remove the WhenClauseList level from the AST"
+        case.child_infos["when_clauses"] = []
+        case.whenClauses = case.whenClauses.clauses
+        for clause in case.whenClauses:
+            clause.parent = case
+            self.visit(clause)
+            
+    def visitExpressionList(self, expr_list):
+        """
+        Remove ExpressionList level from the AST by replacing the contents of
+        the owning attribute of its parents with the ExpressionList's own list of expressions 
+        """
+        for expr in expr_list.expressions:
+            expr.parent = expr_list.parent
+            expr.parent_property = expr_list.parent_property
+            self.visit(expr)
+        expr_list.parent.child_infos[expr_list.parent_property] = []
+        setattr(expr_list.parent, expr_list.parent_property, expr_list.expressions)
         
+            

@@ -8,7 +8,8 @@ class Visitor:
     def visit(self, node):
         """
         Visits a given node by telling the node to call this Visitor's
-        class-specific visitor method.
+        class-specific visitor method. No-op if node is None.
         """
-        return node.accept(self)
+        if node is not None:
+            return node.accept(self)
     
