@@ -13,11 +13,9 @@ class SimplifyStatementListVisitor(Visitor):
         self._accumulated_statements = []
             
     def visitStatementList(self, statement_list):
-        print "SimplifyStatementListVisitor.visitStatementList" 
         statement_list.forEachChild(self.visit)
         
     def visitStatement(self, statement):
-        print "SimplifyStatementListVisitor.visitStatement"
         self._accumulated_statements.append(statement.body)
                 
     def _accumulatedStatements(self):
@@ -34,9 +32,27 @@ class SimplificationVisitor(Visitor):
         node.forEachChild(self.visit)
     
     def visitStatementList(self, statement_list):
-        print "SimplificationVisitor.visitStatementList"
+        "Flatten nested StatementLists and remove Statement nodes."
         sslv = SimplifyStatementListVisitor()
         sslv.visit(statement_list)
         statement_list.statements = sslv.accumulatedStatements
         for statement in statement_list.statements:
+            statement.parent = statement_list
             self.visit(statement)
+            
+    def visitDim(self, dim):
+        """
+        Convert DIM statements and their lists of arrays/blocks into
+        individual AllocateArray and AllocateBlock statements
+        """
+        items = dim.items.items
+        # Locate this DIM in its parent statement list
+        dim_index = dim.parent.statements.index(dim)
+        dim.parent.statements.remove(dim)
+        print "items = %s" % items
+        items.reverse()
+        for item in items:
+            dim.parent.statements.insert(dim_index, item)
+            item.parent = dim.parent
+            
+        
