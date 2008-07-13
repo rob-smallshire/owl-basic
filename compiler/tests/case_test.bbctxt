@@ -8,9 +8,12 @@ ENDCASE
 CASE direction$ OF
   WHEN "left","LEFT" :
   PRINT "turn left"
+  PRINT "Ta til hoeyre"
   WHEN "right","RIGHT" :
   PRINT "Turn right"
+  PRINT "Ta til venstre"
   OTHERWISE
   PRINT "Straight on"
+  PRINT "Rett fram"
 ENDCASE
 
