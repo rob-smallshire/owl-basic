@@ -104,7 +104,9 @@ Changes to TRACE such that line numbers and PROC/FN info produced
   claimed local to a PROC/FN that are automatically released on exit
   or error.
   
+BB4W keywords that will need implimenting at a later date.
 
+	PRIVATE
 
 
 
@@ -118,3 +120,13 @@ this will produce the line:
 	0 REM This file uses 32bit line numbering. Imposible to load on 16bit system
 when listed and will not crash the old interpreter and allow the OWL compiler to detect 32 bit line numbering
 it is also possible to detect with a simpe IF stmt.
+
+
+*all tokenised programs must have line numbers (check how bbc basic for windows does it 16/32 bit)
+open file
+read first line
+if line is started with 16/32 bittoken then 
+	use line numbering.(will need a flag at start of file for 32 bit)
+	set a flag in grammer checker that tells it to decode the first 0/2/4 bytes of each line as a line number.
+	if flag is set and a token that requires a line number is found then check the data after token for encoded line number
+if file is started with ascii numeric value then no line number decoding is needed
