@@ -8,6 +8,5 @@ VDU 23,224,8,28,28,107,127,107,8,28
 VDU
 VDU 23|
 VDU 23,224|23,0,R,X;
-REM This does not work
 VDU 23,224|23,0,R,X|
 
