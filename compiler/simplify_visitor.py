@@ -1,5 +1,6 @@
 # A visitor implementation that creates an XML representation of the abstract syntax tree
 
+from utility import camelCaseToUnderscores
 from visitor import Visitor
 
 
@@ -84,38 +85,42 @@ class SimplificationVisitor(Visitor):
         Remove ExpressionList level from the AST by replacing the contents of
         the owning attribute of its parents with the ExpressionList's own list of expressions 
         """
-        for expr in expr_list.expressions:
-            expr.parent = expr_list.parent
-            expr.parent_property = expr_list.parent_property
-            self.visit(expr)
-        expr_list.parent.child_infos[expr_list.parent_property] = []
-        assert hasattr(expr_list.parent, expr_list.parent_property)
-        setattr(expr_list.parent, expr_list.parent_property, expr_list.expressions)
-        
+        self._elideNode(expr_list)
+#        
     def visitVduList(self, vdu_list):
         """
         Remove VduList level from the AST by replacing the contents of
         the owning attribute of its parent with the VduList's own list of items 
         """
-        for item in vdu_list.items:
-            item.parent = vdu_list.parent
-            item.parent_property = vdu_list.parent_property
-            self.visit(item)
-        vdu_list.parent.child_infos[vdu_list.parent_property] = []
-        assert hasattr(vdu_list.parent, vdu_list.parent_property)
-        setattr(vdu_list.parent, vdu_list.parent_property, vdu_list.items)
-        
+        self._elideNode(vdi_list)
+#        
     def visitFormalArgList(self, formal_arg_list):
         """
         Remove the FormalArgList level from the AST by replacing the contents of
         the owning attribute of its parent with the FormalArgList's own list of arguments
         """
-        print "visitFormalArgList"
-        print "formal_arg_list.parent_property = %s" % formal_arg_list.parent_property
-        for arg in formal_arg_list.arguments:
-            arg.parent = formal_arg_list.parent
-            arg.parent_property = formal_arg_list.parent_property
-            self.visit(arg)
-        formal_arg_list.parent.child_infos[formal_arg_list.parent_property] = []
-        assert hasattr(formal_arg_list.parent, formal_arg_list.parent_property)
-        setattr(formal_arg_list.parent, formal_arg_list.parent_property, formal_arg_list.arguments)    
+        self._elideNode(formal_arg_list)
+#        
+    def visitPrintList(self, print_list):
+        """
+        Remove the PrintList level from the AST by replacing the contents of the
+        owning attribute of its parent.
+        """
+        self._elideNode(print_list)
+        
+    def _elideNode(self, node):
+        """
+        Removes a node from the AST, assigning the contents of its only list
+        attribute to the owning attribute, thereby simplifing the AST structure
+        """
+        print "visitPrintList"
+        assert len(node.child_infos) == 1
+        list_property = node.child_infos.keys()[0]
+        print "list_property = %s" % list_property
+        for item in getattr(node, list_property):
+            item.parent = node.parent
+            item.parent_property = node.parent_property
+        assert hasattr(node.parent, node.parent_property)
+        # TODO: Wrong case of parent_property on next line?
+        node.parent.child_infos[camelCaseToUnderscores(node.parent_property)] = []
+        setattr(node.parent, node.parent_property, getattr(node, list_property))
