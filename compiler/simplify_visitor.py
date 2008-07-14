@@ -52,6 +52,7 @@ class SimplificationVisitor(Visitor):
             self.visit(statement)
             
         statement_list.parent.child_infos["statements"] = []
+        assert hasattr(statement_list, "statements")
         statement_list.parent.statements = statement_list.statements
                         
     def visitDim(self, dim):
@@ -88,17 +89,33 @@ class SimplificationVisitor(Visitor):
             expr.parent_property = expr_list.parent_property
             self.visit(expr)
         expr_list.parent.child_infos[expr_list.parent_property] = []
+        assert hasattr(expr_list.parent, expr_list.parent_property)
         setattr(expr_list.parent, expr_list.parent_property, expr_list.expressions)
         
     def visitVduList(self, vdu_list):
         """
         Remove VduList level from the AST by replacing the contents of
-        the owning attribute of its parents with the VduList's own list of items 
+        the owning attribute of its parent with the VduList's own list of items 
         """
         for item in vdu_list.items:
             item.parent = vdu_list.parent
             item.parent_property = vdu_list.parent_property
             self.visit(item)
         vdu_list.parent.child_infos[vdu_list.parent_property] = []
+        assert hasattr(vdu_list.parent, vdu_list.parent_property)
         setattr(vdu_list.parent, vdu_list.parent_property, vdu_list.items)
-            
+        
+    def visitFormalArgList(self, formal_arg_list):
+        """
+        Remove the FormalArgList level from the AST by replacing the contents of
+        the owning attribute of its parent with the FormalArgList's own list of arguments
+        """
+        print "visitFormalArgList"
+        print "formal_arg_list.parent_property = %s" % formal_arg_list.parent_property
+        for arg in formal_arg_list.arguments:
+            arg.parent = formal_arg_list.parent
+            arg.parent_property = formal_arg_list.parent_property
+            self.visit(arg)
+        formal_arg_list.parent.child_infos[formal_arg_list.parent_property] = []
+        assert hasattr(formal_arg_list.parent, formal_arg_list.parent_property)
+        setattr(formal_arg_list.parent, formal_arg_list.parent_property, formal_arg_list.arguments)    

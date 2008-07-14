@@ -6,14 +6,18 @@ DEF PROCtesting(A)
 ENDPROC
 
 DEF PROCcharlie(A%, B, A(), A)
+    PRINT "charlie", A%, B
 ENDPROC
 
 DEFPROCdelta(A%,A%,A(), B)
+    PRINT "delta", A%, A%, B
 ENDPROC
 
-DEF PROCcharlie(A%, B, RETURN A(), RETURN A)
+DEF PROCecho(A%, B, RETURN A(), RETURN A)
+    PRINT "echo", A%, B
 ENDPROC
 
-DEFPROCdelta(RETURN A%,RETURN A%,A(), B)
+DEFPROCdelta(RETURN A%, RETURN A%, A(), B)
+    PRINT "foxtrot", B
 ENDPROC
 

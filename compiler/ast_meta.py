@@ -1,12 +1,8 @@
 import re
 import sys
 
+from utility import underscoresToCamelCase
 from bbc_types import *
-
-def underscoresToCamelCase(s):
-    t = s.replace('_', ' ').title().replace(' ', '')
-    u = t[0].lower() + t[1:]
-    return u
 
 class Node(object):
     def __init__(self, type=None):
