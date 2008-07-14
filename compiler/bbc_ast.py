@@ -327,7 +327,7 @@ class PrintFile(AstStatement):
 
 class CallProcedure(AstStatement):
     name = StringOption()
-    actualParameters = Node()
+    actual_parameters = Node()
 
 class Quit(AstStatement):
     # TODO: Iyonix BASIC support exit value
@@ -364,10 +364,10 @@ class Repeat(AstStatement):
    pass
 
 class Sound(AstStatement):
-    channel = Node(type=IntegerType)
+    channel   = Node(type=IntegerType)
     amplitude = Node(type=IntegerType)
-    pitch = Node(type=IntegerType)
-    duration = Node(type=IntegerType)
+    pitch     = Node(type=IntegerType)
+    duration  = Node(type=IntegerType)
     
 class Mute(AstStatement):
     mute = BoolOption(False)
@@ -385,8 +385,8 @@ class Stereo(AstStatement):
 
 class Sys(AstStatement):
     routine          = Node()
-    actualParameters = Node()
-    returnValues     = Node()
+    actual_parameters = Node()
+    return_values     = Node()
     flags            = Node()
 
 class TabH(AstNode):

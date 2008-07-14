@@ -802,24 +802,24 @@ def p_sys_stmt(p):
                 | SYS expr COMMA nullable_expr_list TO nullable_variable_list
                 | SYS expr COMMA nullable_expr_list TO nullable_variable_list SEMICOLON variable'''
     if len(p) == 3:
-        p[0] = Sys(routine = p[3])
+        p[0] = Sys(routine = p[2])
     elif len(p) == 5:
-        if str(p[4]) == ';':  # TODO D.R.Y. Get this from the token somehow
-            p[0] = Sys(routine = p[3], flags = p[5])
-        elif str(p[4]) == "TO":
-            p[0] = Sys(routine = p[3], returnValues = p[5])
-        elif str(p[4]) == ',':
-            p[0] = Sys(routine = p[3], actualParameters = p[5])
+        if str(p[3]) == ';':  # TODO D.R.Y. Get this from the token somehow
+            p[0] = Sys(routine = p[2], flags = p[4])
+        elif str(p[3]) == "TO":
+            p[0] = Sys(routine = p[2], returnValues = p[4])
+        elif str(p[3]) == ',':
+            p[0] = Sys(routine = p[2], actualParameters = p[4])
     elif len(p) == 7:
-        if str(p[4]) == "TO":
-            p[0] = Sys(routine = p[3], returnValues = p[5], flags = p[7])
-        elif str(p[4]) == ',':
-            if str(p[6]) == ';':
-                p[0] = Sys(routine = p[3], actualParameters = p[5], flags = p[7])
-            elif str(p[6]) == "TO":
-                p[0] = Sys(routine = p[3], actualParameters = p[5], returnValues = p[7])
+        if str(p[3]) == "TO":
+            p[0] = Sys(routine = p[2], returnValues = p[4], flags = p[6])
+        elif str(p[3]) == ',':
+            if str(p[5]) == ';':
+                p[0] = Sys(routine = p[2], actualParameters = p[4], flags = p[6])
+            elif str(p[5]) == "TO":
+                p[0] = Sys(routine = p[2], actualParameters = p[4], returnValues = p[6])
     elif len(p) == 9:
-        p[0] = Sys(routine = p[3], actualParameters = p[5], returnValues = p[7], flags = p[7])
+        p[0] = Sys(routine = p[2], actualParameters = p[4], returnValues = p[6], flags = p[8])
     p[0].lineNum = p.lineno(1)
         
 def p_tab(p):
@@ -1021,7 +1021,7 @@ def p_nullable_expr(p):
     
 def p_empty_expr(p):
     '''empty_expr :'''
-    pass
+    p[0] = None
 
 def p_nullable_expr_list(p):
     '''nullable_expr_list : nullable_expr
@@ -1636,7 +1636,7 @@ def p_variable_list(p):
     
 def p_empty_variable(p):
     '''empty_variable :'''
-    pass
+    p[0] = None
 
 def p_nullable_variable(p):
     '''nullable_variable : variable

@@ -1,0 +1,8 @@
+SYS "OS_ReadMonotonicTime" TO time
+SYS "OS_SpriteOp",28,,"MYSPRITE",,3
+SYS "Font_FindFont",,"Homerton.Medium",12*16,12*16 TO f%
+SYS 0,0,42 : REM output a *
+OS_Write% = 0
+SYS OS_Write%, 42
+SYS "System.Console.WriteLine", "HelloWorld"
+SYS "System.Console" TO a~

@@ -29,13 +29,19 @@ class XmlVisitor(Visitor):
     
     def childElement(self, name, node):
         self.writer.WriteStartElement(name)
-        self.visit(node)
+        if node is None:
+            self.childNoneElement()
+        else:
+            self.visit(node)
         self.writer.WriteEndElement()
     
     def childListElement(self, name, nodes):
         self.writer.WriteStartElement(name)
         for node in nodes:
-            self.visit(node)
+            if node is None:
+                self.childNoneElement()
+            else:
+                self.visit(node)
         self.writer.WriteEndElement()
     
     def childTextElement(self, name, text):
@@ -58,9 +64,7 @@ class XmlVisitor(Visitor):
             if value is not None:
                 self.childAttribute(name, value)
         for name, child in node.children.items():
-            if child is None:
-                self.childNoneElement()
-            elif isinstance(child, list):
+            if isinstance(child, list):
                 self.childListElement(name, child)
             else:    
                 self.childElement(name, child)

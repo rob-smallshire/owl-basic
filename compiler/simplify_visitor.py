@@ -86,21 +86,28 @@ class SimplificationVisitor(Visitor):
         the owning attribute of its parents with the ExpressionList's own list of expressions 
         """
         self._elideNode(expr_list)
-#        
+        
     def visitVduList(self, vdu_list):
         """
         Remove VduList level from the AST by replacing the contents of
         the owning attribute of its parent with the VduList's own list of items 
         """
-        self._elideNode(vdi_list)
-#        
+        self._elideNode(vdu_list)
+
+    def visitActualArgList(self, actual_arg_list):
+        """
+        Remove the ActualArgList level from the AST by replacing the contents of
+        the owning attribute of its parent with the ActualArgList's own list of arguments
+        """
+        self._elideNode(actual_arg_list)
+
     def visitFormalArgList(self, formal_arg_list):
         """
         Remove the FormalArgList level from the AST by replacing the contents of
         the owning attribute of its parent with the FormalArgList's own list of arguments
         """
         self._elideNode(formal_arg_list)
-#        
+        
     def visitPrintList(self, print_list):
         """
         Remove the PrintList level from the AST by replacing the contents of the
@@ -108,18 +115,24 @@ class SimplificationVisitor(Visitor):
         """
         self._elideNode(print_list)
         
+    def visitVariableList(self, variable_list):
+        """
+        Remove the VariableList level from the AST by replacing the contents of the
+        owning attribute of its parent.
+        """
+        self._elideNode(variable_list)
+        
     def _elideNode(self, node):
         """
         Removes a node from the AST, assigning the contents of its only list
         attribute to the owning attribute, thereby simplifing the AST structure
         """
-        print "visitPrintList"
         assert len(node.child_infos) == 1
         list_property = node.child_infos.keys()[0]
-        print "list_property = %s" % list_property
         for item in getattr(node, list_property):
-            item.parent = node.parent
-            item.parent_property = node.parent_property
+            if item is not None:
+                item.parent = node.parent
+                item.parent_property = node.parent_property
         assert hasattr(node.parent, node.parent_property)
         # TODO: Wrong case of parent_property on next line?
         node.parent.child_infos[camelCaseToUnderscores(node.parent_property)] = []
