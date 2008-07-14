@@ -11,7 +11,7 @@ precedence = (
              ('right', 'UEQUAL'),
              ('left', 'EOR', 'OR'),
              ('left', 'AND'),
-             ('nonassoc', 'EQ' 'NE', 'LTE', 'GTE', 'LT', 'GT', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'SHIFT_RIGHT_UNSIGNED'),
+             ('nonassoc', 'EQ', 'NE', 'LTE', 'GTE', 'LT', 'GT', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'SHIFT_RIGHT_UNSIGNED'),
              ('left', 'PLUS', 'MINUS'),
              ('left', 'TIMES', 'DIVIDE', 'MOD', 'DIV'),
              ('left', 'CARET'),
@@ -321,10 +321,10 @@ def p_dim_list(p):
         
 def p_dim_item(p):
     # TODO: BB4W structures would be added here
-    '''dim_item : ARRAYID_LPAREN expr_list RPAREN
+    '''dim_item : indexer
                 | variable expr'''
-    if len(p) == 4:
-        p[0] = AllocateArray(identifier = p[1], dimensions = p[2])
+    if len(p) == 2:
+        p[0] = AllocateArray(identifier = p[1].identifier, dimensions = p[1].indices)
     elif len(p) == 3:
         p[0] = AllocateBlock(identifier = p[1], size = p[2])
     
@@ -508,12 +508,12 @@ def p_assignment(p):
                   | LET indexer EQ expr
                   | lvalue EQ expr
                   | array EQ array_expr
-                  | indexer EQ expr
-                  | '''
+                  | indexer EQ expr'''
     if len(p) == 5:
         p[0] = Assignment(lValue = p[2], rValue = p[4])
         p[0].lineNum = p.lineno(1)
     elif len(p) == 4:
+        print "assignment : %s %s %s" % (p[1], p[2], p[3])
         p[0] = Assignment(lValue = p[1], rValue = p[3])
         p[0].lineNum = p.lineno(2)
     
@@ -974,6 +974,7 @@ def p_formal_arg(p):
 # FACTORS and EXPRESSIONS
 #
 
+# TODO: Removed indexer from factor temporarily
 def p_factor(p):
     '''factor : literal
               | variable
@@ -1060,6 +1061,7 @@ def p_expr(p):
     if len(p) == 2:
         p[0] = p[1]
     elif len(p) == 4:
+        print "expr : %s %s %s" % (p[1], p[2], p[3])
         if p[2] == '+':
             p[0] = Plus(lhs = p[1], rhs = p[3])
         elif p[2] == '-':
@@ -1659,16 +1661,19 @@ def p_nullable_variable_list(p):
 # Array support
 def p_array(p):
     'array : ARRAYID_LPAREN RPAREN'
+    print "array : %s %s" % (p[1], p[2])
     p[0] = Array(identifer = p[1])
     p[0].lineNum = p.lineno(1)
     
-def p_array_indexer(p):
+def p_indexer(p):
     'indexer : ARRAYID_LPAREN expr_list RPAREN'
-    p[0] = Indexer(identifer = p[1], index = p[2])
+    print 'indexer : %s %s %s' % (p[1], p[2], p[3])
+    p[0] = Indexer(identifier = p[1], indices = p[2])
     p[0].lineNum = p.lineno(1)
     
 # TODO: Is PLUS array for unary plus allowed?
 def p_array_expr(p):
+    # TODO factor here should be factor COMMA expr_list
     '''array_expr : array
                   | factor
                   | expr_list
@@ -1685,8 +1690,7 @@ def p_array_expr(p):
                   | factor TIMES array
                   | array DIVIDE factor
                   | factor DIVIDE array
-                  | array DOT array
-                  | '''
+                  | array DOT array'''
     if len(p) == 2:
         p[0] = p[1]
     elif len(p) == 3:
@@ -1694,6 +1698,7 @@ def p_array_expr(p):
             p[0] = UnaryMinus(expression = p[2])
         p[0].lineNum = p.lineno(1)
     elif len(p) == 4:
+        print "array_expr : %s %s %s" % (p[1], p[2], p[3])
         if p[2] == '+':
             p[0] = Plus(lhs = p[1], rhs = p[3])
         elif p[2] == '-':

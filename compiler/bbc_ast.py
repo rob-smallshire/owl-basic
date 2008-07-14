@@ -419,8 +419,8 @@ class Array(AstNode):
     identifer = StringOption()
 
 class Indexer(AstNode):
-    identifer = StringOption()
-    index = Node()
+    identifier = StringOption()
+    indices = Node()
 
 class Until(AstStatement):
     condition = Node()

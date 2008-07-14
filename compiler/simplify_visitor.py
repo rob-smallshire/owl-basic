@@ -121,6 +121,12 @@ class SimplificationVisitor(Visitor):
         owning attribute of its parent.
         """
         self._elideNode(variable_list)
+    
+    def visitExpressionList(self, expression_list):
+        """
+        Remove the ExpresionList level from the AST by replacing the contents of the
+        owning attribute of its parent.
+        """
         
     def _elideNode(self, node):
         """
