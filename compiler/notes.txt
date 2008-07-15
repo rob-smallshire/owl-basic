@@ -114,6 +114,8 @@ BB4W keywords that will need implimenting at a later date.
 
 32bit line numbering
 
+0x0d [line num hi] [line num lo] [line len] [data...]
+
 if we impliment 32 bit line numbering we can make the file load on a 16 bit system by having a special header
 	\x00\x00\xZZ\xf4 This file uses 32bit line numbering. Imposible to load on 16bit system\n\xff\xff      where ZZ is the length of the line in bytes.
 this will produce the line:
@@ -135,6 +137,9 @@ if file is started with ascii numeric value then no line number decoding is need
 
 
 **********************************************************************************
+
+0x0d [line num hi] [line num lo] [line len] [data...]
+
 
 goto problem (http://xania.org/200711/bbc-basic-line-number-format)
 
