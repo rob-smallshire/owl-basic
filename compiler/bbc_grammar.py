@@ -25,40 +25,64 @@ def p_program(p):
 
 # TODO: Distinguish single-line compound statements
 
+#def p_statement_list(p):
+#    '''statement_list : compound_statement stmt_terminator
+#                      | statement_list compound_statement stmt_terminator'''
+#    if len(p) == 3:
+#        p[0] = StatementList()
+#        p[0].append(p[1])
+#    elif len(p) == 4:
+#        p[1].append(p[2])
+#        p[0] = p[1]
+        
+## A single line statement list - use in single-line IF THEN ELSE construct
+#def p_compound_statement(p):
+#    '''compound_statement : statement statements_tail'''
+#    p[2].prepend(p[1])
+#    p[0] = p[2]
+            
 def p_statement_list(p):
-    '''statement_list : statement
-                      | statement_list statement'''
+    '''statement_list : compound_statement
+                      | statement_list compound_statement'''
     if len(p) == 2:
         p[0] = StatementList()
         p[0].append(p[1])
     elif len(p) == 3:
         p[1].append(p[2])
         p[0] = p[1]
-    
-def p_statement(p):
-    '''statement : any_stmt_body stmt_terminator
-                 | compound_statement stmt_terminator'''
-    p[0] = p[1]
-    
+        
 # A single line statement list - use in single-line IF THEN ELSE construct
 def p_compound_statement(p):
-    '''compound_statement : stmt_body
-                          | compound_statement statement_separator stmt_body'''
-    if len(p) == 2:
-        p[0] = StatementList()
-        p[0].append(p[1])
-    elif len(p) == 4:
-        p[1].append(p[3])
+    '''compound_statement : lone_stmt_body stmt_terminator
+                          | statement statements_tail stmt_terminator'''
+    if len(p) == 3:
         p[0] = p[1]
-    
+    elif len(p) == 4:
+        p[2].prepend(p[1])
+        p[0] = p[2]
+
+def p_statements_tail(p):
+    '''statements_tail : statement_separator statement statements_tail
+                       | empty_stmt'''
+    if len(p) == 4:
+        p[3].prepend(p[2])
+        p[0] = p[3]
+    elif len(p) == 2:
+        p[0] = StatementList() 
+
 def p_statement_separator(p):
     'statement_separator : COLON'
     p[0] = p[1]
-    
+
 def p_stmt_terminator(p):
     'stmt_terminator : EOL'
     p[0] = p[1]
-    
+            
+def p_statement(p):
+    '''statement : stmt_body
+                 | empty_stmt'''
+    p[0] = p[1]
+
 #=============================================================================#
 # STATEMENTS
 
@@ -87,8 +111,7 @@ def p_lone_stmt_body(p):
 # Statements which can appear alone,
 # or in compound statements on one line
 def p_stmt_body(p):
-    '''stmt_body : empty_stmt
-                 | beats_stmt
+    '''stmt_body : beats_stmt
                  | bput_stmt
                  | call_stmt
                  | circle_stmt
