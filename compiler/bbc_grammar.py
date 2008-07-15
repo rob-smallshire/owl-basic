@@ -63,7 +63,7 @@ def p_compound_statement(p):
 
 def p_statements_tail(p):
     '''statements_tail : statement_separator statement statements_tail
-                       | empty_stmt'''
+                       | empty'''
     if len(p) == 4:
         p[3].prepend(p[2])
         p[0] = p[3]
@@ -80,7 +80,7 @@ def p_stmt_terminator(p):
             
 def p_statement(p):
     '''statement : stmt_body
-                 | empty_stmt'''
+                 | empty'''
     p[0] = p[1]
 
 #=============================================================================#
@@ -172,11 +172,6 @@ def p_stmt_body(p):
                  | endwhile_stmt'''
     p[0] = Statement(body = p[1])
         
-# Empty statement
-def p_empty_stmt(p):
-    '''empty_stmt :'''
-    pass
-
 def p_bput_stmt(p):
     '''bput_stmt : BPUT channel COMMA expr
                  | BPUT channel COMMA expr SEMICOLON'''
@@ -1040,13 +1035,9 @@ def p_expr_list(p):
     
 def p_nullable_expr(p):
     '''nullable_expr : expr
-                     | empty_expr'''
+                     | empty'''
     p[0] = p[1]
     
-def p_empty_expr(p):
-    '''empty_expr :'''
-    p[0] = None
-
 def p_nullable_expr_list(p):
     '''nullable_expr_list : nullable_expr
                           | nullable_expr_list COMMA nullable_expr'''
@@ -1659,13 +1650,9 @@ def p_variable_list(p):
         p[1].append(p[3])
         p[0] = p[1]
     
-def p_empty_variable(p):
-    '''empty_variable :'''
-    p[0] = None
-
 def p_nullable_variable(p):
     '''nullable_variable : variable
-                         | empty_variable'''
+                         | empty'''
     p[0] = p[1]
     
 def p_nullable_variable_list(p):
@@ -1757,6 +1744,13 @@ def p_literal_float(p):
     'literal_float : LITERAL_FLOAT'
     p[0] = LiteralFloat(value = p[1])
     p[0].lineNum = p.lineno(1)
+
+#=============================================================================#
+# EMPTY PRODUCTION
+
+def p_empty(p):
+    'empty :'
+    p[0] = None
 
 #=============================================================================#
 # ERRORS
