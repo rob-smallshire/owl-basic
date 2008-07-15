@@ -117,7 +117,7 @@ BB4W keywords that will need implimenting at a later date.
 0x0d [line num hi] [line num lo] [line len] [data...]
 
 if we impliment 32 bit line numbering we can make the file load on a 16 bit system by having a special header
-	\x00\x00\xZZ\xf4 This file uses 32bit line numbering. Imposible to load on 16bit system\n\xff\xff      where ZZ is the length of the line in bytes.
+	\x0d\x00\x00\xZZ\xf4 This file uses 32bit line numbering. Imposible to load on 16bit system\x0d\xff      where ZZ is the length of the line in bytes.
 this will produce the line:
 	0 REM This file uses 32bit line numbering. Imposible to load on 16bit system
 when listed and will not crash the old interpreter and allow the OWL compiler to detect 32 bit line numbering
@@ -149,7 +149,7 @@ If the line numbers were stored naïvely in most significant byte/least significa
 
 would tokenise as:
 
-\n [ 10] ll IF  _  A  =  1 _  GOTO_  [Line139]   ELSE GOTO [line204]
+\r [ 10] ll IF  _  A  =  1 _  GOTO_  [Line139]   ELSE GOTO [line204]
 0D 00 0A 17 E7 20 41 3D 31 20 E5 20 8F 00 8B 20 8B 20 E5 20 8D 00 CC
                                           ^^    ^^
 
@@ -169,3 +169,50 @@ The algorithm used splits the top two bits off each of the two bytes of the 16-b
 So taking the first example of line 139 — 0x008b — we split the top and bottom two bits from the two bytes to get 0x00 and 0x80. Shifting these down and combining them as described above gives 0x20, then exclusive ORring with 0x54 gives us the first byte, 0x74. The remaining six bits of the two bytes are 0x00 (most significant) and 0x0b (least significant), ORred with 0x40 and stored in LO/HI order that gives us a final three byte sequence of 0x74 0x4b 0x40.
 
 **************************************************************************************
+
+BBC Basic Line Numbers
+----------------------
+
+Within BBC Basic programs lines line numbers (eg after GOTO, GOSUB,
+RESTORE) are encoded to make them easily found by RENUMBER, and to prevent
+them appearing tp be control characters or tokens by forcing them into the
+range &40-&7F.
+
+Tokenising line number lsb, msb:
+Byte 0 : 141
+Byte 1 :(((lsb AND &C0) DIV 4) OR ((msb AND &C0) DIV 16)) EOR &54
+Byte 2 :  (lsb AND &3F) OR &40
+Byte 3 :  (msb AND &3F) OR &40
+
+In 6502 code:
+LDA #&8D:STA byte0    :\ &8D line number token
+LDA lsb:AND #&C0
+LSR A:LSR A
+STA byte1
+LDA msb:AND #&C0
+LSR A:LSR A
+LSR A:LSR A
+ORA byte1:EOR #&54
+STA byte1             :\ first encoded byte
+LDA lsb:AND #&3F
+ORA #&40:STA byte2    :\ second encoded byte
+LDA msb:AND #&3F
+ORA #&40:STA byte3    :\ third encoded byte
+
+
+
+Detokenising byte 0,1,2,3:
+lsb : byte 3 EOR (byte 1 * 16)
+msb : byte 2 EOR ((byte 1 AND &30) * 4)
+
+In 6502 code:
+ASL byte1:ASL byte1
+LDA byte1:AND #&C0
+EOR byte2:STA lsb     :\ lsb of line number
+ASL byte1:ASL byte1
+LDA byte1
+EOR byte3:STA msb     :\ msb of line number
+
+
+
+***************************************************************************************
