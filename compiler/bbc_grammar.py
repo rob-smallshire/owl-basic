@@ -501,12 +501,8 @@ def p_for_stmt(p):
     
 # Rule for dealing with unmatched NEXT statements
 def p_next_stmt(p):
-    '''next_stmt : NEXT nullable_variable_list
-                 | NEXT'''
-    if len(p) == 3:
-        p[0] = Next(identifers = p[2])
-    elif len(p) == 2:
-        p[0] = Next()
+    '''next_stmt : NEXT nullable_variable_list'''
+    p[0] = Next(identifers = p[2])
     p[0].lineNum = p.lineno(1)
     
 def p_library_stmt(p):
