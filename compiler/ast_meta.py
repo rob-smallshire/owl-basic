@@ -2,31 +2,10 @@ import re
 import sys
 
 from utility import underscoresToCamelCase
+from node import *
+from options import *
 from bbc_types import *
-
-class Node(object):
-    def __init__(self, type=None):
-        self.type = type
-
-class Option(object):
-    pass
-
-class BoolOption(Option):
-    def __init__(self, default=None):
-        self.value = default
         
-class IntegerOption(Option):
-    def __init__(self, default=None):
-        self.value = default
-
-class FloatOption(Option):
-    def __init__(self, default=None):
-        self.value = default
-
-class StringOption(Option):
-    def __init__(self, default=None):
-        self.value = default
-
 class AstMeta(type):
     def __new__(cls, name, bases, dict):  
         # Allocate child infos
@@ -40,6 +19,11 @@ class AstMeta(type):
         for base in bases:
             if "option_infos" in base.__dict__:
                 dict["option_infos"].update(base.__dict__["option_infos"])
+        
+        if '__doc__' in dict:
+            dict["_description"] = dict['__doc__']
+        else:
+            dict["_description"] = name
                 
         return type.__new__(cls, name, bases, dict)
         
@@ -118,6 +102,7 @@ class AstMeta(type):
         option_infos class member, and create getters, setters and properties
         to provide access to each of the child members.
         """
+        
         infos = {}
         for info_name, v in dict.items():
             if isinstance(v, Option):
@@ -132,7 +117,8 @@ class AstMeta(type):
                return self._options[info_name]
            def _setProperty(self, value, info_name=info_name):
                self._options[info_name] = value
-           setattr(cls, property_name, property(_getProperty, _setProperty))
+           if not hasattr(cls, property_name):
+               setattr(cls, property_name, property(_getProperty, _setProperty))
                         
         for info_name in removal:
             delattr(cls, info_name)
@@ -161,7 +147,8 @@ class AstMeta(type):
 class AstNode(object):
     __metaclass__ = AstMeta
     
-    type = None
+    formal_type = TypeOption()
+    actual_type = TypeOption()
     line_num = IntegerOption()
     
     def __init__(self):
@@ -199,6 +186,11 @@ class AstNode(object):
                     f(subchild)
             else:
                 f(child) 
+    
+    def _getDescription(self):
+        return self._description or self.__class__.__name__
+    
+    description = property(_getDescription)
     
     def accept(self, visitor):
         """

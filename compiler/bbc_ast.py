@@ -6,18 +6,19 @@ import re
 from ast_meta import *
     
 class AstStatement(AstNode):
-    type = VoidType
+    formal_type = TypeOption(VoidType)
+    pass
         
 class Program(AstNode):
-    type = None
+    #formal_type = TypeOption(None)
     statements = Node()
 
 class Statement(AstStatement):
-    type = None
+    #formal_type = TypeOption(None)
     body = Node()
             
 class StatementList(AstNode):
-    type = None
+    formal_type = TypeOption(None)
     statements = [Node()]
 
     def prepend(self, statement):
@@ -27,16 +28,16 @@ class StatementList(AstNode):
         self.statements.append(statement)
         
 class Beats(AstStatement):
-    counter = Node(type=IntegerType)
+    counter = Node(formalType=IntegerType)
     
 class Channel(AstStatement):
-    channel = Node(type=IntegerType)
+    channel = Node(formalType=IntegerType)
 
 class Dim(AstStatement):
     items = Node()
     
 class DimList(AstNode):
-    type = None
+    formal_type = TypeOption(None)
     items = [Node()]
     
     def append(self, node):
@@ -48,7 +49,7 @@ class AllocateArray(AstNode):
     
 class AllocateBlock(AstNode):
     identifier = Node()
-    size       = Node(type = IntegerType)
+    size       = Node(formalType=IntegerType)
 
 class Assignment(AstStatement):
     l_value = Node()
@@ -62,9 +63,9 @@ class Decrement(AstStatement):
     l_value = Node()
     r_value = Node()
 
-class Bput(AstNode):
-    channel = Node(type=ChannelType)
-    data    = Node(type=IntegerType)
+class Bput(AstStatement):
+    channel = Node(formalType=ChannelType)
+    data    = Node(formalType=IntegerType)
     # TODO: Whether newline is True or False depends on
     #       the type of datan.  If data is a number,
     #       we default to False, if data is a string we
@@ -76,9 +77,9 @@ class Call(AstStatement):
     parameters = Node() # TODO: Needs handling in grammar
     
 class Circle(AstStatement):
-    x_coord = Node(type=IntegerType)
-    y_coord = Node(type=IntegerType)
-    radius  = Node(type=IntegerType)
+    x_coord = Node(formalType=IntegerType)
+    y_coord = Node(formalType=IntegerType)
+    radius  = Node(formalType=IntegerType)
     fill    = BoolOption(False)
 
 class Cls(AstStatement):
@@ -88,15 +89,15 @@ class Clg(AstStatement):
     pass
 
 class Colour(AstStatement):
-    colour = Node(type=IntegerType)
-    tint   = Node(type=IntegerType)
+    colour = Node(formalType=IntegerType)
+    tint   = Node(formalType=IntegerType)
 
 class Palette(AstStatement):
-    physical_colour = Node(type=IntegerType)
-    logical_colour  = Node(type=IntegerType)
-    red             = Node(type=IntegerType)
-    green           = Node(type=IntegerType)
-    blue            = Node(type=IntegerType)
+    physical_colour = Node(formalType=IntegerType)
+    logical_colour  = Node(formalType=IntegerType)
+    red             = Node(formalType=IntegerType)
+    green           = Node(formalType=IntegerType)
+    blue            = Node(formalType=IntegerType)
 
 class Case(AstStatement):
     condition    = Node(ScalarType)
@@ -116,7 +117,7 @@ class OtherwiseClause(AstNode):
     statements = Node()
 
 class Close(AstStatement):
-    channel = Node(type=ChannelType)
+    channel = Node(formalType=ChannelType)
 
 class Data(AstStatement):
     # TODO: How to we represent the data list?
@@ -148,7 +149,7 @@ class DefineFunction(AstStatement):
     formal_parameters = Node()
 
 class ReturnFromFunction(AstStatement):
-    return_value = Node(type=ScalarType) # TODO: Can functions return arrays 
+    return_value = Node(formalType=ScalarType) # TODO: Can functions return arrays 
 
 class DefineProcedure(AstStatement):
     name = StringOption()
@@ -159,74 +160,75 @@ class ReturnFromProcedure(AstStatement):
 
 class ForToStep(AstStatement):
     identifer = Node()
-    first     = Node(type=NumericType)
-    last      = Node(type=NumericType)
-    step      = Node(type=NumericType)
+    first     = Node(formalType=NumericType)
+    last      = Node(formalType=NumericType)
+    step      = Node(formalType=NumericType)
 
 class Next(AstStatement):
     identifers = Node()
 
 class Draw(AstStatement):
-    x_coord = Node(type=IntegerType)
-    y_coord = Node(type=IntegerType)
+    "DRAW"
+    x_coord = Node(formalType=IntegerType, description="The x co-ordinate")
+    y_coord = Node(formalType=IntegerType, description="The y co-ordinate")
     relative = BoolOption(False)
 
 class Ellipse(AstStatement):
-    x_coord    = Node(type=IntegerType)
-    y_coord    = Node(type=IntegerType)
-    semi_major = Node(type=IntegerType)
-    semi_minor = Node(type=IntegerType)
-    radians    = Node(type=IntegerType)
+    x_coord    = Node(formalType=IntegerType)
+    y_coord    = Node(formalType=IntegerType)
+    semi_major = Node(formalType=IntegerType)
+    semi_minor = Node(formalType=IntegerType)
+    radians    = Node(formalType=IntegerType)
     fill       = BoolOption(False)
 
 class GenerateError(AstStatement):
-    number      = Node(type=IntegerType)
-    description = Node(type=StringType)
+    number      = Node(formalType=IntegerType)
+    description = Node(formalType=StringType)
     
 class ReturnError(AstStatement):
-    number      = Node(type=IntegerType)
-    description = Node(type=StringType)      
+    number      = Node(formalType=IntegerType)
+    description = Node(formalType=StringType)      
 
 class End(AstStatement):
     pass
 
 class Envelope(AstStatement):
-    n                 = Node(type=IntegerType)
-    t                 = Node(type=IntegerType)
-    pitch1            = Node(type=IntegerType)
-    pitch2            = Node(type=IntegerType)
-    pitch3            = Node(type=IntegerType)
-    num_steps_1       = Node(type=IntegerType)
-    num_steps_2       = Node(type=IntegerType)
-    num_steps_3       = Node(type=IntegerType)
-    amplitude_attack  = Node(type=IntegerType)
-    amplitude_decay   = Node(type=IntegerType)
-    amplitude_sustain = Node(type=IntegerType)
-    amplitude_release = Node(type=IntegerType)
-    target_attack     = Node(type=IntegerType)
-    target_decay      = Node(type=IntegerType)
+    n                 = Node(formalType=IntegerType)
+    t                 = Node(formalType=IntegerType)
+    pitch1            = Node(formalType=IntegerType)
+    pitch2            = Node(formalType=IntegerType)
+    pitch3            = Node(formalType=IntegerType)
+    num_steps_1       = Node(formalType=IntegerType)
+    num_steps_2       = Node(formalType=IntegerType)
+    num_steps_3       = Node(formalType=IntegerType)
+    amplitude_attack  = Node(formalType=IntegerType)
+    amplitude_decay   = Node(formalType=IntegerType)
+    amplitude_sustain = Node(formalType=IntegerType)
+    amplitude_release = Node(formalType=IntegerType)
+    target_attack     = Node(formalType=IntegerType)
+    target_decay      = Node(formalType=IntegerType)
 
 class Fill(AstStatement):
-    x_coord = Node(type=IntegerType)
-    y_coord = Node(type=IntegerType)
+    x_coord = Node(formalType=IntegerType)
+    y_coord = Node(formalType=IntegerType)
     relative = BoolOption(False)
 
 class Gcol(AstStatement):
-    mode          = Node(type=IntegerType)
-    logicalColour = Node(type=IntegerType)
-    tint          = Node(type=IntegerType)
+    mode          = Node(formalType=IntegerType)
+    logicalColour = Node(formalType=IntegerType)
+    tint          = Node(formalType=IntegerType)
 
 class Goto(AstStatement):
-    line = Node(type=IntegerType)
+    line = Node(formalType=IntegerType)
 
 class Gosub(AstStatement):
-    line = Node(type=IntegerType)
+    line = Node(formalType=IntegerType)
 
 class Return(AstStatement):
     pass
 
 class Install(AstStatement):
-    filename = Node(type=StringType)
+    filename = Node(formalType=StringType)
 
 class If(AstStatement):
     condition = Node()
@@ -234,50 +236,51 @@ class If(AstStatement):
     false_clause = Node()
 
 class LoadLibrary(AstStatement):
-    filename = Node(type=StringType)
+    filename = Node(formalType=StringType)
 
 class Move(AstStatement):
-    x_coord = Node(type=IntegerType)
-    y_coord = Node(type=IntegerType)
+    "MOVE"
+    x_coord = Node(formalType=IntegerType, description="The x co-ordinate")
+    y_coord = Node(formalType=IntegerType, description="The y co-ordinate")
     relative = BoolOption(False)
 
 class Mode(AstStatement):
-    number         = Node(type=IntegerType)
-    width          = Node(type=IntegerType)
-    height         = Node(type=IntegerType)
-    bits_per_pixel = Node(type=IntegerType)
-    frame_rate     = Node(type=IntegerType) 
+    number         = Node(formalType=IntegerType)
+    width          = Node(formalType=IntegerType)
+    height         = Node(formalType=IntegerType)
+    bits_per_pixel = Node(formalType=IntegerType)
+    frame_rate     = Node(formalType=IntegerType) 
 
 class Mouse(AstStatement):
-    x_coord = Node(type=IntegerType)
-    y_coord = Node(type=IntegerType)
-    buttons = Node(type=IntegerType)
-    time    = Node(type=IntegerType)
+    x_coord = Node(formalType=IntegerType)
+    y_coord = Node(formalType=IntegerType)
+    buttons = Node(formalType=IntegerType)
+    time    = Node(formalType=IntegerType)
 
 class MouseStep(AstStatement):
-    x_coeff = Node(type=NumericType)
-    y_coeff = Node(type=NumericType)
+    x_coeff = Node(formalType=NumericType)
+    y_coeff = Node(formalType=NumericType)
 
 class MouseColour(AstStatement):
-    logicalColour = Node(type=IntegerType)
-    red = Node(type=IntegerType)
-    green = Node(type=IntegerType)
-    blue = Node(type=IntegerType)
+    logicalColour = Node(formalType=IntegerType)
+    red = Node(formalType=IntegerType)
+    green = Node(formalType=IntegerType)
+    blue = Node(formalType=IntegerType)
 
 class MousePosition(AstStatement):
-    x_coord     = Node(type=IntegerType)
-    y_coord     = Node(type=IntegerType)
+    x_coord     = Node(formalType=IntegerType)
+    y_coord     = Node(formalType=IntegerType)
     moveMouse   = BoolOption(True)
     movePointer = BoolOption(True)
 
 class MousePointer(AstStatement):
-    shape       = Node(type=IntegerType)
+    shape       = Node(formalType=IntegerType)
     
 class MouseRectangleOn(AstStatement):
-    left   = Node(type=IntegerType)
-    bottom = Node(type=IntegerType)
-    right  = Node(type=IntegerType)
-    top    = Node(type=IntegerType)
+    left   = Node(formalType=IntegerType)
+    bottom = Node(formalType=IntegerType)
+    right  = Node(formalType=IntegerType)
+    top    = Node(formalType=IntegerType)
     
 class MouseRectangleOff(AstStatement):
     pass
@@ -289,21 +292,21 @@ class Off(AstStatement):
     pass
 
 class Origin(AstStatement):
-    x_coord = Node(type=IntegerType)
-    y_coord = Node(type=IntegerType)
+    x_coord = Node(formalType=IntegerType)
+    y_coord = Node(formalType=IntegerType)
 
 class Oscli(AstStatement):
-    command = Node(type=StringType)
+    command = Node(formalType=StringType)
 
 class Plot(AstStatement):
-    mode    = Node(type=IntegerType)
-    x_coord = Node(type=IntegerType)
-    y_coord = Node(type=IntegerType)
+    mode    = Node(formalType=IntegerType)
+    x_coord = Node(formalType=IntegerType)
+    y_coord = Node(formalType=IntegerType)
     relative = BoolOption(False)
 
 class Point(AstStatement):
-    x_coord = Node(type=IntegerType)
-    y_coord = Node(type=IntegerType)
+    x_coord = Node(formalType=IntegerType)
+    y_coord = Node(formalType=IntegerType)
     relative = BoolOption(False)
     
 class Print(AstStatement):
@@ -322,7 +325,7 @@ class PrintManipulator(AstNode):
     manipulator = StringOption()
 
 class PrintFile(AstStatement):
-    channel = Node(type=ChannelType)
+    channel = Node(formalType=ChannelType)
     items = Node()
 
 class CallProcedure(AstStatement):
@@ -334,19 +337,19 @@ class Quit(AstStatement):
     pass
 
 class Rectangle(AstStatement):
-    x_coord = Node(type=IntegerType)
-    y_coord = Node(type=IntegerType)
-    width   = Node(type=IntegerType)
-    height  = Node(type=IntegerType) # None ==> square
+    x_coord = Node(formalType=IntegerType)
+    y_coord = Node(formalType=IntegerType)
+    width   = Node(formalType=IntegerType)
+    height  = Node(formalType=IntegerType) # None ==> square
     fill    = BoolOption(False)
 
 class RectangleBlit(AstStatement):
-    x_coord_source = Node(type=IntegerType)
-    y_coord_source = Node(type=IntegerType)
-    width          = Node(type=IntegerType)
-    height         = Node(type=IntegerType) # None ==> square
-    x_coord_target = Node(type=IntegerType)
-    y_coord_target = Node(type=IntegerType)
+    x_coord_source = Node(formalType=IntegerType)
+    y_coord_source = Node(formalType=IntegerType)
+    width          = Node(formalType=IntegerType)
+    height         = Node(formalType=IntegerType) # None ==> square
+    x_coord_target = Node(formalType=IntegerType)
+    y_coord_target = Node(formalType=IntegerType)
 
 class CopyRectangle(RectangleBlit):
     pass
@@ -364,10 +367,10 @@ class Repeat(AstStatement):
    pass
 
 class Sound(AstStatement):
-    channel   = Node(type=IntegerType)
-    amplitude = Node(type=IntegerType)
-    pitch     = Node(type=IntegerType)
-    duration  = Node(type=IntegerType)
+    channel   = Node(formalType=IntegerType)
+    amplitude = Node(formalType=IntegerType)
+    pitch     = Node(formalType=IntegerType)
+    duration  = Node(formalType=IntegerType)
     
 class Mute(AstStatement):
     mute = BoolOption(False)
@@ -380,8 +383,8 @@ class Stop(AstStatement):
     pass
 
 class Stereo(AstStatement):
-    channel =  Node(type=IntegerType)
-    position = Node(type=IntegerType)
+    channel =  Node(formalType=IntegerType)
+    position = Node(formalType=IntegerType)
 
 class Sys(AstStatement):
     routine          = Node()
@@ -390,21 +393,21 @@ class Sys(AstStatement):
     flags            = Node()
 
 class TabH(AstNode):
-    x_coord = Node(type=IntegerType)
+    x_coord = Node(formalType=IntegerType)
 
 class TabXY(AstNode):
-    x_coord = Node(type=IntegerType)
-    y_coord = Node(type=IntegerType)
+    x_coord = Node(formalType=IntegerType)
+    y_coord = Node(formalType=IntegerType)
 
 class Tempo(AstStatement):
-    rate = Node(type=IntegerType)
+    rate = Node(formalType=IntegerType)
 
 class Tint(AstStatement):
-    option = Node(type=IntegerType)
-    tint   = Node(type=IntegerType)
+    option = Node(formalType=IntegerType)
+    tint   = Node(formalType=IntegerType)
 
 class Spc(AstNode):
-    spaces = Node(type=IntegerType)
+    spaces = Node(formalType=IntegerType)
 
 class VariableList(AstNode):
     variables = [Node()]
@@ -478,69 +481,76 @@ class FormalReferenceArgument(AstNode):
     argument = Node()
 
 class UnaryPlus(AstNode):
-    expression = Node(type=NumericType)
-    #type = TypeOf(expression)
+    expression = Node(formalType=NumericType)
 
 class UnaryMinus(AstNode):
-    expression = Node(type=NumericType)
-    #type = TypeOf(expression)
+    expression = Node(formalType=NumericType)
 
 class UnaryByteIndirection(AstNode):
-    type = IntegerType
-    expression = Node(type=IntegerType)
+    formal_type = TypeOption(IntegerType)
+    expression = Node(formalType=IntegerType)
 
 class UnaryIntegerIndirection(AstNode):
-    type = IntegerType
-    expression = Node(type=IntegerType)
+    formal_type = TypeOption(IntegerType)
+    expression = Node(formalType=IntegerType)
 
 class UnaryStringIndirection(AstNode):
-    type = StringType
-    expression = Node(type=IntegerType)
+    formal_type = TypeOption(StringType)
+    expression = Node(formalType=IntegerType)
 
 class UnaryFloatIndirection(AstNode):
-    type = FloatType
-    expression = Node(type=IntegerType)
+    formal_type = TypeOption(FloatType)
+    expression = Node(formalType=IntegerType)
 
 class DyadicByteIndirection(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
     base   = Node()
     offset = Node()
 
 class DyadicIntegerIndirection(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
     base  = Node()
     offset = Node()
 
 class Not(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
     factor = Node()
+
+class BinaryNumericOperator(AstNode):
+    lhs = Node(formalType=NumericType)
+    rhs = Node(formalType=NumericType)
+
+class Plus(BinaryNumericOperator):
+    "add"
+    pass
+
+class Minus(BinaryNumericOperator):
+    pass
+
+class Multiply(BinaryNumericOperator):
+    pass
+
+class Divide(BinaryNumericOperator):
+    pass
+
+class Power(BinaryNumericOperator):
+    pass
 
 class BinaryOperator(AstNode):
     lhs = Node()
     rhs = Node()
 
-class Plus(BinaryOperator):
-    pass
-
-class Minus(BinaryOperator):
-    pass
-
-class Multiply(BinaryOperator):
-    pass
-
-class Divide(BinaryOperator):
-    pass
-
 class MatrixMultiply(BinaryOperator):
     pass
+
+class BinaryIntegerOperator(BinaryOperator):
+    lhs = Node(formalType=IntegerType)
+    rhs = Node(formalType=IntegerType)
 
 class IntegerDivide(BinaryOperator):
     pass
 
 class IntegerModulus(BinaryOperator):
-    pass
-
-class Power(BinaryOperator):
     pass
 
 class RelationalOperator(BinaryOperator):
@@ -584,34 +594,31 @@ class Eor(BinaryOperator):
 
 class AbsFunc(AstNode):
     factor = Node()
-    #type = TypeOf(factor)
 
 class EndValue(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
     expression = Node()
 
 class ExtValue(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
     channel = Node()
 
 class HimemValue(AstNode):
-    type = IntegerType
-    pass
+    formal_type = TypeOption(IntegerType)
 
 class LomemValue(AstNode):
-    type = IntegerType
-    pass
+    formal_type = TypeOption(IntegerType)
 
 class PageValue(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
     pass
 
 class TimeValue(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
     pass
 
 class TimeStrValue(AstNode):
-    type = StringType
+    formal_type = TypeOption(StringType)
     pass
 
 class PtrValue(AstNode):
@@ -619,235 +626,246 @@ class PtrValue(AstNode):
 
 class MidStrLValue(AstNode):
     target = Node()
-    position = Node(type=IntegerType)
-    length = Node(type=IntegerType)
+    position = Node(formalType=IntegerType)
+    length = Node(formalType=IntegerType)
     
 class RightStrLValue(AstNode):
     target = Node()
-    length = Node(type=IntegerType)
+    length = Node(formalType=IntegerType)
 
 class LeftStrLValue(AstNode):
     target = Node()
-    length = Node(type=IntegerType)
+    length = Node(formalType=IntegerType)
     
 class AcsFunc(AstNode):
-    type = FloatType
+    formal_type = TypeOption(FloatType)
     factor = Node()
 
 class AdvalFunc(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
     factor = Node()
 
 class AscFunc(AstNode):
-    type = IntegerType
-    factor = Node(type=StringType)
+    formal_type = TypeOption(IntegerType)
+    factor = Node(formalType=StringType)
 
 class AsnFunc(AstNode):
-    type = FloatType
+    formal_type = TypeOption(FloatType)
     factor = Node()
 
 class AtnFunc(AstNode):
-    type = FloatType
+    formal_type = TypeOption(FloatType)
     factor = Node()
 
 class BeatFunc(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
 
 class BeatsFunc(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
 
 class BgetFunc(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
     channel = Node()
 
 class ChrStrFunc(AstNode):
-    type = StringType
+    formal_type = TypeOption(StringType)
     factor = Node()
 
 class CosFunc(AstNode):
-    type = FloatType
+    formal_type = TypeOption(FloatType)
     radians = Node()
 
 class CountFunc(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
 
 class DegFunc(AstNode):
-    type = FloatType
-    radians = Node(type=NumericType)
+    formal_type = TypeOption(FloatType)
+    radians = Node(formalType=NumericType)
 
 class DimensionsFunc(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
     array = Node()
 
 class DimensionSizeFunc(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
     array = Node()
-    dimension = Node(type=IntegerType)
+    dimension = Node(formalType=IntegerType)
 
 class EofFunc(AstNode):
-    type = IntegerType
-    channel = Node(type=ChannelType)
+    formal_type = TypeOption(IntegerType)
+    channel = Node(formalType=ChannelType)
 
 class ErlFunc(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
 
 class ErrFunc(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
 
 class ExpFunc(AstNode):
-    type = FloatType
-    factor = Node(type=NumericType)
+    formal_type = TypeOption(FloatType)
+    factor = Node(formalType=NumericType)
 
 class FalseFunc(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
 
 class GetFunc(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
 
 class GetStrFunc(AstNode):
-    type = StringType
+    formal_type = TypeOption(StringType)
 
 class GetStrFileFunc(AstNode):
-    type = StringType
-    channel = Node(type=ChannelType)
+    formal_type = TypeOption(StringType)
+    channel = Node(formalType=ChannelType)
 
 class InkeyFunc(AstNode):
-    type = IntegerType
-    factor = Node(type = IntegerType)
+    formal_type = TypeOption(IntegerType)
+    factor = Node(formalType=IntegerType)
 
 class InkeyStrFunc(AstNode):
-    type = StringType
-    factor = Node(type=IntegerType)
+    formal_type = TypeOption(StringType)
+    factor = Node(formalType=IntegerType)
 
 class IntFunc(AstNode):
-    type = IntegerType
-    factor = Node(type=NumericType)
+    formal_type = TypeOption(IntegerType)
+    factor = Node(formalType=NumericType)
 
 class LeftStrFunc(AstNode):
-    type = StringType
+    formal_type = TypeOption(StringType)
     source = Node()
-    length = Node(type=IntegerType)
+    length = Node(formalType=IntegerType)
 
 class LenFunc(AstNode):
-    type = IntegerType
-    factor = Node(type=StringType)
+    formal_type = TypeOption(IntegerType)
+    factor = Node(formalType=StringType)
 
 class LnFunc(AstNode):
-    type = FloatType
-    factor = Node(type=NumericType)
+    formal_type = TypeOption(FloatType)
+    factor = Node(formalType=NumericType)
 
 class LogFunc(AstNode):
-    type = FloatType
-    factor = Node(type=NumericType)
+    formal_type = TypeOption(FloatType)
+    factor = Node(formalType=NumericType)
 
 class MidStrFunc(AstNode):
-    type = StringType
+    formal_type = TypeOption(StringType)
     source   = Node()
-    position = Node(type=IntegerType)
-    length   = Node(type=IntegerType)
+    position = Node(formalType=IntegerType)
+    length   = Node(formalType=IntegerType)
     
 class ModeFunc(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
 
 class OpeninFunc(AstNode):
-    type = ChannelType
-    filename = Node(type=StringType)
+    formal_type = TypeOption(ChannelType)
+    filename = Node(formalType=StringType)
 
 class OpenoutFunc(AstNode):
-    type = ChannelType
-    filename = Node(type=StringType)
+    formal_type = TypeOption(ChannelType)
+    filename = Node(formalType=StringType)
 
 class OpenupFunc(AstNode):
-    type = ChannelType
-    filename = Node(type=StringType)
+    formal_type = TypeOption(ChannelType)
+    filename = Node(formalType=StringType)
 
 class PosFunc(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
 
 class PiFunc(AstNode):
-    type = FloatType
+    formal_type = TypeOption(FloatType)
 
 class PointFunc(AstNode):
-    type = IntegerType
-    x_coord = Node(type=IntegerType)
-    y_coord = Node(type=IntegerType)
+    formal_type = TypeOption(IntegerType)
+    x_coord = Node(formalType=IntegerType)
+    y_coord = Node(formalType=IntegerType)
 
 class RadFunc(AstNode):
-    type = FloatType
-    degrees = Node(type=NumericType)
+    formal_type = TypeOption(FloatType)
+    degrees = Node(formalType=NumericType)
 
 class RightStrFunc(AstNode):
-    type = StringType
+    formal_type = TypeOption(StringType)
     source = Node()
-    length = Node(type=IntegerType)
+    length = Node(formalType=IntegerType)
 
 class RndFunc(AstNode):
-    type = NumericType
-    option = Node(type=IntegerType)
+    formal_type = TypeOption(NumericType)
+    option = Node(formalType=IntegerType)
 
 class SinFunc(AstNode):
-    type = FloatType
-    radians = Node(type=NumericType)
+    formal_type = TypeOption(FloatType)
+    radians = Node(formalType=NumericType)
 
 class SgnFunc(AstNode):
-    type = IntegerType
-    factor = Node(type=NumericType)
+    formal_type = TypeOption(IntegerType)
+    factor = Node(formalType=NumericType)
 
 class SqrFunc(AstNode):
-    type = FloatType
-    factor = Node(type=NumericType)
+    formal_type = TypeOption(FloatType)
+    factor = Node(formalType=NumericType)
 
 class StrStringFunc(AstNode):
-    type = StringType
+    formal_type = TypeOption(StringType)
     base   = IntegerOption(10)
-    factor = Node(type=NumericType)
+    factor = Node(formalType=NumericType)
 
 class Sum(AstNode):
-    type = IntegerType
-    array = Node(type=ArrayType)
+    formal_type = TypeOption(IntegerType)
+    array = Node(formalType=ArrayType)
 
 class SumLenFunc(AstNode):
-    type = IntegerType
-    array = Node(type=ArrayType)
+    formal_type = TypeOption(IntegerType)
+    array = Node(formalType=ArrayType)
 
 class TanFunc(AstNode):
-    type = FloatType
-    factor = Node(type=NumericType)
+    formal_type = TypeOption(FloatType)
+    factor = Node(formalType=NumericType)
 
 class TempoFunc(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
 
 class TintFunc(AstNode):
-    type = IntegerType
-    xCoord = Node(type=IntegerType)
-    yCoord = Node(type=IntegerType)
+    formal_type = TypeOption(IntegerType)
+    xCoord = Node(formalType=IntegerType)
+    yCoord = Node(formalType=IntegerType)
     
 class TopFunc(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
 
 class TrueFunc(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
 
 class ValFunc(AstNode):
-    type = NumericType
-    factor = Node(type=StringType)
+    formal_type = TypeOption(NumericType)
+    factor = Node(formalType=StringType)
 
 class VposFunc(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
 
 class WidthFunc(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
 
 class LiteralString(AstNode):
-    type = StringType
+    formal_type = TypeOption(StringType)
     value = StringOption()
 
 class LiteralInteger(AstNode):
-    type = IntegerType
+    formal_type = TypeOption(IntegerType)
     value = IntegerOption()
 
 class LiteralFloat(AstNode):
-    type = FloatType
+    formal_type = TypeOption(FloatType)
     value = FloatOption()
 
+# Implicit AST nodes
+class Concatenate(AstNode):
+    formal_type = TypeOption(StringType)
+    lhs = Node(formalType=StringType)
+    rhs = Node(formalType=StringType)
 
+class Cast(AstNode):
+    "Implict Conversion"
+    source_type = TypeOption()
+    target_type = TypeOption()
+    value = Node()
+    

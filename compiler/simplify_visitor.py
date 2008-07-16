@@ -2,7 +2,8 @@
 
 from utility import camelCaseToUnderscores
 from visitor import Visitor
-
+from node import *
+from options import *
 
 class SimplifyStatementListVisitor(Visitor):
     """
@@ -52,7 +53,7 @@ class SimplificationVisitor(Visitor):
             statement.parent = statement_list
             self.visit(statement)
             
-        statement_list.parent.child_infos["statements"] = []
+        statement_list.parent.child_infos["statements"] = statement_list.child_infos["statements"]
         assert hasattr(statement_list, "statements")
         statement_list.parent.statements = statement_list.statements
                         
@@ -74,7 +75,7 @@ class SimplificationVisitor(Visitor):
             
     def visitCase(self, case):
         "Remove the WhenClauseList level from the AST"
-        case.child_infos["when_clauses"] = []
+        case.child_infos["when_clauses"] = case.whenClauses.child_infos["clauses"]
         case.whenClauses = case.whenClauses.clauses
         for clause in case.whenClauses:
             clause.parent = case
@@ -140,6 +141,5 @@ class SimplificationVisitor(Visitor):
                 item.parent = node.parent
                 item.parent_property = node.parent_property
         assert hasattr(node.parent, node.parent_property)
-        # TODO: Wrong case of parent_property on next line?
-        node.parent.child_infos[camelCaseToUnderscores(node.parent_property)] = []
+        node.parent.child_infos[camelCaseToUnderscores(node.parent_property)] = node.child_infos[list_property]
         setattr(node.parent, node.parent_property, getattr(node, list_property))

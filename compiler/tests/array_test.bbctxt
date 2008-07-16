@@ -1,21 +1,26 @@
-A(A(X)) = 7
-foo$(0) = "FRED"
-name$(0,0,0) = "JIM"
-a(100*(SINRADangle+1))=a(100*(SINRADangle+1))+increment
-a(100*(SINRADangle+1)) += increment
-A() = (3*n%)
-REM Next line does not work
-A() = 3 + n%()
-a() = 1,2,3,4
-b() = 6,5,4,3,2,1
-A() = A() + (n%*n%)
-A() = A() - m%
-B() = A() * 6
-B() = B() / n%
-A() += n%*n%
-A() -= m%
-A() = A() + B()
-C() = A().B()
-a() = b()*b()
-a() = a()+c()
+A() = 3 + n()
+
+REM A(A(X)) = 7
+REM foo$(0) = "FRED"
+REM name$(0,0,0) = "JIM"
+REM a(100*(SINRADangle+1))=a(100*(SINRADangle+1))+increment
+REM a(100*(SINRADangle+1)) += increment
+REM A() = (3*n%)
+REM A(3, 2) = 54
+REM A(3, 4, 2) = 63
+REM A(a%, b%, c%)= A(e%, f%, g%)
+REM a() = 1,2,3,4
+REM b() = 6,5,4,3,2,1
+REM A() = A() + (n%*n%)
+REM A() = A() - m%
+REM B() = A() * 6
+REM B() = B() / n%
+REM A() += n%*n%
+REM A() -= m%
+REM A() = A() + B()
+REM C() = A().B()
+REM a() = b()*b()
+REM a() = a()+c()
+
+
 

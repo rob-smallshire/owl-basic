@@ -1,5 +1,14 @@
+# TODO: Need to be able to build type expressions
+# TODO: Need support for Constant Types
+
 class Type(object):
-    pass
+    
+    @classmethod
+    def isA(cls, other_type):
+        """
+        True if other_type is compatible with the self type 
+        """
+        return issubclass(othertype, cls)
 
 class VoidType(Type):
     pass

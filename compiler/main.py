@@ -12,6 +12,9 @@ import ply.yacc as yacc
 import bbc_lexer
 import bbc_grammar
 import xml_visitor
+import parent_visitor
+import simplify_visitor
+import typecheck_visitor
 
 #from errors import warning
 
@@ -95,6 +98,10 @@ if __name__ == '__main__':
     yacc.yacc(module=bbc_grammar, debug = 1)
     
     parse_tree = yacc.parse(data)
+    
+    parse_tree.accept(parent_visitor.ParentVisitor())
+    parse_tree.accept(simplify_visitor.SimplificationVisitor())
+    parse_tree.accept(typecheck_visitor.TypecheckVisitor())
         
     if options.use_clr:
         output_filename = filename + ".xml"
@@ -103,9 +110,7 @@ if __name__ == '__main__':
     
     # Structural analysis
     #flatten(parse_tree)
-    #assignLineNumbers(parse_tree)
     #assignIds(parse_tree)
-    #buildSymbolTable(parse_tree)
     #correlateForNext(parse_tree)
     #correlateRepeatUntil(parse_tree)
     #correlateWhileEndwhile(parse_tree)
@@ -113,6 +118,7 @@ if __name__ == '__main__':
     #correlateDefFnEndFn(parse_tree)
     #resolveGotoGosub(parse_tree)
     #splitBasicBlock(parse_tree)
+    #buildSymbolTable(parse_tree)
     
     # Type checking and casting
     #determineTypes(parse_tree)

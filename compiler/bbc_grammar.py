@@ -95,12 +95,6 @@ def p_statement(p):
                  | read_stmt
                  | restore_stmt    PAGE 69 BBCBASIC.PDF - RESTORE +offset???
                  | trace_stmt'''
-
-# All statements
-def p_any_stmt_body(p):
-    '''any_stmt_body : stmt_body
-                     | lone_stmt_body'''
-    p[0] = p[1]
     
 # Statements which must appear alone on
 # their own line
@@ -996,12 +990,12 @@ def p_factor(p):
               | expr_group
               | expr_function
               | indexer
-              | QUERY expr %prec UQUERY
-              | PLING expr %prec UPLING
-              | PIPE expr %prec UPIPE
-              | DOLLAR expr %prec UDOLLAR
-              | PLUS expr %prec UPLUS
-              | MINUS expr %prec UMINUS'''
+              | QUERY factor %prec UQUERY
+              | PLING factor %prec UPLING
+              | PIPE factor %prec UPIPE
+              | DOLLAR factor %prec UDOLLAR
+              | PLUS factor %prec UPLUS
+              | MINUS factor %prec UMINUS'''
     if len(p) == 2:
         p[0] = p[1]
     elif len(p) == 3:
@@ -1066,8 +1060,8 @@ def p_expr(p):
             | expr AND expr
             | expr OR expr
             | expr EOR expr
-            | variable QUERY expr
-            | variable PLING expr'''
+            | variable QUERY factor
+            | variable PLING factor'''
     if len(p) == 2:
         p[0] = p[1]
     elif len(p) == 4:
@@ -1701,18 +1695,18 @@ def p_array_expr(p):
         p[0] = p[1]
     elif len(p) == 3:
         if p[1] == '-':
-            p[0] = UnaryMinus(expression = p[2])
+            p[0] = ArrayUnaryMinus(expression = p[2])
         p[0].lineNum = p.lineno(1)
     elif len(p) == 4:
         print "array_expr : %s %s %s" % (p[1], p[2], p[3])
         if p[2] == '+':
-            p[0] = Plus(lhs = p[1], rhs = p[3])
+            p[0] = ArrayPlus(lhs = p[1], rhs = p[3])
         elif p[2] == '-':
-            p[0] = Minus(lhs = p[1], rhs = p[3])
+            p[0] = ArrayMinus(lhs = p[1], rhs = p[3])
         elif p[2] == '*':
-            p[0] = Multiply(lhs = p[1], rhs = p[3])
+            p[0] = ArrayMultiply(lhs = p[1], rhs = p[3])
         elif p[2] == '/':
-            p[0] = Divide(lhs = p[1], rhs = p[3])
+            p[0] = ArrayDivide(lhs = p[1], rhs = p[3])
         elif p[2] == '.':
             p[0] = MatrixMultiply(lhs = p[1], rhs = p[3])
         p[0].lineNum = p.lineno(2)
