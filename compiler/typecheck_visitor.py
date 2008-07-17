@@ -3,6 +3,7 @@
 from visitor import Visitor
 from errors import *
 from utility import underscoresToCamelCase
+from bbc_types import *
 
 class TypecheckVisitor(Visitor):
     """
@@ -122,7 +123,26 @@ class TypecheckVisitor(Visitor):
         else:
             message = "Cannot raise %s by %s" % (divide.lhs.ActualType, divide.rhs.ActualType)
             self.typeMismatch(divide, message)
-                    
+    
+    def visitVariable(self, variable):
+        # Decode the variable name sigil into the actual type
+        # The sigils are one of [$%&~]
+        print variable.identifier
+        variable.actualType = self.identifierToType(variable.identifier)
+        print variable.actualType
+        
+    def identifierToType(self, identifier):
+        sigil = identifier[-1]
+        if sigil == '$':
+            return StringType
+        elif sigil == '%':
+            return IntegerType
+        elif sigil == '&':
+            return ByteType
+        elif sigil == '~':
+            return ReferenceType
+        return FloatType 
+            
     def checkSignature(self, node):
         """
         Check the actualType of each child node against the formalType of each
@@ -154,7 +174,7 @@ class TypecheckVisitor(Visitor):
         if formal_type is not None: # None types do not need to be checked
             if actual_type is not None:
                 if not actual_type.isA(formal_type):
-                    message = "%s of %s is incompatible with supplied parameter of type %s" % (info.description, node.description, actual_type)
+                    message = "%s of %s is incompatible with supplied parameter of type %s" % (info.description, node.description, actual_type.__doc__)
                     self.typeMismatch(node, message)
                     return False
             else:

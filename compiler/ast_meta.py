@@ -1,7 +1,7 @@
 import re
 import sys
 
-from utility import underscoresToCamelCase
+from utility import underscoresToCamelCase, hasprop
 from node import *
 from options import *
 from bbc_types import *
@@ -60,7 +60,8 @@ class AstMeta(type):
                return self._children[info_name]
            def _setProperty(self, value, info_name=info_name):
                self._children[info_name] = value
-           setattr(cls, property_name, property(_getProperty, _setProperty))
+           if not hasprop(cls, property_name):
+               setattr(cls, property_name, property(_getProperty, _setProperty))
                         
         for info_name in removal:
             delattr(cls, info_name)
@@ -88,7 +89,8 @@ class AstMeta(type):
                return self._children[info_name]
            def _setProperty(self, value, info_name=info_name):
                self._children[info_name] = value
-           setattr(cls, property_name, property(_getProperty, _setProperty))
+           if not hasprop(cls, property_name):
+               setattr(cls, property_name, property(_getProperty, _setProperty))
                         
         for info_name in removal:
             delattr(cls, info_name)
@@ -117,7 +119,7 @@ class AstMeta(type):
                return self._options[info_name]
            def _setProperty(self, value, info_name=info_name):
                self._options[info_name] = value
-           if not hasattr(cls, property_name):
+           if not hasprop(cls, property_name):
                setattr(cls, property_name, property(_getProperty, _setProperty))
                         
         for info_name in removal:
@@ -135,7 +137,7 @@ class AstMeta(type):
         obj = type.__call__(cls, *args)
                 
         for kwarg in kwargs:
-            if hasattr(cls, kwarg): # TODO: How to we test this? and isinstance(cls.__dict__[kwarg], property):
+            if hasprop(cls, kwarg):
                 setattr(obj, kwarg, kwargs[kwarg])
             else:
                 raise AttributeError("No such property initialiser as '%s' on '%s'" % (kwarg, cls.__name__))

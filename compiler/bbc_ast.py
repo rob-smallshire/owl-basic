@@ -419,7 +419,7 @@ class Variable(AstNode):
     identifier = StringOption()
 
 class Array(AstNode):
-    identifer = StringOption()
+    identifier = StringOption()
 
 class Indexer(AstNode):
     identifier = StringOption()
@@ -846,15 +846,15 @@ class WidthFunc(AstNode):
     formal_type = TypeOption(IntegerType)
 
 class LiteralString(AstNode):
-    formal_type = TypeOption(StringType)
+    actual_type = TypeOption(StringType)
     value = StringOption()
 
 class LiteralInteger(AstNode):
-    formal_type = TypeOption(IntegerType)
+    actual_type = TypeOption(IntegerType)
     value = IntegerOption()
 
 class LiteralFloat(AstNode):
-    formal_type = TypeOption(FloatType)
+    actual_type = TypeOption(FloatType)
     value = FloatOption()
 
 # Implicit AST nodes
@@ -865,6 +865,7 @@ class Concatenate(AstNode):
 
 class Cast(AstNode):
     "Implict Conversion"
+    foo = StringOption()
     source_type = TypeOption()
     target_type = TypeOption()
     value = Node()

@@ -55,7 +55,13 @@ class XmlVisitor(Visitor):
     
     def childAttribute(self, name, value):
         self.writer.WriteStartAttribute(name)
-        self.writer.WriteString(str(value))
+        if isinstance(value, type):
+            if hasattr(value, '__doc__'):
+                self.writer.WriteString(value.__doc__)
+            else:
+                self.writer.WriteString(value.__name__)
+        else:
+            self.writer.WriteString(str(value))
         self.writer.WriteEndAttribute()
 
     def visitAstNode(self, node):
