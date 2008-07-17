@@ -35,6 +35,15 @@ class XmlVisitor(Visitor):
             self.visit(node)
         self.writer.WriteEndElement()
     
+    def childNodeElement(self, name, node):
+        self.writer.WriteStartElement(name)
+        self.childAttribute("formal_type", node.formalType)
+        if node is None:
+            self.childNoneElement()
+        else:
+            self.visit(node)
+        self.writer.WriteEndElement()
+    
     def childListElement(self, name, nodes):
         self.writer.WriteStartElement(name)
         for node in nodes:
@@ -73,6 +82,6 @@ class XmlVisitor(Visitor):
             if isinstance(child, list):
                 self.childListElement(name, child)
             else:    
-                self.childElement(name, child)
+                self.childNodeElement(name, child)
         self.endElement()
         
