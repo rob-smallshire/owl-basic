@@ -127,9 +127,7 @@ class TypecheckVisitor(Visitor):
     def visitVariable(self, variable):
         # Decode the variable name sigil into the actual type
         # The sigils are one of [$%&~]
-        print variable.identifier
         variable.actualType = self.identifierToType(variable.identifier)
-        print variable.actualType
         
     def identifierToType(self, identifier):
         sigil = identifier[-1]
@@ -141,6 +139,18 @@ class TypecheckVisitor(Visitor):
             return ByteType
         elif sigil == '~':
             return ReferenceType
+        elif sigil == '(':
+            sigil = identifer[-2:-1]
+            if sigil == '$':
+                return StringArrayType
+            elif sigil == '%':
+                return IntegerArrayType
+            elif sigil == '&':
+                return ByteArrayType
+            elif sigil == '~':
+                return ReferenceArrayType
+            else:
+                return FloatArrayType
         return FloatType 
             
     def checkSignature(self, node):
