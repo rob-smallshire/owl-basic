@@ -521,7 +521,6 @@ def p_assignment(p):
         p[0] = Assignment(lValue = p[2], rValue = p[4])
         p[0].lineNum = p.lineno(1)
     elif len(p) == 4:
-        print "assignment : %s %s %s" % (p[1], p[2], p[3])
         p[0] = Assignment(lValue = p[1], rValue = p[3])
         p[0].lineNum = p.lineno(2)
     
@@ -1065,7 +1064,6 @@ def p_expr(p):
     if len(p) == 2:
         p[0] = p[1]
     elif len(p) == 4:
-        print "expr : %s %s %s" % (p[1], p[2], p[3])
         if p[2] == '+':
             p[0] = Plus(lhs = p[1], rhs = p[3])
         elif p[2] == '-':
@@ -1355,7 +1353,7 @@ def p_count_func(p):
 
 def p_deg_func(p):
     'deg_func : DEG factor %prec FUNCTION'
-    p[0] = DegFunc(radians = p[2])
+    p[0] = DegFunc(factor = p[2])
     p[0].lineNum = p.lineno(1)
 
 def p_dim_func(p):
@@ -1505,7 +1503,7 @@ def p_point_func(p):
     
 def p_rad_func(p):
     'rad_func : RAD factor %prec FUNCTION'
-    p[0] = RadFunc(degrees = p[2])
+    p[0] = RadFunc(factor = p[2])
     p[0].lineNum = p.lineno(1)
 
 def p_right_str_func(p):
@@ -1530,7 +1528,7 @@ def p_rnd_func(p):
     
 def p_sin_func(p):
     'sin_func : SIN factor %prec FUNCTION'
-    p[0] = SinFunc(radians = p[2])
+    p[0] = SinFunc(factor = p[2])
     p[0].lineNum = p.lineno(1)
     
 def p_sgn_func(p):
@@ -1661,13 +1659,11 @@ def p_nullable_variable_list(p):
 # Array support
 def p_array(p):
     'array : ARRAYID_LPAREN RPAREN'
-    print "array : %s %s" % (p[1], p[2])
     p[0] = Array(identifer = p[1])
     p[0].lineNum = p.lineno(1)
     
 def p_indexer(p):
     'indexer : ARRAYID_LPAREN expr_list RPAREN'
-    print 'indexer : %s %s %s' % (p[1], p[2], p[3])
     p[0] = Indexer(identifier = p[1], indices = p[2])
     p[0].lineNum = p.lineno(1)
     
@@ -1698,7 +1694,6 @@ def p_array_expr(p):
             p[0] = ArrayUnaryMinus(expression = p[2])
         p[0].lineNum = p.lineno(1)
     elif len(p) == 4:
-        print "array_expr : %s %s %s" % (p[1], p[2], p[3])
         if p[2] == '+':
             p[0] = ArrayPlus(lhs = p[1], rhs = p[3])
         elif p[2] == '-':

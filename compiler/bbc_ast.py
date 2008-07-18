@@ -4,10 +4,11 @@ import logging
 import re
 
 from ast_meta import *
+from bbc_types import *
     
 class AstStatement(AstNode):
     formal_type = TypeOption(VoidType)
-    pass
+    actual_type = formal_type
         
 class Program(AstNode):
     #formal_type = TypeOption(None)
@@ -231,7 +232,7 @@ class Install(AstStatement):
     filename = Node(formalType=StringType)
 
 class If(AstStatement):
-    condition = Node()
+    condition = Node(formalType=IntegerType)
     true_clause = Node()
     false_clause = Node()
 
@@ -245,6 +246,7 @@ class Move(AstStatement):
     relative = BoolOption(False)
 
 class Mode(AstStatement):
+    "MODE"
     number         = Node(formalType=IntegerType)
     width          = Node(formalType=IntegerType)
     height         = Node(formalType=IntegerType)
@@ -252,12 +254,14 @@ class Mode(AstStatement):
     frame_rate     = Node(formalType=IntegerType) 
 
 class Mouse(AstStatement):
+    "MOUSE"
     x_coord = Node(formalType=IntegerType)
     y_coord = Node(formalType=IntegerType)
     buttons = Node(formalType=IntegerType)
     time    = Node(formalType=IntegerType)
 
 class MouseStep(AstStatement):
+    "MOUSE STEP"
     x_coeff = Node(formalType=NumericType)
     y_coeff = Node(formalType=NumericType)
 
@@ -268,6 +272,7 @@ class MouseColour(AstStatement):
     blue = Node(formalType=IntegerType)
 
 class MousePosition(AstStatement):
+    "MOUSE TO"
     x_coord     = Node(formalType=IntegerType)
     y_coord     = Node(formalType=IntegerType)
     moveMouse   = BoolOption(True)
@@ -277,6 +282,7 @@ class MousePointer(AstStatement):
     shape       = Node(formalType=IntegerType)
     
 class MouseRectangleOn(AstStatement):
+    "MOUSE RECTANGLE"
     left   = Node(formalType=IntegerType)
     bottom = Node(formalType=IntegerType)
     right  = Node(formalType=IntegerType)
@@ -286,19 +292,24 @@ class MouseRectangleOff(AstStatement):
     pass
 
 class On(AstStatement):
+    "ON"
     pass
 
 class Off(AstStatement):
+    "OFF"
     pass
 
 class Origin(AstStatement):
+    "ORIGIN"
     x_coord = Node(formalType=IntegerType)
     y_coord = Node(formalType=IntegerType)
 
 class Oscli(AstStatement):
+    "OSCLI"
     command = Node(formalType=StringType)
 
 class Plot(AstStatement):
+    "PLOT"
     mode    = Node(formalType=IntegerType)
     x_coord = Node(formalType=IntegerType)
     y_coord = Node(formalType=IntegerType)
@@ -441,20 +452,20 @@ class VduList(AstNode):
         self.items.append(item)
 
 class VduItem(AstNode):
-    item = Node()
+    item = Node(formalType=IntegerType)
     length = IntegerOption()
     
 class While(AstStatement):
-    condition = Node()
+    condition = Node(formalType=IntegerType)
 
 class Endwhile(AstStatement):
     pass
 
 class Width(AstStatement):
-    line_width = Node()
+    line_width = Node(formalType=IntegerType)
 
 class Wait(AstStatement):
-    centiseconds = Node()
+    centiseconds = Node(formalType=IntegerType)
 
 class ExpressionList(AstNode):
     expressions = [Node()]
@@ -487,41 +498,44 @@ class UnaryMinus(AstNode):
     expression = Node(formalType=NumericType)
 
 class UnaryByteIndirection(AstNode):
-    formal_type = TypeOption(IntegerType)
-    expression = Node(formalType=IntegerType)
+    formal_type = TypeOption(ByteType)
+    expression = Node(formalType=AddressType)
 
 class UnaryIntegerIndirection(AstNode):
     formal_type = TypeOption(IntegerType)
-    expression = Node(formalType=IntegerType)
+    expression = Node(formalType=AddressType)
 
 class UnaryStringIndirection(AstNode):
     formal_type = TypeOption(StringType)
-    expression = Node(formalType=IntegerType)
+    expression = Node(formalType=AddressType)
 
 class UnaryFloatIndirection(AstNode):
     formal_type = TypeOption(FloatType)
-    expression = Node(formalType=IntegerType)
+    expression = Node(formalType=AddressType)
 
 class DyadicByteIndirection(AstNode):
-    formal_type = TypeOption(IntegerType)
-    base   = Node()
-    offset = Node()
+    formal_type = TypeOption(ByteType)
+    base   = Node(formalType=AddressType)
+    offset = Node(formalType=IntegerType)
 
 class DyadicIntegerIndirection(AstNode):
     formal_type = TypeOption(IntegerType)
-    base  = Node()
-    offset = Node()
+    base  = Node(formalType=AddressType)
+    offset = Node(formalType=IntegerType)
 
 class Not(AstNode):
     formal_type = TypeOption(IntegerType)
-    factor = Node()
+    factor = Node(formalType=IntegerType)
 
-class BinaryNumericOperator(AstNode):
+class BinaryOperator(AstNode):
+    lhs = Node()
+    rhs = Node()
+
+class BinaryNumericOperator(BinaryOperator):
     lhs = Node(formalType=NumericType)
     rhs = Node(formalType=NumericType)
 
 class Plus(BinaryNumericOperator):
-    "add"
     pass
 
 class Minus(BinaryNumericOperator):
@@ -536,10 +550,6 @@ class Divide(BinaryNumericOperator):
 class Power(BinaryNumericOperator):
     pass
 
-class BinaryOperator(AstNode):
-    lhs = Node()
-    rhs = Node()
-
 class MatrixMultiply(BinaryOperator):
     pass
 
@@ -547,10 +557,10 @@ class BinaryIntegerOperator(BinaryOperator):
     lhs = Node(formalType=IntegerType)
     rhs = Node(formalType=IntegerType)
 
-class IntegerDivide(BinaryOperator):
+class IntegerDivide(BinaryIntegerOperator):
     pass
 
-class IntegerModulus(BinaryOperator):
+class IntegerModulus(BinaryIntegerOperator):
     pass
 
 class RelationalOperator(BinaryOperator):
@@ -574,26 +584,26 @@ class GreaterThan(RelationalOperator):
 class GreaterThanEqual(RelationalOperator):
     pass
 
-class ShiftLeft(BinaryOperator):
+class ShiftLeft(BinaryIntegerOperator):
     pass
 
-class ShiftRight(BinaryOperator):
+class ShiftRight(BinaryIntegerOperator):
     pass
 
-class ShiftRightUnsigned(BinaryOperator):
+class ShiftRightUnsigned(BinaryIntegerOperator):
     pass
 
-class And(BinaryOperator):
+class And(BinaryIntegerOperator):
     pass
 
-class Or(BinaryOperator):
+class Or(BinaryIntegerOperator):
     pass
 
-class Eor(BinaryOperator):
+class Eor(BinaryIntegerOperator):
     pass
 
 class AbsFunc(AstNode):
-    factor = Node()
+    factor = Node(formalType=NumericType)
 
 class EndValue(AstNode):
     formal_type = TypeOption(IntegerType)
@@ -622,40 +632,42 @@ class TimeStrValue(AstNode):
     pass
 
 class PtrValue(AstNode):
-    channel = Node()
+    channel = Node(formalType=ChannelType)
 
 class MidStrLValue(AstNode):
-    target = Node()
+    target = Node(nodeType=Variable, formalType=StringType) # TODO: This needs to constrained by the type checker to be a Variable : nodeType=Variable ?
     position = Node(formalType=IntegerType)
     length = Node(formalType=IntegerType)
     
 class RightStrLValue(AstNode):
-    target = Node()
+    target = Node(nodeType=Variable, formalType=StringType) # TODO: This needs to constrained by the type checker to be a Variable : nodeType=Variable ?
     length = Node(formalType=IntegerType)
 
 class LeftStrLValue(AstNode):
-    target = Node()
+    target = Node(nodeType=Variable, formalType=StringType)
     length = Node(formalType=IntegerType)
-    
-class AcsFunc(AstNode):
+
+class UnaryNumericFunc(AstNode):
     formal_type = TypeOption(FloatType)
-    factor = Node()
+    actual_type = formal_type
+    factor = Node(formalType=NumericType, description="The parameter")    
+    
+class AcsFunc(UnaryNumericFunc):
+    "ACS"
 
 class AdvalFunc(AstNode):
     formal_type = TypeOption(IntegerType)
-    factor = Node()
+    factor = Node(formalType=IntegerType)
 
 class AscFunc(AstNode):
     formal_type = TypeOption(IntegerType)
     factor = Node(formalType=StringType)
+    
+class AsnFunc(UnaryNumericFunc):
+    "ASN"
 
-class AsnFunc(AstNode):
-    formal_type = TypeOption(FloatType)
-    factor = Node()
-
-class AtnFunc(AstNode):
-    formal_type = TypeOption(FloatType)
-    factor = Node()
+class AtnFunc(UnaryNumericFunc):
+    "ATN"
 
 class BeatFunc(AstNode):
     formal_type = TypeOption(IntegerType)
@@ -669,26 +681,24 @@ class BgetFunc(AstNode):
 
 class ChrStrFunc(AstNode):
     formal_type = TypeOption(StringType)
-    factor = Node()
+    factor = Node(formalType=IntegerType)
 
-class CosFunc(AstNode):
-    formal_type = TypeOption(FloatType)
-    radians = Node()
+class CosFunc(UnaryNumericFunc):
+    "COS"
 
 class CountFunc(AstNode):
     formal_type = TypeOption(IntegerType)
 
-class DegFunc(AstNode):
-    formal_type = TypeOption(FloatType)
-    radians = Node(formalType=NumericType)
+class DegFunc(UnaryNumericFunc):
+    "DEG"
 
 class DimensionsFunc(AstNode):
     formal_type = TypeOption(IntegerType)
-    array = Node()
+    array = Node(nodeType=Variable, formalType=Array)
 
 class DimensionSizeFunc(AstNode):
     formal_type = TypeOption(IntegerType)
-    array = Node()
+    array = Node(nodeType=Variable, formalType=Array)
     dimension = Node(formalType=IntegerType)
 
 class EofFunc(AstNode):
@@ -701,9 +711,8 @@ class ErlFunc(AstNode):
 class ErrFunc(AstNode):
     formal_type = TypeOption(IntegerType)
 
-class ExpFunc(AstNode):
-    formal_type = TypeOption(FloatType)
-    factor = Node(formalType=NumericType)
+class ExpFunc(UnaryNumericFunc):
+    "EXP"
 
 class FalseFunc(AstNode):
     formal_type = TypeOption(IntegerType)
@@ -739,13 +748,11 @@ class LenFunc(AstNode):
     formal_type = TypeOption(IntegerType)
     factor = Node(formalType=StringType)
 
-class LnFunc(AstNode):
-    formal_type = TypeOption(FloatType)
-    factor = Node(formalType=NumericType)
+class LnFunc(UnaryNumericFunc):
+    "LN"
 
-class LogFunc(AstNode):
-    formal_type = TypeOption(FloatType)
-    factor = Node(formalType=NumericType)
+class LogFunc(UnaryNumericFunc):
+    "LOG"
 
 class MidStrFunc(AstNode):
     formal_type = TypeOption(StringType)
@@ -773,36 +780,34 @@ class PosFunc(AstNode):
 
 class PiFunc(AstNode):
     formal_type = TypeOption(FloatType)
+    actual_type = formal_type
 
 class PointFunc(AstNode):
     formal_type = TypeOption(IntegerType)
     x_coord = Node(formalType=IntegerType)
     y_coord = Node(formalType=IntegerType)
 
-class RadFunc(AstNode):
-    formal_type = TypeOption(FloatType)
-    degrees = Node(formalType=NumericType)
+class RadFunc(UnaryNumericFunc):
+    "RAD"
 
 class RightStrFunc(AstNode):
     formal_type = TypeOption(StringType)
-    source = Node()
+    source = Node(formalType=StringType)
     length = Node(formalType=IntegerType)
 
 class RndFunc(AstNode):
     formal_type = TypeOption(NumericType)
     option = Node(formalType=IntegerType)
 
-class SinFunc(AstNode):
-    formal_type = TypeOption(FloatType)
-    radians = Node(formalType=NumericType)
+class SinFunc(UnaryNumericFunc):
+    "SIN"
 
 class SgnFunc(AstNode):
     formal_type = TypeOption(IntegerType)
     factor = Node(formalType=NumericType)
 
-class SqrFunc(AstNode):
-    formal_type = TypeOption(FloatType)
-    factor = Node(formalType=NumericType)
+class SqrFunc(UnaryNumericFunc):
+    "SQR"
 
 class StrStringFunc(AstNode):
     formal_type = TypeOption(StringType)
@@ -817,9 +822,8 @@ class SumLenFunc(AstNode):
     formal_type = TypeOption(IntegerType)
     array = Node(formalType=ArrayType)
 
-class TanFunc(AstNode):
-    formal_type = TypeOption(FloatType)
-    factor = Node(formalType=NumericType)
+class TanFunc(UnaryNumericFunc):
+    "TAN"
 
 class TempoFunc(AstNode):
     formal_type = TypeOption(IntegerType)
@@ -865,7 +869,6 @@ class Concatenate(AstNode):
 
 class Cast(AstNode):
     "Implict Conversion"
-    foo = StringOption()
     source_type = TypeOption()
     target_type = TypeOption()
     value = Node()

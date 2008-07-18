@@ -1,0 +1,13 @@
+tan_u = SIN(u) / COS(u)
+sin_u = COS(PI / 2 - u)
+cos_a_cos_b = (COS(a + b) + COS(a - b)) / 2
+one = SIN(x) * SIN(x) + COS(x) * COS (x)
+sin_x_plus_y = SIN(x) * COS(y) + COS(x) * SIN(y)
+sin_x_minus_y = SIN(x) * COS(y) - COS(x) * SIN(y)
+cos_x_plus_y = COS(x) * COS(y) - SIN(x) * SIN(y)
+cos_y_minus_x = COS(x) * COS(y) + SIN(x) * SIN(y)
+tan_x_plus_y = (TAN(x) + TAN(y)) / (1 - TAN(x) * TAN(y))
+tan_x_minus_y = (TAN(x) - TAN(y)) / (1 + TAN(x) * TAN(y))
+sin_2_x = 2 * SIN(x) * COS(x)
+
+

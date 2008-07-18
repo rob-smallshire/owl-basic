@@ -187,7 +187,21 @@ class AstNode(object):
                 for subchild in child:
                     f(subchild)
             else:
-                f(child) 
+                f(child)
+                
+    def findChild(self, search_child):
+        """Locate a child node within this AstNode. Returns a tuple containing
+           (property_name, index) where index may be None for non-indexable properties. Returns None
+           if the child is not found"""
+        for name, child in self.children.items():
+            if isinstance(child, list):
+                for index, subchild in enumerate(child):
+                    if subchild is search_child:
+                        return (underscoresToCamelCase(name), index)
+            else:
+                if child is search_child:
+                   return (underscoresToCamelCase(name), None)
+        return (None, None) 
     
     def _getDescription(self):
         return self._description or self.__class__.__name__

@@ -37,7 +37,10 @@ class XmlVisitor(Visitor):
     
     def childNodeElement(self, name, node):
         self.writer.WriteStartElement(name)
-        self.childAttribute("formal_type", node.formalType)
+        if node.parent.child_infos[name].nodeType is not None:
+            self.childAttribute("node_type", node.parent.child_infos[name].nodeType)
+        if node.parent.child_infos[name].formalType is not None:
+            self.childAttribute("formal_type", node.parent.child_infos[name].formalType)
         if node is None:
             self.childNoneElement()
         else:

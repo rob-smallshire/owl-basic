@@ -4,6 +4,7 @@ from visitor import Visitor
 from errors import *
 from utility import underscoresToCamelCase
 from bbc_types import *
+from bbc_ast import Cast
 
 class TypecheckVisitor(Visitor):
     """
@@ -16,6 +17,20 @@ class TypecheckVisitor(Visitor):
         node.forEachChild(self.visit)
         self.checkSignature(node)
     
+    def visitAssignment(self, assignment):
+        # Determine the actual type of the lValue and rValue
+        self.visit(assignment.lValue)
+        self.visit(assignment.rValue)
+        
+        if assignment.rValue.actualType.isA(assignment.lValue.actualType):
+            if assignment.rValue.actualType != assignment.lValue.actualType:
+                self.insertCast(node.rValue, source=assignment.rValue.actualType, target=assignment.lValue.actualType)
+        elif assignment.lValue.actualType.isA(NumericType) and assignment.rValue.actualType.isA(NumericType):
+            self.insertCast(assignment.rValue, assignment.rValue.actualType, assignment.lValue.actualType)
+        else:
+            message = "Cannot assign %s to %s" % (assignment.rValue.actualType, assignment.lValue.actualType)
+            self.typeMismatch(assignment, message)
+            
     def visitPlus(self, plus):
         # Determine the actual type of sub-expressions
         self.visit(plus.lhs)
@@ -35,15 +50,15 @@ class TypecheckVisitor(Visitor):
         
         # Compute the type of the plus expression
         if plus.lhs.actualType == plus.rhs.actualType:
-            plus.actualType = lhs.actualType
+            plus.actualType = plus.lhs.actualType
         elif plus.lhs.actualType == IntegerType and plus.rhs.actualType == FloatType:
-            plus.lhs = Cast(sourceType = IntegerType, targetType = FloatType, value = plus.lhs)
+            self.insertCast(plus.lhs, source=IntegerType, target=FloatType)
             plus.actualType = FloatType
         elif plus.lhs.actualType == FloatType and plus.rhs.actualType == IntegerType:
-            plus.rhs = Cast(sourceType = IntegerType, targetType = FloatType, value = plus.rhs)
+            self.insertCast(plus.rhs, source=IntegerType, target=FloatType)
             plus.actualType = FloatType
         else:
-            message = "Cannot add %s to %s" % (plus.lhs.ActualType, plus.rhs.ActualType)
+            message = "Cannot add %s to %s" % (plus.lhs.actualType, plus.rhs.actualType)
             self.typeMismatch(plus, message)
     
     def visitMinus(self, minus):
@@ -56,15 +71,15 @@ class TypecheckVisitor(Visitor):
         
         # Compute the type of the minus expression
         if minus.lhs.actualType == minus.rhs.actualType:
-            minus.actualType = lhs.actualType
+            minus.actualType = minus.lhs.actualType
         elif minus.lhs.actualType == IntegerType and minus.rhs.actualType == FloatType:
-            minus.lhs = Cast(sourceType = IntegerType, targetType = FloatType, value = minus.lhs)
+            self.insertCast(minus.lhs, source=IntegerType, target=FloatType)
             minus.actualType = FloatType
         elif minus.lhs.actualType == FloatType and minus.rhs.actualType == IntegerType:
-            minus.rhs = Cast(sourceType = IntegerType, targetType = FloatType, value = minus.rhs)
+            self.insertCast(minus.rhs, source=IntegerType, target=FloatType)
             minus.actualType = FloatType
         else:
-            message = "Cannot subtract %s from %s" % (minus.rhs.ActualType, minus.lhs.ActualType)
+            message = "Cannot subtract %s from %s" % (minus.rhs.actualType, minus.lhs.actualType)
             self.typeMismatch(minus, message)
     
     def visitMultiply(self, multiply):
@@ -77,15 +92,15 @@ class TypecheckVisitor(Visitor):
         
         # Compute the type of the multiply expression
         if multiply.lhs.actualType == multiply.rhs.actualType:
-            multiply.actualType = lhs.actualType
+            multiply.actualType = multiply.lhs.actualType
         elif multiply.lhs.actualType == IntegerType and multiply.rhs.actualType == FloatType:
-            multiply.lhs = Cast(sourceType = IntegerType, targetType = FloatType, value = multiply.lhs)
+            self.insertCast(multiply.lhs, source=IntegerType, target=FloatType)
             multiply.actualType = FloatType
         elif multiply.lhs.actualType == FloatType and multiply.rhs.actualType == IntegerType:
-            multiply.rhs = Cast(sourceType = IntegerType, targetType = FloatType, value = multiply.rhs)
+            self.insertCast(multiply.rhs, source=IntegerType, target=FloatType)
             multiply.actualType = FloatType
         else:
-            message = "Cannot multiply %s by %s" % (multiply.lhs.ActualType, multiply.rhs.ActualType)
+            message = "Cannot multiply %s by %s" % (multiply.lhs.actualType, multiply.rhs.actualType)
             self.typeMismatch(multiply, message)
     
     def visitDivide(self, divide):
@@ -96,16 +111,13 @@ class TypecheckVisitor(Visitor):
         if not self.checkSignature(divide):
             return
         
-        # Compute the type of the multiply expression
-        divide.actualType = FloatType
-        if divide.lhs.actualType == IntegerType and divide.rhs.actualType == FloatType:
-            divide.lhs = Cast(sourceType = IntegerType, targetType = FloatType, value = divide.lhs)
-        elif divide.lhs.actualType == FloatType and divide.rhs.actualType == IntegerType:
-            divide.rhs = Cast(sourceType = IntegerType, targetType = FloatType, value = divide.rhs)
-        else:
-            message = "Cannot divide %s by %s" % (divide.lhs.ActualType, divide.rhs.ActualType)
-            self.typeMismatch(divide, message)
-    
+        # Compute the type of the division expression
+        divide.actualType = FloatType            
+        if divide.lhs.actualType == IntegerType:
+            self.insertCast(divide.lhs, source=IntegerType, target=FloatType)
+        if divide.rhs.actualType == IntegerType:
+            self.insertCast(divide.rhs, source=IntegerType, target=FloatType)
+            
     def visitPower(self, power):
         # Determine the actual type of sub-expressions
         self.visit(divide.lhs)
@@ -117,17 +129,40 @@ class TypecheckVisitor(Visitor):
         # Compute the actual type of the power expression
         power.actualType = FloatType
         if power.lhs.actualType == IntegerType and power.rhs.actualType == FloatType:
-            power.lhs = Cast(sourceType = IntegerType, targetType = FloatType, value = power.lhs)
+            self.insertCast(power.lhs, source=IntegerType, target=FloatType)
         elif power.lhs.actualType == FloatType and power.rhs.actualType == IntegerType:
-            power.rhs = Cast(sourceType = IntegerType, targetType = FloatType, value = power.rhs)
+            self.insertCast(power.rhs, source=IntegerType, target=FloatType)
         else:
-            message = "Cannot raise %s by %s" % (divide.lhs.ActualType, divide.rhs.ActualType)
+            message = "Cannot raise %s by %s" % (divide.lhs.actualType, divide.rhs.actualType)
             self.typeMismatch(divide, message)
     
     def visitVariable(self, variable):
         # Decode the variable name sigil into the actual type
         # The sigils are one of [$%&~]
         variable.actualType = self.identifierToType(variable.identifier)
+         
+    def visitUnaryNumericFunc(self, func):
+        self.visit(func.factor)
+        if not self.checkSignature(func):
+            return
+        if func.factor.actualType is IntegerType:
+            self.insertCast(func.factor, source=func.factor.actualType, target=FloatType)
+        
+    def insertCast(self, child, source, target):
+        """Wrap the supplied node is a Cast node from source type to target type"""
+        if source is FloatType and target is IntegerType:
+            message = "of %s to %s, possible loss of data" % (source, target)
+            self.castWarning(child, message)
+        
+        parent = child.parent
+        parent_property = child.parent_property
+        child_name, index = parent.findChild(child) # TODO: Give parent_property as a hint
+        cast = Cast(sourceType=source, targetType=target, value=child)
+        cast.parent = parent
+        cast.parent_property = parent_property
+        cast.value.parent = cast
+        cast.value.parent_property = "value"
+        setattr(parent, parent_property, cast)
         
     def identifierToType(self, identifier):
         sigil = identifier[-1]
@@ -200,5 +235,9 @@ class TypecheckVisitor(Visitor):
     def typeMismatch(self, node, message):
         message = "Type mismatch: %s at line %d" % (message, node.lineNum)
         error(message)
+        
+    def castWarning(self, node, message):
+        message = "Implicit conversion %s at line %d" % (message, node.lineNum)
+        warning(message)
         
         

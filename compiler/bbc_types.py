@@ -5,11 +5,11 @@ class Type(object):
     "Type"
     
     @classmethod
-    def isA(cls, other_type):
+    def isA(cls, base_type):
         """
         True if other_type is compatible with the self type 
         """
-        return issubclass(other_type, cls)
+        return issubclass(cls, base_type)
 
 class VoidType(Type):
     "Void"
@@ -30,6 +30,10 @@ class NumericType(ScalarType):
     
 class IntegerType(NumericType):
     "Integer"
+    pass
+
+class AddressType(NumericType):
+    "Address"
     pass
 
 # TODO: Could have a Channel type which is subclass of the Integer type
