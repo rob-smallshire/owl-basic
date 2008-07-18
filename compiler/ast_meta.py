@@ -208,6 +208,12 @@ class AstNode(object):
     
     description = property(_getDescription)
     
+    def setProperty(self, value, property_name, index=None):
+        if index is not None:
+            getattr(self, property_name)[index] = value
+        else:
+            setattr(self, property_name, value)
+    
     def accept(self, visitor):
         """
         Accept method for visitor pattern.

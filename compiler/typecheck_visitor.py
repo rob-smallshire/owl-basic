@@ -17,6 +17,13 @@ class TypecheckVisitor(Visitor):
         node.forEachChild(self.visit)
         self.checkSignature(node)
     
+    def visitAstStatement(self, statement):
+        "Generic visitor for simple statements"
+        statement.forEachChild(self.visit)      
+        if not self.checkSignature(statement):
+            return
+        self.insertNumericCasts(statement)
+        
     def visitAssignment(self, assignment):
         # Determine the actual type of the lValue and rValue
         self.visit(assignment.lValue)
@@ -41,7 +48,7 @@ class TypecheckVisitor(Visitor):
             concat = Concatenate(lhs = plus.lhs, rhs = plus.rhs)
             concat.lhs.parent = concat
             concat.rhs.parent = concat
-            setattr(plus.parent, plus.parent_property, concat)
+            plus.parent.setProperty(concat, plus.parent_property)
             self.visit(concat)
             return
         
@@ -147,22 +154,40 @@ class TypecheckVisitor(Visitor):
             return
         if func.factor.actualType is IntegerType:
             self.insertCast(func.factor, source=func.factor.actualType, target=FloatType)
-        
+    
+    def insertNumericCasts(self, node):
+        """
+        Where an Integer value is being passed to a parameter of Numeric type,
+        insert an Integer->Float cast operation.
+        """
+        for name, child in node.children.items():
+            if isinstance(child, list):
+                formal_type = node.child_infos[name][0].formalType
+                if formal_type.isA(NumericType):
+                    for subchild in child:
+                        self.insertCast(subchild, source=subchild.actualType, target=formal_type)
+            else:
+                formal_type = node.child_infos[name].formalType
+                if formal_type.isA(NumericType):
+                    self.insertCast(child, source=child.actualType, target=formal_type)
+            
     def insertCast(self, child, source, target):
         """Wrap the supplied node is a Cast node from source type to target type"""
         if source is FloatType and target is IntegerType:
-            message = "of %s to %s, possible loss of data" % (source, target)
+            message = "of %s to %s, possible loss of data" % (source.__doc__, target.__doc__)
             self.castWarning(child, message)
         
         parent = child.parent
         parent_property = child.parent_property
-        child_name, index = parent.findChild(child) # TODO: Give parent_property as a hint
+        parent_index    = child.parent_index
         cast = Cast(sourceType=source, targetType=target, value=child)
         cast.parent = parent
         cast.parent_property = parent_property
+        cast.parent_index = parent_index
         cast.value.parent = cast
         cast.value.parent_property = "value"
-        setattr(parent, parent_property, cast)
+        cast.value.parent_index = None
+        parent.setProperty(cast, parent_property, parent_index)
         
     def identifierToType(self, identifier):
         sigil = identifier[-1]
@@ -218,7 +243,8 @@ class TypecheckVisitor(Visitor):
         
         if formal_type is not None: # None types do not need to be checked
             if actual_type is not None:
-                if not actual_type.isA(formal_type):
+                if not actual_type.isConvertibleTo(formal_type):
+                    print "%s not convertible to %s" % (actual_type, formal_type)
                     message = "%s of %s is incompatible with supplied parameter of type %s" % (info.description, node.description, actual_type.__doc__)
                     self.typeMismatch(node, message)
                     return False

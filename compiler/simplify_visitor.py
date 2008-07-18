@@ -140,6 +140,7 @@ class SimplificationVisitor(Visitor):
             if item is not None:
                 item.parent = node.parent
                 item.parent_property = node.parent_property
+                item.parent_index = node.parent_index
         assert hasattr(node.parent, node.parent_property)
         node.parent.child_infos[camelCaseToUnderscores(node.parent_property)] = node.child_infos[list_property]
-        setattr(node.parent, node.parent_property, getattr(node, list_property))
+        node.parent.setProperty(getattr(node, list_property), node.parent_property)

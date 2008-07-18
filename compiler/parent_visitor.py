@@ -17,14 +17,14 @@ class ParentVisitor(Visitor):
         # TODO: Inlining the forEachChild function works, however...
         for name, child in node.children.items():
             if isinstance(child, list):
-                for subchild in child:
-                    self._setParent(node, name, subchild)
+                for index, subchild in enumerate(child):
+                    self._setParent(node, subchild, name, index)
             else:
-                self._setParent(node, name, child) 
+                self._setParent(node, child, name) 
         
         node.forEachChild(self.visit)
         
-    def _setParent(self, parent, name, node):
+    def _setParent(self, parent, node, name, index=None):
         """
         Given a reference to the parent, and the name of a child value, create the
         property name and attach it, together with the reference to the parent, to
@@ -33,6 +33,7 @@ class ParentVisitor(Visitor):
         if node is not None:
             if hasattr(node, "parent"):
                 assert node.parent is parent
-            node.parent_property = underscoresToCamelCase(name) # The property through which the parent can be accessed.
             node.parent = parent
+            node.parent_property = underscoresToCamelCase(name) # The property through which the parent can be accessed.
+            node.parent_index = index
         

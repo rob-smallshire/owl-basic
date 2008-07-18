@@ -11,6 +11,10 @@ class Type(object):
         """
         return issubclass(cls, base_type)
 
+    @classmethod
+    def isConvertibleTo(cls, other_type):
+        return cls.isA(other_type)
+
 class VoidType(Type):
     "Void"
     pass
@@ -30,7 +34,10 @@ class NumericType(ScalarType):
     
 class IntegerType(NumericType):
     "Integer"
-    pass
+    
+    @classmethod
+    def isConvertibleTo(cls, other_type):
+        return cls.isA(other_type) or (other_type is FloatType)
 
 class AddressType(NumericType):
     "Address"
@@ -46,7 +53,10 @@ class ChannelType(IntegerType):
 
 class FloatType(NumericType):
     "Float"
-    pass
+    
+    @classmethod
+    def isConvertibleTo(cls, other_type):
+        return cls.isA(other_type) or (other_type is IntegerType)
 
 class StringType(ScalarType):
     "String"
