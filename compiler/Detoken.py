@@ -73,9 +73,9 @@ def Detokenise(line):
         else: # Normal token, plus any extra characters
             if token[0] == '\x8d': # line number following token
                 #decode the 24 bit line number
-                return str(DecodeLineNo(token[1:])) 
+                return str(DecodeLineNo(token[1:]))
             else:
-                return tokens[tokenOrd-127] + token[1:]
+                return tokens[tokenOrd-127]+ ' ' + token[1:]
 
     # This regular expression is essentially:
     # (Optional extension token) followed by
@@ -103,18 +103,40 @@ def ReadLines(data):
     """Returns a list of [line number, tokenised line] from a binary
        BBC BASIC V format file."""
     lines = []
+    start=0
+    lineNumberToken = True
+    skipTokens = False
     while True:
         if len(data) < 2:
-            raise Exception, "Bad program"
-        if data[0] != '\r':
-            print `data`
-            raise Exception, "Bad program"
-        if data[1] == '\xff':
             break
-        lineNumber, length = struct.unpack('>hB', data[1:4])
-        lineData = data[4:length]
+        if data[0:2] == '\r\xff': # EOF marker
+            break
+        if len(data) < 4:
+            break
+        # check if this line starts with a tokenised line number
+        # TODO sometimes gets it wrong with plane text
+        tmplen = ord(data[3])
+        if tmplen > len(data):
+            tmplen=len(data)-1
+        if (data[tmplen] == '\r') & (data[0] == '\r'):
+            #line seems to have a line number
+            lineNumber, length = struct.unpack('>hB', data[1:4])
+            lineData = data[4:length]
+        else:
+            lineNumber = 0
+            length = data.find('\r',1)
+            #need a regular expression to determine what CRLF has been used
+            # start need to ne the position of the first char that is not CR or LF
+            start=0
+            if (data[0] == '\r') | (data[0] =='\n'):
+                start == 1
+                if (data[1] == '\r') | (data[1] == '\n'):
+                    start = 2
+            lineData = data[start:length]
+        print len(lineData),start
         lines.append([lineNumber, lineData])
         data = data[length:]
+
     return lines
 
 def Decode(data, output):
@@ -133,8 +155,10 @@ if __name__ == "__main__":
     optlist, args = getopt.getopt(sys.argv[1:], '')
     if len(args) != 2:
         print "Usage: %s INPUT OUTPUT" % sys.argv[0]
-        sys.exit(1)
+        #sys.exit(1)
     entireFile = open(args[0], 'rb').read()
     output = open(args[1], 'w')
+    #entireFile = open('calc.txt', 'rb').read()
+    #output = open('calc1.txt', 'w')
     Decode(entireFile, output)
     output.close()
