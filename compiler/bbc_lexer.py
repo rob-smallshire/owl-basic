@@ -808,7 +808,7 @@ def t_ARRAYID_LPAREN(t):
 # TODO: Cannot use @ symbol at the beginning of
 #       any variable name. @% is a special variable
 def t_ID(t):
-    r'([a-zA-Z_`][a-zA-Z_0-9`]*[$%&~]?)|@%'
+    r'([@a-zA-Z_`][a-zA-Z_0-9`]*[$%&~]?)'
     # TODO: Hash doesn't seem to work in here.
     # Ampersand (byte) and hash (64-bit numeric ?int) suffixes only apply to BBC BASIC for Windows
     # Tilde suffix only applies to OWL BASIC - object reference
