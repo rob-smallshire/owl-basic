@@ -147,6 +147,23 @@ class TypecheckVisitor(Visitor):
         # Decode the variable name sigil into the actual type
         # The sigils are one of [$%&~]
         variable.actualType = self.identifierToType(variable.identifier)
+    
+    def visitUnaryNumericOperator(self, operator):
+        self.visit(operator.factor)
+        if not self.checkSignature(operator):
+            return
+        operator.actualType = operator.factor.actualType
+        
+    def visitBinaryIntegerOperator(self, operator):
+        self.visit(operator.lhs)
+        self.visit(operator.rhs)
+        if not self.checkSignature(operator):
+            return
+        # TODO: Pull this out into a function
+        if operator.lhs.actualType is not IntegerType:
+            self.insertCast(operator.lhs, source=operator.lhs.actualType, target=IntegerType)
+        if operator.rhs.actualType is not IntegerType:
+            self.insertCast(operator.rhs, source=operator.rhs.actualType, target=IntegerType)
          
     def visitUnaryNumericFunc(self, func):
         self.visit(func.factor)
@@ -161,6 +178,13 @@ class TypecheckVisitor(Visitor):
             return
         if func.factor.actualType is IntegerType:
             elideNode(func)
+    
+    def visitNot(self, operator):
+        self.visit(operator.factor)
+        if not self.checkSignature(operator):
+            return
+        if operator.factor.actualType is not IntegerType:
+            self.insertCast(operator.factor, source-operator.factor.actualType, target=IntegerType)
     
     def insertNumericCasts(self, node):
         """

@@ -44,11 +44,11 @@ class DimList(AstNode):
     def append(self, node):
         self.items.append(node)
 
-class AllocateArray(AstNode):
+class AllocateArray(AstStatement):
     identifier = StringOption()
     dimensions = Node()
     
-class AllocateBlock(AstNode):
+class AllocateBlock(AstStatement):
     identifier = Node()
     size       = Node(formalType=IntegerType)
 
@@ -491,11 +491,14 @@ class FormalArgument(AstNode):
 class FormalReferenceArgument(AstNode):
     argument = Node()
 
-class UnaryPlus(AstNode):
-    expression = Node(formalType=NumericType)
-
-class UnaryMinus(AstNode):
-    expression = Node(formalType=NumericType)
+class UnaryNumericOperator(AstNode):
+    factor = Node(formalType=NumericType)
+    
+class UnaryPlus(UnaryNumericOperator):
+    pass
+    
+class UnaryMinus(UnaryNumericOperator):
+    pass
 
 class UnaryByteIndirection(AstNode):
     formal_type = TypeOption(ByteType)
@@ -524,7 +527,9 @@ class DyadicIntegerIndirection(AstNode):
     offset = Node(formalType=IntegerType)
 
 class Not(AstNode):
+    "NOT"
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
     factor = Node(formalType=IntegerType)
 
 class BinaryOperator(AstNode):
@@ -554,6 +559,8 @@ class MatrixMultiply(BinaryOperator):
     pass
 
 class BinaryIntegerOperator(BinaryOperator):
+    formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
     lhs = Node(formalType=IntegerType)
     rhs = Node(formalType=IntegerType)
 
@@ -564,7 +571,8 @@ class IntegerModulus(BinaryIntegerOperator):
     pass
 
 class RelationalOperator(BinaryOperator):
-    pass
+    formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
 
 class Equal(RelationalOperator):
     pass
@@ -594,12 +602,15 @@ class ShiftRightUnsigned(BinaryIntegerOperator):
     pass
 
 class And(BinaryIntegerOperator):
+    "AND"
     pass
 
 class Or(BinaryIntegerOperator):
+    "OR"
     pass
 
 class Eor(BinaryIntegerOperator):
+    "EOR"
     pass
 
 class AbsFunc(AstNode):

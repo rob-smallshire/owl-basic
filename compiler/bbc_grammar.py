@@ -999,9 +999,9 @@ def p_factor(p):
         p[0] = p[1]
     elif len(p) == 3:
         if p[1] == '+':
-            p[0] = UnaryPlus(expression = p[2])
+            p[0] = UnaryPlus(factor = p[2])
         elif p[1] == '-':
-            p[0] = UnaryMinus(expression = p[2])
+            p[0] = UnaryMinus(factor = p[2])
         elif p[1] == '?':
             p[0] = UnaryByteIndirection(expression = p[2])
         elif p[1] == '!':
