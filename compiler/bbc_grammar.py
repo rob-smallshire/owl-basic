@@ -989,10 +989,6 @@ def p_factor(p):
               | expr_group
               | expr_function
               | indexer
-              | QUERY factor %prec UQUERY
-              | PLING factor %prec UPLING
-              | PIPE factor %prec UPIPE
-              | DOLLAR factor %prec UDOLLAR
               | PLUS factor %prec UPLUS
               | MINUS factor %prec UMINUS'''
     if len(p) == 2:
@@ -1002,16 +998,23 @@ def p_factor(p):
             p[0] = UnaryPlus(factor = p[2])
         elif p[1] == '-':
             p[0] = UnaryMinus(factor = p[2])
-        elif p[1] == '?':
-            p[0] = UnaryByteIndirection(expression = p[2])
-        elif p[1] == '!':
-            p[0] = UnaryIntegerIndirection(expression = p[2])
-        elif p[1] == '$':
-            p[0] = UnaryStringIndirection(expression = p[2])
-        elif p[1] == '|':
-            p[0] = UnaryFloatIndirection(expression = p[2])
         p[0].lineNum = p.lineno(1)
-    
+
+def p_unary_indirection(p):
+    '''unary_indirection : QUERY factor %prec UQUERY
+                         | PLING factor %prec UPLING
+                         | PIPE factor %prec UPIPE
+                         | DOLLAR factor %prec UDOLLAR'''
+    if p[1] == '?':
+        p[0] = UnaryByteIndirection(expression = p[2])
+    elif p[1] == '!':
+        p[0] = UnaryIntegerIndirection(expression = p[2])
+    elif p[1] == '$':
+        p[0] = UnaryStringIndirection(expression = p[2])
+    elif p[1] == '|':
+        p[0] = UnaryFloatIndirection(expression = p[2])
+    p[0].lineNum = p.lineno(1)
+
 def p_expr_list(p):
     '''expr_list : expr
                  | expr_list COMMA expr'''
@@ -1059,8 +1062,7 @@ def p_expr(p):
             | expr AND expr
             | expr OR expr
             | expr EOR expr
-            | variable QUERY factor
-            | variable PLING factor'''
+            | dyadic_indirection'''
     if len(p) == 2:
         p[0] = p[1]
     elif len(p) == 4:
@@ -1096,13 +1098,6 @@ def p_expr(p):
             p[0] = ShiftRight(lhs = p[1], rhs = p[3])
         elif p[2] == '>>>':
             p[0] = ShiftRightUnsigned(lhs = p[1], rhs = p[3])
-        elif p[2] == '?':
-            # TODO: Ideally we would want to require that the LHS
-            #       of the dyadic indirection operators is a simple
-            #       variable.  Doesn't work yet, though.
-            p[0] = DyadicByteIndirection(base = p[1], offset = p[3])
-        elif p[2] == '!':
-            p[0] = DyanicIntegerIndirection(base = p[1], offset = p[3])
         elif p[2] == 'AND':
             p[0] = And(lhs = p[1], rhs = p[3])
         elif p[2] == 'OR':
@@ -1110,6 +1105,18 @@ def p_expr(p):
         elif p[2] == 'EOR':
             p[0] = Eor(lhs = p[1], rhs = p[3])
         p[0].lineNum = p.lineno(2)
+
+def p_dyadic_indirection(p):
+    """dyadic_indirection : variable QUERY factor
+                          | variable PLING factor"""
+    if p[2] == '?':
+        # TODO: Ideally we would want to require that the LHS
+        #       of the dyadic indirection operators is a simple
+        #       variable.  Doesn't work yet, though.
+        p[0] = DyadicByteIndirection(base = p[1], offset = p[3])
+    elif p[2] == '!':
+        p[0] = DyadicIntegerIndirection(base = p[1], offset = p[3])
+    p[0].lineNum = p.lineno(2)
     
 def p_expr_group(p):
     'expr_group : LPAREN expr RPAREN'
@@ -1127,7 +1134,9 @@ def p_lvalue(p):
               | pseudovariable
               | mid_str_lvalue
               | right_str_lvalue
-              | left_str_lvalue'''
+              | left_str_lvalue
+              | unary_indirection
+              | dyadic_indirection'''
     p[0] = p[1]
     
 def p_mid_str_lvalue(p):
