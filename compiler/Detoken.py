@@ -71,6 +71,7 @@ bb4wTokens=["AND","DIV","EOR","MOD","OR","ERROR","LINE","OFF",
         "SWAP","SYS","TINT","WAIT","INSTALL","","PRIVATE","BY","EXIT"]
 
 def Detokenise(line, decode):
+
     """Replace all tokens in the line 'line' with their ASCII equivalent."""
     # Internal function used as a callback to the regular expression
     # to replace tokens with their ASCII equivalents.
@@ -90,16 +91,19 @@ def Detokenise(line, decode):
                 #decode the 24 bit line number
                 return str(DecodeLineNo(token[1:]))
             else:
-                return tokens[tokenOrd-127] + token[1:]
+                return ' ' + tokens[tokenOrd-127] + token[1:]
     def ReplaceFuncBB4W(match):
-        token = match.groups()
-        token=token[0]
+        prefix= ' '
+        ext, token = match.groups()
+        # token=token[0]
         tokenOrd = ord(token[0])
+        if ext == ' ':
+            prefix=' '
         if token[0] == '\x8d': # line number following token
             #decode the 24 bit line number
             return str(DecodeLineNo(token[1:]))
         else:
-            return bb4wTokens[tokenOrd ^ 128] + token[1:]
+            return prefix + bb4wTokens[tokenOrd ^ 128] + token[1:]
 
     if decode ==2:
         # This uses BB4W encoding
@@ -112,7 +116,7 @@ def Detokenise(line, decode):
         # (any token 127-255)
         # OR
         # (any token 0-15)
-        return re.sub(r'(\xf4.*|\x8d[\x40-\x7f]{3}|[\x7f-\xff]|[\x00-\x0f])', ReplaceFuncBB4W, line)
+        return re.sub(r'([\x20])?(\xf4.*|\x8d[\x40-\x7f]{3}|[\x7f-\xff]|[\x00-\x0f])', ReplaceFuncBB4W, line)
     else:   
         # Acorn encoding
         # This regular expression is essentially:
