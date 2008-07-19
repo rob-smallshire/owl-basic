@@ -5,6 +5,7 @@ from errors import *
 from utility import underscoresToCamelCase
 from bbc_types import *
 from bbc_ast import Cast
+from ast_utils import elideNode
 
 class TypecheckVisitor(Visitor):
     """
@@ -26,14 +27,13 @@ class TypecheckVisitor(Visitor):
         
     def visitAssignment(self, assignment):
         # Determine the actual type of the lValue and rValue
+        
         self.visit(assignment.lValue)
         self.visit(assignment.rValue)
         
-        if assignment.rValue.actualType.isA(assignment.lValue.actualType):
-            if assignment.rValue.actualType != assignment.lValue.actualType:
-                self.insertCast(node.rValue, source=assignment.rValue.actualType, target=assignment.lValue.actualType)
-        elif assignment.lValue.actualType.isA(NumericType) and assignment.rValue.actualType.isA(NumericType):
-            self.insertCast(assignment.rValue, assignment.rValue.actualType, assignment.lValue.actualType)
+        if assignment.rValue.actualType.isConvertibleTo(assignment.lValue.actualType):
+            if assignment.rValue.actualType is not assignment.lValue.actualType:
+                self.insertCast(assignment.rValue, assignment.rValue.actualType, assignment.lValue.actualType)
         else:
             message = "Cannot assign %s to %s" % (assignment.rValue.actualType, assignment.lValue.actualType)
             self.typeMismatch(assignment, message)
@@ -154,6 +154,13 @@ class TypecheckVisitor(Visitor):
             return
         if func.factor.actualType is IntegerType:
             self.insertCast(func.factor, source=func.factor.actualType, target=FloatType)
+            
+    def visitIntFunc(self, func):
+        self.visit(func.factor)
+        if not self.checkSignature(func):
+            return
+        if func.factor.actualType is IntegerType:
+            elideNode(func)
     
     def insertNumericCasts(self, node):
         """

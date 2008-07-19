@@ -736,8 +736,10 @@ class InkeyStrFunc(AstNode):
     factor = Node(formalType=IntegerType)
 
 class IntFunc(AstNode):
+    "INT"
     formal_type = TypeOption(IntegerType)
-    factor = Node(formalType=NumericType)
+    actual_type = formal_type
+    factor = Node(formalType=FloatType)
 
 class LeftStrFunc(AstNode):
     formal_type = TypeOption(StringType)
