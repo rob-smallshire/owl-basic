@@ -160,13 +160,13 @@ class ReturnFromProcedure(AstStatement):
     pass
 
 class ForToStep(AstStatement):
-    identifer = Node()
-    first     = Node(formalType=NumericType)
-    last      = Node(formalType=NumericType)
-    step      = Node(formalType=NumericType)
+    identifier = Node()
+    first      = Node(formalType=NumericType)
+    last       = Node(formalType=NumericType)
+    step       = Node(formalType=NumericType)
 
 class Next(AstStatement):
-    identifers = Node()
+    identifiers = Node()
 
 class Draw(AstStatement):
     "DRAW"
@@ -662,6 +662,10 @@ class UnaryNumericFunc(AstNode):
     formal_type = TypeOption(FloatType)
     actual_type = formal_type
     factor = Node(formalType=NumericType, description="The parameter")    
+
+class UserFunc(AstNode):
+    name = StringOption()
+    actual_parameters = Node()
     
 class AcsFunc(UnaryNumericFunc):
     "ACS"

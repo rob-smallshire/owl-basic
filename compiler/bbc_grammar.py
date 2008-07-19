@@ -496,7 +496,7 @@ def p_for_stmt(p):
 # Rule for dealing with unmatched NEXT statements
 def p_next_stmt(p):
     '''next_stmt : NEXT nullable_variable_list'''
-    p[0] = Next(identifers = p[2])
+    p[0] = Next(identifiers = p[2])
     p[0].lineNum = p.lineno(1)
     
 def p_library_stmt(p):
@@ -796,7 +796,7 @@ def p_swap_stmt(p):
                  | SWAP array COMMA array'''
     #SWAP var1 COMMA var2
     #SWAP array1 COMMA array2
-    p[0] = Swap(identifer1 = p[2], identifier2 = p[4])
+    p[0] = Swap(identifier1 = p[2], identifier2 = p[4])
     p[0].lineNum = p.lineno(1)
     
 def p_sys_stmt(p):
@@ -1228,7 +1228,8 @@ def p_time_str_value(p):
                      | usr_func'''
 
 def p_expr_function(p):
-    '''expr_function : adval_func
+    '''expr_function : user_func
+                     | adval_func
                      | abs_func
                      | acs_func
                      | asc_func
@@ -1287,9 +1288,9 @@ def p_expr_function(p):
     p[0] = p[1]
     
 
-#def p_user_func(p):
-#    'user_func : FN ID LPAREN actual_arg_list RPAREN %prec FUNCTION'
-#    p[0] = UserFunc(p[2], p[3])
+def p_user_func(p):
+    'user_func : FN_ID LPAREN actual_arg_list RPAREN %prec FUNCTION'
+    p[0] = UserFunc(name = p[2], actualParameters = p[3])
 
 def p_abs_func(p):
     'abs_func : ABS factor %prec FUNCTION'
@@ -1659,7 +1660,7 @@ def p_nullable_variable_list(p):
 # Array support
 def p_array(p):
     'array : ARRAYID_LPAREN RPAREN'
-    p[0] = Array(identifer = p[1])
+    p[0] = Array(identifier = p[1])
     p[0].lineNum = p.lineno(1)
     
 def p_indexer(p):
