@@ -4,7 +4,7 @@ from visitor import Visitor
 from errors import *
 from utility import underscoresToCamelCase
 from bbc_types import *
-from bbc_ast import Cast
+from bbc_ast import Cast, Concatenate
 from ast_utils import elideNode
 
 class TypecheckVisitor(Visitor):
@@ -13,6 +13,14 @@ class TypecheckVisitor(Visitor):
     """
     def __init__(self):
         pass
+    
+    def visit(self, node):
+        "Override visit to allow safe traversal of lists"
+        if isinstance(node, list):
+            for elem in node:
+                self.visit(elem)
+        else:
+            super(TypecheckVisitor, self).visit(node)
     
     def visitAstNode(self, node):
         node.forEachChild(self.visit)
@@ -30,13 +38,27 @@ class TypecheckVisitor(Visitor):
         
         self.visit(assignment.lValue)
         self.visit(assignment.rValue)
-        
-        if assignment.rValue.actualType.isConvertibleTo(assignment.lValue.actualType):
-            if assignment.rValue.actualType is not assignment.lValue.actualType:
-                self.insertCast(assignment.rValue, assignment.rValue.actualType, assignment.lValue.actualType)
+        if isinstance(assignment.rValue, list):
+            # Deal with L-values which are lists
+            if assignment.lValue.actualType.isA(ArrayType):
+                for item in assignment.rValue:
+                    if item.actualType.isConvertibleTo(assignment.lValue.actualType._getElementType()):
+                        if item.actualType is not assignment.lValue.actualType._getElementType():
+                            self.insertCast(item, item.actualType, target=assignment.lValue.actualType._getElementType())
+                    else:
+                        message = "Cannot assign list item of type %s to elements of %s" % (item.actualType.__doc__, assignment.lValue.actualType.__doc__)
+                        self.typeMismatch(assignment, message)
+            else:
+                message = "List is only assignable to an array"
+                self.typeMismatch(assignment, message)
         else:
-            message = "Cannot assign %s to %s" % (assignment.rValue.actualType, assignment.lValue.actualType)
-            self.typeMismatch(assignment, message)
+            print assignment.rValue
+            if assignment.rValue.actualType.isConvertibleTo(assignment.lValue.actualType):
+                if assignment.rValue.actualType is not assignment.lValue.actualType:
+                    self.insertCast(assignment.rValue, assignment.rValue.actualType, assignment.lValue.actualType)
+            else:
+                message = "Cannot assign %s to %s" % (assignment.rValue.actualType, assignment.lValue.actualType)
+                self.typeMismatch(assignment, message)
             
     def visitPlus(self, plus):
         # Determine the actual type of sub-expressions
@@ -48,7 +70,7 @@ class TypecheckVisitor(Visitor):
             concat = Concatenate(lhs = plus.lhs, rhs = plus.rhs)
             concat.lhs.parent = concat
             concat.rhs.parent = concat
-            plus.parent.setProperty(concat, plus.parent_property)
+            plus.parent.setProperty(concat, plus.parent_property, plus.parent_index)
             self.visit(concat)
             return
         
@@ -143,6 +165,11 @@ class TypecheckVisitor(Visitor):
             message = "Cannot raise %s by %s" % (divide.lhs.actualType, divide.rhs.actualType)
             self.typeMismatch(divide, message)
     
+    def visitArray(self, array):
+        # Decode the variable name sigil into the actual type
+        # The sigils are one of [$%&~]
+        array.actualType = self.identifierToType(array.identifier)
+    
     def visitVariable(self, variable):
         # Decode the variable name sigil into the actual type
         # The sigils are one of [$%&~]
@@ -192,15 +219,22 @@ class TypecheckVisitor(Visitor):
         insert an Integer->Float cast operation.
         """
         for name, child in node.children.items():
-            if isinstance(child, list):
-                formal_type = node.child_infos[name][0].formalType
-                if formal_type.isA(NumericType):
-                    for subchild in child:
-                        self.insertCast(subchild, source=subchild.actualType, target=formal_type)
-            else:
-                formal_type = node.child_infos[name].formalType
-                if formal_type.isA(NumericType):
-                    self.insertCast(child, source=child.actualType, target=formal_type)
+            if child is not None:
+                if isinstance(child, list):
+                    formal_type = node.child_infos[name][0].formalType
+                    if formal_type is not None:
+                        if formal_type.isA(NumericType):
+                            for subchild in child:
+                                self.insertCast(subchild, source=subchild.actualType, target=formal_type)
+                        else:
+                            sys.stderr.write("Compiler construction: Missing formal type information on %s, %s\n" % (node, name))
+                else:
+                    formal_type = node.child_infos[name].formalType
+                    if formal_type is not None:
+                        if formal_type.isA(NumericType):
+                            self.insertCast(child, source=child.actualType, target=formal_type)
+                        else:
+                            sys.stderr.write("Compiler construction: Missing formal type information on %s, %s\n" % (node, name))
             
     def insertCast(self, child, source, target):
         """Wrap the supplied node is a Cast node from source type to target type"""
@@ -212,6 +246,10 @@ class TypecheckVisitor(Visitor):
         parent_property = child.parent_property
         parent_index    = child.parent_index
         cast = Cast(sourceType=source, targetType=target, value=child)
+        cast.lineNum = parent.lineNum
+        # TODO: Tidy up this redundancy!
+        cast.formalType = cast.targetType
+        cast.actualType = cast.formalType
         cast.parent = parent
         cast.parent_property = parent_property
         cast.parent_index = parent_index
@@ -231,7 +269,7 @@ class TypecheckVisitor(Visitor):
         elif sigil == '~':
             return ReferenceType
         elif sigil == '(':
-            sigil = identifer[-2:-1]
+            sigil = identifier[-2:-1]
             if sigil == '$':
                 return StringArrayType
             elif sigil == '%':
@@ -256,9 +294,11 @@ class TypecheckVisitor(Visitor):
             if isinstance(info, list):
                 info = info[0]
                 formal_type = info.formalType
-                for child_node in getattr(node, underscoresToCamelCase(name)):
-                    child_result = self.checkType(node, child_node, formal_type, info)
-                    result = result and child_result
+                child_nodes = getattr(node, underscoresToCamelCase(name))
+                if child_nodes is not None:
+                    for child_node in child_nodes:
+                        child_result = self.checkType(node, child_node, formal_type, info)
+                        result = result and child_result
             else:
                 formal_type = info.formalType
                 child_node = getattr(node, underscoresToCamelCase(name))
@@ -270,19 +310,18 @@ class TypecheckVisitor(Visitor):
         """
         Checks that child_node of node is of formal_type. 
         """
-        actual_type = child_node.actualType
-        
-        if formal_type is not None: # None types do not need to be checked
-            if actual_type is not None:
-                if not actual_type.isConvertibleTo(formal_type):
-                    print "%s not convertible to %s" % (actual_type, formal_type)
-                    message = "%s of %s is incompatible with supplied parameter of type %s" % (info.description, node.description, actual_type.__doc__)
-                    self.typeMismatch(node, message)
+        if child_node is not None:
+            actual_type = child_node.actualType
+            if formal_type is not None: # None types do not need to be checked
+                if actual_type is not None:
+                    if not actual_type.isConvertibleTo(formal_type):
+                        message = "%s of %s is incompatible with supplied parameter of type %s" % (info.description, node.description, actual_type.__doc__)
+                        self.typeMismatch(node, message)
+                        return False
+                else:
+                    message = "%s of %s has no type information" % (info.description, node.description)
+                    self.typeError(node, message)
                     return False
-            else:
-                message = "%s of %s has no type information" % (info.description, node.description)
-                self.typeError(node, message)
-                return False
         return True
     
     def typeError(self, node, message):

@@ -1,6 +1,6 @@
 # The Visitor base class
 
-class Visitor:
+class Visitor(object):
     """
     A base visitor class
     """

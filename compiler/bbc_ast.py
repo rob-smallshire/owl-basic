@@ -453,7 +453,7 @@ class VduList(AstNode):
 
 class VduItem(AstNode):
     item = Node(formalType=IntegerType)
-    length = IntegerOption()
+    length = IntegerOption(default=1)
     
 class While(AstStatement):
     condition = Node(formalType=IntegerType)
@@ -696,6 +696,7 @@ class BgetFunc(AstNode):
 
 class ChrStrFunc(AstNode):
     formal_type = TypeOption(StringType)
+    actual_type = formal_type
     factor = Node(formalType=IntegerType)
 
 class CosFunc(UnaryNumericFunc):
@@ -881,11 +882,13 @@ class LiteralFloat(AstNode):
 # Implicit AST nodes
 class Concatenate(AstNode):
     formal_type = TypeOption(StringType)
+    actual_type = formal_type
     lhs = Node(formalType=StringType)
     rhs = Node(formalType=StringType)
 
 class Cast(AstNode):
     "Implict Conversion"
+    formal_type = TypeOption()
     source_type = TypeOption()
     target_type = TypeOption()
     value = Node()

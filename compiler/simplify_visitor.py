@@ -50,8 +50,9 @@ class SimplificationVisitor(Visitor):
         sslv = SimplifyStatementListVisitor()
         sslv.visit(statement_list)
         statement_list.statements = sslv.accumulatedStatements
-        for statement in statement_list.statements:
+        for index, statement in enumerate(statement_list.statements):
             statement.parent = statement_list
+            statement.parent_index = index
             self.visit(statement)
             
         statement_list.parent.child_infos["statements"] = statement_list.child_infos["statements"]

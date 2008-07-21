@@ -42,6 +42,7 @@ if __name__ == '__main__':
     parser.add_option("-x", "--debug-lex", action='store_true', dest='debug_lex', default=False)
     parser.add_option("-l", "--line-numbers", action='store_true', dest="line_numbers", default=False)
     parser.add_option("-c", "--debug-no-clr", action='store_false', dest='use_clr', default=True)
+    parser.add_option("-t", "--debug-no-typecheck", action='store_false', dest='use_typecheck', default=True)
     
     (options, args) = parser.parse_args();
 
@@ -101,7 +102,9 @@ if __name__ == '__main__':
     
     parse_tree.accept(parent_visitor.ParentVisitor())
     parse_tree.accept(simplify_visitor.SimplificationVisitor())
-    parse_tree.accept(typecheck_visitor.TypecheckVisitor())
+    
+    if options.use_typecheck:
+        parse_tree.accept(typecheck_visitor.TypecheckVisitor())
         
     if options.use_clr:
         output_filename = filename + ".xml"

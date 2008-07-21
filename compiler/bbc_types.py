@@ -72,24 +72,28 @@ class BoxType(ScalarType):
 
 class ArrayType(Type):
     "Array"
-    pass
+    _element_type = None
+    
+    @classmethod
+    def _getElementType(cls):
+        return cls._element_type
+        
+    # TODO: Can't call this property on a class!    
+    elementType = property(_getElementType)
 
 class ByteArrayType(ArrayType):
     "Array[Byte]"
-    pass
+    _element_type = ByteType
 
 class IntegerArrayType(ArrayType):
     "Array[Integer]"
-    pass
+    _element_type = IntegerType
 
 class FloatArrayType(ArrayType):
     "Array[Float]"
-    pass
+    _element_type = FloatType
 
 class StringArrayType(ArrayType):
     "Array[String]"
-    pass
-
-
-
+    _element_type = StringType
     

@@ -1,4 +1,4 @@
-A() = 3 + n()
+REM A() = 3 + n() DOES NOT WORK
 
 REM A(A(X)) = 7
 REM foo$(0) = "FRED"
@@ -10,7 +10,7 @@ REM A(3, 2) = 54
 REM A(3, 4, 2) = 63
 REM A(a%, b%, c%)= A(e%, f%, g%)
 REM a() = 1,2,3,4
-REM b() = 6,5,4,3,2,1
+b() = 6,5,4,3,2,1
 REM A() = A() + (n%*n%)
 REM A() = A() - m%
 REM B() = A() * 6
