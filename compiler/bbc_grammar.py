@@ -425,13 +425,13 @@ def p_install_stmt(p):
 # GOTO statement
 def p_goto_stmt(p):
     '''goto_stmt : GOTO factor'''
-    p[0] = Goto(line = p[2])
+    p[0] = Goto(targetLogicalLine = p[2])
     p[0].lineNum = p.lineno(1)
     
 # GOSUB statement
 def p_gosub(p):
     '''gosub_stmt : GOSUB factor'''
-    p[0] = Gosub(line = p[2])
+    p[0] = Gosub(targetLogicalLine = p[2])
     p[0].lineNum = p.lineno(1)
     
 def p_return_stmt(p):

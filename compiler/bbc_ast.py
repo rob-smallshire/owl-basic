@@ -220,10 +220,10 @@ class Gcol(AstStatement):
     tint          = Node(formalType=IntegerType)
 
 class Goto(AstStatement):
-    line = Node(formalType=IntegerType)
+    target_logical_line = Node(formalType=IntegerType)
 
 class Gosub(AstStatement):
-    line = Node(formalType=IntegerType)
+    target_logical_line = Node(formalType=IntegerType)
 
 class Return(AstStatement):
     pass
