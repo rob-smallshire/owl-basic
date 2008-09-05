@@ -76,38 +76,47 @@ def Detokenise(line, decode):
     # Internal function used as a callback to the regular expression
     # to replace tokens with their ASCII equivalents.
     def ReplaceFunc(match):
-        ext, token = match.groups()
-        tokenOrd = ord(token[0])
-        if ext: # An extended opcode, CASE/WHILE/SYS etc
-            if ext == '\xc6':
-                return cfnTokens[tokenOrd-0x8e]
-            if ext == '\xc7':
-                return comTokens[tokenOrd-0x8e]
-            if ext == '\xc8':
-                return stmtTokens[tokenOrd-0x8e]
-            raise Exception, "Bad token"
-        else: # Normal token, plus any extra characters
+        if match.group().startswith('"'):
+            return match.group()
+        else:
+            prefix, ext, token = match.groups()
+            if len(prefix) == 0:
+                prefix = ' '
+            tokenOrd = ord(token[0])
+            if ext: # An extended opcode, CASE/WHILE/SYS etc
+                if ext == '\xc6':
+                    return cfnTokens[tokenOrd-0x8e]
+                if ext == '\xc7':
+                    return comTokens[tokenOrd-0x8e]
+                if ext == '\xc8':
+                    return stmtTokens[tokenOrd-0x8e]
+                raise Exception, "Bad token"
+            else: # Normal token, plus any extra characters
+                if token[0] == '\x8d': # line number following token
+                    #decode the 24 bit line number
+                    return str(DecodeLineNo(token[1:]))
+                else:
+                    return prefix + tokens[tokenOrd - 127] + token[1:]
+    def ReplaceFuncBB4W(match):
+        if match.group().startswith('"'):
+            return match.group()
+        else:
+            print match.groups()
+            prefix, token = match.groups()
+            if len(prefix) == 0:
+                prefix = ' '
+            tokenOrd = ord(token[0])
             if token[0] == '\x8d': # line number following token
                 #decode the 24 bit line number
                 return str(DecodeLineNo(token[1:]))
             else:
-                return ' ' + tokens[tokenOrd-127] + token[1:]
-    def ReplaceFuncBB4W(match):
-        prefix= ' '
-        ext, token = match.groups()
-        # token=token[0]
-        tokenOrd = ord(token[0])
-        if ext == ' ':
-            prefix=' '
-        if token[0] == '\x8d': # line number following token
-            #decode the 24 bit line number
-            return str(DecodeLineNo(token[1:]))
-        else:
-            return prefix + bb4wTokens[tokenOrd ^ 128] + token[1:]
+                return prefix + bb4wTokens[tokenOrd ^ 128] + token[1:]
 
     if decode ==2:
         # This uses BB4W encoding
         # This regular expression is essentially:
+        # Match a quoted string OR
+        #
         # (REM token followed by the rest of the line)
         #     -- this ensures we don't detokenise the REM statement itself
         # OR
@@ -115,11 +124,13 @@ def Detokenise(line, decode):
         # OR
         # (any token 127-255)
         # OR
-        # (any token 0-15)
-        return re.sub(r'([\x20])?(\xf4.*|\x8d[\x40-\x7f]{3}|[\x7f-\xff]|[\x00-\x0f])', ReplaceFuncBB4W, line)
+        # (any token 0-15) TODO check if 16 is needed (EXIT) i think
+        return re.sub(r'"(?:(?:[^"]+|"")*)"(?!")|( ?)(\xf4.*|\x8d[\x40-\x7f]{3}|[\x7f-\xff]|[\x00-\x0f])', ReplaceFuncBB4W, line)
     else:   
         # Acorn encoding
         # This regular expression is essentially:
+        # Match a quoted string OR
+        #
         # (Optional extension token) followed by
         # (REM token followed by the rest of the line)
         #     -- this ensures we don't detokenise the REM statement itself
@@ -127,7 +138,7 @@ def Detokenise(line, decode):
         # (Line number following token, with 3 characters in the range 64-127)
         # OR
         # (any token)
-        return re.sub(r'([\xc6-\xc8])?(\xf4.*|\x8d[\x40-\x7f]{3}|[\x7f-\xff])', ReplaceFunc, line)
+        return re.sub(r'"(?:(?:[^"]+|"")*)"(?!")|( ?)([\xc6-\xc8])?(\xf4.*|\x8d[\x40-\x7f]{3}|[\x7f-\xff])', ReplaceFunc, line)
 
 def DecodeLineNo(lineNo):
     """Returns a line number from a 24bit encoded line number"""
@@ -233,7 +244,7 @@ def Decode(data, output):
     for lineNumber, lineData in lines:
         if lineNoNeeded:
             output.write(str(lineNumber))
-        output.write(lineData + '\n') 
+        output.write(lineData.strip() + '\n') 
 
 if __name__ == "__main__":
     optlist, args = getopt.getopt(sys.argv[1:], '')
@@ -243,7 +254,7 @@ if __name__ == "__main__":
     entireFile = open(args[0], 'rb').read()
     output = open(args[1], 'w')
 
-    #entireFile = open('sudoku.bbc', 'rb').read()
-    #output = open('calc1.txt', 'w')
+    #entireFile = open('bbc\sudoku.txt', 'rb').read()
+    #output = open('bbc\sudoku2.txt', 'w')
     Decode(entireFile, output)
     output.close()
