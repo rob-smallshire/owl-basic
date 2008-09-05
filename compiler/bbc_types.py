@@ -56,7 +56,7 @@ class FloatType(NumericType):
     
     @classmethod
     def isConvertibleTo(cls, other_type):
-        return cls.isA(other_type) or (other_type is IntegerType)
+        return cls.isA(other_type) or (other_type is IntegerType) or (other_type is AddressType) or (other_type is ByteType)
 
 class StringType(ScalarType):
     "String"

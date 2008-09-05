@@ -28,6 +28,9 @@ class StatementList(AstNode):
     def append(self, statement):
         self.statements.append(statement)
         
+class MarkerStatement(AstStatement):
+    following_statement = Node()
+        
 class Beats(AstStatement):
     counter = Node(formalType=IntegerType)
     
@@ -122,12 +125,7 @@ class Close(AstStatement):
 
 class Data(AstStatement):
     # TODO: How to we represent the data list?
-    data = Node(ScalarType)
-
-    def __init__(self, data):
-        super(Data, self).__init__()
-        # TODO: Create the correct node types here
-        self.data = self.parse(data)
+    data = StringOption()
 
     def parse(self, data):
         "Parse the text following a DATA statement into items"
@@ -145,14 +143,14 @@ class Data(AstStatement):
             items.append(item)
         return items
 
-class DefineFunction(AstStatement):
+class DefineFunction(MarkerStatement):
     name = StringOption()
     formal_parameters = Node()
 
 class ReturnFromFunction(AstStatement):
     return_value = Node(formalType=ScalarType) # TODO: Can functions return arrays 
 
-class DefineProcedure(AstStatement):
+class DefineProcedure(MarkerStatement):
     name = StringOption()
     formal_parameters = Node()
 
@@ -215,18 +213,28 @@ class Fill(AstStatement):
     relative = BoolOption(False)
 
 class Gcol(AstStatement):
-    mode          = Node(formalType=IntegerType)
-    logicalColour = Node(formalType=IntegerType)
-    tint          = Node(formalType=IntegerType)
+    mode           = Node(formalType=IntegerType)
+    logical_colour = Node(formalType=IntegerType)
+    tint           = Node(formalType=IntegerType)
 
 class Goto(AstStatement):
     target_logical_line = Node(formalType=IntegerType)
+
+class OnGoto(AstStatement):
+    switch = Node()
+    target_logical_lines = Node()
+    out_of_range_clause = Node()
 
 class Gosub(AstStatement):
     target_logical_line = Node(formalType=IntegerType)
 
 class Return(AstStatement):
     pass
+
+class Input(AstStatement):
+    # TODO: Needs updating for all INPUT syntax including INPUT LINE
+    prompt   = Node()
+    writable = Node()
 
 class Install(AstStatement):
     filename = Node(formalType=StringType)
@@ -238,6 +246,9 @@ class If(AstStatement):
 
 class LoadLibrary(AstStatement):
     filename = Node(formalType=StringType)
+
+class Local(AstStatement):
+    variables = Node()
 
 class Move(AstStatement):
     "MOVE"
@@ -370,12 +381,18 @@ class MoveRectangle(RectangleBlit):
     
 class SwapRectangle(RectangleBlit):
     pass
+
+class Read(AstStatement):
+    writables = Node()
     
 class Report(AstStatement):
     pass
 
-class Repeat(AstStatement):
-   pass
+class Repeat(MarkerStatement):
+    pass
+
+class Restore(AstStatement):
+    target_logical_line = Node(formalType=IntegerType)
 
 class Sound(AstStatement):
     channel   = Node(formalType=IntegerType)
@@ -428,6 +445,12 @@ class VariableList(AstNode):
 
 class Variable(AstNode):
     identifier = StringOption()
+
+class WritableList(AstNode):
+    writables = [Node()]
+
+    def append(self, writable):
+        self.writables.append(writable)
 
 class Array(AstNode):
     identifier = StringOption()
@@ -500,32 +523,37 @@ class UnaryPlus(UnaryNumericOperator):
 class UnaryMinus(UnaryNumericOperator):
     pass
 
-class UnaryByteIndirection(AstNode):
-    formal_type = TypeOption(ByteType)
+class UnaryIndirection(AstNode):
     expression = Node(formalType=AddressType)
 
-class UnaryIntegerIndirection(AstNode):
+class UnaryByteIndirection(UnaryIndirection):
+    formal_type = TypeOption(ByteType)
+    actual_type = formal_type
+    
+class UnaryIntegerIndirection(UnaryIndirection):
     formal_type = TypeOption(IntegerType)
-    expression = Node(formalType=AddressType)
+    actual_type = formal_type
 
-class UnaryStringIndirection(AstNode):
+class UnaryStringIndirection(UnaryIndirection):
     formal_type = TypeOption(StringType)
-    expression = Node(formalType=AddressType)
+    actual_type = formal_type
 
-class UnaryFloatIndirection(AstNode):
+class UnaryFloatIndirection(UnaryIndirection):
     formal_type = TypeOption(FloatType)
-    expression = Node(formalType=AddressType)
+    actual_type = formal_type
 
-class DyadicByteIndirection(AstNode):
-    formal_type = TypeOption(ByteType)
+class DyadicIndirection(AstNode):
     base   = Node(formalType=AddressType)
     offset = Node(formalType=IntegerType)
 
-class DyadicIntegerIndirection(AstNode):
-    formal_type = TypeOption(IntegerType)
-    base  = Node(formalType=AddressType)
-    offset = Node(formalType=IntegerType)
+class DyadicByteIndirection(DyadicIndirection):
+    formal_type = TypeOption(ByteType)
+    actual_type = formal_type
 
+class DyadicIntegerIndirection(DyadicIndirection):
+    formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
+    
 class Not(AstNode):
     "NOT"
     formal_type = TypeOption(IntegerType)
@@ -750,6 +778,14 @@ class InkeyFunc(AstNode):
 class InkeyStrFunc(AstNode):
     formal_type = TypeOption(StringType)
     factor = Node(formalType=IntegerType)
+
+class InstrFunc(AstNode):
+    "INSTR"
+    formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
+    source         = Node(formalType=StringType)
+    sub_string     = Node(formalType=StringType)
+    start_position = Node(formalType=IntegerType)
 
 class IntFunc(AstNode):
     "INT"

@@ -58,7 +58,7 @@ class SimplificationVisitor(Visitor):
         statement_list.parent.child_infos["statements"] = statement_list.child_infos["statements"]
         assert hasattr(statement_list, "statements")
         statement_list.parent.statements = statement_list.statements
-                        
+                            
     def visitDim(self, dim):
         """
         Convert DIM statements and their lists of arrays/blocks into
@@ -83,6 +83,16 @@ class SimplificationVisitor(Visitor):
             clause.parent = case
             self.visit(clause)
             
+    def visitMarkerStatement(self, marker):
+        """
+        Remove the followingStatement from the Repeat, moving it to immediately
+        after the Repeat in the parent StatementList
+        """
+        if marker.followingStatement is not None:
+            marker_index = marker.parent.statements.index(marker)
+            marker.parent.statements.insert(marker_index + 1, marker.followingStatement.body)
+            marker.followingStatement = None
+        
     def visitExpressionList(self, expr_list):
         """
         Remove ExpressionList level from the AST by replacing the contents of

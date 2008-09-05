@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<project name="statements" cp="1252">
+	<fileinfo type="grammar" cp="1252">
+		<path>.\statements.grm</path>
+		<breakpoints></breakpoints>
+	</fileinfo>
+	<fileinfo type="test" cp="1252">
+		<path>.\TestFiles\TestFile_1.txt</path>
+		<breakpoints></breakpoints>
+	</fileinfo>
+</project>

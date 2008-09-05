@@ -22,24 +22,6 @@ precedence = (
 def p_program(p):
     'program : statement_list'
     p[0] = Program(statements = p[1])
-
-# TODO: Distinguish single-line compound statements
-
-#def p_statement_list(p):
-#    '''statement_list : compound_statement stmt_terminator
-#                      | statement_list compound_statement stmt_terminator'''
-#    if len(p) == 3:
-#        p[0] = StatementList()
-#        p[0].append(p[1])
-#    elif len(p) == 4:
-#        p[1].append(p[2])
-#        p[0] = p[1]
-        
-## A single line statement list - use in single-line IF THEN ELSE construct
-#def p_compound_statement(p):
-#    '''compound_statement : statement statements_tail'''
-#    p[2].prepend(p[1])
-#    p[0] = p[2]
             
 def p_statement_list(p):
     '''statement_list : compound_statement
@@ -54,13 +36,14 @@ def p_statement_list(p):
 # A single line statement list - use in single-line IF THEN ELSE construct
 def p_compound_statement(p):
     '''compound_statement : lone_stmt_body stmt_terminator
-                          | statement statements_tail stmt_terminator'''
-    if len(p) == 3:
-        p[0] = p[1]
-    elif len(p) == 4:
-        p[2].prepend(p[1])
-        p[0] = p[2]
-
+                          | multi_statement stmt_terminator'''
+    p[0] = p[1]
+        
+def p_multi_statement(p):
+    '''multi_statement : statement statements_tail'''
+    p[2].prepend(p[1])
+    p[0] = p[2]
+    
 def p_statements_tail(p):
     '''statements_tail : statement_separator statement statements_tail
                        | empty'''
@@ -127,12 +110,15 @@ def p_stmt_body(p):
                  | fill_stmt
                  | gcol_stmt
                  | goto_stmt
+                 | on_goto_stmt
                  | gosub_stmt
+                 | input_stmt
                  | install_stmt
                  | if_stmt
                  | for_stmt
                  | library_stmt
                  | let_stmt
+                 | local_stmt
                  | mode_stmt
                  | mouse_stmt
                  | move_stmt
@@ -146,9 +132,11 @@ def p_stmt_body(p):
                  | print_stmt
                  | proc_stmt
                  | quit_stmt
+                 | read_stmt
                  | rectangle_stmt
                  | repeat_stmt
                  | report_stmt
+                 | restore_stmt
                  | return_stmt
                  | sound_stmt
                  | stop_stmt
@@ -177,7 +165,7 @@ def p_bput_stmt(p):
     
 def p_call_stmt(p):
     '''call_stmt : CALL expr
-                 | CALL expr COMMA variable_list'''
+                 | CALL expr COMMA writable_list'''
     if len(p) == 3:
         p[0] = Call(address = p[2])
     elif len(p) == 5:
@@ -278,14 +266,13 @@ def p_def_stmt(p):
 # The statement list needs to be modified so there can be more
 # than one point of return form functions
 def p_def_fn_stmt(p):
-    '''def_fn_stmt : DEF FN_ID compound_statement
-                   | DEF FN_ID LPAREN formal_arg_list RPAREN compound_statement'''
+    '''def_fn_stmt : DEF FN_ID statement
+                   | DEF FN_ID LPAREN formal_arg_list RPAREN statement'''
+    
     if len(p) == 4:
-        p[3].prepend(DefineFunction(name = p[2]))
-        p[0] = p[3]
+        p[0] = DefineFunction(name = p[2], followingStatement = p[3])
     elif len(p) == 7:
-        p[6].prepend(DefineFunction(name = p[2], formalParameters = p[4]))
-        p[0] = p[6]
+        p[0] = DefineFunction(name = p[2], formalParameters = p[4], followingStatement = p[6])
     p[0].lineNum = p.lineno(1)
     
 def p_end_fn_stmt(p):
@@ -294,12 +281,12 @@ def p_end_fn_stmt(p):
     p[0].lineNum = p.lineno(1)
     
 def p_def_proc_stmt(p):
-    '''def_proc_stmt : DEF PROC_ID
-                     | DEF PROC_ID LPAREN formal_arg_list RPAREN'''
-    if len(p) == 3:
-        p[0] = DefineProcedure(name = p[2])
-    elif len(p) == 6:
-        p[0] = DefineProcedure(name = p[2], formalParameters = p[4])
+    '''def_proc_stmt : DEF PROC_ID statement
+                     | DEF PROC_ID LPAREN formal_arg_list RPAREN statement'''
+    if len(p) == 4:
+        p[0] = DefineProcedure(name = p[2], followingStatement = p[3])
+    elif len(p) == 7:
+        p[0] = DefineProcedure(name = p[2], formalParameters = p[4], followingStatement = p[6])
     p[0].lineNum = p.lineno(1)
     
 def p_endproc_stmt(p):
@@ -415,6 +402,16 @@ def p_gcol_stmt(p):
     elif len(p) == 7:
         p[0] = Gcol(mode = p[2], logicalColour = p[4], tint = p[6])
     p[0].lineNum = p.lineno(1)
+
+def p_input_stmt(p):
+    '''input_stmt : INPUT writable
+                  | INPUT literal_string COMMA writable'''
+    # TODO: All other syntax of input to replace the second line above - see PRINT
+    if len(p) == 3:
+        p[0] = Input(writable = p[2])
+    elif len(p) == 5:
+        p[0] = Input(prompt = p[2], writable = p[4])
+    p[0].lineNum = p.lineno(1)  
     
 def p_install_stmt(p):
     '''install_stmt : INSTALL expr'''
@@ -427,6 +424,15 @@ def p_goto_stmt(p):
     '''goto_stmt : GOTO factor'''
     p[0] = Goto(targetLogicalLine = p[2])
     p[0].lineNum = p.lineno(1)
+
+def p_on_goto_stmt(p):
+    '''on_goto_stmt : ON expr GOTO expr_list
+                    | ON expr GOTO expr_list ELSE multi_statement'''
+    # TODO ELSE clause
+    if len(p) == 5:
+        p[0] = OnGoto(switch = p[2], targetLogicalLines = p[4])
+    elif len(p) == 7:
+        p[0] = OnGoto(switch = p[2], targetLogicalLines = p[4], outOfRangeClause = p[6])
     
 # GOSUB statement
 def p_gosub(p):
@@ -440,8 +446,9 @@ def p_return_stmt(p):
     p[0].lineNum = p.lineno(1)
     
 def p_if_stmt(p):
-    '''if_stmt : if_single_stmt
-               | if_multi_stmt'''
+    '''if_stmt : if_single_stmt'''
+    #'''if_stmt : if_single_stmt
+    #           | if_multi_stmt'''
     p[0] = p[1]
     
 def p_if_single_stmt(p):
@@ -456,20 +463,20 @@ def p_if_single_stmt(p):
     elif len(p) == 6:
         p[0] = If(condition = p[2], trueClause = p[3], falseClause = p[5])
     elif len(p) == 7:
-        p[0] = If(condition = p[2], trueClause = p[4], faultClause = p[6])
+        p[0] = If(condition = p[2], trueClause = p[4], falseClause = p[6])
     p[0].lineNum = p.lineno(1)
     
 # The clause is only used with IF statements and
 # possible ON statements when the result of an expression
 # is interpreted as a line number to GOTO
 def p_clause(p):
-    '''clause : compound_statement
+    '''clause : multi_statement
               | implicit_goto'''
     p[0] = p[1]
 
 def p_implicit_goto(p):
     '''implicit_goto : factor'''
-    p[0] = Goto(line = p[1])
+    p[0] = Goto(targetLogicalLine = p[1])
     
 def p_if_multi_stmt(p):
     '''if_multi_stmt : IF expr THEN statement_list ENDIF
@@ -485,8 +492,8 @@ def p_if_multi_stmt(p):
 # rather than as a loop terminator.  A later analysis of the parse
 # tree will attempt to match each NEXT with its corresponding FOR
 def p_for_stmt(p):
-    '''for_stmt : FOR variable EQ expr TO expr
-                | FOR variable EQ expr TO expr STEP expr'''
+    '''for_stmt : FOR writable EQ expr TO expr
+                | FOR writable EQ expr TO expr STEP expr'''
     if len(p) == 7:
         p[0] = ForToStep(identifier = p[2], first = p[4], last = p[6], step = LiteralInteger(value = 1))
     elif len(p) == 9:
@@ -551,6 +558,12 @@ def p_decrement(p):
     elif len(p) == 4:
         p[0] = Decrement(lValue = p[1], rValue = p[3])
         p[0].lineNum = p.lineno(2)
+
+# LOCAL statement
+def p_local_stmt(p):
+    '''local_stmt : LOCAL variable_list'''
+    p[0] = Local(variables = p[2])
+    p[0].lineNum = p.lineno(1)
     
 # MOVE statement
 def p_move_stmt(p):
@@ -567,17 +580,17 @@ def p_mode_stmt(p):
                  | MODE expr COMMA expr COMMA expr
                  | MODE expr COMMA expr COMMA expr COMMA expr'''
     if len(p) == 3:
-        p[0] = Mode(number = p[3])
+        p[0] = Mode(number = p[2])
     elif len(p) == 7:
-        p[0] = Mode(width = p[3], height = p[5], bitsPerPixel = p[7])
+        p[0] = Mode(width = p[2], height = p[4], bitsPerPixel = p[6])
     elif len(p) == 9:
-        p[0] = Mode(width = p[3], height = p[5], bitsPerPixel = p[7], frameRate = p[9])
+        p[0] = Mode(width = p[2], height = p[4], bitsPerPixel = p[6], frameRate = p[8])
     p[0].lineNum = p.lineno(1)
     
 
 def p_mouse_stmt(p):
-    '''mouse_stmt : MOUSE variable COMMA variable COMMA variable
-                  | MOUSE variable COMMA variable COMMA variable COMMA variable
+    '''mouse_stmt : MOUSE writable COMMA writable COMMA writable
+                  | MOUSE writable COMMA writable COMMA writable COMMA writable
                   | MOUSE ON
                   | MOUSE ON expr
                   | MOUSE OFF
@@ -715,6 +728,14 @@ def p_quit_stmt(p):
     '''quit_stmt : QUIT'''
     p[0] = Quit()
     p[0].lineNum = p.lineno(1)
+
+def p_read(p):
+    '''read_stmt : READ
+                 | READ writable_list'''
+    if len(p) == 2:
+        p[0] = Read()
+    elif len(p) == 3:
+        p[0] = Read(writables = p[2])
     
 def p_rectangle_stmt(p):
     '''rectangle_stmt : RECTANGLE expr COMMA expr COMMA expr
@@ -769,9 +790,20 @@ def p_report_stmt(p):
     p[0].lineNum = p.lineno(1)
     
 def p_repeat_stmt(p):
-    '''repeat_stmt : REPEAT compound_statement'''
-    p[2].prepend(Repeat(lineNum = p.lineno(1)))
-    p[0] = p[2]
+    '''repeat_stmt : REPEAT statement'''
+    p[0] = Repeat(followingStatement = p[2])
+
+def p_restore_stmt(p):
+    '''restore_stmt : RESTORE
+                    | RESTORE expr'''
+    # TODO restore data 
+    # TODO restore + expr
+    if len(p) == 2:
+        p[0] = Restore()
+    elif len(p) == 3:
+        p[0] = Restore(targetLogicalLine = p[2])
+    p[0].lineNum = p.lineno(1)
+
     
 def p_sound_stmt(p):
     '''sound_stmt : SOUND expr COMMA expr COMMA expr COMMA expr
@@ -792,7 +824,7 @@ def p_stereo_stmt(p):
     p[0].lineNum = p.lineno(1)
     
 def p_swap_stmt(p):
-    '''swap_stmt : SWAP variable COMMA variable
+    '''swap_stmt : SWAP writable COMMA writable
                  | SWAP array COMMA array'''
     #SWAP var1 COMMA var2
     #SWAP array1 COMMA array2
@@ -801,13 +833,13 @@ def p_swap_stmt(p):
     
 def p_sys_stmt(p):
     '''sys_stmt : SYS expr
-                | SYS expr SEMICOLON variable
-                | SYS expr TO nullable_variable_list
+                | SYS expr SEMICOLON writable
+                | SYS expr TO nullable_writable_list
                 | SYS expr COMMA nullable_expr_list
-                | SYS expr TO nullable_variable_list SEMICOLON variable
-                | SYS expr COMMA nullable_expr_list SEMICOLON variable
-                | SYS expr COMMA nullable_expr_list TO nullable_variable_list
-                | SYS expr COMMA nullable_expr_list TO nullable_variable_list SEMICOLON variable'''
+                | SYS expr TO nullable_writable_list SEMICOLON writable
+                | SYS expr COMMA nullable_expr_list SEMICOLON writable
+                | SYS expr COMMA nullable_expr_list TO nullable_writable_list
+                | SYS expr COMMA nullable_expr_list TO nullable_writable_list SEMICOLON writable'''
     if len(p) == 3:
         p[0] = Sys(routine = p[2])
     elif len(p) == 5:
@@ -1130,15 +1162,31 @@ def p_expr_group(p):
 # This contains all of the lvalues which can occur on the
 # left-hand-side on an assignment operator (without the LET).
 def p_lvalue(p):
-    '''lvalue : variable
+    '''lvalue : writable
               | pseudovariable
               | mid_str_lvalue
               | right_str_lvalue
-              | left_str_lvalue
-              | unary_indirection
-              | dyadic_indirection'''
+              | left_str_lvalue'''
+    p[0] = p[1]
+
+# This contains values which can be written or assigned to in 
+# for example FOR and READ
+def p_writable(p):
+    '''writable : variable
+                | unary_indirection
+                | dyadic_indirection'''
     p[0] = p[1]
     
+def p_writable_list(p):
+    '''writable_list : writable
+                     | writable_list COMMA writable'''
+    if len(p) == 2:
+        p[0] = WritableList()
+        p[0].append(p[1])
+    elif len(p) == 4:
+        p[1].append(p[3])
+        p[0] = p[1]
+            
 def p_mid_str_lvalue(p):
     '''mid_str_lvalue : MID_STR_LPAREN variable COMMA expr RPAREN
                       | MID_STR_LPAREN variable COMMA expr COMMA expr RPAREN'''
@@ -1262,6 +1310,7 @@ def p_expr_function(p):
                      | get_str_file_func
                      | inkey_func
                      | inkey_str_func
+                     | instr_func
                      | int_func
                      | left_str_func
                      | len_func
@@ -1299,7 +1348,7 @@ def p_expr_function(p):
 
 def p_user_func(p):
     'user_func : FN_ID LPAREN actual_arg_list RPAREN %prec FUNCTION'
-    p[0] = UserFunc(name = p[2], actualParameters = p[3])
+    p[0] = UserFunc(name = p[1], actualParameters = p[3])
 
 def p_abs_func(p):
     'abs_func : ABS factor %prec FUNCTION'
@@ -1428,6 +1477,17 @@ def p_inkey_str_func(p):
     p[0] = InkeyStrFunc(factor = p[2])
     p[0].lineNum = p.lineno(1)
 
+def p_instr_func(p):
+    '''instr_func : INSTR_LPAREN expr COMMA expr RPAREN
+                  | INSTR_LPAREN expr COMMA expr COMMA expr RPAREN'''
+    if len(p) == 6:
+        #INSTR expr COMMA expr
+        p[0] = InstrFunc(source = p[2], subString = p[4] )
+    elif len(p) == 8:
+        #INSTR expr COMMA expr COMMA expr
+        p[0] = InstrFunc(source = p[2], subString = p[4], startPosition = p[6] )
+    p[0].lineNum = p.lineno(1)
+
 def p_int_func(p):
     '''int_func : INT factor %prec FUNCTION'''
     p[0] = IntFunc(factor = p[2])
@@ -1527,11 +1587,11 @@ def p_right_str_func(p):
     
 def p_rnd_func(p):
     '''rnd_func : RND %prec FUNCTION
-                | RND_LPAREN expr LPAREN %prec FUNCTION'''
+                | RND_LPAREN expr RPAREN %prec FUNCTION'''
     if len(p) == 2:
         #RND
         p[0] = RndFunc(option=None)
-    elif len(p) == 3:
+    elif len(p) == 4:
         #RND expression
         p[0] = RndFunc(option = p[2])
     p[0].lineNum = p.lineno(1)
@@ -1662,7 +1722,21 @@ def p_nullable_variable_list(p):
     elif len(p) == 4:
         p[1].append(p[3])
         p[0] = p[1]
+
+def p_nullable_writable(p):
+    '''nullable_writable : writable
+                         | empty'''
+    p[0] = p[1]
     
+def p_nullable_writable_list(p):
+    '''nullable_writable_list : nullable_writable
+                              | nullable_writable_list COMMA nullable_writable'''
+    if len(p) == 2:
+        p[0] = WritableList()
+        p[0].append(p[1])
+    elif len(p) == 4:
+        p[1].append(p[3])
+        p[0] = p[1]    
 #=============================================================================#
 # ARRAYS
 

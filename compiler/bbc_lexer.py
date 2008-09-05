@@ -2,6 +2,8 @@
 
 import re
 
+from errors import error
+        
 tokens = (
     'EOL',
     'ARRAYID_LPAREN',
@@ -85,7 +87,7 @@ tokens = (
     'FALSE',
     'GET',
     'INKEY',
-    'INSTR',
+    'INSTR_LPAREN',
     'INT',
     'LEN',
     'LN',
@@ -445,7 +447,9 @@ def t_DATA(t):
     # Note: Data captures everything until the
     #       end of the line. The data items are
     #       not tokenized at this point.
-    m = re.match(r'DATA\s+([^\n]+)', t.value)
+    m = re.match(r'DATA([^\n]+)', t.value)
+    if m is None:
+        fatalError("No DATA in %s" % t.value)
     t.value = m.group(1)
     return t
 

@@ -1,0 +1,70 @@
+// **********************************************************************
+// *** This is a simple calculator grammar sample (just to highlight
+// *** general guidelines) that parses  the something like this:
+// ***      A = 2 + 4;   
+// ***      B = 3 * ( 4 + 5 );
+// ***      C = 3 + 4 * 5 ;
+// ***      D = 4 + 3 * B / -4 ;
+// ***      F= 3 / Dd ** C * 234;
+// *** Other samples can be found in the installation folder.
+// **********************************************************************
+
+// ---- optional definitions section ------------------------------------
+// define here macros for token expressions if nessesary
+%macro
+n		'0-9' ;
+num		'[{n}]' ; // <- declare macro using another macro
+char		'a-z_A-Z' ;
+
+// ---- optional pragma section -----------------------------------------
+%pragma
+intok( on, off ); // allow inline token declarations, case insesitive
+dkey( off );      // detect keywords mode is turned off
+rtc( off, 4 );    // resolve token conflicts mode is turned off
+
+// ---- token declaration section ( terminal symbols ) ------------------
+%tokens
+'[ \t]+'                                wspace,     %ignore;
+'[\n\r]+'                               Eol;
+
+
+'COMMAND'                               Command,    'command';
+':'                                     Colon,      'colon';
+
+// -----  optional precedence section -----------------------------------
+// The terminal symbols in the table below will receive priorities 
+// from low in the  first line to high in the last line. So:
+// symbols in the first line ( '+' '-' ) will have the lowest priority,
+// then symbols '*' '/' follow with more priority,  then '**' with more 
+// priority,...
+// The fictitious terminal symbol UMINUS will get the highest priority.
+
+// The %prec modifier ( see below ) declares the precedence of a 
+// particular rule by specifying a terminal symbol whose precedence 
+// should be used for that rule. It's not necessary for that symbol 
+// to appear otherwise in the rule .
+
+%left  '+' '-';      // <- symbols with lowest priority
+%left  '*' '/';
+%right '**';
+%left   UMINUS;      // <- highest priority
+
+// ---- production section ----------------------------------------------
+%production Start
+
+Start 	:  StatementList;
+
+StatementList : CompoundStatement Eol
+              | StatementList CompoundStatement Eol;
+
+CompoundStatement : Statement StatementsTail;
+
+StatementsTail : StatementSeparator Statement StatementsTail
+               | Empty;
+
+StatementSeparator : Colon;
+
+Statement : Command
+          | Empty;
+
+Empty : ;

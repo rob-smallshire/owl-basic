@@ -191,6 +191,14 @@ class TypecheckVisitor(Visitor):
             self.insertCast(operator.lhs, source=operator.lhs.actualType, target=IntegerType)
         if operator.rhs.actualType is not IntegerType:
             self.insertCast(operator.rhs, source=operator.rhs.actualType, target=IntegerType)
+    
+    def visitDyadicIndirection(self, dyadic):
+        self.visit(dyadic.base)
+        self.visit(dyadic.offset)
+        if not self.checkSignature(dyadic):
+            return
+        self.insertNumericCasts(dyadic)
+        
          
     def visitUnaryNumericFunc(self, func):
         self.visit(func.factor)
@@ -211,7 +219,16 @@ class TypecheckVisitor(Visitor):
         if not self.checkSignature(operator):
             return
         if operator.factor.actualType is not IntegerType:
-            self.insertCast(operator.factor, source-operator.factor.actualType, target=IntegerType)
+            self.insertCast(operator.factor, source = operator.factor.actualType, target=IntegerType)
+    
+    def visitInstr(self, instr):
+        self.visit(instr.source)
+        self.visit(instr.subString)
+        self.visit(instr.startPosition)
+        if not self.checkSignature(instr):
+            return
+        if instr.startPosition is not None and instr.startPosition.actualType is not IntegerType:
+            self.insertCast(instr.startPosition, source = instr.startPosition.actualType, target = IntegerType)
     
     def insertNumericCasts(self, node):
         """
@@ -238,6 +255,9 @@ class TypecheckVisitor(Visitor):
             
     def insertCast(self, child, source, target):
         """Wrap the supplied node is a Cast node from source type to target type"""
+        if source is target:
+            return
+        
         if source is FloatType and target is IntegerType:
             message = "of %s to %s, possible loss of data" % (source.__doc__, target.__doc__)
             self.castWarning(child, message)
@@ -289,6 +309,7 @@ class TypecheckVisitor(Visitor):
         IntegerType is compatible with NumericType, and NumericType is compatible
         with ScalarType, but StringType is not compatible with NumericType.
         """
+        print "node = %s at line %d" % (node, node.lineNum)
         result = True
         for name, info in node.child_infos.items():
             if isinstance(info, list):
