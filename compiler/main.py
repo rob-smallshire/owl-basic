@@ -4,6 +4,7 @@
 import sys
 import re
 import logging
+import StringIO
 from optparse import OptionParser
 
 import ply.lex as lex
@@ -15,6 +16,7 @@ import xml_visitor
 import parent_visitor
 import simplify_visitor
 import typecheck_visitor
+from Detoken import Decode
 
 #from errors import warning
 
@@ -61,6 +63,12 @@ if __name__ == '__main__':
     
     # Read the file - processing it for line numbers if necessary
     f = open(filename, 'r')
+    
+    #call the detokenize routine
+    detokenized = StringIO.StringIO()
+    Decode(f.read(), detokenized)
+    f.close()
+    
     if options.line_numbers:
         line_number_regex = re.compile(r'\s*(\d+)\s*(.*)')
         physical_line = 0
@@ -68,7 +76,8 @@ if __name__ == '__main__':
         physical_to_logical_line = [0]
         line_bodies = []
         while True:
-            line = f.readline()
+            line = detokenized.readline()
+            print line   # ians debug line
             if not line:
                 break
             physical_line += 1
@@ -82,8 +91,8 @@ if __name__ == '__main__':
         print physical_to_logical_line
         data = '\n'.join(line_bodies)
     else:
-        data = f.read()
-    f.close()
+        data = detokenized.read()
+    detokenized.close()
     
     print data
     
