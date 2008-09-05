@@ -244,7 +244,8 @@ def Decode(data, output):
     for lineNumber, lineData in lines:
         if lineNoNeeded:
             output.write(str(lineNumber))
-        output.write(lineData.strip() + '\n') 
+        output.write(lineData.strip() + '\n')
+    return lineNoNeeded
 
 if __name__ == "__main__":
     optlist, args = getopt.getopt(sys.argv[1:], '')
