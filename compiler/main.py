@@ -66,8 +66,14 @@ if __name__ == '__main__':
     
     #call the detokenize routine
     detokenized = StringIO.StringIO()
-    Decode(f.read(), detokenized)
+    lineNoNeeded = Decode(f.read(), detokenized)
+
+    #lineNoNeeded is true if the file has line numbers (need testing for file without line numbers)
+    #I dont know how to change the parameter on the command line
+
     f.close()
+    
+    detokenHandle = StringIO.StringIO(detokenized.getvalue())
     
     if options.line_numbers:
         line_number_regex = re.compile(r'\s*(\d+)\s*(.*)')
@@ -76,7 +82,7 @@ if __name__ == '__main__':
         physical_to_logical_line = [0]
         line_bodies = []
         while True:
-            line = detokenized.readline()
+            line = detokenHandle.readline()
             print line   # ians debug line
             if not line:
                 break
@@ -91,11 +97,11 @@ if __name__ == '__main__':
         print physical_to_logical_line
         data = '\n'.join(line_bodies)
     else:
-        data = detokenized.read()
-    detokenized.close()
+        data = detokenHandle.read()
+    detokenHandle.close()
     
     print data
-    
+
     if not data.endswith('\n'):
         logging.warning("Missing newline at end of file")
         data += '\n'
