@@ -243,8 +243,9 @@ def Decode(data, output):
     lines = ReadLines(data)
     for lineNumber, lineData in lines:
         if lineNoNeeded:
-            output.write(str(lineNumber))
+            output.write(str(lineNumber) + ' ')
         output.write(lineData.strip() + '\n')
+    #output.write('\n')
     return lineNoNeeded
 
 if __name__ == "__main__":
