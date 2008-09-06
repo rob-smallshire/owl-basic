@@ -92,12 +92,14 @@ class SimplificationVisitor(Visitor):
             marker_index = marker.parent.statements.index(marker)
             marker.parent.statements.insert(marker_index + 1, marker.followingStatement.body)
             marker.followingStatement = None
+        # TODO: Does the moved statement node ever get visited? Are we inserting into a sequence during iteration?
         
     def visitExpressionList(self, expr_list):
         """
         Remove ExpressionList level from the AST by replacing the contents of
         the owning attribute of its parents with the ExpressionList's own list of expressions 
         """
+        expr_list.forEachChild(self.visit)
         elideNode(expr_list, liftFormalTypes=True)
         
     def visitVduList(self, vdu_list):
@@ -105,6 +107,7 @@ class SimplificationVisitor(Visitor):
         Remove VduList level from the AST by replacing the contents of
         the owning attribute of its parent with the VduList's own list of items 
         """
+        vdu_list.forEachChild(self.visit)
         elideNode(vdu_list, liftFormalTypes=True)
 
     def visitActualArgList(self, actual_arg_list):
@@ -112,6 +115,7 @@ class SimplificationVisitor(Visitor):
         Remove the ActualArgList level from the AST by replacing the contents of
         the owning attribute of its parent with the ActualArgList's own list of arguments
         """
+        actual_arg_list.forEachChild(self.visit)
         elideNode(actual_arg_list, liftFormalTypes=True)
 
     def visitFormalArgList(self, formal_arg_list):
@@ -119,6 +123,7 @@ class SimplificationVisitor(Visitor):
         Remove the FormalArgList level from the AST by replacing the contents of
         the owning attribute of its parent with the FormalArgList's own list of arguments
         """
+        formal_arg_list.forEachChild(self.visit)
         elideNode(formal_arg_list, liftFormalTypes=True)
         
     def visitPrintList(self, print_list):
@@ -126,6 +131,7 @@ class SimplificationVisitor(Visitor):
         Remove the PrintList level from the AST by replacing the contents of the
         owning attribute of its parent.
         """
+        print_list.forEachChild(self.visit)
         elideNode(print_list, liftFormalTypes=True)
         
     def visitVariableList(self, variable_list):
@@ -133,6 +139,7 @@ class SimplificationVisitor(Visitor):
         Remove the VariableList level from the AST by replacing the contents of the
         owning attribute of its parent.
         """
+        variable_list.forEachChild(self.visit)
         elideNode(variable_list, liftFormalTypes=True)
     
     def visitExpressionList(self, expression_list):
@@ -140,4 +147,5 @@ class SimplificationVisitor(Visitor):
         Remove the ExpresionList level from the AST by replacing the contents of the
         owning attribute of its parent.
         """
+        expression_list.forEachChild(self.visit)
         elideNode(expression_list, liftFormalTypes=True)

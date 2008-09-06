@@ -15,6 +15,17 @@ class Type(object):
     def isConvertibleTo(cls, other_type):
         return cls.isA(other_type)
 
+# Used for types which will unknown at any given point
+# TODO: These PendingTypes need to be detected and removed
+# when sufficient information is available
+class PendingType(Type):
+    "Unknown"
+    pass
+
+    @classmethod
+    def isConvertibleTo(cls, other_type):
+        return True
+
 class VoidType(Type):
     "Void"
     pass
@@ -96,4 +107,4 @@ class FloatArrayType(ArrayType):
 class StringArrayType(ArrayType):
     "Array[String]"
     _element_type = StringType
-    
+   

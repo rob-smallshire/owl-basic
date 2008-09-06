@@ -53,6 +53,7 @@ class TypecheckVisitor(Visitor):
                 self.typeMismatch(assignment, message)
         else:
             print assignment.rValue
+            print assignment.rValue.actualType
             if assignment.rValue.actualType.isConvertibleTo(assignment.lValue.actualType):
                 if assignment.rValue.actualType is not assignment.lValue.actualType:
                     self.insertCast(assignment.rValue, assignment.rValue.actualType, assignment.lValue.actualType)
@@ -70,6 +71,7 @@ class TypecheckVisitor(Visitor):
             concat = Concatenate(lhs = plus.lhs, rhs = plus.rhs)
             concat.lhs.parent = concat
             concat.rhs.parent = concat
+            concat.parent = plus.parent
             plus.parent.setProperty(concat, plus.parent_property, plus.parent_index)
             self.visit(concat)
             return
@@ -175,6 +177,32 @@ class TypecheckVisitor(Visitor):
         # The sigils are one of [$%&~]
         variable.actualType = self.identifierToType(variable.identifier)
     
+    def visitIf(self, iff):
+        self.visit(iff.condition)
+        self.visit(iff.trueClause)
+        self.visit(iff.falseClause)
+        print "iff.condition.actualType = %s" % iff.condition.actualType
+        if iff.condition.actualType.isConvertibleTo(IntegerType):
+            self.insertCast(iff.condition, iff.condition.actualType, iff.condition.formalType)
+        else:
+            self.typeMismatch(iff, "Conditional expression must be convertible to %s." % iff.condition.actualType.__doc__)
+    
+    def visitOnGoto(self, ongoto):
+        self.visit(ongoto.switch)
+        if ongoto.switch.actualType.isConvertibleTo(IntegerType):
+            self.insertCast(ongoto.switch, ongoto.switch.actualType, ongoto.switch.formalType)
+        else:
+            self.typeMismatch(ongoto, "Selector expression must be convertible to %s" % ongoto.switch.actualType.__doc__)
+        
+        for target in ongoto.targetLogicalLines:
+            self.visit(target)
+            if target.actualType.isConvertibleTo(IntegerType):
+                self.insertCast(target, target.actualType, IntegerType)
+            else:
+                self.typeMismatch(ongoto, "Target expressions must be convertible to Integer")
+            
+        self.visit(ongoto.outOfRangeClause)
+            
     def visitUnaryNumericOperator(self, operator):
         self.visit(operator.factor)
         if not self.checkSignature(operator):
@@ -229,6 +257,13 @@ class TypecheckVisitor(Visitor):
             return
         if instr.startPosition is not None and instr.startPosition.actualType is not IntegerType:
             self.insertCast(instr.startPosition, source = instr.startPosition.actualType, target = IntegerType)
+    
+    def visitUserFunc(self, func):
+        # TODO Add to a list of user defined functions to be typechecked
+        print "func.actualParameters = %s at line %s" % (func.actualParameters, func.lineNum)
+        
+        for parameter in func.actualParameters:
+            self.visit(parameter)
     
     def insertNumericCasts(self, node):
         """
@@ -309,9 +344,10 @@ class TypecheckVisitor(Visitor):
         IntegerType is compatible with NumericType, and NumericType is compatible
         with ScalarType, but StringType is not compatible with NumericType.
         """
-        print "node = %s at line %d" % (node, node.lineNum)
+        print "node = %s at line %s" % (node, node.lineNum)
         result = True
         for name, info in node.child_infos.items():
+            print "name = %s" % name
             if isinstance(info, list):
                 info = info[0]
                 formal_type = info.formalType

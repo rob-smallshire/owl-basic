@@ -1349,6 +1349,7 @@ def p_expr_function(p):
 def p_user_func(p):
     'user_func : FN_ID LPAREN actual_arg_list RPAREN %prec FUNCTION'
     p[0] = UserFunc(name = p[1], actualParameters = p[3])
+    p[0].lineNum = p.lineno(1)
 
 def p_abs_func(p):
     'abs_func : ABS factor %prec FUNCTION'
