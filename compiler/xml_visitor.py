@@ -78,7 +78,10 @@ class XmlVisitor(Visitor):
             else:
                 self.writer.WriteString(value.__name__)
         else:
-            self.writer.WriteString(str(value))
+            if not isinstance(value, basestring):
+                # TODO: Yuck rebinding!
+                value = str(value)
+            self.writer.WriteString(value.encode('ascii', 'xmlcharrefreplace'))
         self.writer.WriteEndAttribute()
 
     def visitAstNode(self, node):
