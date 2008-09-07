@@ -221,7 +221,7 @@ class Goto(AstStatement):
     target_logical_line = Node(formalType=IntegerType)
 
 class OnGoto(AstStatement):
-    switch = Node()
+    switch = Node(formalType=IntegerType)
     target_logical_lines = Node()
     out_of_range_clause = Node()
 
@@ -692,6 +692,8 @@ class UnaryNumericFunc(AstNode):
     factor = Node(formalType=NumericType, description="The parameter")    
 
 class UserFunc(AstNode):
+    formal_type = TypeOption(PendingType)
+    actual_type = formal_type
     name = StringOption()
     actual_parameters = Node()
     
@@ -704,6 +706,7 @@ class AdvalFunc(AstNode):
 
 class AscFunc(AstNode):
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
     factor = Node(formalType=StringType)
     
 class AsnFunc(UnaryNumericFunc):
@@ -795,6 +798,7 @@ class IntFunc(AstNode):
 
 class LeftStrFunc(AstNode):
     formal_type = TypeOption(StringType)
+    actual_type = formal_type
     source = Node()
     length = Node(formalType=IntegerType)
 
@@ -810,6 +814,7 @@ class LogFunc(UnaryNumericFunc):
 
 class MidStrFunc(AstNode):
     formal_type = TypeOption(StringType)
+    actual_type = formal_type
     source   = Node()
     position = Node(formalType=IntegerType)
     length   = Node(formalType=IntegerType)
@@ -831,6 +836,7 @@ class OpenupFunc(AstNode):
 
 class PosFunc(AstNode):
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
 
 class PiFunc(AstNode):
     formal_type = TypeOption(FloatType)
@@ -846,6 +852,7 @@ class RadFunc(UnaryNumericFunc):
 
 class RightStrFunc(AstNode):
     formal_type = TypeOption(StringType)
+    actual_type = formal_type
     source = Node(formalType=StringType)
     length = Node(formalType=IntegerType)
 
@@ -858,6 +865,7 @@ class SinFunc(UnaryNumericFunc):
 
 class SgnFunc(AstNode):
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
     factor = Node(formalType=NumericType)
 
 class SqrFunc(UnaryNumericFunc):
@@ -865,6 +873,7 @@ class SqrFunc(UnaryNumericFunc):
 
 class StrStringFunc(AstNode):
     formal_type = TypeOption(StringType)
+    actual_type = formal_type
     base   = IntegerOption(10)
     factor = Node(formalType=NumericType)
 

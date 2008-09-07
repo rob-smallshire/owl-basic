@@ -1,12 +1,25 @@
-IF number% >= 0 AND number% <= 9 THEN
-IF A%(number%) = 0 THEN
-PRINT "Thank you"
-A%(number%) = 1 : count% = count% + 1
-ELSE
-PRINT "You’ve already had that number"
-ENDIF
-ELSE
-PRINT number% " is not between 0 and 9 !"
-ENDIF
-IF count% < 10 GOTO 30
-IF count% > 5 THEN 50 ELSE 20
+REM IF L <> O?31 THEN 195 ELSE D = D + 1 : PROCR(29) 
+REM IF O?1 <> 1 THEN O?1=L ELSE PRINT CHR$(127);"."'"The axe vanishes after";
+
+IF a%=5 b%=1
+IF a%=5 THEN b%=1
+IF a%=5 b%=1 ELSE b%=2
+IF a%=5 THEN b%=1 ELSE b%=2
+
+IF a%=5 25
+REM IF a%=5 THEN 25
+REM IF a%=5 25 ELSE 29
+REM IF a%=5 THEN 25 ELSE 29
+
+REM IF number% >= 0 AND number% <= 9 THEN
+REM IF A%(number%) = 0 THEN
+REM PRINT "Thank you"
+REM A%(number%) = 1 : count% = count% + 1
+REM ELSE
+REM PRINT "You’ve already had that number"
+REM ENDIF
+REM ELSE
+REM PRINT number% " is not between 0 and 9 !"
+REM ENDIF
+REM IF count% < 10 GOTO 30
+REM IF count% > 5 THEN 50 ELSE 20
