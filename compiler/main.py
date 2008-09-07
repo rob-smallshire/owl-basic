@@ -16,6 +16,7 @@ import xml_visitor
 import parent_visitor
 import simplify_visitor
 import typecheck_visitor
+
 from Detoken import Decode
 
 #from errors import warning
@@ -46,6 +47,7 @@ if __name__ == '__main__':
     parser.add_option("-c", "--debug-no-clr", action='store_false', dest='use_clr', default=True)
     parser.add_option("-s", "--debug-no-simplification", action='store_false', dest='use_simplification', default=True)
     parser.add_option("-t", "--debug-no-typecheck", action='store_false', dest='use_typecheck', default=True)
+    parser.add_option("-v", "--verbose", action='store_true', dest='verbose', default=False)
     
     (options, args) = parser.parse_args();
 
@@ -64,16 +66,25 @@ if __name__ == '__main__':
     # Read the file - processing it for line numbers if necessary
     f = open(filename, 'r')
     
+    if options.verbose:
+        sys.stderr.write("Detokenizing...")
     #call the detokenize routine
     detokenized = StringIO.StringIO()
     lineNoNeeded = Decode(f.read(), detokenized)
+    
 
     #lineNoNeeded is true if the file has line numbers (need testing for file without line numbers)
     #I dont know how to change the parameter on the command line
 
     f.close()
     
+    if options.verbose:
+        sys.stderr.write("done\n")
+    
     detokenHandle = StringIO.StringIO(detokenized.getvalue())
+    
+    if options.verbose:
+        sys.stderr.write("Mapping physical to logical line numbers... ")
     
     if options.line_numbers:
         line_number_regex = re.compile(r'\s*(\d+)\s*(.*)')
@@ -83,7 +94,7 @@ if __name__ == '__main__':
         line_bodies = []
         while True:
             line = detokenHandle.readline()
-            print line   # ians debug line
+            #print line   # ians debug line
             if not line:
                 break
             physical_line += 1
@@ -94,40 +105,74 @@ if __name__ == '__main__':
             logical_line = int(m.group(1))
             physical_to_logical_line.append(logical_line)
             line_bodies.append(m.group(2))
-        print physical_to_logical_line
+        #print physical_to_logical_line
         data = '\n'.join(line_bodies)
     else:
         data = detokenHandle.read()
     detokenHandle.close()
     
-    print data
-
+    if options.verbose:
+        sys.stderr.write("done\n")
+    
     if not data.endswith('\n'):
         logging.warning("Missing newline at end of file")
         data += '\n'
     
+    if options.verbose:
+        sys.stderr.write("Building lexer...")
+    
     # Build the lexer and parser
+    
     lex.lex(bbc_lexer)
+    
+    if options.verbose:
+        sys.stderr.write("done\n")
     
     if options.debug_lex:
         tokenize(data)
+    
+    if options.verbose:
+        sys.stderr.write("Builder parser... ")
         
     yacc.yacc(module=bbc_grammar, debug = 1)
     
+    if options.verbose:
+        sys.stderr.write("done\n")
+        sys.stderr.write("Parsing...")
+    
     parse_tree = yacc.parse(data)
+    
+    if options.verbose:
+        sys.stderr.write("done\n")
+        sys.stderr.write("Setting parents... ")
     
     parse_tree.accept(parent_visitor.ParentVisitor())
     
+    if options.verbose:
+        sys.stderr.write("done\n")
+    
     if options.use_simplification:
+        if options.verbose:
+            sys.stderr.write("Simplifying Abstract Syntax Tree... ")
         parse_tree.accept(simplify_visitor.SimplificationVisitor())
+        if options.verbose:
+            sys.stderr.write("done\n")
     
     if options.use_typecheck:
+        if options.verbose:
+            sys.stderr.write("Type checking... ")
         parse_tree.accept(typecheck_visitor.TypecheckVisitor())
+        if options.verbose:
+            sys.stderr.write("done\n")
         
     if options.use_clr:
+        if options.verbose:
+            sys.stderr.write("Creating XML... ")
         output_filename = filename + ".xml"
         print "Creating %s" % output_filename
         xml(parse_tree, output_filename)
+        if options.verbose:
+            sys.stderr.write("done\n") 
     
     # Structural analysis
     #flatten(parse_tree)
