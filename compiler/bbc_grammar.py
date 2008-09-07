@@ -404,14 +404,43 @@ def p_gcol_stmt(p):
     p[0].lineNum = p.lineno(1)
 
 def p_input_stmt(p):
-    '''input_stmt : INPUT writable
-                  | INPUT literal_string COMMA writable'''
+    '''input_stmt : INPUT 
+                  | INPUT input_list'''
     # TODO: All other syntax of input to replace the second line above - see PRINT
-    if len(p) == 3:
-        p[0] = Input(writable = p[2])
-    elif len(p) == 5:
-        p[0] = Input(prompt = p[2], writable = p[4])
+    if len(p) == 2:
+        p[0] = Input()
+    elif len(p) == 3:
+        p[0] = Input(inputList = p[2])
     p[0].lineNum = p.lineno(1)  
+
+def p_input_list(p):
+    '''input_list : input_item
+                  | input_list input_item'''
+    if len(p) == 2:
+        p[0] = InputList()
+        p[0].append(p[1])
+    elif len(p) == 3:
+        p[1].append(p[2])
+        p[0] = p[1]
+    
+def p_input_item(p):
+    '''input_item : literal_string
+                  | tab
+                  | spc
+                  | input_manipulator
+                  | writable'''
+    p[0] = InputItem(item = p[1])
+    
+def p_input_manipulator(p):
+    '''input_manipulator : APOSTROPHE
+                         | COMMA
+                         | SEMICOLON'''
+    p[0] = InputManipulator(manipulator = p[1])
+    p[0].lineNum = p.lineno(1)
+
+
+
+
     
 def p_install_stmt(p):
     '''install_stmt : INSTALL expr'''

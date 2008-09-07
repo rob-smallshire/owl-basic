@@ -233,8 +233,19 @@ class Return(AstStatement):
 
 class Input(AstStatement):
     # TODO: Needs updating for all INPUT syntax including INPUT LINE
-    prompt   = Node()
-    writable = Node()
+    input_list = Node()
+
+class InputList(AstNode):
+    items = [Node()]
+
+    def append(self, item):
+        self.items.append(item)
+
+class InputItem(AstNode):
+    item = Node()
+
+class InputManipulator(AstNode):
+    manipulator = StringOption()
 
 class Install(AstStatement):
     filename = Node(formalType=StringType)

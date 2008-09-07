@@ -1,0 +1,17 @@
+INPUT "A" "B" "C" "D" "E"              
+INPUT "A","B","C","D","E"         
+INPUT "G"SPC(6)"H"                
+INPUT "H"'"G"                  
+INPUT "A","B" "C"                     
+INPUT "A","B" "C"D                  
+INPUT "A","B","C"D                     
+INPUT "A","B","C",D          
+INPUT "G"SPC(6)"H"            
+INPUT "A" "B" "C" "D" "E"              
+INPUT "A","B","C","D","E"         
+INPUT A B C  
+INPUT ""A ""B ""C
+INPUT TAB(5,5)"AAA"TAB(5,8) "AAA"A$,"BBB",B$,"CCC"C,D,E,"FF","HHHHH"H
+x=1
+y=2
+INPUT TAB(x,y)"AAA"c
