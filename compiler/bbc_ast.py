@@ -930,6 +930,12 @@ class VposFunc(AstNode):
 class WidthFunc(AstNode):
     formal_type = TypeOption(IntegerType)
 
+class Line(AstStatement):
+    x1_coord = Node(formalType=IntegerType)
+    y1_coord = Node(formalType=IntegerType)
+    x2_coord = Node(formalType=IntegerType)
+    y2_coord = Node(formalType=IntegerType)
+
 class LiteralString(AstNode):
     actual_type = TypeOption(StringType)
     value = StringOption()

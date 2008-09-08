@@ -71,11 +71,8 @@ def p_statement(p):
 
 # TODO: Statements to be implemented
     '''stmt_body : chain_stmt
-                 | input_stmt
-                 | line_stmt
                  | local_stmt
                  | on_error_stmt
-                 | read_stmt
                  | restore_stmt    PAGE 69 BBCBASIC.PDF - RESTORE +offset???
                  | trace_stmt'''
     
@@ -116,6 +113,7 @@ def p_stmt_body(p):
                  | install_stmt
                  | if_stmt
                  | for_stmt
+                 | line_stmt
                  | library_stmt
                  | let_stmt
                  | local_stmt
@@ -561,6 +559,13 @@ def p_next_stmt(p):
 def p_library_stmt(p):
     '''library_stmt : LIBRARY expr'''
     p[0] = LoadLibrary(filename = p[2])
+    p[0].lineNum = p.lineno(1)
+
+def p_line_stmt(p):
+    '''line_stmt : LINE expr COMMA expr COMMA expr COMMA expr'''
+
+    # TODO: Sort this lot out!  
+    p[0] = Line(x1Coord = p[2], y1Coord = p[4], x2Coord = p[6], y2Coord = p[8])
     p[0].lineNum = p.lineno(1)
 
 def p_let_stmt(p):
