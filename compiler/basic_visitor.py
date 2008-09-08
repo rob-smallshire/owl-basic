@@ -31,6 +31,22 @@ class BasicVisitor(Visitor):
             self.visit(mid_str_func.length)
         sys.stdout.write(")")
         
+    def visitTrueFunc(self, true_func):
+        sys.stdout.write("TRUE ")
+
+    def visitAcsFunc(self, acs_func):
+        sys.stdout.write("ACS ")
+        
+    def visitAdvalFunc(self, adval_func):
+        sys.stdout.write("ADVAL ")
+        sys.stdout.write(adval_func.factor)
+        
+    def visitAsnFunc(self, Asn_func):
+        sys.stdout.write("ASN ")
+
+    def visitAtnFunc(self, atn_func):
+        sys.stdout.write("ATN ")
+
     def visitStrStringFunc(self, str_string_func):
         sys.stdout.write("STR$")
         if str_string_func.base == 16:
