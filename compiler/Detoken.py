@@ -4,14 +4,21 @@
 #
 # Updated 2008 Ian Smallshire.
 #
+# Get v0.01 @ http://xania.org/200711/bbc-basic-v-format
+#
 # Use however you like, as long as you put credit where credit's due.
 # Some information obtained from source code from RISC OS Open.
-# v0.01 - first release.  Doesn't deal with GOTO line numbers.
-# v0.02 - edited to output line numbers where needed and fixed
+# v0.01 - first release.  Doesn't deal with GOTO line numbers.       (c) 2007 Matt Godbolt
+# v0.02 - edited to output line numbers where needed and fixed       Ian Smallshire
 #         the GOTO/RESTORE/GOSUB line numbers.
-# v0.03 - Added file type detection for input and provision
+# v0.03 - Added file type detection for input and provision          Ian Smallshire
 #         for BB4W encoded tokens
-# v0.04 - Now decodes BB4W tokens as well as Acorn.
+# v0.04 - Now decodes BB4W tokens as well as Acorn.                  Ian Smallshire
+# v0.05 - Corrected tokens inside strings. No longer detokenized     Rob & Ian Smallshire
+# v0.06 - Fixed line number decoding with line numbers over 32767    Ian Smallshire
+
+#line numbers for bb4w still need testing properly.
+#if input file is plane text it must be terminated by an EOL
 import struct, re, getopt, sys
 
 # The list of BBC BASIC V tokens:
@@ -145,7 +152,7 @@ def DecodeLineNo(lineNo):
     byte0=ord(lineNo[0])
     byte1=ord(lineNo[1])
     byte2=ord(lineNo[2])
-    #needed to be ANDed with 255 after multipy because with this formula
+    #needed to be ANDed with 255 after multiply because with this formula
     #on the 6502 it moved the high bits to carry with the Logical Shift 
     msb = byte2 ^ (( byte0 * 16) & 255)          
     lsb = byte1 ^ (((byte0 & 0x30 ) * 4) & 255)  
@@ -209,13 +216,16 @@ def ReadLines(data):
             # (http://bb4w.wikispaces.com/Format)
             # {<len> <linelo> <linehi> <text> <cr>} <00> <ff> <ff>
 
-            lineNumber, length= struct.unpack('>hB', data[2]+data[1]+data[0]) # line number bytes in different order
+            # TODO check if order of bytes is correct
+            lineNumber=(ord(data[1]) + (ord(data[2]) * 256)) # line number bytes in different order
+            length=ord(data[0])
             if lineNumber == -1:
                 break
             lineData = data[3:length]
         if (decode == 1):
             #  {<cr> <linehi> <linelo> <len> <text>} <cr> <ff>
-            lineNumber, length = struct.unpack('>hB', data[1:4])
+            lineNumber=(ord(data[2]) + (ord(data[1]) * 256))
+            length=ord(data[3])
             lineData = data[4:length]
         if (decode == 0):
             #  {[<text>] [<cr>|<lf>|<cr><lf>|<lf><cr>]}
@@ -245,7 +255,6 @@ def Decode(data, output):
         if lineNoNeeded:
             output.write(str(lineNumber) + ' ')
         output.write(lineData.strip() + '\n')
-    #output.write('\n')
     return lineNoNeeded
 
 if __name__ == "__main__":
@@ -255,8 +264,5 @@ if __name__ == "__main__":
         sys.exit(1)
     entireFile = open(args[0], 'rb').read()
     output = open(args[1], 'w')
-
-    #entireFile = open('bbc\sudoku.txt', 'rb').read()
-    #output = open('bbc\sudoku2.txt', 'w')
     Decode(entireFile, output)
     output.close()
