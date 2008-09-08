@@ -405,12 +405,35 @@ def p_gcol_stmt(p):
 
 def p_input_stmt(p):
     '''input_stmt : INPUT 
-                  | INPUT input_list'''
+                  | INPUT input_list
+                  | LINE INPUT
+                  | LINE INPUT input_list
+                  | INPUT LINE
+                  | INPUT LINE input_list
+                  | INPUT channel COMMA variable_list'''
     # TODO: All other syntax of input to replace the second line above - see PRINT
     if len(p) == 2:
+        #INPUT 
         p[0] = Input()
     elif len(p) == 3:
-        p[0] = Input(inputList = p[2])
+        if p[1] == "LINE":
+            #LINE INPUT
+            p[0] = Input(inputLine = True) 
+        elif p[2] == "LINE":
+            #INPUT LINE
+            p[0] = Input(inputLine = True) 
+        else:
+            #INPUT input_list
+            p[0] = Input(inputList = p[2])
+    elif len(p) == 4:
+        if p[1] == "LINE":
+            #LINE INPUT input_list
+            p[0] = Input(inputLine = True, inputList = p[3]) 
+        elif p[2] == "LINE":
+            #INPUT LINE input_list
+            p[0] = Input(inputLine = True, inputList = p[3])
+    elif len(p) == 5:
+        p[0] = InputFile(channel = p[2], items = p[4])
     p[0].lineNum = p.lineno(1)  
 
 def p_input_list(p):

@@ -234,6 +234,11 @@ class Return(AstStatement):
 class Input(AstStatement):
     # TODO: Needs updating for all INPUT syntax including INPUT LINE
     input_list = Node()
+    input_line = BoolOption(False)
+
+class InputFile(AstStatement):
+    channel = Node(formalType=ChannelType)
+    items = Node()
 
 class InputList(AstNode):
     items = [Node()]
@@ -246,6 +251,8 @@ class InputItem(AstNode):
 
 class InputManipulator(AstNode):
     manipulator = StringOption()
+
+
 
 class Install(AstStatement):
     filename = Node(formalType=StringType)
