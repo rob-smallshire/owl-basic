@@ -5,6 +5,7 @@ from visitor import Visitor
 from node import *
 from options import *
 from ast_utils import elideNode
+from bbc_ast import StatementList, Next
 
 class SimplifyStatementListVisitor(Visitor):
     """
@@ -52,18 +53,57 @@ class SimplificationVisitor(Visitor):
         statement_list.statements = sslv.accumulatedStatements
         for index, statement in enumerate(statement_list.statements):
             statement.parent = statement_list
+            statement.parent_property = "statements"
             statement.parent_index = index
             self.visit(statement)
             
         statement_list.parent.child_infos["statements"] = statement_list.child_infos["statements"]
         assert hasattr(statement_list, "statements")
         statement_list.parent.statements = statement_list.statements
-                            
+    
+    def visitIf(self, iff):
+        if isinstance(iff.trueClause, StatementList):
+            sslv = SimplifyStatementListVisitor()
+            sslv.visit(iff.trueClause)
+            print "iff.trueClause = %s" % iff.trueClause
+            print iff.trueClause.child_infos
+            iff.child_infos['true_clause'] = iff.trueClause.child_infos['statements']
+            iff.trueClause = sslv.accumulatedStatements
+            if len(iff.trueClause) == 0:
+                iff.trueClause = None
+            else:
+                for index, statement in enumerate(iff.trueClause):
+                    statement.parent = iff
+                    statement.parent_property = 'true_clause' # TODO: Or trueClause
+                    statement.parent_index = index
+                    self.visit(statement)
+        else:
+            self.visit(iff.trueClause)
+                
+        if isinstance(iff.trueClause, StatementList):
+            sslv = SimplifyStatementListVisitor()
+            sslv.visit(iff.falseClause)
+            iff.child_infos['false_clause'] = iff.trueClause.child_infos['statements']
+            iff.falseClause = sslv.accumulatedStatements
+            if len(iff.falseClause) == 0:
+                iff.falseClause = None
+            else:
+                for index, statement in enumerate(iff.falseClause):
+                    statement.parent = iff
+                    statement.parent_property = 'false_clause' # TODO: Or falseClause
+                    statement.parent_index = index
+                    self.visit(statement)
+        else:
+            self.visit(iff.falseClause)
+                    
+        self.visit(iff.condition)
+                                    
     def visitDim(self, dim):
         """
         Convert DIM statements and their lists of arrays/blocks into
         individual AllocateArray and AllocateBlock statements
         """
+        # TODO: Move to SeparationVisitor
         items = dim.items.items
         # Locate this DIM in its parent statement list
         dim_index = dim.parent.statements.index(dim)
@@ -89,11 +129,12 @@ class SimplificationVisitor(Visitor):
         after the Repeat in the parent StatementList
         """
         if marker.followingStatement is not None:
+            # TODO: Should probably use parent_property in here
             marker_index = marker.parent.statements.index(marker)
             marker.parent.statements.insert(marker_index + 1, marker.followingStatement.body)
             marker.followingStatement = None
         # TODO: Does the moved statement node ever get visited? Are we inserting into a sequence during iteration?
-        
+            
     def visitExpressionList(self, expr_list):
         """
         Remove ExpressionList level from the AST by replacing the contents of
@@ -149,3 +190,7 @@ class SimplificationVisitor(Visitor):
         """
         expression_list.forEachChild(self.visit)
         elideNode(expression_list, liftFormalTypes=True)
+
+    # TODO: visitInputList
+    
+    

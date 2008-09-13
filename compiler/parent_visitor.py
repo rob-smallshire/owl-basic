@@ -33,6 +33,7 @@ class ParentVisitor(Visitor):
         if node is not None:
             if hasattr(node, "parent"):
                 assert node.parent is parent
+            print "node = %s" % node
             node.parent = parent
             node.parent_property = underscoresToCamelCase(name) # The property through which the parent can be accessed.
             node.parent_index = index

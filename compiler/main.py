@@ -14,6 +14,7 @@ import bbc_lexer
 import bbc_grammar
 import xml_visitor
 import parent_visitor
+import separation_visitor
 import simplify_visitor
 import typecheck_visitor
 
@@ -45,6 +46,7 @@ if __name__ == '__main__':
     parser.add_option("-x", "--debug-lex", action='store_true', dest='debug_lex', default=False)
     parser.add_option("-l", "--line-numbers", action='store_true', dest="line_numbers", default=False)
     parser.add_option("-c", "--debug-no-clr", action='store_false', dest='use_clr', default=True)
+    parser.add_option("-p", "--debug-no-separation", action='store_false', dest='use_separation', default=True)
     parser.add_option("-s", "--debug-no-simplification", action='store_false', dest='use_simplification', default=True)
     parser.add_option("-t", "--debug-no-typecheck", action='store_false', dest='use_typecheck', default=True)
     parser.add_option("-v", "--verbose", action='store_true', dest='verbose', default=False)
@@ -151,6 +153,13 @@ if __name__ == '__main__':
     if options.verbose:
         sys.stderr.write("done\n")
     
+    if options.use_separation:
+        if options.verbose:
+            sys.stderr.write("Separating complex Abstract Syntax Tree nodes... ")
+        parse_tree.accept(separation_visitor.SeparationVisitor())
+        if options.verbose:
+            sys.stderr.write("done\n")
+    
     if options.use_simplification:
         if options.verbose:
             sys.stderr.write("Simplifying Abstract Syntax Tree... ")
@@ -185,7 +194,7 @@ if __name__ == '__main__':
     #resolveGotoGosub(parse_tree)
     #splitBasicBlock(parse_tree)
     #buildSymbolTable(parse_tree)
-    
+    #extractData(parse_tree)
     # Type checking and casting
     #determineTypes(parse_tree)
     #typeCheck(parse_tree)
