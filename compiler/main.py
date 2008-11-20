@@ -17,6 +17,7 @@ import parent_visitor
 import separation_visitor
 import simplify_visitor
 import typecheck_visitor
+import flowgraph_visitor
 
 from Detoken import Decode
 
@@ -49,6 +50,7 @@ if __name__ == '__main__':
     parser.add_option("-p", "--debug-no-separation", action='store_false', dest='use_separation', default=True)
     parser.add_option("-s", "--debug-no-simplification", action='store_false', dest='use_simplification', default=True)
     parser.add_option("-t", "--debug-no-typecheck", action='store_false', dest='use_typecheck', default=True)
+    parser.add_option("-f", "--debug-no-flowgraph", action='store_false', dest='use_flowgraph', default=True)
     parser.add_option("-v", "--verbose", action='store_true', dest='verbose', default=False)
     
     (options, args) = parser.parse_args();
@@ -182,6 +184,13 @@ if __name__ == '__main__':
         xml(parse_tree, output_filename)
         if options.verbose:
             sys.stderr.write("done\n") 
+    
+    if options.use_flowgraph:
+        if options.verbose:
+            sys.stderr.write("Creating Control Flow Graph...")
+        parse_tree.accept(flowgraph_visitor.FlowgraphForwardVisitor(parse_tree))
+        if options.verbose:
+            sys.stderr.write("done\n")
     
     # Structural analysis
     #flatten(parse_tree)

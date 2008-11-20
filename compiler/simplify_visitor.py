@@ -65,8 +65,6 @@ class SimplificationVisitor(Visitor):
         if isinstance(iff.trueClause, StatementList):
             sslv = SimplifyStatementListVisitor()
             sslv.visit(iff.trueClause)
-            print "iff.trueClause = %s" % iff.trueClause
-            print iff.trueClause.child_infos
             iff.child_infos['true_clause'] = iff.trueClause.child_infos['statements']
             iff.trueClause = sslv.accumulatedStatements
             if len(iff.trueClause) == 0:
@@ -74,23 +72,23 @@ class SimplificationVisitor(Visitor):
             else:
                 for index, statement in enumerate(iff.trueClause):
                     statement.parent = iff
-                    statement.parent_property = 'true_clause' # TODO: Or trueClause
+                    statement.parent_property = 'trueClause'
                     statement.parent_index = index
                     self.visit(statement)
         else:
             self.visit(iff.trueClause)
                 
-        if isinstance(iff.trueClause, StatementList):
+        if isinstance(iff.falseClause, StatementList):
             sslv = SimplifyStatementListVisitor()
             sslv.visit(iff.falseClause)
-            iff.child_infos['false_clause'] = iff.trueClause.child_infos['statements']
+            iff.child_infos['false_clause'] = iff.falseClause.child_infos['statements']
             iff.falseClause = sslv.accumulatedStatements
             if len(iff.falseClause) == 0:
                 iff.falseClause = None
             else:
                 for index, statement in enumerate(iff.falseClause):
                     statement.parent = iff
-                    statement.parent_property = 'false_clause' # TODO: Or falseClause
+                    statement.parent_property = 'falseClause'
                     statement.parent_index = index
                     self.visit(statement)
         else:
@@ -125,8 +123,8 @@ class SimplificationVisitor(Visitor):
             
     def visitMarkerStatement(self, marker):
         """
-        Remove the followingStatement from the Repeat, moving it to immediately
-        after the Repeat in the parent StatementList
+        Remove the followingStatement from the Repeat, DefineProcedure, etc, moving it to immediately
+        after the statement in the parent StatementList
         """
         if marker.followingStatement is not None:
             # TODO: Should probably use parent_property in here

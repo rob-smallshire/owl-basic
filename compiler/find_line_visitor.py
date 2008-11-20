@@ -13,6 +13,8 @@ class FindLineVisitor(Visitor):
         Initialize the visitor with the logical line number we are looking for
         """
         self.targetLineNumber = logicalLineNumber
+        
+        # TODO: Wrap result in a property
         self.result = None
         
     def visitAstNode(self, node):

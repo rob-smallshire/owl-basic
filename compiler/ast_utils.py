@@ -3,7 +3,7 @@ from utility import camelCaseToUnderscores
 def elideNode(node, liftFormalTypes=False):
     """
     Removes a node from the AST, assigning the contents of its only attribute
-    attribute to the owning attribute, thereby simplifing the AST structure. If
+    attribute to the owning attribute, thereby simplifying the AST structure. If
     liftFormalTypes is true, the formal type of the child is propagates to the
     new owner of the data.
     """
@@ -32,3 +32,27 @@ def elideNode(node, liftFormalTypes=False):
     if liftFormalTypes:
         node.parent.child_infos[camelCaseToUnderscores(node.parent_property)] = node.child_infos[prop]
     node.parent.setProperty(getattr(node, prop), node.parent_property)
+    
+def findFollowingStatement(statement):
+    """
+    Given a statement, locates the following statement
+    """
+    
+    if statement.parent is None:
+        return None
+    
+    parent_list = getattr(statement.parent, statement.parent_property)
+    if isinstance(parent_list, list):
+        if statement.parent_index < (len(parent_list) - 1):
+            return parent_list[statement.parent_index + 1]
+    
+    findFollowingStatement(statement.parent)
+
+def findRoot(node):
+    """
+    Given an AST node find the root node of the AST.
+    """
+    n = node
+    while n.parent is not None:
+        n = n.parent
+    return n

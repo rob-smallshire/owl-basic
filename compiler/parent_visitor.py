@@ -13,7 +13,7 @@ class ParentVisitor(Visitor):
     def visitAstNode(self, node):
         # TODO: This partial function application doesn't work correctly with IronPython
         #node.forEachChild(partial(self._setParent, parent = node))
-        
+                
         # TODO: Inlining the forEachChild function works, however...
         for name, child in node.children.items():
             if isinstance(child, list):
@@ -31,8 +31,8 @@ class ParentVisitor(Visitor):
         the supplied node.
         """
         if node is not None:
-            if hasattr(node, "parent"):
-                assert node.parent is parent
+            #if hasattr(node, "parent"):
+            #    assert node.parent is parent
             print "node = %s" % node
             node.parent = parent
             node.parent_property = underscoresToCamelCase(name) # The property through which the parent can be accessed.

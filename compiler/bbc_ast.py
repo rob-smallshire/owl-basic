@@ -5,8 +5,9 @@ import re
 
 from ast_meta import *
 from bbc_types import *
+from cfg_vertex import *
     
-class AstStatement(AstNode):
+class AstStatement(AstNode, CfgVertex):
     formal_type = TypeOption(VoidType)
     actual_type = formal_type
         
@@ -71,7 +72,7 @@ class Bput(AstStatement):
     channel = Node(formalType=ChannelType)
     data    = Node(formalType=IntegerType)
     # TODO: Whether newline is True or False depends on
-    #       the type of datan.  If data is a number,
+    #       the type of data.  If data is a number,
     #       we default to False, if data is a string we
     #       default to True.
     newline = BoolOption(False)
@@ -251,8 +252,6 @@ class InputItem(AstNode):
 
 class InputManipulator(AstNode):
     manipulator = StringOption()
-
-
 
 class Install(AstStatement):
     filename = Node(formalType=StringType)
@@ -956,7 +955,7 @@ class Concatenate(AstNode):
     rhs = Node(formalType=StringType)
 
 class Cast(AstNode):
-    "Implict Conversion"
+    "Implicit Conversion"
     formal_type = TypeOption()
     source_type = TypeOption()
     target_type = TypeOption()

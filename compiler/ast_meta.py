@@ -31,11 +31,12 @@ class AstMeta(type):
         """
         Configure the class that is being created by introspecting its
         'declaration' and creating getters, setters and properties for its
-        data memebers.
+        data members.
         """
         cls._createChildProperties(name, bases, dict)
         cls._createChildListProperties(name, bases, dict)
         cls._createOptionProperties(name, bases, dict)
+        super(AstMeta, cls).__init__(name, bases, dict)
     
     # TODO: These methods have a lot of common code.
     
@@ -154,8 +155,9 @@ class AstNode(object):
     line_num = IntegerOption()
     
     def __init__(self):
-        # Initialise children
+        self.parent = None
         
+        # Initialise children
         self._children = {}
         for info_name, info in self.child_infos.items():
             if isinstance(info, Node):
@@ -166,6 +168,7 @@ class AstNode(object):
         self._options = {}
         for info_name, option in self.option_infos.items():
             self._options[info_name] = option.value
+        super(AstNode, self).__init__()
         
     # Children accessor
     
