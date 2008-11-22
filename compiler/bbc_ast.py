@@ -821,6 +821,7 @@ class LeftStrFunc(AstNode):
 
 class LenFunc(AstNode):
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
     factor = Node(formalType=StringType)
 
 class LnFunc(UnaryNumericFunc):
@@ -875,6 +876,7 @@ class RightStrFunc(AstNode):
 
 class RndFunc(AstNode):
     formal_type = TypeOption(NumericType)
+    actual_type = formal_type
     option = Node(formalType=IntegerType)
 
 class SinFunc(UnaryNumericFunc):

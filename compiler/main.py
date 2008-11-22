@@ -16,8 +16,10 @@ import xml_visitor
 import parent_visitor
 import separation_visitor
 import simplify_visitor
+import line_number_visitor
 import typecheck_visitor
 import flowgraph_visitor
+import gml_visitor
 
 from Detoken import Decode
 
@@ -36,10 +38,15 @@ def tokenize(data):
         if not tok: break      # No more input
         print tok
 
-def xml(tree, filename):
+def xmlAst(tree, filename):
     xmlv = xml_visitor.XmlVisitor(filename)
     tree.accept(xmlv)
     xmlv.close()
+    
+def xmlCfg(tree, filename):
+    gmlv = gml_visitor.GmlVisitor(filename)
+    tree.accept(gmlv)
+    gmlv.close()
 
 if __name__ == '__main__':
     
@@ -169,6 +176,9 @@ if __name__ == '__main__':
         if options.verbose:
             sys.stderr.write("done\n")
     
+    lnv = line_number_visitor.LineNumberVisitor()
+    parse_tree.accept(lnv)
+                
     if options.use_typecheck:
         if options.verbose:
             sys.stderr.write("Type checking... ")
@@ -178,19 +188,28 @@ if __name__ == '__main__':
         
     if options.use_clr:
         if options.verbose:
-            sys.stderr.write("Creating XML... ")
-        output_filename = filename + ".xml"
+            sys.stderr.write("Creating XML AST... ")
+        output_filename = filename + "_ast.xml"
         print "Creating %s" % output_filename
-        xml(parse_tree, output_filename)
+        xmlAst(parse_tree, output_filename)
         if options.verbose:
             sys.stderr.write("done\n") 
     
     if options.use_flowgraph:
         if options.verbose:
             sys.stderr.write("Creating Control Flow Graph...")
-        parse_tree.accept(flowgraph_visitor.FlowgraphForwardVisitor(parse_tree))
+        parse_tree.accept(flowgraph_visitor.FlowgraphForwardVisitor(lnv.line_to_stmt))
         if options.verbose:
             sys.stderr.write("done\n")
+    
+    if options.use_clr:
+        if options.verbose:
+            sys.stderr.write("Creating XML CFG... ")
+        output_filename = filename + "_cfg.graphml"
+        print "Creating %s" % output_filename
+        xmlCfg(parse_tree, output_filename)
+        if options.verbose:
+            sys.stderr.write("done\n") 
     
     # Structural analysis
     #flatten(parse_tree)

@@ -35,6 +35,7 @@ class SeparationVisitor(Visitor):
             new_next = Next()
             new_next.parent = statement
             new_next.parent_property = 'body'
+            new_next.lineNum = next.lineNum
             statement.body = new_next
             
             variable_list = VariableList()

@@ -1,6 +1,7 @@
 from visitor import Visitor
 from find_line_visitor import FindLineVisitor
 from ast_utils import *
+import errors
 
 class FlowgraphForwardVisitor(Visitor):
     """
@@ -9,9 +10,13 @@ class FlowgraphForwardVisitor(Visitor):
     the child nodes appropriately.
     """
     
-    def __init__(self, root):
+    def __init__(self, line_to_stmt):
         # TODO: This should locate its own root, finding it on demand
-        self.root = root
+        self.line_to_stmt = line_to_stmt
+    
+    def statementOnLine(self, targetLine):
+        n = targetLine.value          
+        return self.line_to_stmt.has_key(n) and self.line_to_stmt[n]
             
     def visitAstNode(self, node):
         "Visit all children in order"
@@ -39,8 +44,11 @@ class FlowgraphForwardVisitor(Visitor):
         Connect the If to the initial statements of the true and false
         clauses.  Process each statement in both clauses.
         """
-       
+        print "IF on line %d" % iff.lineNum
         following = findFollowingStatement(iff)
+        print "following = %s" % following
+        if not following:
+            errors.internal("Following statement to IF not found at line %d" % iff.lineNum)
         if iff.trueClause is not None:
             if isinstance(iff.trueClause, list):
                 if len(iff.trueClause) > 0:
@@ -52,6 +60,9 @@ class FlowgraphForwardVisitor(Visitor):
                         self.visit(statement)
                 else:
                     self.connect(iff, iff.trueClause)
+                    self.visit(iff.trueClause)
+        else:
+            self.connect(iff, following)
                 
         if iff.falseClause is not None:
             if isinstance(iff.falseClause, list):
@@ -64,6 +75,9 @@ class FlowgraphForwardVisitor(Visitor):
                         self.visit(statement)
                 else:
                     self.connect(iff, iff.falseClause)
+                    self.visit(iff.falseClause)
+        else:
+            self.connect(iff, following)       
             
     def visitGoto(self, goto):
         """
@@ -72,11 +86,12 @@ class FlowgraphForwardVisitor(Visitor):
         """
         # TODO: targetLogicalLine needs to be a constant for this
         # to work
-        flv = FindLineVisitor(goto.targetLogicalLine)
-        findRoot(goto).accept(flv)
-        if flv.result:
-            self.cfg.connect(goto, flv.result)
+        print "CFG goto"
+        goto_target = self.statementOnLine(goto.targetLogicalLine)
+        if goto_target:
+            self.connect(goto, goto_target)
         else:
+            print "Line not found"
             # TODO: Error!
             pass
             
@@ -85,11 +100,11 @@ class FlowgraphForwardVisitor(Visitor):
         Connect the Gosub to the first statement on the target line if
         it exists. Error if it does not.
         """
-        flv = FindLineVisitor(gosub.targetLogicalLine)
-        self.root.accept(flv)
-        if flv.result:
-            self.connect(gosub, flv.result)
+        gosub_target = self.statementOnLine(gosub.targetLogicalLine)
+        if gosub_target:
+            self.connect(gosub, gosub_target)
         else:
+            print "Line not found"
             # TODO: Error!
             pass
         
@@ -101,10 +116,11 @@ class FlowgraphForwardVisitor(Visitor):
         that clause.
         """
         for targetLogicalLine in ongoto.targetLogicalLines:
-            flv = FindLineVisitor(targetLogicalLine)
-            if flv.result:
-                self.connect(ongoto, flv.result)
+            ongoto_target = self.statementOnLine(targetLogicalLine)
+            if ongoto_target:
+                self.connect(ongoto, ongoto_target)
             else:
+                print "Line not found"
                 # TODO: Error!
                 pass
             
@@ -119,6 +135,7 @@ class FlowgraphForwardVisitor(Visitor):
                         self.visit(statement)
                 else:
                     self.connect(ongoto, ongoto.outOfRangeClause)
+                    self.visit(ongoto.outOfRangeClause)
             
     def visitCase(self, case):
         """
@@ -133,11 +150,7 @@ class FlowgraphForwardVisitor(Visitor):
                 
                 for statement in when_clause.statements:
                     self.visit(statement)
-                                    
-    def visitData(self, data):
-        # TODO
-        pass
-    
+                                        
     # The following are statements which do not pass control to the
     # succeeding statement in the linear source code order of the program
     

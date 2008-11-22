@@ -37,16 +37,21 @@ def findFollowingStatement(statement):
     """
     Given a statement, locates the following statement
     """
-    
+    #print "findFollowingStatement"
     if statement.parent is None:
+        #print "statement.parent is None"
         return None
     
     parent_list = getattr(statement.parent, statement.parent_property)
+    #print "parent_list = %s" % parent_list
     if isinstance(parent_list, list):
+        #print "parent_index = %d" % statement.parent_index
+        #print "len(parent_list) = %d" % len(parent_list)
         if statement.parent_index < (len(parent_list) - 1):
+            #print "parent_list[statement.parent_index + 1] = %s" % parent_list[statement.parent_index + 1]
             return parent_list[statement.parent_index + 1]
     
-    findFollowingStatement(statement.parent)
+    return findFollowingStatement(statement.parent)
 
 def findRoot(node):
     """

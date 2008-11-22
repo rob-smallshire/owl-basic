@@ -483,6 +483,7 @@ def p_on_goto_stmt(p):
         p[0] = OnGoto(switch = p[2], targetLogicalLines = p[4])
     elif len(p) == 7:
         p[0] = OnGoto(switch = p[2], targetLogicalLines = p[4], outOfRangeClause = p[6])
+    p[0].lineNum = p.lineno(1)
     
 # GOSUB statement
 def p_gosub(p):
@@ -527,6 +528,7 @@ def p_clause(p):
 def p_implicit_goto(p):
     '''implicit_goto : factor'''
     p[0] = Goto(targetLogicalLine = p[1])
+    # TODO: Need line number here
     
 def p_if_multi_stmt(p):
     '''if_multi_stmt : IF expr THEN statement_list ENDIF
@@ -793,6 +795,7 @@ def p_read(p):
         p[0] = Read()
     elif len(p) == 3:
         p[0] = Read(writables = p[2])
+    p[0].lineNum = p.lineno(1)
     
 def p_rectangle_stmt(p):
     '''rectangle_stmt : RECTANGLE expr COMMA expr COMMA expr
@@ -849,6 +852,7 @@ def p_report_stmt(p):
 def p_repeat_stmt(p):
     '''repeat_stmt : REPEAT statement'''
     p[0] = Repeat(followingStatement = p[2])
+    p[0].lineNum = p.lineno(1)
 
 def p_restore_stmt(p):
     '''restore_stmt : RESTORE

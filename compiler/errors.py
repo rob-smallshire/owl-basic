@@ -18,3 +18,4 @@ def internal(message):
     sys.stderr.write("Internal Compiler Error: ")
     sys.stderr.write(message)
     sys.stderr.write('\n')
+    sys.exit(1)
