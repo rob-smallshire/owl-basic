@@ -44,9 +44,9 @@ class FlowgraphForwardVisitor(Visitor):
         Connect the If to the initial statements of the true and false
         clauses.  Process each statement in both clauses.
         """
-        print "IF on line %d" % iff.lineNum
+        #print "IF on line %d" % iff.lineNum
         following = findFollowingStatement(iff)
-        print "following = %s" % following
+        #print "following = %s" % following
         if not following:
             errors.internal("Following statement to IF not found at line %d" % iff.lineNum)
         if iff.trueClause is not None:
@@ -59,8 +59,10 @@ class FlowgraphForwardVisitor(Visitor):
                     for statement in iff.trueClause:
                         self.visit(statement)
                 else:
-                    self.connect(iff, iff.trueClause)
-                    self.visit(iff.trueClause)
+                    self.connect(iff.following)
+            else:
+                self.connect(iff, iff.trueClause)
+                self.visit(iff.trueClause)                
         else:
             self.connect(iff, following)
                 
@@ -74,8 +76,10 @@ class FlowgraphForwardVisitor(Visitor):
                     for statement in iff.falseClause:
                         self.visit(statement)
                 else:
-                    self.connect(iff, iff.falseClause)
-                    self.visit(iff.falseClause)
+                    self.connect(iff.following)
+            else:
+                self.connect(iff, iff.falseClause)
+                self.visit(iff.falseClause)
         else:
             self.connect(iff, following)       
             
@@ -91,7 +95,7 @@ class FlowgraphForwardVisitor(Visitor):
         if goto_target:
             self.connect(goto, goto_target)
         else:
-            print "Line not found"
+            errors.error("No such line %s at line %s" % (goto.targetLogicalLine.value, goto.lineNum))
             # TODO: Error!
             pass
             

@@ -211,6 +211,32 @@ if __name__ == '__main__':
         if options.verbose:
             sys.stderr.write("done\n") 
     
+    # TODO: Inline single-entry GOSUB
+    #
+    # Trace back from RETURN statements - if only one
+    # GOSUB is reached - move the code in the GOSUB to the call site
+    # of the GOSUB. 
+    
+    # TODO: Analyse the flowgraph and warn about any inbound
+    # edges to DefineFunction and DefneProcedure. Insert nodes
+    # to raise ExecuteDefinitionException on these edges.
+    
+    # Locate nodes with no inbound edges and trace unreachable code
+    # from them. Remove unreachable code from the CFG and the AST. This
+    # will need to be traced from program and procedure entry points
+    
+    # Locate any procedures with GOTOs which jump out of the procedure
+    # Replace the procedure with throw GotoLabelExceptionNNN. Wrap all call
+    # sites to that procedure in catch blocks containing a Goto to the correct line.
+    # Repeat until all GOTOs can be resolved in their block.
+    
+    # Convert GOSUB blocks to procedures if they are called more than once,
+    # otherwise inline them.
+    
+    
+    
+    # TODO: Replace Goto -> ReturnFromProcedure with ReturnFromProcedure
+    
     # Structural analysis
     #flatten(parse_tree)
     #assignIds(parse_tree)
