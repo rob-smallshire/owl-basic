@@ -151,10 +151,10 @@ class TypecheckVisitor(Visitor):
             
     def visitPower(self, power):
         # Determine the actual type of sub-expressions
-        self.visit(divide.lhs)
-        self.visit(divide.rhs)
+        self.visit(power.lhs)
+        self.visit(power.rhs)
         
-        if not self.checkSignature(divide):
+        if not self.checkSignature(power):
             return
         
         # Compute the actual type of the power expression
@@ -164,8 +164,8 @@ class TypecheckVisitor(Visitor):
         elif power.lhs.actualType == FloatType and power.rhs.actualType == IntegerType:
             self.insertCast(power.rhs, source=IntegerType, target=FloatType)
         else:
-            message = "Cannot raise %s by %s" % (divide.lhs.actualType, divide.rhs.actualType)
-            self.typeMismatch(divide, message)
+            message = "Cannot raise %s by %s" % (power.lhs.actualType, power.rhs.actualType)
+            self.typeMismatch(power, message)
     
     def visitArray(self, array):
         # Decode the variable name sigil into the actual type
@@ -176,6 +176,13 @@ class TypecheckVisitor(Visitor):
         # Decode the variable name sigil into the actual type
         # The sigils are one of [$%&~]
         variable.actualType = self.identifierToType(variable.identifier)
+        
+    def visitIndexer(self, indexer):
+        # Decode the variable name sigil into the actual type
+        # The sigils are one of [$%&~]
+        print "indexer.identifier = %s" % indexer.identifier
+        indexer.actualType = self.identifierToType(indexer.identifier[:-1])
+        print "indexer.actualType = %s" % indexer.actualType
     
     def visitIf(self, iff):
         self.visit(iff.condition)

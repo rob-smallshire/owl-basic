@@ -775,11 +775,18 @@ class ErlFunc(AstNode):
 class ErrFunc(AstNode):
     formal_type = TypeOption(IntegerType)
 
+class EvalFunc(AstNode):
+    "EVAL"
+    formal_type = TypeOption(ScalarType)
+    actual_type = formal_type
+    factor = Node(formalType=StringType)
+    
 class ExpFunc(UnaryNumericFunc):
     "EXP"
 
 class FalseFunc(AstNode):
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
 
 class GetFunc(AstNode):
     formal_type = TypeOption(IntegerType)
@@ -875,7 +882,11 @@ class RightStrFunc(AstNode):
     length = Node(formalType=IntegerType)
 
 class RndFunc(AstNode):
-    formal_type = TypeOption(NumericType)
+    "RND"
+    # A minor change from BBC BASIC. In BBC BASIC RND(x) can return
+    # either a float or integer.  In OWL BASIC we always return a
+    # 64-bit float.
+    formal_type = TypeOption(FloatType) 
     actual_type = formal_type
     option = Node(formalType=IntegerType)
 
@@ -920,6 +931,7 @@ class TopFunc(AstNode):
 
 class TrueFunc(AstNode):
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
 
 class ValFunc(AstNode):
     formal_type = TypeOption(NumericType)

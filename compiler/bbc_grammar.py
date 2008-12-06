@@ -1339,7 +1339,6 @@ def p_time_str_value(p):
 
 # TODO: Functions to be implemented
 '''    expr_function :
-                     | eval_func
                      | report_str_func
                      | string_str_func
                      | sum_func
@@ -1365,6 +1364,7 @@ def p_expr_function(p):
                      | erl_func
                      | exp_func
                      | eof_func
+                     | eval_func
                      | false_func
                      | get_func
                      | get_str_func
@@ -1504,6 +1504,11 @@ def p_err_func(p):
 def p_exp_func(p):
     '''exp_func : EXP factor %prec FUNCTION'''
     p[0] = ExpFunc(factor = p[2])
+    p[0].lineNum = p.lineno(1)
+
+def p_eval_func(p):
+    '''eval_func : EVAL factor %prec FUNCTION'''
+    p[0] = EvalFunc(factor = p[2])
     p[0].lineNum = p.lineno(1)
 
 def p_false_func(p):
