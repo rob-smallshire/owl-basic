@@ -15,6 +15,7 @@ class LineNumberVisitor(Visitor):
 
     def registerStatement(self, statement):
         line_num = statement.lineNum
+        print "line_num = %s" % line_num
         if not self.line_to_stmt.has_key(line_num):
             self.line_to_stmt[line_num] = statement
 

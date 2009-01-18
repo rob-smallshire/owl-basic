@@ -9,11 +9,11 @@ def elideNode(node, liftFormalTypes=False):
     """
     # TODO: Refactor! D.R.Y.
     assert len(node.child_infos) == 1
-    print node
-    print node.child_infos
+    #print node
+    #print node.child_infos
     if isinstance(node.child_infos.values()[0], list):
         prop = node.child_infos.keys()[0] # TODO: Rename list_property
-        print prop
+        #print prop
         
         for item in getattr(node, prop):
             if item is not None:
@@ -41,8 +41,9 @@ def findFollowingStatement(statement):
     if statement.parent is None:
         #print "statement.parent is None"
         return None
-    
+    #print "statement.lineNum = %s" % statement.lineNum
     parent_list = getattr(statement.parent, statement.parent_property)
+    
     #print "parent_list = %s" % parent_list
     if isinstance(parent_list, list):
         #print "parent_index = %d" % statement.parent_index
@@ -61,3 +62,37 @@ def findRoot(node):
     while n.parent is not None:
         n = n.parent
     return n
+
+def insertStatementBefore(statement, target):
+    """
+    Insert target before statement in the AST, and correct the AST and CFG references to match
+    """
+    if statement.parent is None:
+        errors.fatalError("Cannot insert statement before %s at line %s" % (statement, statement.lineNum))
+    
+    parent_list = getattr(statement.parent, statement.parent_property)
+    
+    if isinstance(parent_list, list):
+        parent_list.insert(statement.parent_index, target)
+        target.parent = statement.parent
+        target.parent_property = statement.parent_property
+        target.parent_index = statement.parent_index
+        statement.parent_index += 1
+                  
+    else:
+        errors.fatalError("Cannot insert statement before %s at line %s" % (statement, statement.lineNum))
+        return
+        
+    # Reconnect CFG
+    for prior_stmt in statement.inEdges:
+        assert statement in prior_stmt.outEdges
+        prior_stmt.outEdges.remove(statement)
+        prior_stmt.outEdges.append(target)
+        target.inEdges.append(prior_stmt)
+    
+    statement.clearInEdges()    
+    statement.addInEdge(target)
+    
+    target.clearOutEdges()
+    target.addOutEdge(statement)
+        

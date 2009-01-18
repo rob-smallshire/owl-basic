@@ -10,13 +10,15 @@ class FlowgraphForwardVisitor(Visitor):
     the child nodes appropriately.
     """
     
-    def __init__(self, line_to_stmt):
+    def __init__(self, line_mapper):
         # TODO: This should locate its own root, finding it on demand
-        self.line_to_stmt = line_to_stmt
+        self.line_mapper = line_mapper
     
+    # TODO: Factor this out of here
     def statementOnLine(self, targetLine):
-        n = targetLine.value          
-        return self.line_to_stmt.has_key(n) and self.line_to_stmt[n]
+        n = targetLine.value
+        return self.line_mapper.logicalStatement(n)          
+        #return self.line_to_stmt.has_key(n) and self.line_to_stmt[n]
             
     def visitAstNode(self, node):
         "Visit all children in order"
@@ -90,8 +92,10 @@ class FlowgraphForwardVisitor(Visitor):
         """
         # TODO: targetLogicalLine needs to be a constant for this
         # to work
-        print "CFG goto"
+        #print "CFG goto"
+        print "goto.targetLogicalLine = %s" % goto.targetLogicalLine.value
         goto_target = self.statementOnLine(goto.targetLogicalLine)
+        print "goto_target = %s" % goto_target
         if goto_target:
             self.connect(goto, goto_target)
         else:
@@ -99,18 +103,18 @@ class FlowgraphForwardVisitor(Visitor):
             # TODO: Error!
             pass
             
-    def visitGosub(self, gosub):
-        """
-        Connect the Gosub to the first statement on the target line if
-        it exists. Error if it does not.
-        """
-        gosub_target = self.statementOnLine(gosub.targetLogicalLine)
-        if gosub_target:
-            self.connect(gosub, gosub_target)
-        else:
-            print "Line not found"
-            # TODO: Error!
-            pass
+#    def visitGosub(self, gosub):
+#        """
+#        Connect the Gosub to the first statement on the target line if
+#        it exists. Error if it does not.
+#        """
+#        gosub_target = self.statementOnLine(gosub.targetLogicalLine)
+#        if gosub_target:
+#            self.connect(gosub, gosub_target)
+#        else:
+#            print "Line not found"
+#            # TODO: Error!
+#            pass
         
     def visitOnGoto(self, ongoto):
         """
@@ -191,11 +195,3 @@ class FlowgraphForwardVisitor(Visitor):
         # TODO: Rheolism!
         pass
     
-    
-    
-    
-    
-        
-        
-            
-        

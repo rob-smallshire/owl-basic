@@ -110,6 +110,8 @@ class SimplificationVisitor(Visitor):
         for item in items:
             dim.parent.statements.insert(dim_index, item)
             item.parent = dim.parent
+            item.parent_property = dim.parent_property
+            item.parent_index = dim_index
             item.lineNum = dim.lineNum
             self.visit(item)
             

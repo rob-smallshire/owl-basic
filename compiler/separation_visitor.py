@@ -17,7 +17,7 @@ class SeparationVisitor(Visitor):
         """
         Split NEXT i%, j%, k% statements into NEXT i% : NEXT j% : NEXT k%
         """
-        print next
+        #print next
         self.visit(next.identifiers)
         statement_list = StatementList()
         statement_list.parent = next.parent

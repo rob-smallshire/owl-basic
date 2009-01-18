@@ -23,13 +23,13 @@ class FindLineVisitor(Visitor):
     
     def visitProgram(self, program):
         "Search the list of statements"
-        print "FindLineVisitor.visitProgram"
+        #print "FindLineVisitor.visitProgram"
         # Extract the line numbers into an array
         line_numbers = [statement.lineNum for statement in program.statements]
         above_index = bisect_left(line_numbers, self.targetLineNumber)
         above_line_number = program.statements[above_index].lineNum
         
-        print "target = %d, above_line_number = %d" % (self.targetLineNumber, above_line_number)
+        #print "target = %d, above_line_number = %d" % (self.targetLineNumber, above_line_number)
         
         if above_line_number == self.targetLineNumber:
             self.visit(program.statements[above_index])
@@ -45,7 +45,7 @@ class FindLineVisitor(Visitor):
             self.visit(program.statements[below_index])
         
     def visitAstStatement(self, statement):
-        print "visitAstStatement lineNum = %s" % statement.lineNum
+        #print "visitAstStatement lineNum = %s" % statement.lineNum
         if statement.lineNum == self.targetLineNumber:
             self.result = statement
             

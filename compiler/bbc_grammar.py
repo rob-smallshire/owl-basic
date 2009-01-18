@@ -1387,6 +1387,7 @@ def p_expr_function(p):
                      | pi_func
                      | pos_func
                      | point_func
+                     | quit_func
                      | sin_func
                      | sgn_func
                      | sqr_func
@@ -1636,6 +1637,11 @@ def p_pi_func(p):
 def p_point_func(p):
     '''point_func : POINT_LPAREN expr COMMA expr RPAREN %prec FUNCTION'''
     p[0] = PointFunc(xCoord = p[2] , yCoord = p[4])
+    p[0].lineNum = p.lineno(1)
+
+def p_quit_func(p):
+    '''quit_func : QUIT %prec FUNCTION'''
+    p[0] = QuitFunc()
     p[0].lineNum = p.lineno(1)
     
 def p_rad_func(p):

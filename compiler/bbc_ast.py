@@ -144,14 +144,17 @@ class Data(AstStatement):
             items.append(item)
         return items
 
-class DefineFunction(MarkerStatement):
+class DefinitionStatement(MarkerStatement):
+    pass
+
+class DefineFunction(DefinitionStatement):
     name = StringOption()
     formal_parameters = Node()
 
 class ReturnFromFunction(AstStatement):
     return_value = Node(formalType=ScalarType) # TODO: Can functions return arrays 
 
-class DefineProcedure(MarkerStatement):
+class DefineProcedure(DefinitionStatement):
     name = StringOption()
     formal_parameters = Node()
 
@@ -872,6 +875,11 @@ class PointFunc(AstNode):
     x_coord = Node(formalType=IntegerType)
     y_coord = Node(formalType=IntegerType)
 
+class QuitFunc(AstNode):
+    "QUIT"
+    formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
+    
 class RadFunc(UnaryNumericFunc):
     "RAD"
 
@@ -974,4 +982,9 @@ class Cast(AstNode):
     source_type = TypeOption()
     target_type = TypeOption()
     value = Node()
+    
+class Raise(AstStatement):
+    "Raise exception"
+    type = StringOption()
+    
     

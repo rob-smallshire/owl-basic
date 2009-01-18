@@ -41,8 +41,8 @@ class XmlVisitor(Visitor):
             self.childNoneElement()
         else:
             if name in node.parent.child_infos:
-                print "node = %s, name = %s" % (node, name)
-                print "node.parent.child_infos = %s" % str(node.parent.child_infos)
+                #print "node = %s, name = %s" % (node, name)
+                #print "node.parent.child_infos = %s" % str(node.parent.child_infos)
                 # TODO: Next if is temporary
                 if not isinstance(node.parent.child_infos[name], list):
                     if node.parent.child_infos[name].nodeType is not None:
@@ -90,12 +90,12 @@ class XmlVisitor(Visitor):
             if value is not None:
                 self.childAttribute(name, value)
         for name, child in node.children.items():
-            print "child = %s" % child
+            #print "child = %s" % child
             if isinstance(child, list):
-                print "child!"
+                #print "child!"
                 self.childListElement(name, child)
             else:    
-                print "node!"
+                #print "node!"
                 self.childNodeElement(name, child)
         self.endElement()
         

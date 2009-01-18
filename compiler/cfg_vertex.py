@@ -6,6 +6,8 @@ class CfgVertex(object):
     def __init__(self):
         self.__in_edges  = []
         self.__out_edges = []
+        self.__come_from_edges = []
+        self.__entry_points = []
         
         CfgVertex.__counter += 1
         self.__id = CfgVertex.__counter
@@ -25,9 +27,37 @@ class CfgVertex(object):
     
     outEdges = property(_getOutEdges)
     
+    def _getComeFromEdges(self):
+        return self.__come_from_edges
+    
+    comeFromEdges = property(_getComeFromEdges)
+    
+    def _getEntryPoints(self):
+        return self.__entry_points
+    
+    entryPoints = property(_getEntryPoints)
+    
+    def clearInEdges(self):
+        self.__in_edges = []
+    
+    def clearOutEdges(self):
+        self.__out_edges = []
+    
+    def clearComeFromEdges(self):
+        self.__come_from_edges = []
+    
+    def clearEntryPoints(self):
+        self.__entry_points = []
+    
     def addInEdge(self, from_vertex):
         self.inEdges.append(from_vertex)
         
     def addOutEdge(self, to_vertex):
         self.outEdges.append(to_vertex)
+        
+    def addComeFromEdge(self, from_vertex):
+        self.comeFromEdges.append(from_vertex)
+        
+    def addEntryPoint(self, name):
+        self.entryPoints.append(name)
         

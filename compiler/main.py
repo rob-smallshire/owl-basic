@@ -10,8 +10,10 @@ from optparse import OptionParser
 import ply.lex as lex
 import ply.yacc as yacc
 
+import errors
 import bbc_lexer
 import bbc_grammar
+import bbc_ast
 import xml_visitor
 import parent_visitor
 import separation_visitor
@@ -20,6 +22,10 @@ import line_number_visitor
 import typecheck_visitor
 import flowgraph_visitor
 import gml_visitor
+import entry_point_visitor
+import ast_utils
+import flow_analysis
+from line_mapper import LineMapper
 
 from Detoken import Decode
 
@@ -58,6 +64,7 @@ if __name__ == '__main__':
     parser.add_option("-s", "--debug-no-simplification", action='store_false', dest='use_simplification', default=True)
     parser.add_option("-t", "--debug-no-typecheck", action='store_false', dest='use_typecheck', default=True)
     parser.add_option("-f", "--debug-no-flowgraph", action='store_false', dest='use_flowgraph', default=True)
+    parser.add_option("-e", "--debug-no-entrypoints", action='store_false', dest='use_entry_points', default=True)
     parser.add_option("-v", "--verbose", action='store_true', dest='verbose', default=False)
     
     (options, args) = parser.parse_args();
@@ -101,7 +108,7 @@ if __name__ == '__main__':
         line_number_regex = re.compile(r'\s*(\d+)\s*(.*)')
         physical_line = 0
         logical_line = 0
-        physical_to_logical_line = [0]
+        physical_to_logical_map = [0]
         line_bodies = []
         while True:
             line = detokenHandle.readline()
@@ -114,11 +121,12 @@ if __name__ == '__main__':
                 logging.error("Missing line number at physical line %d (after logical line %d)", physical_line, logical_line)
                 sys.exit(1)
             logical_line = int(m.group(1))
-            physical_to_logical_line.append(logical_line)
+            physical_to_logical_map.append(logical_line)
             line_bodies.append(m.group(2))
-        #print physical_to_logical_line
+        print physical_to_logical_map
         data = '\n'.join(line_bodies)
     else:
+        physical_to_logical_map = None
         data = detokenHandle.read()
     detokenHandle.close()
     
@@ -178,7 +186,11 @@ if __name__ == '__main__':
     
     lnv = line_number_visitor.LineNumberVisitor()
     parse_tree.accept(lnv)
-                
+    
+    print lnv.line_to_stmt
+    
+    line_mapper = LineMapper(physical_to_logical_map, lnv.line_to_stmt)
+                                
     if options.use_typecheck:
         if options.verbose:
             sys.stderr.write("Type checking... ")
@@ -198,9 +210,36 @@ if __name__ == '__main__':
     if options.use_flowgraph:
         if options.verbose:
             sys.stderr.write("Creating Control Flow Graph...")
-        parse_tree.accept(flowgraph_visitor.FlowgraphForwardVisitor(lnv.line_to_stmt))
+        parse_tree.accept(flowgraph_visitor.FlowgraphForwardVisitor(line_mapper))
+        #parse_tree.accept(flowgraph_visitor.FlowgraphBackwardVisitor(lnv.line_to_stmt))
         if options.verbose:
             sys.stderr.write("done\n")
+        
+    if options.use_entry_points:
+        if options.verbose:
+            sys.stderr.write("Finding entry points...")
+        epv = entry_point_visitor.EntryPointVisitor(line_mapper)
+        parse_tree.accept(epv)
+        first_statement = line_mapper.firstStatement()
+        #print "first_statement = %s" % first_statement
+        epv.mainEntryPoint(first_statement)
+        if options.verbose:
+            sys.stderr.write("done\n")
+    
+        # Check for incoming execution edges to entry points
+        for entry_point in epv.entry_points:
+            if isinstance(entry_point, bbc_ast.DefinitionStatement):
+                if len(entry_point.inEdges) != 0:
+                    errors.warning("Execution of procedure/function at line %s" % entry_point.lineNum)
+                    # TODO: Could use ERROR statement here
+                    raise_stmt = bbc_ast.Raise(type = "ExecutedDefinitionException")
+                    ast_utils.insertStatementBefore(entry_point, raise_stmt)
+                    raise_stmt.clearOutEdges()
+                    entry_point.clearInEdges()
+    
+    # Tag each statement with its predecesor entry point
+    for entry_point in epv.entry_points:
+        flow_analysis.tagSuccessors(entry_point)
     
     if options.use_clr:
         if options.verbose:

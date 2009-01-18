@@ -52,8 +52,8 @@ class TypecheckVisitor(Visitor):
                 message = "List is only assignable to an array"
                 self.typeMismatch(assignment, message)
         else:
-            print assignment.rValue
-            print assignment.rValue.actualType
+            #print assignment.rValue
+            #print assignment.rValue.actualType
             if assignment.rValue.actualType.isConvertibleTo(assignment.lValue.actualType):
                 if assignment.rValue.actualType is not assignment.lValue.actualType:
                     self.insertCast(assignment.rValue, assignment.rValue.actualType, assignment.lValue.actualType)
@@ -180,15 +180,15 @@ class TypecheckVisitor(Visitor):
     def visitIndexer(self, indexer):
         # Decode the variable name sigil into the actual type
         # The sigils are one of [$%&~]
-        print "indexer.identifier = %s" % indexer.identifier
+        #print "indexer.identifier = %s" % indexer.identifier
         indexer.actualType = self.identifierToType(indexer.identifier[:-1])
-        print "indexer.actualType = %s" % indexer.actualType
+        #print "indexer.actualType = %s" % indexer.actualType
     
     def visitIf(self, iff):
         self.visit(iff.condition)
         self.visit(iff.trueClause)
         self.visit(iff.falseClause)
-        print "iff.condition.actualType = %s" % iff.condition.actualType
+        #print "iff.condition.actualType = %s" % iff.condition.actualType
         if iff.condition.actualType.isConvertibleTo(IntegerType):
             self.insertCast(iff.condition, iff.condition.actualType, iff.condition.formalType)
         else:
@@ -267,7 +267,7 @@ class TypecheckVisitor(Visitor):
     
     def visitUserFunc(self, func):
         # TODO Add to a list of user defined functions to be typechecked
-        print "func.actualParameters = %s at line %s" % (func.actualParameters, func.lineNum)
+        #print "func.actualParameters = %s at line %s" % (func.actualParameters, func.lineNum)
         
         for parameter in func.actualParameters:
             self.visit(parameter)
@@ -351,10 +351,10 @@ class TypecheckVisitor(Visitor):
         IntegerType is compatible with NumericType, and NumericType is compatible
         with ScalarType, but StringType is not compatible with NumericType.
         """
-        print "node = %s at line %s" % (node, node.lineNum)
+        #print "node = %s at line %s" % (node, node.lineNum)
         result = True
         for name, info in node.child_infos.items():
-            print "name = %s" % name
+            #print "name = %s" % name
             if isinstance(info, list):
                 info = info[0]
                 formal_type = info.formalType
