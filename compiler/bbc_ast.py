@@ -987,4 +987,7 @@ class Raise(AstStatement):
     "Raise exception"
     type = StringOption()
     
-    
+class LongJump(AstStatement):
+    "Long jump"
+    target_logical_line = Node(formalType=IntegerType)
+

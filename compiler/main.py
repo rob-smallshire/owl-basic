@@ -26,6 +26,7 @@ import entry_point_visitor
 import ast_utils
 import flow_analysis
 from line_mapper import LineMapper
+import longjump_visitor
 
 from Detoken import Decode
 
@@ -65,6 +66,7 @@ if __name__ == '__main__':
     parser.add_option("-t", "--debug-no-typecheck", action='store_false', dest='use_typecheck', default=True)
     parser.add_option("-f", "--debug-no-flowgraph", action='store_false', dest='use_flowgraph', default=True)
     parser.add_option("-e", "--debug-no-entrypoints", action='store_false', dest='use_entry_points', default=True)
+    parser.add_option("-j", "--debug-no-longjumps", action='store_false', dest='use_longjumps', default=True)
     parser.add_option("-v", "--verbose", action='store_true', dest='verbose', default=False)
     
     (options, args) = parser.parse_args();
@@ -237,9 +239,29 @@ if __name__ == '__main__':
                     raise_stmt.clearOutEdges()
                     entry_point.clearInEdges()
     
-    # Tag each statement with its predecesor entry point
-    for entry_point in epv.entry_points:
-        flow_analysis.tagSuccessors(entry_point)
+        # Tag each statement with its predecesor entry point
+        for entry_point in epv.entry_points:
+            flow_analysis.tagSuccessors(entry_point)
+    
+    if options.use_longjumps:
+        # Insert longjumps where flow control jumps out of a procedure
+        if options.verbose:
+            sys.stderr.write("Finding longjumps")
+        ljv = longjump_visitor.LongjumpVisitor(line_mapper)
+        parse_tree.accept(ljv)
+        print "ljv.longjumps ="
+        for lj in ljv.longjumps:
+            print lj, lj.lineNum
+        if options.verbose:
+            sys.stderr.write("done\n")
+            sys.stderr.write("Detagging following longjumps")
+            
+        ljv.createLongjumps()
+        
+        if options.verbose:
+            sys.stderr.write("done\n")
+        
+        
     
     if options.use_clr:
         if options.verbose:
