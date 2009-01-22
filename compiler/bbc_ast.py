@@ -270,10 +270,15 @@ class LoadLibrary(AstStatement):
 class Local(AstStatement):
     variables = Node()
 
+class Mandel(AstStatement):
+    "MANDEL"
+    i_coord = Node(formalType=IntegerType, description="The i coordinate")
+    j_coord = Node(formalType=IntegerType, description="The j coordinate")
+
 class Move(AstStatement):
     "MOVE"
-    x_coord = Node(formalType=IntegerType, description="The x co-ordinate")
-    y_coord = Node(formalType=IntegerType, description="The y co-ordinate")
+    x_coord = Node(formalType=IntegerType, description="The x coordinate")
+    y_coord = Node(formalType=IntegerType, description="The y coordinate")
     relative = BoolOption(False)
 
 class Mode(AstStatement):
@@ -373,6 +378,9 @@ class PrintFile(AstStatement):
 class CallProcedure(AstStatement):
     name = StringOption()
     actual_parameters = Node()
+
+class Private(AstStatement):
+    variables = Node()
 
 class Quit(AstStatement):
     # TODO: Iyonix BASIC support exit value

@@ -197,7 +197,8 @@ tokens = (
     'PRIVATE',
     'BY',
     'EXIT',
-    'NOT'
+    'NOT',
+    'MANDEL'
 )
 
 def t_COMMENT(t):
@@ -301,6 +302,12 @@ def t_INSTR_LPAREN(t):
 
 def t_LEFT_STR_LPAREN(t):
     r'LEFT\$\('
+    return t
+
+# Existence in ARM BASIC documented at
+# http://www.g7jjf.com/acornArm.htm 
+def t_MANDEL(t):
+    r'MANDEL'
     return t
 
 def t_OPENIN(t):

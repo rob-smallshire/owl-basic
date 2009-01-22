@@ -117,6 +117,7 @@ def p_stmt_body(p):
                  | library_stmt
                  | let_stmt
                  | local_stmt
+                 | mandel_stmt
                  | mode_stmt
                  | mouse_stmt
                  | move_stmt
@@ -128,6 +129,7 @@ def p_stmt_body(p):
                  | plot_stmt
                  | point_stmt
                  | print_stmt
+                 | private_stmt
                  | proc_stmt
                  | quit_stmt
                  | read_stmt
@@ -623,6 +625,12 @@ def p_local_stmt(p):
     '''local_stmt : LOCAL variable_list'''
     p[0] = Local(variables = p[2])
     p[0].lineNum = p.lineno(1)
+
+# MANDEL statement
+def p_mandel_stmt(p):
+    '''mandel_stmt : MANDEL expr COMMA expr'''
+    p[0] = Mandel(iCoord = p[2], jCoord = p[4])
+    p[0].lineNum = p.lineno(1)
     
 # MOVE statement
 def p_move_stmt(p):
@@ -780,6 +788,12 @@ def p_print_manipulator(p):
                          | COMMA
                          | SEMICOLON'''
     p[0] = PrintManipulator(manipulator = p[1])
+    p[0].lineNum = p.lineno(1)
+
+# PRIVATE statement
+def p_private_stmt(p):
+    '''private_stmt : PRIVATE variable_list'''
+    p[0] = Private(variables = p[2])
     p[0].lineNum = p.lineno(1)
     
 def p_quit_stmt(p):
