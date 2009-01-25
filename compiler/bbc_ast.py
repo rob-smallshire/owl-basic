@@ -145,18 +145,19 @@ class Data(AstStatement):
         return items
 
 class DefinitionStatement(MarkerStatement):
-    pass
-
-class DefineFunction(DefinitionStatement):
     name = StringOption()
     formal_parameters = Node()
+
+class DefineFunction(DefinitionStatement):
+    "DEF FN"
+    pass
 
 class ReturnFromFunction(AstStatement):
     return_value = Node(formalType=ScalarType) # TODO: Can functions return arrays 
 
 class DefineProcedure(DefinitionStatement):
-    name = StringOption()
-    formal_parameters = Node()
+    "DEF PROC"
+    pass
 
 class ReturnFromProcedure(AstStatement):
     pass
@@ -272,8 +273,8 @@ class Local(AstStatement):
 
 class Mandel(AstStatement):
     "MANDEL"
-    i_coord = Node(formalType=IntegerType, description="The i coordinate")
-    j_coord = Node(formalType=IntegerType, description="The j coordinate")
+    i_coord = Node(formalType=FloatType, description="The i coordinate")
+    j_coord = Node(formalType=FloatType, description="The j coordinate")
 
 class Move(AstStatement):
     "MOVE"

@@ -40,8 +40,11 @@ class EntryPointVisitor(Visitor):
         deffn.entryPoint = "public"
         
     def visitGosub(self, gosub):
+        print "EntryPointVisitor.visitGosub"
+        print "GOSUB at line %s" % gosub.lineNum
         gosub_target = self.statementOnLine(gosub.targetLogicalLine)
         if gosub_target:
+            print "target is %s at line %s" % (gosub_target, gosub_target.lineNum)
             self.entry_points.append(gosub_target)
             gosub_target.entryPoint = "private"
             gosub_target.addComeFromEdge(gosub)

@@ -157,6 +157,8 @@ class AstNode(object):
     def __init__(self):
         self.parent = None
         
+        self.__symbol_table = None
+        
         # Initialise children
         self._children = {}
         for info_name, info in self.child_infos.items():
@@ -216,6 +218,14 @@ class AstNode(object):
             getattr(self, property_name)[index] = value
         else:
             setattr(self, property_name, value)
+    
+    def _getSymbolTable(self):
+        return self.__symbol_table
+    
+    def _setSymbolTable(self, table):
+        self.__symbol_table = table
+        
+    symbolTable = property(_getSymbolTable, _setSymbolTable)
     
     def accept(self, visitor):
         """

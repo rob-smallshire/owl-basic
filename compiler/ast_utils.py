@@ -1,3 +1,4 @@
+import errors
 from utility import camelCaseToUnderscores
 
 def elideNode(node, liftFormalTypes=False):
@@ -67,6 +68,8 @@ def insertStatementBefore(statement, target):
     """
     Insert target before statement in the AST, and correct the AST and CFG references to match
     """
+    # TODO: Does this need to correct incoming GOTOs or is that handled by adjusting the AST edges
+    
     if statement.parent is None:
         errors.fatalError("Cannot insert statement before %s at line %s" % (statement, statement.lineNum))
     
@@ -95,4 +98,29 @@ def insertStatementBefore(statement, target):
     
     target.clearOutEdges()
     target.addOutEdge(statement)
+    
+def removeStatement(statement):
+    """
+    Remove the statement from the AST
+    """
+    if statement.parent is None:
+        errors.fatalError("Cannot insert statement before %s at line %s" % (statement, statement.lineNum))
         
+    # Remove from the parent list
+    parent_list = getattr(statement.parent, statement.parent_property)
+    parent_list.remove(statement)
+    
+    # Reconnect CFG
+    for prior_stmt in statement.inEdges:
+        assert statement in prior_stmt.outEdges
+        prior_stmt.outEdges.remove(statement)
+        prior_stmt.outEdges.extend(statement.outEdges)
+        
+    for next_stmt in statement.outEdges:
+        assert statement in next_stmt.inEdges
+        next_stmt.inEdges.remove(statement)
+        next_stmt.inEdges.extend(statement.inEdges)
+
+    statement.clearInEdges()
+    statement.clearOutEdges()
+    

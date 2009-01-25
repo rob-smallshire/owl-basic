@@ -27,6 +27,8 @@ import ast_utils
 import flow_analysis
 from line_mapper import LineMapper
 import longjump_visitor
+import symbol_table_visitor
+import convert_sub_visitor
 
 from Detoken import Decode
 
@@ -67,6 +69,8 @@ if __name__ == '__main__':
     parser.add_option("-f", "--debug-no-flowgraph", action='store_false', dest='use_flowgraph', default=True)
     parser.add_option("-e", "--debug-no-entrypoints", action='store_false', dest='use_entry_points', default=True)
     parser.add_option("-j", "--debug-no-longjumps", action='store_false', dest='use_longjumps', default=True)
+    parser.add_option("-g", "--debug-no-convert-subs", action='store_false', dest='use_convert_subs', default=True)
+    parser.add_option("-y", "--debug-no-symbol-tables", action='store_false', dest='use_symbol_tables', default=True)
     parser.add_option("-v", "--verbose", action='store_true', dest='verbose', default=False)
     
     (options, args) = parser.parse_args();
@@ -125,7 +129,7 @@ if __name__ == '__main__':
             logical_line = int(m.group(1))
             physical_to_logical_map.append(logical_line)
             line_bodies.append(m.group(2))
-        print physical_to_logical_map
+        #print physical_to_logical_map
         data = '\n'.join(line_bodies)
     else:
         physical_to_logical_map = None
@@ -227,7 +231,9 @@ if __name__ == '__main__':
         epv.mainEntryPoint(first_statement)
         if options.verbose:
             sys.stderr.write("done\n")
-    
+
+        if options.verbose:
+            sys.stderr.write("Checking for direct execution of function or procedure bodies...")    
         # Check for incoming execution edges to entry points
         for entry_point in epv.entry_points:
             if isinstance(entry_point, bbc_ast.DefinitionStatement):
@@ -238,31 +244,87 @@ if __name__ == '__main__':
                     ast_utils.insertStatementBefore(entry_point, raise_stmt)
                     raise_stmt.clearOutEdges()
                     entry_point.clearInEdges()
+        if options.verbose:
+            sys.stderr.write("done\n")
     
         # Tag each statement with its predecesor entry point
+        if options.verbose:
+            sys.stderr.write("Tagging statements with entry point\n")
         for entry_point in epv.entry_points:
             flow_analysis.tagSuccessors(entry_point)
+        if options.verbose:
+            sys.stderr.write("done\n")
+    
+    print epv.entry_points
     
     if options.use_longjumps:
         # Insert longjumps where flow control jumps out of a procedure
         if options.verbose:
-            sys.stderr.write("Finding longjumps")
+            sys.stderr.write("Finding longjump locations")
         ljv = longjump_visitor.LongjumpVisitor(line_mapper)
         parse_tree.accept(ljv)
-        print "ljv.longjumps ="
-        for lj in ljv.longjumps:
-            print lj, lj.lineNum
         if options.verbose:
             sys.stderr.write("done\n")
-            sys.stderr.write("Detagging following longjumps")
+            sys.stderr.write("Creating long jumps")
             
         ljv.createLongjumps()
         
         if options.verbose:
             sys.stderr.write("done\n")
-        
-        
     
+    print epv.entry_points
+        
+    if options.use_convert_subs:
+        # Convert subroutines to procedures
+        if options.verbose:
+            sys.stderr.write("Convert subroutines to procedures")
+        
+        entry_points_to_remove = []
+        entry_points_to_add = []
+        for entry_point in epv.entry_points:
+            print "entry_point = %s at %s" % (entry_point, entry_point.lineNum)
+            # TODO: This will only work with simple (i.e. single entry) subroutines
+            subname = iter(entry_point.entryPoints).next()
+            if subname.startswith('SUB'):
+                procname = subname
+                assert len(entry_point.inEdges) == 0
+                defproc = bbc_ast.DefineProcedure(name=procname, formalParameters=None)
+                ast_utils.insertStatementBefore(entry_point, defproc)
+                flow_analysis.deTagSuccessors(entry_point)
+                entry_point.clearEntryPoints()
+                entry_points_to_remove.append(entry_point)
+                entry_points_to_add.append(defproc)
+                flow_analysis.tagSuccessors(defproc)
+        for eptr in entry_points_to_remove:
+            epv.entry_points.remove(eptr)
+        epv.entry_points.extend(entry_points_to_add)
+        
+        csv = convert_sub_visitor.ConvertSubVisitor()
+        parse_tree.accept(csv)
+                
+        if options.verbose:
+            sys.stderr.write("done\n")
+    
+    print epv.entry_points
+        
+    if options.use_symbol_tables:
+        # Attach symbol tables to each statement
+        if options.verbose:
+            sys.stderr.write("Building symbol tables")
+        
+        stv = symbol_table_visitor.SymbolTableVisitor()
+        
+        # Set the global symbol table for the main program entry point
+        # TODO: This assumes the program doesn't start with e.g. a DEF PROC
+        print "epv.entry_points[0] = %s" % epv.entry_points[0]
+        epv.entry_points[0].symbolTable = stv.globalSymbols
+        
+        for entry_point in epv.entry_points:
+            print "entry_point = %s" % entry_point
+            entry_point.accept(stv)
+        if options.verbose:
+            sys.stderr.write("done\n")
+        
     if options.use_clr:
         if options.verbose:
             sys.stderr.write("Creating XML CFG... ")
@@ -278,18 +340,10 @@ if __name__ == '__main__':
     # GOSUB is reached - move the code in the GOSUB to the call site
     # of the GOSUB. 
     
-    # TODO: Analyse the flowgraph and warn about any inbound
-    # edges to DefineFunction and DefneProcedure. Insert nodes
-    # to raise ExecuteDefinitionException on these edges.
-    
     # Locate nodes with no inbound edges and trace unreachable code
     # from them. Remove unreachable code from the CFG and the AST. This
     # will need to be traced from program and procedure entry points
     
-    # Locate any procedures with GOTOs which jump out of the procedure
-    # Replace the procedure with throw GotoLabelExceptionNNN. Wrap all call
-    # sites to that procedure in catch blocks containing a Goto to the correct line.
-    # Repeat until all GOTOs can be resolved in their block.
     
     # Convert GOSUB blocks to procedures if they are called more than once,
     # otherwise inline them.
@@ -297,6 +351,8 @@ if __name__ == '__main__':
     
     
     # TODO: Replace Goto -> ReturnFromProcedure with ReturnFromProcedure
+    
+    
     
     # Structural analysis
     #flatten(parse_tree)

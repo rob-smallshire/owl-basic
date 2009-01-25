@@ -18,7 +18,7 @@ class LineMapper(object):
         
     def logicalStatement(self, logical_line_number):
         physical_line_number = self.logicalToPhysical(logical_line_number)
-        print "physical_line_number = %s" % physical_line_number
+        #print "physical_line_number = %s" % physical_line_number
         if self.line_to_stmt_map.has_key(physical_line_number):
             return self.line_to_stmt_map[physical_line_number]
         return None

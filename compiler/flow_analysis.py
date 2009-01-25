@@ -37,18 +37,15 @@ def deTagSuccessors(node):
     Given a node and its entry point tags, remove all those tags from following
     the nodes.
     """
-    print "deTagSuccessors"
     tags = node.entryPoints
     if tags is not None:
         deTagFollowingStatements(node, tags)
     
 def deTagFollowingStatements(node, tags):
-    print "deTagFollowingStatements"
     for successor in node.outEdges:
         deTagNode(tags, successor)
         
 def deTagNode(tags, node):
-    print "deTagNode"
     if tags.issubset(node.entryPoints):
         node.entryPoints.difference_update(tags)
         deTagFollowingStatements(node, tags)
