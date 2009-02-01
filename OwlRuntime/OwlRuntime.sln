@@ -4,6 +4,13 @@ Microsoft Visual Studio Solution File, Format Version 10.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OwlRuntime", "OwlRuntime\OwlRuntime.csproj", "{F53261E4-9FBC-4434-90D4-58A0242414BC}"
 EndProject
 Global
+	GlobalSection(SourceCodeControl) = preSolution
+		SccNumberOfProjects = 2
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = OwlRuntime\\OwlRuntime.csproj
+		SccLocalPath1 = .
+		SccProjectFilePathRelativizedFromConnection1 = OwlRuntime\\
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
