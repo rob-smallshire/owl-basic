@@ -7,5 +7,9 @@ namespace OwlRuntime.platform.riscos
 {
     internal class PalettedScreenMode : ScreenMode
     {
+        public PalettedScreenMode(byte number) :
+            base(number)
+        {
+        }
     }
 }

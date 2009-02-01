@@ -5,7 +5,7 @@ using System.Text;
 using System.Windows.Forms;
 using System.Drawing;
 
-internal class ScreenMode
+public class ScreenMode
 {
     public static ScreenMode CreateScreenMode(byte number)
     {
@@ -23,7 +23,7 @@ internal class ScreenMode
     private Color[] palette;
 
     // Create a ScreenMode from a mode number
-    private ScreenMode(byte number)
+    public ScreenMode(byte number)
     {
         switch (number)
         {

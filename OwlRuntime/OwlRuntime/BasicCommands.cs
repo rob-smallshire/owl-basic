@@ -10,6 +10,17 @@ namespace OwlRuntime
         private static int channelCounter = 0;
         private static readonly Dictionary<int, FileStream> channels = new Dictionary<int, FileStream>();
 
+        public class NoSuchChannelException : ApplicationException
+        {
+            private int channel;
+
+            public NoSuchChannelException(string message, int channel) :
+                base(message)
+            {
+                this.channel = channel;
+            }
+        }
+
         public static void Bput(int channel, byte value)
         {
             if (channels.ContainsKey(channel))
@@ -139,7 +150,8 @@ namespace OwlRuntime
                 // Use GetAsyncKeyState to determine whether the requested key is down
             }
 
-            // Return a number indicating the OS version
+            // TODO: Return a number indicating the OS version
+            return 100;
         }
 
         public static string InputString()
@@ -171,7 +183,8 @@ namespace OwlRuntime
             {
                 // Return double between 0.0 and 1.0
             }
-            // Return an integer between [1, n]
+            // TODO: Return an integer between [1, n]
+            return n;
         }
 
         public static int Himem { get; set; }
