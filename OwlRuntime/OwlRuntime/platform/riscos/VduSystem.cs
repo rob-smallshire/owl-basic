@@ -129,7 +129,7 @@ namespace OwlRuntime.platform.riscos
         #endregion
 
         private VduForm vduForm;
-        private ScreenMode screenMode = ScreenMode.CreateScreenMode(7);
+        private AbstractScreenMode screenMode = AbstractScreenMode.CreateScreenMode(7);
 
         // The VDU queue
         private readonly Queue<byte> queue = new Queue<byte>();
@@ -878,7 +878,7 @@ namespace OwlRuntime.platform.riscos
         private void SolidLineIncludingBothEndPoints()
         {
             Graphics g = vduForm.CreateGraphics();
-            Color physicalColour = screenMode.PalettePhysical(graphicsForegroundColour);
+            Color physicalColour = screenMode.LogicalToPhysical(graphicsForegroundColour);
             Pen pen = new Pen(physicalColour, 1); // TODO: Get current colour
             pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid;
             g.DrawLine(pen, oldCsX, oldCsY, gCsIX, gCsIY);
@@ -927,7 +927,7 @@ namespace OwlRuntime.platform.riscos
             }
             else
             {
-                Color color = screenMode.PalettePhysical(logicalColour);
+                Color color = screenMode.LogicalToPhysical(logicalColour);
                 setAction(color);
             }
             ExpectVduCommand();
@@ -946,7 +946,7 @@ namespace OwlRuntime.platform.riscos
         private void DoSetMode()
         {
             byte modeNumber = DequeueByte();
-            screenMode = ScreenMode.CreateScreenMode(modeNumber);
+            screenMode = AbstractScreenMode.CreateScreenMode(modeNumber);
             if (vduForm != null)
             {
                 vduForm.Close();

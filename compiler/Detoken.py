@@ -205,8 +205,8 @@ def ReadLines(data):
     while True:
         if (decode == 1) & (len(data) < 2):
             raise Exception, "Bad program"
-        if (decode == 1) & (data[0] != '\r'):
-            raise Exception, "Bad program"
+        #if (decode == 1) & (data[0] != '\r'):
+        #    raise Exception, "Bad program"
         if (decode == 1) & (data[1] == '\xff'):
             break
         if (decode == 2):
