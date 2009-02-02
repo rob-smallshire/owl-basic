@@ -879,7 +879,7 @@ namespace OwlRuntime.platform.riscos
         {
             Graphics g = vduForm.CreateGraphics();
             Color physicalColour = screenMode.LogicalToPhysical(graphicsForegroundColour);
-            Pen pen = new Pen(physicalColour, 1); // TODO: Get current colour
+            Pen pen = new Pen(Color.Red, 1); // TODO: Get current colour
             pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid;
             g.DrawLine(pen, oldCsX, oldCsY, gCsIX, gCsIY);
         }

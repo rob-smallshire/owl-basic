@@ -10,7 +10,7 @@ namespace OwlRuntime.platform.riscos
     internal class PalettedScreenMode : AbstractScreenMode
     {
 
-        private List<Color> palette;
+        private readonly List<Color> palette;
 
         // Create a ScreenMode from a mode number
         public PalettedScreenMode(int bitsPerPixel)
@@ -53,9 +53,9 @@ namespace OwlRuntime.platform.riscos
                 case 8:
                     for (int i = 0; i <= 255; i++)
                     {
-                        int r = 17 * ((i & 7) & ((i & 16) >> 1));
-                        int g = 17 * ((i & 3) & ((i & 96) >> 3));
-                        int b = 17 * ((i & 3) & ((i & 8) >> 1) & ((i & 128) >> 4));
+                        int r = 17 * ((i & 7) | ((i & 16) >> 1));
+                        int g = 17 * ((i & 3) | ((i & 96) >> 3));
+                        int b = 17 * ((i & 3) | ((i & 8) >> 1) & ((i & 128) >> 4));
                         palette.Add(Color.FromArgb(r, g, b));
                     }
                     break;
