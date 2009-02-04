@@ -291,7 +291,7 @@ namespace OwlRuntime.platform.riscos
                     break;
                 case 18:
                     requiredBytes = 2;
-                    DoPlotAction();
+                    nextCommand = DoPlotAction;
                     break;
                 case 19:
                     SetPalette();
@@ -362,11 +362,21 @@ namespace OwlRuntime.platform.riscos
 
         private void DoPlotAction()
         {
-            // TODO  GCOL action
+            // prm1-586
             // is equiv to GCOL k,c
-            // k = DequeueByte();
-            // c = DequeueByte();
-            throw new NotImplementedException();
+            int k;
+            k = DequeueByte();
+            if ((k & 128) != 0) // if top bit set then background GCOL action
+                GPLBMD = (k & 127);
+            else
+                GPLFMD = k;
+            int c;
+            c = DequeueByte();
+            if ((c & 128) != 0)// if top bit set then background GCOL color
+                graphicsBackgroundColour = c & 64; // only bottom 6 bits used for color
+            else
+                graphicsForegroundColour = c & 64;
+            ExpectVduCommand();
         }
 
         private void DoDefineTextWindow()
@@ -461,7 +471,7 @@ namespace OwlRuntime.platform.riscos
                     setPrintDirection(bytes[0]);
                     break;
                 case 17:
-                    // TINT n,m
+                    // TINT n,m and two others that may not be implimented
                     setTint(bytes[0], bytes[1]);
                     break;
                 // 18-26 reserved
@@ -490,7 +500,33 @@ namespace OwlRuntime.platform.riscos
 
         private void setTint(byte n, byte m)
         {
-            throw new NotImplementedException();
+            // m & 192 because only the top 2 bits are used
+            // prm1-616
+            switch (n)
+            {
+                case 0:
+                    textForegroundTint=m & 192;
+                    break;
+                case 1:
+                    textBackgroundTint = m & 192;
+                    break;
+                case 2:
+                    graphicsForegroundTint = m & 192;
+                    break;
+                case 3:
+                    graphicsBackgroundTint = m & 192;
+                    break;
+                case 4:
+                    // prm1-617
+                    throw new NotImplementedException();
+                    break;
+                case 5:
+                    // prm1-618
+                    throw new NotImplementedException();
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
         }
 
         private void PagedModeOn()
@@ -945,6 +981,7 @@ namespace OwlRuntime.platform.riscos
 
         private void DoSetMode()
         {
+            //prm 1-594
             byte modeNumber = DequeueByte();
             screenMode = AbstractScreenMode.CreateScreenMode(modeNumber);
             if (vduForm != null)

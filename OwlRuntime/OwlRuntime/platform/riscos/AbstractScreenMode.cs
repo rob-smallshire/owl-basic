@@ -27,9 +27,11 @@ namespace OwlRuntime.platform.riscos
         
         public static AbstractScreenMode CreateScreenMode(byte number)
         {
+
+            
             AbstractScreenMode mode = null;
 
-            switch (number)
+            switch (number & 127) // after reading prm only bottom 7 bits are used for setting mode (top bit is for shadow modes) PRM 1-597
             {
                 case 0:
                     mode = new PalettedScreenMode(1);
