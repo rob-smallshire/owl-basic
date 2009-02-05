@@ -501,6 +501,7 @@ namespace OwlRuntime.platform.riscos
                 // 28-31 reserved
                 // 32-255 user definable chars
             }
+            ExpectVduCommand();
         }
 
         private void cursorDisplay(byte b)
