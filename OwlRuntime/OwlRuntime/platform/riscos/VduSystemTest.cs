@@ -16,7 +16,7 @@ namespace OwlRuntime.platform.riscos
         [Test]
         public void Test18()
         {
-            // Change to mode 12
+
             vdu.Enqueue((byte)18, (byte)0, (byte)135);  // GCOL action color
         }
 

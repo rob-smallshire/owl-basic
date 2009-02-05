@@ -287,7 +287,8 @@ namespace OwlRuntime.platform.riscos
                     ClearGraphicsWindow();
                     break;
                 case 17:
-                    SetTextColour();
+                    requiredBytes = 1;
+                    nextCommand = SetTextColour;
                     break;
                 case 18:
                     requiredBytes = 2;
@@ -364,18 +365,25 @@ namespace OwlRuntime.platform.riscos
         {
             // prm1-586
             // is equiv to GCOL k,c
-            int k;
-            k = DequeueByte();
+            int k = DequeueByte();
             if ((k & 128) != 0) // if top bit set then background GCOL action
+            {
                 GPLBMD = (k & 127);
+            }
             else
+            {
                 GPLFMD = k;
-            int c;
-            c = DequeueByte();
+            }
+            
+            int c = DequeueByte();
             if ((c & 128) != 0)// if top bit set then background GCOL color
-                graphicsBackgroundColour = c & 64; // only bottom 6 bits used for color
+            {
+                graphicsBackgroundColour = c & 63; // only bottom 6 bits used for color
+            }
             else
-                graphicsForegroundColour = c & 64;
+            {
+                graphicsForegroundColour = c & 63;
+            }
             ExpectVduCommand();
         }
 
