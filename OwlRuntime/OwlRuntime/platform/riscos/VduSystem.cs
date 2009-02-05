@@ -129,6 +129,7 @@ namespace OwlRuntime.platform.riscos
         #endregion
 
         private VduForm vduForm;
+        private byte modeNumber;
         private AbstractScreenMode screenMode = AbstractScreenMode.CreateScreenMode(7);
 
         // The VDU queue
@@ -137,9 +138,20 @@ namespace OwlRuntime.platform.riscos
         private Action nextCommand;
         private bool hasBeenDisposed = false;
 
+
         public VduSystem()
         {
             ExpectVduCommand();
+        }
+
+        public int GraphicsBackgroundColour
+        {
+            get { return graphicsBackgroundColour; }
+        }
+
+        public byte ModeNumber
+        {
+            get { return modeNumber; }
         }
 
         public void Enqueue(byte b)
@@ -292,7 +304,7 @@ namespace OwlRuntime.platform.riscos
                     break;
                 case 18:
                     requiredBytes = 2;
-                    nextCommand = DoPlotAction;
+                    nextCommand = SetGraphicsColour;
                     break;
                 case 19:
                     SetPalette();
@@ -361,7 +373,7 @@ namespace OwlRuntime.platform.riscos
             originX = DequeueShort();
         }
 
-        private void DoPlotAction()
+        private void SetGraphicsColour()
         {
             // prm1-586
             // is equiv to GCOL k,c
@@ -990,8 +1002,8 @@ namespace OwlRuntime.platform.riscos
         private void DoSetMode()
         {
             //prm 1-594
-            byte modeNumber = DequeueByte();
-            screenMode = AbstractScreenMode.CreateScreenMode(modeNumber);
+            modeNumber = DequeueByte();
+            screenMode = AbstractScreenMode.CreateScreenMode(this.ModeNumber);
             if (vduForm != null)
             {
                 vduForm.Close();

@@ -18,13 +18,15 @@ namespace OwlRuntime.platform.riscos
         {
 
             vdu.Enqueue((byte)18, (byte)0, (byte)135);  // GCOL action color
+            Assert.AreEqual(7, vdu.GraphicsBackgroundColour);
         }
 
         [Test]
         public void Test22()
         {
             // Change to mode 12
-            vdu.Enqueue(7, 22, 12, 7);
+            vdu.Enqueue(22, 12);
+            Assert.AreEqual(12, vdu.ModeNumber);
         }
 
         [Test]
