@@ -824,7 +824,16 @@ namespace OwlRuntime.platform.riscos
 
         private void RectangleFill()
         {
-            throw new NotImplementedException();
+            // TODO some how need to get and use the absolute and plot type (xor/and atc) to here.
+            // most are global vars available
+            // TODO swap Y co-ords over
+            // TODO use the EX and EY to scale output
+            Graphics g = vduForm.CreateGraphics();
+            Color physicalColour = screenMode.LogicalToPhysical(graphicsForegroundColour | graphicsForegroundTint);
+            SolidBrush brush = new SolidBrush(physicalColour);
+            g.FillRectangle(brush, oldCsX, oldCsY, gCsIX - oldCsX, gCsIY - oldCsY);
+            brush.Dispose();
+
         }
 
         private void HorizontalLineFillLeftToForeground()

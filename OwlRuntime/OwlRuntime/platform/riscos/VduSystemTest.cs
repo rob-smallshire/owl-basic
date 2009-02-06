@@ -60,9 +60,10 @@ namespace OwlRuntime.platform.riscos
             vdu.Enqueue(7);
             vdu.Enqueue((byte)22, (byte)28); // Change to mode 28
             int c = 0;
-            for (int y = 0; y <= 255; y++)
+            int size = 16;
+            for (int y = 0; y <= 15; y++)
             {
-                for (int x = 0; x <= 255; x++)
+                for (int x = 0; x <= 15; x++)
                 {   
 
                     // TINT action (2) color (c & 192)
@@ -73,10 +74,10 @@ namespace OwlRuntime.platform.riscos
                     vdu.Enqueue((byte)18, (byte)0, (byte)(c & 63));
                     // MOVE
                     vdu.Enqueue((byte)25, (byte)4);
-                    vdu.Enqueue((short)(x*16), (short)(y * 16));
+                    vdu.Enqueue((short)(x * size), (short)(y * size));
                     // PLOT rectangle fill
                     vdu.Enqueue((byte)25, (byte)101);
-                    vdu.Enqueue((short)((x * 16) + 16), (short)((y * 16) + 16));
+                    vdu.Enqueue((short)((x * size) + (size -1 )), (short)((y * size) + (size -1)));
                     c++;
                 } 
             }

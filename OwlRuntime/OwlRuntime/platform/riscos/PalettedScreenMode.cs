@@ -72,7 +72,7 @@ namespace OwlRuntime.platform.riscos
                     {
                         int r = 17 * ((i & 7) | ((i & 16) >> 1));
                         int g = 17 * ((i & 3) | ((i & 96) >> 3));
-                        int b = 17 * ((i & 3) | ((i & 8) >> 1) & ((i & 128) >> 4));
+                        int b = 17 * ((i & 3) | ((i & 8) >> 1) | ((i & 128) >> 4));
                         palette.Add(Color.FromArgb(r, g, b));
                     }
                     break;
