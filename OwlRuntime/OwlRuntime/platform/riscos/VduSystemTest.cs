@@ -60,25 +60,27 @@ namespace OwlRuntime.platform.riscos
             vdu.Enqueue(7);
             vdu.Enqueue((byte)22, (byte)28); // Change to mode 28
             int c = 0;
-            int size = 16;
-            for (int y = 0; y <= 15; y++)
+            const int size = 16;
+            for (int y = 0; y < size; ++y)
             {
-                for (int x = 0; x <= 15; x++)
+                for (int x = 0; x < size; ++x)
                 {   
-
                     // TINT action (2) color (c & 192)
                     vdu.Enqueue((byte)23, (byte)17, (byte)2, (byte)(c & 192));
                     vdu.Enqueue((byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
-                    // GCOL action (0) color (c & 63)
 
+                    // GCOL action (0) color (c & 63)
                     vdu.Enqueue((byte)18, (byte)0, (byte)(c & 63));
+
                     // MOVE
                     vdu.Enqueue((byte)25, (byte)4);
                     vdu.Enqueue((short)(x * size), (short)(y * size));
+
                     // PLOT rectangle fill
                     vdu.Enqueue((byte)25, (byte)101);
-                    vdu.Enqueue((short)((x * size) + (size -1 )), (short)((y * size) + (size -1)));
-                    c++;
+                    vdu.Enqueue((short)((x * size) + (size - 1)), (short)((y * size) + (size - 1)));
+
+                    ++c;
                 } 
             }
             Console.WriteLine("End");

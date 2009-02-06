@@ -838,8 +838,6 @@ namespace OwlRuntime.platform.riscos
 
             Color physicalColour = screenMode.LogicalToPhysical(paletteColour); SolidBrush brush = new SolidBrush(physicalColour);
             g.FillRectangle(brush, oldCsX, oldCsY, gCsIX - oldCsX, gCsIY - oldCsY);
-            brush.Dispose();
-
         }
 
         private void HorizontalLineFillLeftToForeground()
