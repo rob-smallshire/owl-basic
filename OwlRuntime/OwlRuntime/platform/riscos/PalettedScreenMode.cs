@@ -13,8 +13,9 @@ namespace OwlRuntime.platform.riscos
         private readonly List<Color> palette;
 
         // Create a ScreenMode from a mode number
-        public PalettedScreenMode(int bitsPerPixel) // TODO do we need an extra param to define if this mode is using a shadow bank and find out of shadow banks have unique palette
+        public PalettedScreenMode(byte bitsPerPixel) // TODO do we need an extra param to define if this mode is using a shadow bank and find out of shadow banks have unique palette
         {
+            this.BitsPerPixel = bitsPerPixel;
             palette = new List<Color>(1 << bitsPerPixel);
             // Populate palette - reverse enginered from risc os palette file prm1-558
 

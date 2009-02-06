@@ -133,6 +133,9 @@ namespace OwlRuntime.platform.riscos
         private AbstractScreenMode screenMode = AbstractScreenMode.CreateScreenMode(7);
 
         private int graphicsBackgroundPaletteIndex ;
+        private int graphicsForegroundPaletteIndex;
+        private int textBackgroundPaletteIndex;
+        private int textForegroundPaletteIndex;
 
         // The VDU queue
         private readonly Queue<byte> queue = new Queue<byte>();
@@ -155,14 +158,166 @@ namespace OwlRuntime.platform.riscos
                 if (screenMode.BitsPerPixel == 8)
                 {
                     graphicsBackgroundPaletteIndex = 0;
-                    graphicsBackgroundPaletteIndex |= (graphicsForegroundColour & 33) << 2;
-                    graphicsBackgroundPaletteIndex |= (graphicsForegroundColour & 14) << 3;
-                    graphicsBackgroundPaletteIndex |= (graphicsForegroundColour & 16) >> 1;
-                    graphicsBackgroundPaletteIndex |= graphicsForegroundTint >> 6;
+                    graphicsBackgroundPaletteIndex |= (graphicsBackgroundColour & 33) << 2;
+                    graphicsBackgroundPaletteIndex |= (graphicsBackgroundColour & 14) << 3;
+                    graphicsBackgroundPaletteIndex |= (graphicsBackgroundColour & 16) >> 1;
+                    graphicsBackgroundPaletteIndex |= graphicsBackgroundTint >> 6;
+                }
+                else
+                {
+                    throw new NotImplementedException();
                 }
             }
         }
 
+        public int GraphicsForegroundColour
+        {
+            get { return graphicsForegroundColour; }
+            private set
+            {
+                graphicsForegroundColour = value;
+                if (screenMode.BitsPerPixel == 8)
+                {
+                    graphicsForegroundPaletteIndex = 0;
+                    graphicsForegroundPaletteIndex |= (graphicsForegroundColour & 33) << 2;
+                    graphicsForegroundPaletteIndex |= (graphicsForegroundColour & 14) << 3;
+                    graphicsForegroundPaletteIndex |= (graphicsForegroundColour & 16) >> 1;
+                    graphicsForegroundPaletteIndex |= graphicsForegroundTint >> 6;
+                }
+                else
+                {
+                    throw new NotImplementedException();
+                }
+            }
+        }
+
+        public int TextBackgroundColour
+        {
+            get { return textBackgroundColour; }
+            private set
+            {
+                textBackgroundColour = value;
+                if (screenMode.BitsPerPixel == 8)
+                {
+                    textBackgroundPaletteIndex = 0;
+                    textBackgroundPaletteIndex |= (textBackgroundColour & 33) << 2;
+                    textBackgroundPaletteIndex |= (textBackgroundColour & 14) << 3;
+                    textBackgroundPaletteIndex |= (textBackgroundColour & 16) >> 1;
+                    textBackgroundPaletteIndex |= textBackgroundTint >> 6;
+                }
+                else
+                {
+                    throw new NotImplementedException();
+                }
+            }
+        }
+
+        public int TextForegroundColour
+        {
+            get { return textForegroundColour; }
+            private set
+            {
+                textForegroundColour = value;
+                if (screenMode.BitsPerPixel == 8)
+                {
+                    textForegroundPaletteIndex = 0;
+                    textForegroundPaletteIndex |= (textForegroundColour & 33) << 2;
+                    textForegroundPaletteIndex |= (textForegroundColour & 14) << 3;
+                    textForegroundPaletteIndex |= (textForegroundColour & 16) >> 1;
+                    textForegroundPaletteIndex |= textForegroundTint >> 6;
+                }
+                else
+                {
+                    throw new NotImplementedException();
+                }
+            }
+        }
+
+        public int GraphicsBackgroundTint
+        {
+            get { return graphicsBackgroundTint; }
+            private set
+            {
+                graphicsBackgroundTint = value;
+                if (screenMode.BitsPerPixel == 8)
+                {
+                    graphicsBackgroundPaletteIndex = 0;
+                    graphicsBackgroundPaletteIndex |= (graphicsBackgroundColour & 33) << 2;
+                    graphicsBackgroundPaletteIndex |= (graphicsBackgroundColour & 14) << 3;
+                    graphicsBackgroundPaletteIndex |= (graphicsBackgroundColour & 16) >> 1;
+                    graphicsBackgroundPaletteIndex |= graphicsBackgroundTint >> 6;
+                }
+                else
+                {
+                    throw new NotImplementedException();
+                }
+            }
+        }
+
+        public int GraphicsForegroundTint
+        {
+            get { return graphicsForegroundTint; }
+            private set
+            {
+                graphicsForegroundTint = value;
+                if (screenMode.BitsPerPixel == 8)
+                {
+                    graphicsForegroundPaletteIndex = 0;
+                    graphicsForegroundPaletteIndex |= (graphicsForegroundColour & 33) << 2;
+                    graphicsForegroundPaletteIndex |= (graphicsForegroundColour & 14) << 3;
+                    graphicsForegroundPaletteIndex |= (graphicsForegroundColour & 16) >> 1;
+                    graphicsForegroundPaletteIndex |= graphicsForegroundTint >> 6;
+                }
+                else
+                {
+                    throw new NotImplementedException();
+                }
+            }
+        }
+
+        public int TextBackgroundTint
+        {
+            get { return textBackgroundTint; }
+            private set
+            {
+                textBackgroundTint = value;
+                if (screenMode.BitsPerPixel == 8)
+                {
+                    textBackgroundPaletteIndex = 0;
+                    textBackgroundPaletteIndex |= (textBackgroundColour & 33) << 2;
+                    textBackgroundPaletteIndex |= (textBackgroundColour & 14) << 3;
+                    textBackgroundPaletteIndex |= (textBackgroundColour & 16) >> 1;
+                    textBackgroundPaletteIndex |= textBackgroundTint >> 6;
+                }
+                else
+                {
+                    throw new NotImplementedException();
+                }
+            }
+        }
+
+        public int TextForegroundTint
+        {
+            get { return textForegroundTint; }
+            private set
+            {
+                textForegroundTint = value;
+                if (screenMode.BitsPerPixel == 8)
+                {
+                    textForegroundPaletteIndex = 0;
+                    textForegroundPaletteIndex |= (textForegroundColour & 33) << 2;
+                    textForegroundPaletteIndex |= (textForegroundColour & 14) << 3;
+                    textForegroundPaletteIndex |= (textForegroundColour & 16) >> 1;
+                    textForegroundPaletteIndex |= textForegroundTint >> 6;
+                }
+                else
+                {
+                    throw new NotImplementedException();
+                }
+            }
+        }
+
+        
         public byte ModeNumber
         {
             get { return modeNumber; }
@@ -404,11 +559,11 @@ namespace OwlRuntime.platform.riscos
             int c = DequeueByte();
             if ((c & 128) != 0)// if top bit set then background GCOL color
             {
-                graphicsBackgroundColour = c & 63; // only bottom 6 bits used for color
+                GraphicsBackgroundColour = c & 63; // only bottom 6 bits used for color
             }
             else
             {
-                graphicsForegroundColour = c & 63;
+                GraphicsForegroundColour = c & 63;
             }
             ExpectVduCommand();
         }
@@ -540,16 +695,16 @@ namespace OwlRuntime.platform.riscos
             switch (n)
             {
                 case 0:
-                    textForegroundTint=m & 192;
+                    TextForegroundTint=m & 192;
                     break;
                 case 1:
-                    textBackgroundTint = m & 192;
+                    TextBackgroundTint = m & 192;
                     break;
                 case 2:
-                    graphicsForegroundTint = m & 192;
+                    GraphicsForegroundTint = m & 192;
                     break;
                 case 3:
-                    graphicsBackgroundTint = m & 192;
+                    GraphicsBackgroundTint = m & 192;
                     break;
                 case 4:
                     // prm1-617
@@ -843,14 +998,8 @@ namespace OwlRuntime.platform.riscos
             // TODO swap Y co-ords over
             // TODO use the EX and EY to scale output
             Graphics g = vduForm.CreateGraphics();
-
-            int paletteColour = 0;
-            paletteColour |= (graphicsForegroundColour & 33) << 2;
-            paletteColour |= (graphicsForegroundColour & 14) << 3;
-            paletteColour |= (graphicsForegroundColour & 16) >> 1;
-            paletteColour |= graphicsForegroundTint >> 6;
-
-            Color physicalColour = screenMode.LogicalToPhysical(paletteColour); SolidBrush brush = new SolidBrush(physicalColour);
+            Color physicalColour = screenMode.LogicalToPhysical(graphicsForegroundPaletteIndex);
+            SolidBrush brush = new SolidBrush(physicalColour);
             g.FillRectangle(brush, oldCsX, oldCsY, gCsIX - oldCsX, gCsIY - oldCsY);
         }
 
@@ -1036,17 +1185,17 @@ namespace OwlRuntime.platform.riscos
             switch (screenMode.BitsPerPixel)
             {
                 case 8:
-                    textForegroundColour = 63; // TODO: Call property
-                    textForegroundTint = 192; // TODO: Call property
+                    TextForegroundColour = 63;
+                    TextForegroundTint = 192;
 
-                    textBackgroundColour = 0; // TODO: Call property
-                    textBackgroundTint = 0; // TODO: Call property
+                    TextBackgroundColour = 0;
+                    TextBackgroundTint = 0;
 
-                    graphicsForegroundColour = 63; // TODO: Call property
-                    graphicsForegroundTint = 192; // TODO: Call property
+                    GraphicsForegroundColour = 63;
+                    GraphicsForegroundTint = 192;
 
                     GraphicsBackgroundColour = 0;
-                    graphicsBackgroundTint = 0; // TODO: Call property
+                    GraphicsBackgroundTint = 0;
                     break;
                 default:
                     throw new ApplicationException();
