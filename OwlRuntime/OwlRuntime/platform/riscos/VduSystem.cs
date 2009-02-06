@@ -829,8 +829,14 @@ namespace OwlRuntime.platform.riscos
             // TODO swap Y co-ords over
             // TODO use the EX and EY to scale output
             Graphics g = vduForm.CreateGraphics();
-            Color physicalColour = screenMode.LogicalToPhysical(graphicsForegroundColour | graphicsForegroundTint);
-            SolidBrush brush = new SolidBrush(physicalColour);
+
+            int paletteColour = 0;
+            paletteColour |= (graphicsForegroundColour & 33) << 2;
+            paletteColour |= (graphicsForegroundColour & 14) << 3;
+            paletteColour |= (graphicsForegroundColour & 16) >> 1;
+            paletteColour |= graphicsForegroundTint >> 6;
+
+            Color physicalColour = screenMode.LogicalToPhysical(paletteColour); SolidBrush brush = new SolidBrush(physicalColour);
             g.FillRectangle(brush, oldCsX, oldCsY, gCsIX - oldCsX, gCsIY - oldCsY);
             brush.Dispose();
 
