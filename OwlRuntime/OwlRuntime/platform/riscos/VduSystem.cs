@@ -132,6 +132,8 @@ namespace OwlRuntime.platform.riscos
         private byte modeNumber;
         private AbstractScreenMode screenMode = AbstractScreenMode.CreateScreenMode(7);
 
+        private int graphicsBackgroundPaletteIndex ;
+
         // The VDU queue
         private readonly Queue<byte> queue = new Queue<byte>();
         private int requiredBytes;
@@ -147,6 +149,18 @@ namespace OwlRuntime.platform.riscos
         public int GraphicsBackgroundColour
         {
             get { return graphicsBackgroundColour; }
+            private set
+            {
+                graphicsBackgroundColour = value;
+                if (screenMode.BitsPerPixel == 8)
+                {
+                    graphicsBackgroundPaletteIndex = 0;
+                    graphicsBackgroundPaletteIndex |= (graphicsForegroundColour & 33) << 2;
+                    graphicsBackgroundPaletteIndex |= (graphicsForegroundColour & 14) << 3;
+                    graphicsBackgroundPaletteIndex |= (graphicsForegroundColour & 16) >> 1;
+                    graphicsBackgroundPaletteIndex |= graphicsForegroundTint >> 6;
+                }
+            }
         }
 
         public byte ModeNumber
@@ -1018,12 +1032,34 @@ namespace OwlRuntime.platform.riscos
             //prm 1-594
             modeNumber = DequeueByte();
             screenMode = AbstractScreenMode.CreateScreenMode(this.ModeNumber);
+            // TODO: Set default colours
+            switch (screenMode.BitsPerPixel)
+            {
+                case 8:
+                    textForegroundColour = 63; // TODO: Call property
+                    textForegroundTint = 192; // TODO: Call property
+
+                    textBackgroundColour = 0; // TODO: Call property
+                    textBackgroundTint = 0; // TODO: Call property
+
+                    graphicsForegroundColour = 63; // TODO: Call property
+                    graphicsForegroundTint = 192; // TODO: Call property
+
+                    GraphicsBackgroundColour = 0;
+                    graphicsBackgroundTint = 0; // TODO: Call property
+                    break;
+                default:
+                    throw new ApplicationException();
+            }
+
+            // Create the window
             if (vduForm != null)
             {
                 vduForm.Close();
             }
             vduForm = new VduForm(screenMode.SquarePixelWidth, screenMode.SquarePixelHeight);
             vduForm.Show();
+
             ExpectVduCommand();
         }
 
