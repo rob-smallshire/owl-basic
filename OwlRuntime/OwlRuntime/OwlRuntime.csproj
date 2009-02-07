@@ -54,10 +54,16 @@
   <ItemGroup>
     <Compile Include="BasicCommands.cs" />
     <Compile Include="platform\riscos\AbstractScreenMode.cs" />
+    <Compile Include="platform\riscos\BaseGraphicsScreenMode.cs" />
+    <Compile Include="platform\riscos\IPalette.cs" />
     <Compile Include="platform\riscos\OS.cs" />
-    <Compile Include="platform\riscos\PalettedScreenMode.cs" />
+    <Compile Include="platform\riscos\Palette.cs" />
+    <Compile Include="platform\riscos\PalettedGraphicsScreenMode.cs" />
+    <Compile Include="platform\riscos\PalettedTextScreenMode.cs" />
     <Compile Include="platform\riscos\SwiAttribute.cs" />
     <Compile Include="platform\riscos\TeletextScreenMode.cs" />
+    <Compile Include="platform\riscos\BaseTextScreenMode.cs" />
+    <Compile Include="platform\riscos\TrueGraphicsScreenMode.cs" />
     <Compile Include="platform\riscos\VduForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -65,6 +71,9 @@
     <Compile Include="platform\riscos\VduSystemTest.cs" />
     <Compile Include="platform\riscos\VduVariableAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="platform\riscos\Vdu.cd" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="platform\acornmos\" />

@@ -5,11 +5,16 @@ using System.Text;
 
 namespace OwlRuntime.platform.riscos
 {
-    public class TeletextScreenMode : AbstractScreenMode
+    public class TeletextScreenMode : BaseTextScreenMode
     {
-        public override System.Drawing.Color LogicalToPhysical(int logical)
+        public TeletextScreenMode(VduSystem vdu) :
+            base(vdu, 40, 25)
         {
-            throw new NotImplementedException();
+        }
+
+        public override void Dispose()
+        {
+            // Do nothing
         }
     }
 }

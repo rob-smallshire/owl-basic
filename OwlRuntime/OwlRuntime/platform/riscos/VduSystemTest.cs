@@ -18,7 +18,7 @@ namespace OwlRuntime.platform.riscos
         {
 
             vdu.Enqueue((byte)18, (byte)0, (byte)135);  // GCOL action color
-            Assert.AreEqual(7, vdu.GraphicsBackgroundColour);
+            Assert.AreEqual(7, vdu.LogicalGraphicsBackgroundColour);
         }
 
         [Test]

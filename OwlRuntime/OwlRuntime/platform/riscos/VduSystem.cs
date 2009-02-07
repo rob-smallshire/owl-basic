@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
@@ -7,7 +8,7 @@ using System.Drawing;
 
 namespace OwlRuntime.platform.riscos
 {
-    internal class VduSystem : IDisposable
+    public class VduSystem : IDisposable
     {
         #region Official VDU Variables
 
@@ -50,22 +51,22 @@ namespace OwlRuntime.platform.riscos
         private int graphicsCursorY;         // GCsY - Y coordinate of the graphics cursor (ec)
 
         [VduVariable(140)]
-        private short olderCsX; // olderCsX - x coordinate of oldest graphics cursor (ic)
+        private short olderGraphicsCursorX; // olderCsX - x coordinate of oldest graphics cursor (ic)
 
         [VduVariable(141)]
-        private short olderCsY; // olderCsY - Y coordinate of oldest graphics cursor (ic)
+        private short olderGraphicsCursorY; // olderCsY - Y coordinate of oldest graphics cursor (ic)
 
         [VduVariable(142)]
-        private short oldCsX; // oldCsX - x coordinate of previous graphics cursor (ic)
+        private short oldGraphicsCursorX; // oldCsX - x coordinate of previous graphics cursor (ic)
 
         [VduVariable(143)]
-        private short oldCsY; // oldCsY - Y coordinate of previous graphics cursor (ic)
+        private short oldGraphicsCursorY; // oldCsY - Y coordinate of previous graphics cursor (ic)
 
         [VduVariable(144)]
-        private short gCsIX; // gCsIX - x coordinate of graphics cursor (ic)
+        private short graphicsCursorIX; // gCsIX - x coordinate of graphics cursor (ic)
 
         [VduVariable(145)]
-        private short gCsIY; // gCsIY - Y coordinate of graphics cursor (ic)
+        private short graphicsCursorIY; // gCsIY - Y coordinate of graphics cursor (ic)
 
         [VduVariable(146)]
         private short newPtX; // newPtX - x coordinate of new point (ic)
@@ -83,21 +84,21 @@ namespace OwlRuntime.platform.riscos
         [VduVariable(152)]
         private int GPLBMD; // GPLBMD - GCOL action for background colour
         [VduVariable(153)]
-        private int graphicsForegroundColour; // GFCOL - Graphics foreground colour
+        private int logicalGraphicsForegroundColour; // GFCOL - Graphics foreground colour
         [VduVariable(154)]
-        private int graphicsBackgroundColour; // GBCOL - Graphics background colour
+        private int logicalGraphicsBackgroundColour; // GBCOL - Graphics background colour
         [VduVariable(155)]
-        private int textForegroundColour; // TForeCol - TForeCol Text foreground colour
+        private int logicalTextForegroundColour; // TForeCol - TForeCol Text foreground colour
         [VduVariable(156)]
-        private int textBackgroundColour; // TBackCol - TBackCol Text background colour
+        private int logicalTextBackgroundColour; // TBackCol - TBackCol Text background colour
         [VduVariable(157)]
-        private int graphicsForegroundTint; // GFTint - Tint for graphics foreground colour
+        private int logicalGraphicsForegroundTint; // GFTint - Tint for graphics foreground colour
         [VduVariable(158)]
-        private int graphicsBackgroundTint; // GBTint - Tint for graphics background colour
+        private int logicalGraphicsBackgroundTint; // GBTint - Tint for graphics background colour
         [VduVariable(159)]
-        private int textForegroundTint; // TFTint - Tint for text foreground colour
+        private int logicalTextForegroundTint; // TFTint - Tint for text foreground colour
         [VduVariable(160)]
-        private int textBackgroundTint; // TBTint - Tint for text background colour
+        private int logicalTextBackgroundTint; // TBTint - Tint for text background colour
         [VduVariable(161)]
         private int MaxMode; // MaxMode - Highest mode number available
         [VduVariable(162)]
@@ -128,9 +129,9 @@ namespace OwlRuntime.platform.riscos
         private int WindowHeight; // WindowHeight - Rows that will fit in the text window without scrolling it
         #endregion
 
-        private VduForm vduForm;
+        //private VduForm vduForm;
         private byte modeNumber;
-        private AbstractScreenMode screenMode = AbstractScreenMode.CreateScreenMode(7);
+        private AbstractScreenMode screenMode;
 
         private int graphicsBackgroundPaletteIndex ;
         private int graphicsForegroundPaletteIndex;
@@ -141,27 +142,29 @@ namespace OwlRuntime.platform.riscos
         private readonly Queue<byte> queue = new Queue<byte>();
         private int requiredBytes;
         private Action nextCommand;
-        private bool hasBeenDisposed = false;
+        private Stopwatch stopwatch = new Stopwatch();
 
 
         public VduSystem()
         {
+            screenMode = AbstractScreenMode.CreateScreenMode(this, 7);
             ExpectVduCommand();
+            stopwatch.Start();
         }
 
-        public int GraphicsBackgroundColour
+        public int LogicalGraphicsBackgroundColour
         {
-            get { return graphicsBackgroundColour; }
+            get { return logicalGraphicsBackgroundColour; }
             private set
             {
-                graphicsBackgroundColour = value;
+                logicalGraphicsBackgroundColour = value;
                 if (screenMode.BitsPerPixel == 8)
                 {
                     graphicsBackgroundPaletteIndex = 0;
-                    graphicsBackgroundPaletteIndex |= (graphicsBackgroundColour & 33) << 2;
-                    graphicsBackgroundPaletteIndex |= (graphicsBackgroundColour & 14) << 3;
-                    graphicsBackgroundPaletteIndex |= (graphicsBackgroundColour & 16) >> 1;
-                    graphicsBackgroundPaletteIndex |= graphicsBackgroundTint >> 6;
+                    graphicsBackgroundPaletteIndex = GraphicsBackgroundPaletteIndex | (logicalGraphicsBackgroundColour & 33) << 2;
+                    graphicsBackgroundPaletteIndex = GraphicsBackgroundPaletteIndex | (logicalGraphicsBackgroundColour & 14) << 3;
+                    graphicsBackgroundPaletteIndex = GraphicsBackgroundPaletteIndex | (logicalGraphicsBackgroundColour & 16) >> 1;
+                    graphicsBackgroundPaletteIndex = GraphicsBackgroundPaletteIndex | logicalGraphicsBackgroundTint >> 6;
                 }
                 else
                 {
@@ -170,19 +173,19 @@ namespace OwlRuntime.platform.riscos
             }
         }
 
-        public int GraphicsForegroundColour
+        public int LogicalGraphicsForegroundColour
         {
-            get { return graphicsForegroundColour; }
+            get { return logicalGraphicsForegroundColour; }
             private set
             {
-                graphicsForegroundColour = value;
+                logicalGraphicsForegroundColour = value;
                 if (screenMode.BitsPerPixel == 8)
                 {
                     graphicsForegroundPaletteIndex = 0;
-                    graphicsForegroundPaletteIndex |= (graphicsForegroundColour & 33) << 2;
-                    graphicsForegroundPaletteIndex |= (graphicsForegroundColour & 14) << 3;
-                    graphicsForegroundPaletteIndex |= (graphicsForegroundColour & 16) >> 1;
-                    graphicsForegroundPaletteIndex |= graphicsForegroundTint >> 6;
+                    graphicsForegroundPaletteIndex = GraphicsForegroundPaletteIndex | (logicalGraphicsForegroundColour & 33) << 2;
+                    graphicsForegroundPaletteIndex = GraphicsForegroundPaletteIndex | (logicalGraphicsForegroundColour & 14) << 3;
+                    graphicsForegroundPaletteIndex = GraphicsForegroundPaletteIndex | (logicalGraphicsForegroundColour & 16) >> 1;
+                    graphicsForegroundPaletteIndex = GraphicsForegroundPaletteIndex | logicalGraphicsForegroundTint >> 6;
                 }
                 else
                 {
@@ -191,19 +194,22 @@ namespace OwlRuntime.platform.riscos
             }
         }
 
-        public int TextBackgroundColour
+        public int LogicalTextBackgroundColour
         {
-            get { return textBackgroundColour; }
+            get { return logicalTextBackgroundColour; }
             private set
             {
-                textBackgroundColour = value;
+                screenMode.LogicalTextBackgroundColour = value;
+
+                // TODO: Move into screen mode class
+                logicalTextBackgroundColour = value;
                 if (screenMode.BitsPerPixel == 8)
                 {
                     textBackgroundPaletteIndex = 0;
-                    textBackgroundPaletteIndex |= (textBackgroundColour & 33) << 2;
-                    textBackgroundPaletteIndex |= (textBackgroundColour & 14) << 3;
-                    textBackgroundPaletteIndex |= (textBackgroundColour & 16) >> 1;
-                    textBackgroundPaletteIndex |= textBackgroundTint >> 6;
+                    textBackgroundPaletteIndex = TextBackgroundPaletteIndex | (logicalTextBackgroundColour & 33) << 2;
+                    textBackgroundPaletteIndex = TextBackgroundPaletteIndex | (logicalTextBackgroundColour & 14) << 3;
+                    textBackgroundPaletteIndex = TextBackgroundPaletteIndex | (logicalTextBackgroundColour & 16) >> 1;
+                    textBackgroundPaletteIndex = TextBackgroundPaletteIndex | logicalTextBackgroundTint >> 6;
                 }
                 else
                 {
@@ -212,19 +218,22 @@ namespace OwlRuntime.platform.riscos
             }
         }
 
-        public int TextForegroundColour
+        public int LogicalTextForegroundColour
         {
-            get { return textForegroundColour; }
+            get { return logicalTextForegroundColour; }
             private set
             {
-                textForegroundColour = value;
+                screenMode.LogicalTextForegroundColour = value;
+
+                // TODO: Move into screen mode class
+                logicalTextForegroundColour = value;
                 if (screenMode.BitsPerPixel == 8)
                 {
                     textForegroundPaletteIndex = 0;
-                    textForegroundPaletteIndex |= (textForegroundColour & 33) << 2;
-                    textForegroundPaletteIndex |= (textForegroundColour & 14) << 3;
-                    textForegroundPaletteIndex |= (textForegroundColour & 16) >> 1;
-                    textForegroundPaletteIndex |= textForegroundTint >> 6;
+                    textForegroundPaletteIndex = TextForegroundPaletteIndex | (logicalTextForegroundColour & 33) << 2;
+                    textForegroundPaletteIndex = TextForegroundPaletteIndex | (logicalTextForegroundColour & 14) << 3;
+                    textForegroundPaletteIndex = TextForegroundPaletteIndex | (logicalTextForegroundColour & 16) >> 1;
+                    textForegroundPaletteIndex = TextForegroundPaletteIndex | logicalTextForegroundTint >> 6;
                 }
                 else
                 {
@@ -233,19 +242,19 @@ namespace OwlRuntime.platform.riscos
             }
         }
 
-        public int GraphicsBackgroundTint
+        public int LogicalGraphicsBackgroundTint
         {
-            get { return graphicsBackgroundTint; }
+            get { return logicalGraphicsBackgroundTint; }
             private set
             {
-                graphicsBackgroundTint = value;
+                logicalGraphicsBackgroundTint = value;
                 if (screenMode.BitsPerPixel == 8)
                 {
                     graphicsBackgroundPaletteIndex = 0;
-                    graphicsBackgroundPaletteIndex |= (graphicsBackgroundColour & 33) << 2;
-                    graphicsBackgroundPaletteIndex |= (graphicsBackgroundColour & 14) << 3;
-                    graphicsBackgroundPaletteIndex |= (graphicsBackgroundColour & 16) >> 1;
-                    graphicsBackgroundPaletteIndex |= graphicsBackgroundTint >> 6;
+                    graphicsBackgroundPaletteIndex = GraphicsBackgroundPaletteIndex | (logicalGraphicsBackgroundColour & 33) << 2;
+                    graphicsBackgroundPaletteIndex = GraphicsBackgroundPaletteIndex | (logicalGraphicsBackgroundColour & 14) << 3;
+                    graphicsBackgroundPaletteIndex = GraphicsBackgroundPaletteIndex | (logicalGraphicsBackgroundColour & 16) >> 1;
+                    graphicsBackgroundPaletteIndex = GraphicsBackgroundPaletteIndex | logicalGraphicsBackgroundTint >> 6;
                 }
                 else
                 {
@@ -254,19 +263,19 @@ namespace OwlRuntime.platform.riscos
             }
         }
 
-        public int GraphicsForegroundTint
+        public int LogicalGraphicsForegroundTint
         {
-            get { return graphicsForegroundTint; }
+            get { return logicalGraphicsForegroundTint; }
             private set
             {
-                graphicsForegroundTint = value;
+                logicalGraphicsForegroundTint = value;
                 if (screenMode.BitsPerPixel == 8)
                 {
                     graphicsForegroundPaletteIndex = 0;
-                    graphicsForegroundPaletteIndex |= (graphicsForegroundColour & 33) << 2;
-                    graphicsForegroundPaletteIndex |= (graphicsForegroundColour & 14) << 3;
-                    graphicsForegroundPaletteIndex |= (graphicsForegroundColour & 16) >> 1;
-                    graphicsForegroundPaletteIndex |= graphicsForegroundTint >> 6;
+                    graphicsForegroundPaletteIndex = GraphicsForegroundPaletteIndex | (logicalGraphicsForegroundColour & 33) << 2;
+                    graphicsForegroundPaletteIndex = GraphicsForegroundPaletteIndex | (logicalGraphicsForegroundColour & 14) << 3;
+                    graphicsForegroundPaletteIndex = GraphicsForegroundPaletteIndex | (logicalGraphicsForegroundColour & 16) >> 1;
+                    graphicsForegroundPaletteIndex = GraphicsForegroundPaletteIndex | logicalGraphicsForegroundTint >> 6;
                 }
                 else
                 {
@@ -275,19 +284,19 @@ namespace OwlRuntime.platform.riscos
             }
         }
 
-        public int TextBackgroundTint
+        public int LogicalTextBackgroundTint
         {
-            get { return textBackgroundTint; }
+            get { return logicalTextBackgroundTint; }
             private set
             {
-                textBackgroundTint = value;
+                logicalTextBackgroundTint = value;
                 if (screenMode.BitsPerPixel == 8)
                 {
                     textBackgroundPaletteIndex = 0;
-                    textBackgroundPaletteIndex |= (textBackgroundColour & 33) << 2;
-                    textBackgroundPaletteIndex |= (textBackgroundColour & 14) << 3;
-                    textBackgroundPaletteIndex |= (textBackgroundColour & 16) >> 1;
-                    textBackgroundPaletteIndex |= textBackgroundTint >> 6;
+                    textBackgroundPaletteIndex = TextBackgroundPaletteIndex | (logicalTextBackgroundColour & 33) << 2;
+                    textBackgroundPaletteIndex = TextBackgroundPaletteIndex | (logicalTextBackgroundColour & 14) << 3;
+                    textBackgroundPaletteIndex = TextBackgroundPaletteIndex | (logicalTextBackgroundColour & 16) >> 1;
+                    textBackgroundPaletteIndex = TextBackgroundPaletteIndex | logicalTextBackgroundTint >> 6;
                 }
                 else
                 {
@@ -296,19 +305,19 @@ namespace OwlRuntime.platform.riscos
             }
         }
 
-        public int TextForegroundTint
+        public int LogicalTextForegroundTint
         {
-            get { return textForegroundTint; }
+            get { return logicalTextForegroundTint; }
             private set
             {
-                textForegroundTint = value;
+                logicalTextForegroundTint = value;
                 if (screenMode.BitsPerPixel == 8)
                 {
                     textForegroundPaletteIndex = 0;
-                    textForegroundPaletteIndex |= (textForegroundColour & 33) << 2;
-                    textForegroundPaletteIndex |= (textForegroundColour & 14) << 3;
-                    textForegroundPaletteIndex |= (textForegroundColour & 16) >> 1;
-                    textForegroundPaletteIndex |= textForegroundTint >> 6;
+                    textForegroundPaletteIndex = TextForegroundPaletteIndex | (logicalTextForegroundColour & 33) << 2;
+                    textForegroundPaletteIndex = TextForegroundPaletteIndex | (logicalTextForegroundColour & 14) << 3;
+                    textForegroundPaletteIndex = TextForegroundPaletteIndex | (logicalTextForegroundColour & 16) >> 1;
+                    textForegroundPaletteIndex = TextForegroundPaletteIndex | logicalTextForegroundTint >> 6;
                 }
                 else
                 {
@@ -321,6 +330,56 @@ namespace OwlRuntime.platform.riscos
         public byte ModeNumber
         {
             get { return modeNumber; }
+        }
+
+        public short OlderGraphicsCursorX
+        {
+            get { return olderGraphicsCursorX; }
+        }
+
+        public short OlderGraphicsCursorY
+        {
+            get { return olderGraphicsCursorY; }
+        }
+
+        public short OldGraphicsCursorX
+        {
+            get { return oldGraphicsCursorX; }
+        }
+
+        public short OldGraphicsCursorY
+        {
+            get { return oldGraphicsCursorY; }
+        }
+
+        public short GraphicsCursorIX
+        {
+            get { return graphicsCursorIX; }
+        }
+
+        public short GraphicsCursorIY
+        {
+            get { return graphicsCursorIY; }
+        }
+
+        public int GraphicsBackgroundPaletteIndex
+        {
+            get { return graphicsBackgroundPaletteIndex; }
+        }
+
+        public int GraphicsForegroundPaletteIndex
+        {
+            get { return graphicsForegroundPaletteIndex; }
+        }
+
+        public int TextBackgroundPaletteIndex
+        {
+            get { return textBackgroundPaletteIndex; }
+        }
+
+        public int TextForegroundPaletteIndex
+        {
+            get { return textForegroundPaletteIndex; }
         }
 
         public void Enqueue(byte b)
@@ -359,16 +418,22 @@ namespace OwlRuntime.platform.riscos
             if (queue.Count >= requiredBytes)
             {
                 nextCommand();
-                Refresh();
+                // Only refresh the display every 10 ms
+                if (stopwatch.ElapsedMilliseconds > 10)
+                {
+                    Refresh();
+                    stopwatch.Reset();
+                    stopwatch.Start();
+                }
             }
         }
 
         private void Refresh()
         {
-            if (vduForm != null)
-            {
-                vduForm.Refresh();
-            }
+            //if (vduForm != null)
+            //{
+            //    vduForm.Refresh();
+            //}
         }
 
         public void DoVduDispatch()
@@ -559,11 +624,11 @@ namespace OwlRuntime.platform.riscos
             int c = DequeueByte();
             if ((c & 128) != 0)// if top bit set then background GCOL color
             {
-                GraphicsBackgroundColour = c & 63; // only bottom 6 bits used for color
+                LogicalGraphicsBackgroundColour = c & 63; // only bottom 6 bits used for color
             }
             else
             {
-                GraphicsForegroundColour = c & 63;
+                LogicalGraphicsForegroundColour = c & 63;
             }
             ExpectVduCommand();
         }
@@ -695,16 +760,16 @@ namespace OwlRuntime.platform.riscos
             switch (n)
             {
                 case 0:
-                    TextForegroundTint=m & 192;
+                    LogicalTextForegroundTint=m & 192;
                     break;
                 case 1:
-                    TextBackgroundTint = m & 192;
+                    LogicalTextBackgroundTint = m & 192;
                     break;
                 case 2:
-                    GraphicsForegroundTint = m & 192;
+                    LogicalGraphicsForegroundTint = m & 192;
                     break;
                 case 3:
-                    GraphicsBackgroundTint = m & 192;
+                    LogicalGraphicsBackgroundTint = m & 192;
                     break;
                 case 4:
                     // prm1-617
@@ -771,112 +836,112 @@ namespace OwlRuntime.platform.riscos
             bool absolute = (plotType & 4) != 0;
             PlotEffect plotEffect = (PlotEffect) (plotType & 3);
 
-            newPtX = absolute ? x : (short) (gCsIX + x);
-            newPtY = absolute ? y : (short) (gCsIY + y);
+            newPtX = absolute ? x : (short) (GraphicsCursorIX + x);
+            newPtY = absolute ? y : (short) (GraphicsCursorIY + y);
 
-            olderCsX = oldCsX;
-            olderCsY = oldCsY;
+            olderGraphicsCursorX = OldGraphicsCursorX;
+            olderGraphicsCursorY = OldGraphicsCursorY;
 
-            oldCsX = gCsIX;
-            oldCsY = gCsIY;
+            oldGraphicsCursorX = GraphicsCursorIX;
+            oldGraphicsCursorY = GraphicsCursorIY;
 
-            gCsIX = newPtX;
-            gCsIY = newPtY;
+            graphicsCursorIX = newPtX;
+            graphicsCursorIY = newPtY;
 
             if (plotEffect != PlotEffect.MOVE)
             {
                 switch (plotType & 248)
                 {
                     case 0:
-                        SolidLineIncludingBothEndPoints();
+                        screenMode.SolidLineIncludingBothEndPoints();
                         break;
 
                     case 8:
-                        SolidLineExcludingTheFinalPoint();
+                        screenMode.SolidLineExcludingTheFinalPoint();
                         break;
 
                     case 16:
-                        DottedLineIncludingBothEndPointsPatternRestarted();
+                        screenMode.DottedLineIncludingBothEndPointsPatternRestarted();
                         break;
 
                     case 24:
-                        DottedLineExcludingtheFinalPointPatternRestarted();
+                        screenMode.DottedLineExcludingtheFinalPointPatternRestarted();
                         break;
 
                     case 32:
-                        SolidLineExcludingtheInitialPoint();
+                        screenMode.SolidLineExcludingtheInitialPoint();
                         break;
 
                     case 40:
-                        SolidLineExcludingBothEndPoints();
+                        screenMode.SolidLineExcludingBothEndPoints();
                         break;
 
                     case 48:
-                        DottedLineExcludingtheInitialPointPatternContinued();
+                        screenMode.DottedLineExcludingtheInitialPointPatternContinued();
                         break;
 
                     case 56:
-                        DottedLineExcludingBothEndPointsPatternContinued();
+                        screenMode.DottedLineExcludingBothEndPointsPatternContinued();
                         break;
 
                     case 64:
-                        PointPlot();
+                        screenMode.PointPlot();
                         break;
 
                     case 72:
-                        HorizontalLineFillLeftRightToNonBackground();
+                        screenMode.HorizontalLineFillLeftRightToNonBackground();
                         break;
 
                     case 80:
-                        TriangleFill();
+                        screenMode.TriangleFill();
                         break;
 
                     case 88:
-                        HorizontalLineFillRightToBackground();
+                        screenMode.HorizontalLineFillRightToBackground();
                         break;
 
                     case 96:
-                        RectangleFill();
+                        screenMode.RectangleFill();
                         break;
 
                     case 104:
-                        HorizontalLineFillLeftToForeground();
+                        screenMode.HorizontalLineFillLeftToForeground();
                         break;
 
                     case 112:
-                        ParallelogramFill();
+                        screenMode.ParallelogramFill();
                         break;
 
                     case 120:
-                        HorizontalLineFillRightOnlyToNonForeground();
+                        screenMode.HorizontalLineFillRightOnlyToNonForeground();
                         break;
 
                     case 128:
-                        FloodToNonBackground();
+                        screenMode.FloodToNonBackground();
                         break;
 
                     case 136:
-                        FloodToForeground();
+                        screenMode.FloodToForeground();
                         break;
 
                     case 144:
-                        CircleOutline();
+                        screenMode.CircleOutline();
                         break;
 
                     case 152:
-                        CircleFill();
+                        screenMode.CircleFill();
                         break;
 
                     case 160:
-                        CircularArc();
+                        screenMode.CircularArc();
                         break;
 
                     case 168:
-                        Segment();
+                        screenMode.Segment();
                         break;
 
                     case 176:
-                        Sector();
+                        screenMode.Sector();
                         break;
 
                     case 184:
@@ -887,15 +952,15 @@ namespace OwlRuntime.platform.riscos
                                 break;
 
                             case 185:
-                                RelativeRectangleMove();
+                                screenMode.RelativeRectangleMove();
                                 break;
 
                             case 186:
-                                RelativeRectangleCopy();
+                                screenMode.RelativeRectangleCopy();
                                 break;
 
                             case 187:
-                                RelativeRectangleCopy();
+                                screenMode.RelativeRectangleCopy();
                                 break;
 
                             case 188:
@@ -903,32 +968,32 @@ namespace OwlRuntime.platform.riscos
                                 break;
 
                             case 189:
-                                AbsoluteRectangleMove();
+                                screenMode.AbsoluteRectangleMove();
                                 break;
 
                             case 190:
-                                AbsoluteRectangleCopy();
+                                screenMode.AbsoluteRectangleCopy();
                                 break;
 
                             case 191:
-                                AbsoluteRectangleCopy();
+                                screenMode.AbsoluteRectangleCopy();
                                 break;
                         }
                         break;
                     case 192:
-                        EllipseOutline();
+                        screenMode.EllipseOutline();
                         break;
 
                     case 200:
-                        EllipseFill();
+                        screenMode.EllipseFill();
                         break;
 
                     case 208:
-                        FontPrinting();
+                        screenMode.FontPrinting();
                         break;
 
                     case 232:
-                        SpritePlot();
+                        screenMode.SpritePlot();
                         break;
                 }
             }
@@ -941,159 +1006,8 @@ namespace OwlRuntime.platform.riscos
             nextCommand = DoVduDispatch;
         }
 
-        private void DottedLineIncludingBothEndPointsPatternRestarted()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void DottedLineExcludingtheFinalPointPatternRestarted()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void SolidLineExcludingtheInitialPoint()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void SolidLineExcludingBothEndPoints()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void DottedLineExcludingtheInitialPointPatternContinued()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void DottedLineExcludingBothEndPointsPatternContinued()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void HorizontalLineFillLeftRightToNonBackground()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void PointPlot()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void TriangleFill()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void HorizontalLineFillRightToBackground()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void RectangleFill()
-        {
-            // TODO some how need to get and use the absolute and plot type (xor/and atc) to here.
-            // most are global vars available
-            // TODO swap Y co-ords over
-            // TODO use the EX and EY to scale output
-            Graphics g = vduForm.CreateGraphics();
-            Color physicalColour = screenMode.LogicalToPhysical(graphicsForegroundPaletteIndex);
-            SolidBrush brush = new SolidBrush(physicalColour);
-            g.FillRectangle(brush, oldCsX, oldCsY, gCsIX - oldCsX, gCsIY - oldCsY);
-        }
-
-        private void HorizontalLineFillLeftToForeground()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void ParallelogramFill()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void HorizontalLineFillRightOnlyToNonForeground()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void FloodToNonBackground()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void FloodToForeground()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void CircleOutline()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void CircleFill()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void CircularArc()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Segment()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void Sector()
-        {
-            throw new NotImplementedException();
-        }
-
+        
         private void MoveRelative()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void RelativeRectangleMove()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void RelativeRectangleCopy()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void SpritePlot()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void FontPrinting()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void EllipseFill()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void EllipseOutline()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void AbsoluteRectangleCopy()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void AbsoluteRectangleMove()
         {
             throw new NotImplementedException();
         }
@@ -1101,20 +1015,6 @@ namespace OwlRuntime.platform.riscos
         private void MoveAbsolute()
         {
             throw new NotImplementedException();
-        }
-
-        private void SolidLineExcludingTheFinalPoint()
-        {
-            throw new NotImplementedException();
-        }
-
-        private void SolidLineIncludingBothEndPoints()
-        {
-            Graphics g = vduForm.CreateGraphics();
-            Color physicalColour = screenMode.LogicalToPhysical(graphicsForegroundColour);
-            Pen pen = new Pen(Color.Red, 1); // TODO: Get current colour
-            pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid;
-            g.DrawLine(pen, oldCsX, oldCsY, gCsIX, gCsIY);
         }
 
         private void CarriageReturn()
@@ -1142,38 +1042,33 @@ namespace OwlRuntime.platform.riscos
             byte colour = DequeueByte();
             byte logicalColour = (byte) (colour % screenMode.BitsPerPixel);
 
-            Action<Color> setAction;
             if ((logicalColour & 0x80) != 0)
             {
-                setAction = SetTextForeground;
+                LogicalTextForegroundColour = logicalColour;
+                
             }
             else
             {
-                setAction = SetTextBackground;
+                LogicalTextBackgroundColour = logicalColour;
             }
+            
 
-            // TODO: Move this into the ScreenMode class
-            if (screenMode.BitsPerPixel > 4)
-            {
-                Color color = Color.FromArgb(logicalColour & 0x03, (logicalColour & 0x0C) >> 2, (logicalColour & 0x30) >> 4);
-                setAction(color);
-            }
-            else
-            {
-                Color color = screenMode.LogicalToPhysical(logicalColour);
-                setAction(color);
-            }
+
+            Color color = screenMode.PhysicalTextColour;
+            setAction(color);
+
+            //// TODO: Move this into the ScreenMode class
+            //if (screenMode.BitsPerPixel > 4)
+            //{
+            //    Color color = Color.FromArgb(logicalColour & 0x03, (logicalColour & 0x0C) >> 2, (logicalColour & 0x30) >> 4);
+            //    setAction(color);
+            //}
+            //else
+            //{
+            //    Color color = screenMode.LogicalToPhysical(logicalColour);
+            //    setAction(color);
+            //}
             ExpectVduCommand();
-        }
-
-        private void SetTextForeground(Color color)
-        {
-
-        }
-
-        private void SetTextBackground(Color color)
-        {
-
         }
 
         private void DoSetMode()
@@ -1185,29 +1080,29 @@ namespace OwlRuntime.platform.riscos
             switch (screenMode.BitsPerPixel)
             {
                 case 8:
-                    TextForegroundColour = 63;
-                    TextForegroundTint = 192;
+                    LogicalTextForegroundColour = 63;
+                    LogicalTextForegroundTint = 192;
 
-                    TextBackgroundColour = 0;
-                    TextBackgroundTint = 0;
+                    LogicalTextBackgroundColour = 0;
+                    LogicalTextBackgroundTint = 0;
 
-                    GraphicsForegroundColour = 63;
-                    GraphicsForegroundTint = 192;
+                    LogicalGraphicsForegroundColour = 63;
+                    LogicalGraphicsForegroundTint = 192;
 
-                    GraphicsBackgroundColour = 0;
-                    GraphicsBackgroundTint = 0;
+                    LogicalGraphicsBackgroundColour = 0;
+                    LogicalGraphicsBackgroundTint = 0;
                     break;
                 default:
                     throw new ApplicationException();
             }
 
-            // Create the window
-            if (vduForm != null)
-            {
-                vduForm.Close();
-            }
-            vduForm = new VduForm(screenMode.SquarePixelWidth, screenMode.SquarePixelHeight);
-            vduForm.Show();
+            //// Create the window
+            //if (vduForm != null)
+            //{
+            //    vduForm.Close();
+            //}
+            //vduForm = new VduForm(screenMode.SquarePixelWidth, screenMode.SquarePixelHeight);
+            //vduForm.Show();
 
             ExpectVduCommand();
         }
@@ -1265,11 +1160,6 @@ namespace OwlRuntime.platform.riscos
 
                 hasBeenDisposed = true;
             }
-        }
-
-        ~VduSystem()
-        {
-            Dispose();
         }
     }
 }
