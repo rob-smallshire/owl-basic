@@ -117,12 +117,25 @@ namespace OwlRuntime.platform.riscos
 
         public override void PointPlot()
         {
-            throw new NotImplementedException();
+            using (Graphics g = CreateGraphics())
+            {
+                Pen pen = Pen();
+                pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid;
+                // cant find a method to plot just a point in system.drawing    
+                g.DrawLine(pen, Vdu.GraphicsCursorIX, Vdu.GraphicsCursorIY, Vdu.GraphicsCursorIX, Vdu.GraphicsCursorIY);
+            } 
         }
 
         public override void TriangleFill()
         {
-            throw new NotImplementedException();
+            using (Graphics g = CreateGraphics())
+            {
+                SolidBrush brush = SolidBrush();
+                Point[] points = {new Point(Vdu.OlderGraphicsCursorX, Vdu.OlderGraphicsCursorY),
+                                  new Point(Vdu.OldGraphicsCursorX, Vdu.OldGraphicsCursorY),
+                                  new Point(Vdu.GraphicsCursorIX, Vdu.GraphicsCursorIY)};
+                g.FillPolygon(brush, points);
+            } 
         }
 
         public override void HorizontalLineFillRightToBackground()
