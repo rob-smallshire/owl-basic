@@ -16,5 +16,15 @@ namespace OwlRuntime.platform.riscos
         {
             // Do nothing
         }
+
+        public override void UpdateTextBackgroundColour(int logicalColour, int tint)
+        {
+            // Do nothing
+        }
+
+        public override void UpdateTextForegroundColour(int logicalColour, int tint)
+        {
+            // Do nothing
+        }
     }
 }

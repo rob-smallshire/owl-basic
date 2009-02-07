@@ -7,7 +7,7 @@ using System.Drawing;
 
 namespace OwlRuntime.platform.riscos
 {
-    public class Palette : IPalette
+    public class Palette
     {
         private readonly int bitsPerPixel;
         private readonly List<Color> palette;
@@ -86,13 +86,23 @@ namespace OwlRuntime.platform.riscos
             get { return bitsPerPixel; }
         }
 
-        #region IPalette Members
-
         public Color LogicalToPhysical(int logical)
         {
  	        return palette[logical];
         }
 
-        #endregion
+        public Color LogicalToPhysical(int logicalColour, int tint)
+        {
+            if (BitsPerPixel == 8)
+            {
+                int index = 0;
+                index = index | (logicalColour & 33) << 2;
+                index = index | (logicalColour & 14) << 3;
+                index = index | (logicalColour & 16) >> 1;
+                index = index | tint >> 6;
+                return LogicalToPhysical(index);
+            }
+            return LogicalToPhysical(logicalColour);
+        }
     }
 }

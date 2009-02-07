@@ -10,7 +10,7 @@ namespace OwlRuntime.platform.riscos
     /// <summary>
     /// Only used for MODE 3 and MODE 6
     /// </summary>
-    public class PalettedTextScreenMode : BaseTextScreenMode, IPalette
+    public class PalettedTextScreenMode : BaseTextScreenMode
     {
         private readonly Palette palette;
 
@@ -20,14 +20,19 @@ namespace OwlRuntime.platform.riscos
             palette = new Palette(bitsPerPixel);
         }
 
-        public Color LogicalToPhysical(int logical)
-        {
-            return palette.LogicalToPhysical(logical);
-        }
-
         public override void Dispose()
         {
             // Do nothing
+        }
+
+        public override void UpdateTextBackgroundColour(int logicalColour, int tint)
+        {
+            PhysicalTextBackgroundColour = palette.LogicalToPhysical(logicalColour, tint);
+        }
+
+        public override void UpdateTextForegroundColour(int logicalColour, int tint)
+        {
+            PhysicalTextForegroundColour = palette.LogicalToPhysical(logicalColour, tint);
         }
     }
 }

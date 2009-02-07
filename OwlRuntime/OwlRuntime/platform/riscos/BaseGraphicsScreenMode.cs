@@ -78,6 +78,9 @@ namespace OwlRuntime.platform.riscos
                                 Vdu.GraphicsCursorIX - Vdu.OldGraphicsCursorX,
                                 Vdu.GraphicsCursorIY - Vdu.OldGraphicsCursorY);
             }
+
+            // TODO: Temporary, so we can see something
+            vduForm.Refresh();
         }
 
         public override void DottedLineIncludingBothEndPointsPatternRestarted()
@@ -123,7 +126,10 @@ namespace OwlRuntime.platform.riscos
                 pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid;
                 // cant find a method to plot just a point in system.drawing    
                 g.DrawLine(pen, Vdu.GraphicsCursorIX, Vdu.GraphicsCursorIY, Vdu.GraphicsCursorIX, Vdu.GraphicsCursorIY);
-            } 
+            }
+
+            // TODO: Temporary, so we can see something
+            vduForm.Refresh();
         }
 
         public override void TriangleFill()
@@ -135,7 +141,10 @@ namespace OwlRuntime.platform.riscos
                                   new Point(Vdu.OldGraphicsCursorX, Vdu.OldGraphicsCursorY),
                                   new Point(Vdu.GraphicsCursorIX, Vdu.GraphicsCursorIY)};
                 g.FillPolygon(brush, points);
-            } 
+            }
+
+            // TODO: Temporary, so we can see something
+            vduForm.Refresh();
         }
 
         public override void HorizontalLineFillRightToBackground()
@@ -245,7 +254,10 @@ namespace OwlRuntime.platform.riscos
                 Pen pen = Pen();
                 pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid; // TODO: Get current dash style
                 g.DrawLine(pen, Vdu.OldGraphicsCursorX, Vdu.OldGraphicsCursorY, Vdu.GraphicsCursorIX, Vdu.GraphicsCursorIY);
-            }   
+            }
+
+            // TODO: Temporary, so we can see something
+            vduForm.Refresh();
         }
 
         private Pen Pen()

@@ -7,7 +7,7 @@ using System.Drawing;
 
 namespace OwlRuntime.platform.riscos
 {
-    public class PalettedGraphicsScreenMode : BaseGraphicsScreenMode, IPalette
+    public class PalettedGraphicsScreenMode : BaseGraphicsScreenMode
     {
         private readonly Palette palette;
 
@@ -17,14 +17,24 @@ namespace OwlRuntime.platform.riscos
             palette = new Palette(bitsPerPixel);
         }
 
-        public Color LogicalToPhysical(int logical)
-        {
-            return palette.LogicalToPhysical(logical);
+        public override void UpdateTextBackgroundColour(int logicalColour, int tint)
+        {           
+            PhysicalTextBackgroundColour = palette.LogicalToPhysical(logicalColour, tint);
         }
 
-        protected override Color GraphicsForegroundColour()
+        public override void UpdateTextForegroundColour(int logicalColour, int tint)
         {
-            return palette.LogicalToPhysical(Vdu.GraphicsForegroundPaletteIndex);
+            PhysicalTextForegroundColour = palette.LogicalToPhysical(logicalColour, tint);
+        }
+
+        public override void UpdateGraphicsBackgroundColour(int logicalColour, int tint)
+        {
+            PhysicalGraphicsBackgroundColour = palette.LogicalToPhysical(logicalColour, tint);
+        }
+
+        public override void UpdateGraphicsForegroundColour(int logicalColour, int tint)
+        {
+            PhysicalGraphicsForegroundColour = palette.LogicalToPhysical(logicalColour, tint);
         }
     }
 }

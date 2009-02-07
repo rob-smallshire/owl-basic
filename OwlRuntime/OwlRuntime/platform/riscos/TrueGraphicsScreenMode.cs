@@ -14,9 +14,44 @@ namespace OwlRuntime.platform.riscos
         {
         }
 
-        protected override Color GraphicsForegroundColour()
+        /// <summary>
+        /// Updates the current PhysicalTextBackgroundColour for this screen mode.
+        /// </summary>
+        /// <param name="logicalColour">Packed ARGB integer - which for these modes is actually a physical colour</param>
+        /// <param name="tint">Unused</param>
+        public override void UpdateTextBackgroundColour(int logicalColour, int tint)
         {
-            throw new NotImplementedException();
+            PhysicalTextBackgroundColour = Color.FromArgb(logicalColour);
+        }
+
+        /// <summary>
+        /// Updates the current PhysicalTextForegroundColour for this screen mode.
+        /// </summary>
+        /// <param name="logicalColour">Packed ARGB integer - which for these modes is actually a physical colour</param>
+        /// <param name="tint">Unused</param>
+        public override void UpdateTextForegroundColour(int logicalColour, int tint)
+        {
+            PhysicalTextForegroundColour = Color.FromArgb(logicalColour);
+        }
+
+        /// <summary>
+        /// Updates the current PhysicalGraphicsBackgroundColour for this screen mode.
+        /// </summary>
+        /// <param name="logicalColour">Packed ARGB integer - which for these modes is actually a physical colour</param>
+        /// <param name="tint">Unused</param>
+        public override void UpdateGraphicsBackgroundColour(int logicalColour, int tint)
+        {
+            PhysicalGraphicsBackgroundColour = Color.FromArgb(logicalColour);
+        }
+
+        /// <summary>
+        /// Updates the current PhysicalGraphicsForegroundColour for this screen mode.
+        /// </summary>
+        /// <param name="logicalColour">Packed ARGB integer - which for these modes is actually a physical colour</param>
+        /// <param name="tint">Unused</param>
+        public override void UpdateGraphicsForegroundColour(int logicalColour, int tint)
+        {
+            PhysicalGraphicsForegroundColour = Color.FromArgb(logicalColour);
         }
     }
 }

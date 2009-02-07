@@ -23,7 +23,7 @@ namespace OwlRuntime.platform.riscos
         private int unitsWidth;
         private int unitsHeight;
         private byte bitsPerPixel;
-        private Color physicalTextForgroundColour;
+        private Color physicalTextForegroundColour;
         private Color physicalTextBackgroundColour;
 
         private readonly VduSystem vdu;
@@ -358,10 +358,10 @@ namespace OwlRuntime.platform.riscos
             get { return vdu; }
         }
 
-        public Color PhysicalTextForgroundColour
+        public Color PhysicalTextForegroundColour
         {
-            get { return physicalTextForgroundColour; }
-            protected set { physicalTextForgroundColour = value; }
+            get { return physicalTextForegroundColour; }
+            protected set { physicalTextForegroundColour = value; }
         }
 
         public Color PhysicalTextBackgroundColour
@@ -499,5 +499,19 @@ namespace OwlRuntime.platform.riscos
         }
 
         public abstract void Dispose();
+
+        public virtual void UpdateGraphicsBackgroundColour(int logicalColour, int tint)
+        {
+            // Do nothing
+        }
+
+        public virtual void UpdateGraphicsForegroundColour(int logicalColour, int tint)
+        {
+            // Do nothing
+        }
+
+        public abstract void UpdateTextBackgroundColour(int logicalColour, int tint);
+
+        public abstract void UpdateTextForegroundColour(int logicalColour, int tint);
     }
 }

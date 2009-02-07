@@ -55,7 +55,6 @@
     <Compile Include="BasicCommands.cs" />
     <Compile Include="platform\riscos\AbstractScreenMode.cs" />
     <Compile Include="platform\riscos\BaseGraphicsScreenMode.cs" />
-    <Compile Include="platform\riscos\IPalette.cs" />
     <Compile Include="platform\riscos\OS.cs" />
     <Compile Include="platform\riscos\Palette.cs" />
     <Compile Include="platform\riscos\PalettedGraphicsScreenMode.cs" />

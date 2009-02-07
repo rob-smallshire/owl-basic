@@ -129,27 +129,19 @@ namespace OwlRuntime.platform.riscos
         private int WindowHeight; // WindowHeight - Rows that will fit in the text window without scrolling it
         #endregion
 
-        //private VduForm vduForm;
         private byte modeNumber;
         private AbstractScreenMode screenMode;
-
-        private int graphicsBackgroundPaletteIndex ;
-        private int graphicsForegroundPaletteIndex;
-        private int textBackgroundPaletteIndex;
-        private int textForegroundPaletteIndex;
+        private bool hasBeenDisposed = false;
 
         // The VDU queue
         private readonly Queue<byte> queue = new Queue<byte>();
         private int requiredBytes;
         private Action nextCommand;
-        private Stopwatch stopwatch = new Stopwatch();
-
 
         public VduSystem()
         {
             screenMode = AbstractScreenMode.CreateScreenMode(this, 7);
             ExpectVduCommand();
-            stopwatch.Start();
         }
 
         public int LogicalGraphicsBackgroundColour
@@ -158,18 +150,7 @@ namespace OwlRuntime.platform.riscos
             private set
             {
                 logicalGraphicsBackgroundColour = value;
-                if (screenMode.BitsPerPixel == 8)
-                {
-                    graphicsBackgroundPaletteIndex = 0;
-                    graphicsBackgroundPaletteIndex = GraphicsBackgroundPaletteIndex | (logicalGraphicsBackgroundColour & 33) << 2;
-                    graphicsBackgroundPaletteIndex = GraphicsBackgroundPaletteIndex | (logicalGraphicsBackgroundColour & 14) << 3;
-                    graphicsBackgroundPaletteIndex = GraphicsBackgroundPaletteIndex | (logicalGraphicsBackgroundColour & 16) >> 1;
-                    graphicsBackgroundPaletteIndex = GraphicsBackgroundPaletteIndex | logicalGraphicsBackgroundTint >> 6;
-                }
-                else
-                {
-                    throw new NotImplementedException();
-                }
+                screenMode.UpdateGraphicsBackgroundColour(logicalGraphicsBackgroundColour, logicalGraphicsBackgroundTint);
             }
         }
 
@@ -179,18 +160,7 @@ namespace OwlRuntime.platform.riscos
             private set
             {
                 logicalGraphicsForegroundColour = value;
-                if (screenMode.BitsPerPixel == 8)
-                {
-                    graphicsForegroundPaletteIndex = 0;
-                    graphicsForegroundPaletteIndex = GraphicsForegroundPaletteIndex | (logicalGraphicsForegroundColour & 33) << 2;
-                    graphicsForegroundPaletteIndex = GraphicsForegroundPaletteIndex | (logicalGraphicsForegroundColour & 14) << 3;
-                    graphicsForegroundPaletteIndex = GraphicsForegroundPaletteIndex | (logicalGraphicsForegroundColour & 16) >> 1;
-                    graphicsForegroundPaletteIndex = GraphicsForegroundPaletteIndex | logicalGraphicsForegroundTint >> 6;
-                }
-                else
-                {
-                    throw new NotImplementedException();
-                }
+                screenMode.UpdateGraphicsForegroundColour(logicalGraphicsForegroundColour, logicalGraphicsForegroundTint);
             }
         }
 
@@ -199,22 +169,8 @@ namespace OwlRuntime.platform.riscos
             get { return logicalTextBackgroundColour; }
             private set
             {
-                screenMode.LogicalTextBackgroundColour = value;
-
-                // TODO: Move into screen mode class
                 logicalTextBackgroundColour = value;
-                if (screenMode.BitsPerPixel == 8)
-                {
-                    textBackgroundPaletteIndex = 0;
-                    textBackgroundPaletteIndex = TextBackgroundPaletteIndex | (logicalTextBackgroundColour & 33) << 2;
-                    textBackgroundPaletteIndex = TextBackgroundPaletteIndex | (logicalTextBackgroundColour & 14) << 3;
-                    textBackgroundPaletteIndex = TextBackgroundPaletteIndex | (logicalTextBackgroundColour & 16) >> 1;
-                    textBackgroundPaletteIndex = TextBackgroundPaletteIndex | logicalTextBackgroundTint >> 6;
-                }
-                else
-                {
-                    throw new NotImplementedException();
-                }
+                screenMode.UpdateTextBackgroundColour(logicalTextBackgroundColour, logicalTextBackgroundTint);
             }
         }
 
@@ -223,22 +179,8 @@ namespace OwlRuntime.platform.riscos
             get { return logicalTextForegroundColour; }
             private set
             {
-                screenMode.LogicalTextForegroundColour = value;
-
-                // TODO: Move into screen mode class
                 logicalTextForegroundColour = value;
-                if (screenMode.BitsPerPixel == 8)
-                {
-                    textForegroundPaletteIndex = 0;
-                    textForegroundPaletteIndex = TextForegroundPaletteIndex | (logicalTextForegroundColour & 33) << 2;
-                    textForegroundPaletteIndex = TextForegroundPaletteIndex | (logicalTextForegroundColour & 14) << 3;
-                    textForegroundPaletteIndex = TextForegroundPaletteIndex | (logicalTextForegroundColour & 16) >> 1;
-                    textForegroundPaletteIndex = TextForegroundPaletteIndex | logicalTextForegroundTint >> 6;
-                }
-                else
-                {
-                    throw new NotImplementedException();
-                }
+                screenMode.UpdateTextForegroundColour(logicalTextForegroundColour, logicalTextForegroundTint);
             }
         }
 
@@ -248,18 +190,7 @@ namespace OwlRuntime.platform.riscos
             private set
             {
                 logicalGraphicsBackgroundTint = value;
-                if (screenMode.BitsPerPixel == 8)
-                {
-                    graphicsBackgroundPaletteIndex = 0;
-                    graphicsBackgroundPaletteIndex = GraphicsBackgroundPaletteIndex | (logicalGraphicsBackgroundColour & 33) << 2;
-                    graphicsBackgroundPaletteIndex = GraphicsBackgroundPaletteIndex | (logicalGraphicsBackgroundColour & 14) << 3;
-                    graphicsBackgroundPaletteIndex = GraphicsBackgroundPaletteIndex | (logicalGraphicsBackgroundColour & 16) >> 1;
-                    graphicsBackgroundPaletteIndex = GraphicsBackgroundPaletteIndex | logicalGraphicsBackgroundTint >> 6;
-                }
-                else
-                {
-                    throw new NotImplementedException();
-                }
+                screenMode.UpdateGraphicsBackgroundColour(logicalGraphicsBackgroundColour, logicalGraphicsBackgroundTint);
             }
         }
 
@@ -269,18 +200,7 @@ namespace OwlRuntime.platform.riscos
             private set
             {
                 logicalGraphicsForegroundTint = value;
-                if (screenMode.BitsPerPixel == 8)
-                {
-                    graphicsForegroundPaletteIndex = 0;
-                    graphicsForegroundPaletteIndex = GraphicsForegroundPaletteIndex | (logicalGraphicsForegroundColour & 33) << 2;
-                    graphicsForegroundPaletteIndex = GraphicsForegroundPaletteIndex | (logicalGraphicsForegroundColour & 14) << 3;
-                    graphicsForegroundPaletteIndex = GraphicsForegroundPaletteIndex | (logicalGraphicsForegroundColour & 16) >> 1;
-                    graphicsForegroundPaletteIndex = GraphicsForegroundPaletteIndex | logicalGraphicsForegroundTint >> 6;
-                }
-                else
-                {
-                    throw new NotImplementedException();
-                }
+                screenMode.UpdateGraphicsForegroundColour(logicalGraphicsForegroundColour, logicalGraphicsForegroundTint);
             }
         }
 
@@ -290,18 +210,7 @@ namespace OwlRuntime.platform.riscos
             private set
             {
                 logicalTextBackgroundTint = value;
-                if (screenMode.BitsPerPixel == 8)
-                {
-                    textBackgroundPaletteIndex = 0;
-                    textBackgroundPaletteIndex = TextBackgroundPaletteIndex | (logicalTextBackgroundColour & 33) << 2;
-                    textBackgroundPaletteIndex = TextBackgroundPaletteIndex | (logicalTextBackgroundColour & 14) << 3;
-                    textBackgroundPaletteIndex = TextBackgroundPaletteIndex | (logicalTextBackgroundColour & 16) >> 1;
-                    textBackgroundPaletteIndex = TextBackgroundPaletteIndex | logicalTextBackgroundTint >> 6;
-                }
-                else
-                {
-                    throw new NotImplementedException();
-                }
+                screenMode.UpdateTextBackgroundColour(logicalTextBackgroundColour, logicalTextBackgroundTint);
             }
         }
 
@@ -311,22 +220,10 @@ namespace OwlRuntime.platform.riscos
             private set
             {
                 logicalTextForegroundTint = value;
-                if (screenMode.BitsPerPixel == 8)
-                {
-                    textForegroundPaletteIndex = 0;
-                    textForegroundPaletteIndex = TextForegroundPaletteIndex | (logicalTextForegroundColour & 33) << 2;
-                    textForegroundPaletteIndex = TextForegroundPaletteIndex | (logicalTextForegroundColour & 14) << 3;
-                    textForegroundPaletteIndex = TextForegroundPaletteIndex | (logicalTextForegroundColour & 16) >> 1;
-                    textForegroundPaletteIndex = TextForegroundPaletteIndex | logicalTextForegroundTint >> 6;
-                }
-                else
-                {
-                    throw new NotImplementedException();
-                }
+                screenMode.UpdateTextForegroundColour(logicalTextForegroundColour, logicalTextForegroundTint);
             }
         }
 
-        
         public byte ModeNumber
         {
             get { return modeNumber; }
@@ -360,26 +257,6 @@ namespace OwlRuntime.platform.riscos
         public short GraphicsCursorIY
         {
             get { return graphicsCursorIY; }
-        }
-
-        public int GraphicsBackgroundPaletteIndex
-        {
-            get { return graphicsBackgroundPaletteIndex; }
-        }
-
-        public int GraphicsForegroundPaletteIndex
-        {
-            get { return graphicsForegroundPaletteIndex; }
-        }
-
-        public int TextBackgroundPaletteIndex
-        {
-            get { return textBackgroundPaletteIndex; }
-        }
-
-        public int TextForegroundPaletteIndex
-        {
-            get { return textForegroundPaletteIndex; }
         }
 
         public void Enqueue(byte b)
@@ -418,22 +295,14 @@ namespace OwlRuntime.platform.riscos
             if (queue.Count >= requiredBytes)
             {
                 nextCommand();
-                // Only refresh the display every 10 ms
-                if (stopwatch.ElapsedMilliseconds > 10)
-                {
-                    Refresh();
-                    stopwatch.Reset();
-                    stopwatch.Start();
-                }
+                Refresh();
             }
         }
 
         private void Refresh()
         {
-            //if (vduForm != null)
-            //{
-            //    vduForm.Refresh();
-            //}
+            // TODO: Only the graphics modes need Refresh...
+            //screenMode.Refresh();
         }
 
         public void DoVduDispatch()
@@ -1054,8 +923,8 @@ namespace OwlRuntime.platform.riscos
             
 
 
-            Color color = screenMode.PhysicalTextColour;
-            setAction(color);
+            //Color color = screenMode.PhysicalTextColour;
+            //setAction(color);
 
             //// TODO: Move this into the ScreenMode class
             //if (screenMode.BitsPerPixel > 4)
@@ -1075,10 +944,12 @@ namespace OwlRuntime.platform.riscos
         {
             //prm 1-594
             modeNumber = DequeueByte();
-            screenMode = AbstractScreenMode.CreateScreenMode(this.ModeNumber);
+            screenMode = AbstractScreenMode.CreateScreenMode(this, ModeNumber);
             // TODO: Set default colours
             switch (screenMode.BitsPerPixel)
             {
+                // TODO: Other default logical colours needed
+
                 case 8:
                     LogicalTextForegroundColour = 63;
                     LogicalTextForegroundTint = 192;
@@ -1092,8 +963,11 @@ namespace OwlRuntime.platform.riscos
                     LogicalGraphicsBackgroundColour = 0;
                     LogicalGraphicsBackgroundTint = 0;
                     break;
-                default:
-                    throw new ApplicationException();
+                //case 24:
+                    // logical colours are physical colours
+
+                //default:
+                    //throw new ApplicationException();
             }
 
             //// Create the window
@@ -1148,7 +1022,7 @@ namespace OwlRuntime.platform.riscos
                 {
                     if (disposeManagedObjs)
                     {
-                        vduForm.Dispose();
+                        screenMode.Dispose();
                     }
                     GC.SuppressFinalize(this);
                 }

@@ -7,13 +7,13 @@
       <Compartment Name="Methods" Collapsed="true" />
     </Compartments>
     <TypeIdentifier>
-      <HashCode>CBSGNQBYDghSECAIggEBQSSQBQAEyBAkBCgCCAAAACE=</HashCode>
+      <HashCode>CBaCNQBYCiByECAAggEBQwSQBYCFyAAgBDgCCAACACE=</HashCode>
       <FileName>platform\riscos\AbstractScreenMode.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
   <Class Name="OwlRuntime.platform.riscos.VduSystem">
-    <Position X="1" Y="0.5" Width="2.25" />
+    <Position X="0.5" Y="0.5" Width="2.25" />
     <Compartments>
       <Compartment Name="Properties" Collapsed="true" />
       <Compartment Name="Methods" Collapsed="true" />
@@ -26,7 +26,7 @@
       </Enum>
     </NestedTypes>
     <TypeIdentifier>
-      <HashCode>CMDKtWKcAylDEhO6MwFFEK5JPpEEhSjGU/EQJDDsWhM=</HashCode>
+      <HashCode>DMDM9mKcByjDEgeaEQFEQA5JPpEEhCjGUvUQJDTsSlM=</HashCode>
       <FileName>platform\riscos\VduSystem.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
@@ -39,56 +39,46 @@
     </TypeIdentifier>
   </Class>
   <Class Name="OwlRuntime.platform.riscos.BaseGraphicsScreenMode" Collapsed="true">
-    <Position X="7" Y="4.25" Width="2.75" />
+    <Position X="7.25" Y="4.25" Width="2.75" />
     <TypeIdentifier>
-      <HashCode>CBSQFQBYCAFSGAAAggEAQQSQBAAAQAAgBCACCAAAAAA=</HashCode>
+      <HashCode>CBWUFQBYDChSGAAIggEAQSSShgAAQBAkBCACCAAAAAA=</HashCode>
       <FileName>platform\riscos\BaseGraphicsScreenMode.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="OwlRuntime.platform.riscos.Palette">
-    <Position X="11" Y="5.25" Width="2.25" />
+    <Position X="10.5" Y="2.75" Width="2.25" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAABAIAAAAAAAAAAACAAAAAgAAAAAAAA=</HashCode>
       <FileName>platform\riscos\Palette.cs</FileName>
     </TypeIdentifier>
-    <Lollipop Position="0.2" />
   </Class>
   <Class Name="OwlRuntime.platform.riscos.PalettedGraphicsScreenMode">
-    <Position X="8.25" Y="6.25" Width="2.5" />
+    <Position X="8.75" Y="6.25" Width="2.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAEAAABAIAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <HashCode>AAAAAAAAAAAgAAAAIAAAAAAAAIABAAAAABAAAAAAAAA=</HashCode>
       <FileName>platform\riscos\PalettedGraphicsScreenMode.cs</FileName>
     </TypeIdentifier>
-    <Lollipop Position="0.2" />
   </Class>
-  <Class Name="OwlRuntime.platform.riscos.TeletextScreenMode" Collapsed="true">
+  <Class Name="OwlRuntime.platform.riscos.TeletextScreenMode">
     <Position X="5" Y="5.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <HashCode>AAAAAAAAACAAAAAAAAAAAAAAAIAAAAAAABAAAAAAAAA=</HashCode>
       <FileName>platform\riscos\TeletextScreenMode.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="OwlRuntime.platform.riscos.PalettedTextScreenMode" Collapsed="true">
+  <Class Name="OwlRuntime.platform.riscos.PalettedTextScreenMode">
     <Position X="3.25" Y="5.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAABAIAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <HashCode>AAAAAAAAACAAAAAAIAAAAAAAAIAAAAAAABAAAAAAAAA=</HashCode>
       <FileName>platform\riscos\PalettedTextScreenMode.cs</FileName>
     </TypeIdentifier>
-    <Lollipop Position="0.2" />
   </Class>
   <Class Name="OwlRuntime.platform.riscos.TrueGraphicsScreenMode">
-    <Position X="6.5" Y="6.25" Width="1.5" />
+    <Position X="6.75" Y="6.25" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <HashCode>AAAAAAAAAAAgAAAAAAAAAAAAAIABAAAAABAAAAAAAAA=</HashCode>
       <FileName>platform\riscos\TrueGraphicsScreenMode.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Interface Name="OwlRuntime.platform.riscos.IPalette">
-    <Position X="9.5" Y="0.75" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
-      <FileName>platform\riscos\IPalette.cs</FileName>
-    </TypeIdentifier>
-  </Interface>
   <Font Name="Segoe UI" Size="9" />
 </ClassDiagram>
