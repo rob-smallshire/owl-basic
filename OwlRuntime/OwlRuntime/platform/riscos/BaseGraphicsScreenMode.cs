@@ -179,12 +179,37 @@ namespace OwlRuntime.platform.riscos
 
         public override void CircleOutline()
         {
-            throw new NotImplementedException();
+            using (Graphics g = CreateGraphics())
+            {
+                Pen pen = Pen();
+                pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid;
+                int diffX = Vdu.GraphicsCursorIX - Vdu.OldGraphicsCursorX;
+                int diffY = Vdu.GraphicsCursorIY - Vdu.OldGraphicsCursorY;
+                int radius = (int)Math.Sqrt((diffX * diffX) + (diffY * diffY));
+                g.DrawEllipse(pen, Vdu.OldGraphicsCursorX - radius,
+                                     Vdu.OldGraphicsCursorY - radius, radius * 2, radius * 2);
+            }
+
+            // TODO needs testing
+
+            // TODO: Temporary, so we can see something
+            vduForm.Refresh();
         }
 
         public override void CircleFill()
         {
-            throw new NotImplementedException();
+            using (Graphics g = CreateGraphics())
+            {
+                SolidBrush brush = SolidBrush();
+                int diffX = Vdu.GraphicsCursorIX - Vdu.OldGraphicsCursorX;
+                int diffY = Vdu.GraphicsCursorIY - Vdu.OldGraphicsCursorY;
+                int radius = (int)Math.Sqrt((diffX * diffX) + (diffY * diffY));
+                g.FillEllipse(brush, Vdu.OldGraphicsCursorX - radius,
+                                     Vdu.OldGraphicsCursorY - radius, radius*2, radius*2);
+            }
+
+            // TODO: Temporary, so we can see something
+            vduForm.Refresh();
         }
 
         public override void CircularArc()
