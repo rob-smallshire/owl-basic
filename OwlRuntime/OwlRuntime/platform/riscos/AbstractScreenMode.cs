@@ -513,5 +513,58 @@ namespace OwlRuntime.platform.riscos
         public abstract void UpdateTextBackgroundColour(int logicalColour, int tint);
 
         public abstract void UpdateTextForegroundColour(int logicalColour, int tint);
+
+        /// <summary>
+        /// Update the palette for the current screen mode by mapping the logicalColour
+        /// index to the colour of the entry in the physical (i.e. default) palette.
+        /// </summary>
+        /// <param name="logicalColourIndex">The logical colour to be redefined</param>
+        /// <param name="physcialColourIndex">An index into the physcial (i.e. default) palette.</param>
+        public virtual void UpdatePalette(byte logicalColourIndex, byte physcialColourIndex)
+        {
+            // Do nothing
+        }
+
+        /// <summary>
+        /// Update the palette for the current screen mode by mapping the logicalColour
+        /// index to the colour specified by red, green and blue.
+        /// </summary>
+        /// <param name="logicalColour">A logical colour - index into the palette</param>
+        /// <param name="red">Red channel 0-255</param>
+        /// <param name="green">Green channel 0-255</param>
+        /// <param name="blue">Blue channel 0-255</param>
+        public virtual void UpdatePalette(byte logicalColour, byte red, byte green, byte blue)
+        {
+            // Do nothing
+        }
+
+        public virtual void UpdatePaletteFirstFlash(byte colour, byte red, byte green, byte blue)
+        {
+            // Do nothing
+        }
+
+        public virtual void UpdatePaletteSecondFlash(byte colour, byte red, byte green, byte blue)
+        {
+            // Do nothing
+        }
+
+        public virtual void UpdatePaletteBorder(byte colour, byte red, byte green, byte blue)
+        {
+            // Do nothing
+        }
+
+        public virtual void UpdatePointerPalette(byte colour, byte red, byte green, byte blue)
+        {
+            // Do nothing
+        }
+
+        /// <summary>
+        /// Reset to the default palette. Reset text and graphics, background and foreground colours to
+        /// the default for the mode.
+        /// </summary>
+        public void ResetPaletteAndColours()
+        {
+            // Do nothing
+        }
     }
 }

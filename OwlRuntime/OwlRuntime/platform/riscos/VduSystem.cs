@@ -410,10 +410,11 @@ namespace OwlRuntime.platform.riscos
                     nextCommand = SetGraphicsColour;
                     break;
                 case 19:
+                    requiredBytes = 5;
                     SetPalette();
                     break;
                 case 20:
-                    SetPaletteDefault();
+                    RestoreDefaultColours();
                     break;
                 case 21:
                     DisableConsoleStream();
@@ -670,12 +671,58 @@ namespace OwlRuntime.platform.riscos
 
         private void SetPalette()
         {
-            throw new NotImplementedException();
+            byte logicalColour = DequeueByte();
+            byte mode = DequeueByte();
+            byte red = DequeueByte();
+            byte green = DequeueByte();
+            byte blue = DequeueByte();
+
+            bool supremacy = (mode & 128) != 0;
+
+            mode &= 127;
+
+            if (mode >=0 && mode <= 15)
+            {
+                // logical colour = physical colour specified by mode
+                byte physcialColour =  mode; // index in the physical palette
+                screenMode.UpdatePalette(logicalColour, physcialColour);
+            }
+            else
+            {
+                switch (mode)
+                {
+                    case 16:
+                        screenMode.UpdatePalette(logicalColour, red, green, blue);
+                        // both flash palettes for logical colour = red units red, green units green, blue units blue
+                        break;
+                    case 17:
+                        // first flash palette for logical colour = red units red, green units green, blue units blue
+                        screenMode.UpdatePaletteFirstFlash(logicalColour, red, green, blue);
+                        break;
+                    case 18:
+                        // second flash palette for logical colour = red units red, green units green, blue units blue
+                        screenMode.UpdatePaletteSecondFlash(logicalColour, red, green, blue);
+                        break;
+                    case 24:
+                        // border colour = red units red, green units green, blue units blue; logical colour is not used, and should be zero
+                        screenMode.UpdatePaletteBorder(logicalColour, red, green, blue);
+                        break;
+                    case 25:
+                        // logical colour (1 - 3) of pointer = red units red, green units green, blue units blue
+                        screenMode.UpdatePointerPalette(logicalColour, red, green, blue);
+                        break;
+                    case 255:
+                        // BBC BASIC for Windows compatibility: the physical colour is determined by interpreting
+                        // the remaining three parameters as red, green and blue values in the range 0 to 63
+                        screenMode.UpdatePalette(logicalColour, (byte) (red * 4), (byte) (green * 4), (byte) (blue * 4));
+                        break;
+                }
+            }
         }
 
-        private void SetPaletteDefault()
+        private void RestoreDefaultColours()
         {
-            throw new NotImplementedException();
+            screenMode.ResetPaletteAndColours();
         }
 
         private void DisableConsoleStream()
