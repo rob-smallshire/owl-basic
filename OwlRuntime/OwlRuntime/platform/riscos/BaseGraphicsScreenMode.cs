@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Text;
 
@@ -10,28 +11,28 @@ namespace OwlRuntime.platform.riscos
     {
         private readonly VduForm vduForm;
         private bool hasBeenDisposed = false;
-        private int pixelWidth;
-        private int pixelHeight;
+        private readonly int pixelWidth;
+        private readonly int pixelHeight;
         private Color physicalGraphicsForegroundColour;
         private Color physicalGraphicsBackgroundColour;
 
-        protected BaseGraphicsScreenMode(VduSystem vdu, int textWidth, int textHeight, int squarePixelWidth, int squarePixelHeight) :
-            base(vdu, textWidth, textHeight)
+        protected BaseGraphicsScreenMode(VduSystem vdu, int textWidth, int textHeight, int pixelWidth, int pixelHeight, int unitsWidth, int unitsHeight) :
+            base(vdu, textWidth, textHeight, unitsWidth, unitsHeight)
         {
-            vduForm = new VduForm(squarePixelWidth, squarePixelHeight);
+            this.pixelWidth = pixelWidth;
+            this.pixelHeight = pixelHeight;
+            vduForm = new VduForm(SquarePixelWidth, SquarePixelHeight);
             vduForm.Show(); // TODO: Is this the best place for this?
         }
 
         public int PixelWidth
         {
             get { return pixelWidth; }
-            protected set { pixelWidth = value; }
         }
 
         public int PixelHeight
         {
             get { return pixelHeight; }
-            protected set { pixelHeight = value; }
         }
 
         public int PixelAspect
@@ -41,12 +42,26 @@ namespace OwlRuntime.platform.riscos
 
         public int SquarePixelWidth
         {
-            get { return PixelWidth; }
+            get
+            {
+                if (PixelAspect < 1.0)
+                {
+                    return PixelWidth;
+                }
+                return PixelWidth * PixelAspect;
+            }
         }
 
         public int SquarePixelHeight
         {
-            get { return PixelHeight * PixelAspect; }
+            get
+            {
+                if (PixelAspect < 1.0)
+                {
+                    return PixelHeight / PixelAspect;
+                }
+                return PixelHeight;
+            }
         }
 
         public Color PhysicalGraphicsForegroundColour
@@ -63,7 +78,11 @@ namespace OwlRuntime.platform.riscos
 
         protected Graphics CreateGraphics()
         {
-            return vduForm.CreateGraphics();
+            Graphics graphics = vduForm.CreateGraphics();
+            graphics.ResetTransform(); // TODO: Is this necessary?
+            graphics.TranslateTransform(0.0f, UnitsHeight, MatrixOrder.Prepend);
+            graphics.ScaleTransform(xxx, -1.0, MatrixOrder.Prepend);
+            return graphics;
         }
 
         /// <summary>

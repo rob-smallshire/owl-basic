@@ -11,8 +11,8 @@ namespace OwlRuntime.platform.riscos
     {
         private readonly Palette palette;
 
-        public PalettedGraphicsScreenMode(VduSystem vdu, byte bitsPerPixel, int textWidth, int textHeight, int squarePixelWidth, int squarePixelHeight) :
-            base(vdu, textWidth, textHeight, squarePixelWidth, squarePixelHeight)
+        public PalettedGraphicsScreenMode(VduSystem vdu, byte bitsPerPixel, int textWidth, int textHeight, int pixelWidth, int pixelHeight, int unitsWidth, int unitsHeight) :
+            base(vdu, textWidth, textHeight, pixelWidth, pixelHeight, unitsWidth, unitsHeight)
         {
             palette = new Palette(bitsPerPixel);
         }

@@ -9,8 +9,8 @@ namespace OwlRuntime.platform.riscos
 {
     public class TrueGraphicsScreenMode : BaseGraphicsScreenMode
     {
-        public TrueGraphicsScreenMode(VduSystem vdu, int textWidth, int textHeight, int squarePixelWidth, int squarePixelHeight) :
-            base(vdu, textWidth, textHeight, squarePixelWidth, squarePixelHeight)
+        public TrueGraphicsScreenMode(VduSystem vdu, int textWidth, int textHeight, int pixelWidth, int pixelHeight, int unitsWidth, int unitsHeight) :
+            base(vdu, textWidth, textHeight, pixelWidth, pixelHeight, unitsWidth, unitsHeight)
         {
         }
 

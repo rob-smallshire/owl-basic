@@ -9,8 +9,19 @@ namespace OwlRuntime.platform.riscos
 {
     public class Palette
     {
+        //private static Palette physicalPalette;
+        //private static HashSet<int, Palette> defaultPalettes;
+
         private readonly int bitsPerPixel;
         private readonly List<Color> palette;
+
+        //static Palette()
+        //{
+        //    physicalPalette
+
+        //    defaultPalettes = new HashSet<int, Palette>();
+            
+        //}
 
         public Palette(byte bitsPerPixel)
         {
@@ -80,6 +91,7 @@ namespace OwlRuntime.platform.riscos
                     throw new ArgumentOutOfRangeException();
             }
         }
+
 
         public int BitsPerPixel
         {

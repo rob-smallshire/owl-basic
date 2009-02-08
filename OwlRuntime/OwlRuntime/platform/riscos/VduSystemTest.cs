@@ -90,18 +90,14 @@ namespace OwlRuntime.platform.riscos
         public void TestPaletteWheel()
         {
             vdu.Enqueue((byte)22, (byte)28); // Change to mode 28
-            int c = 3;
-            short size = 220;
+            const short size = 220;
             int radius = 250;
-
-
 
             for (int t = 1; t < 5; ++t)
             {
                 radius -= 30;
-                c = 3;
+                int c = 3;
                 int cntr = 0;
-                short mov1x, mov1y, mov2x, mov2y;
                 int colDiff = 0;
 
                 for (int circle = 100; circle < 450; circle+=20)
@@ -116,10 +112,10 @@ namespace OwlRuntime.platform.riscos
                     vdu.Enqueue((byte)18, (byte)0, (byte)(c & 63));
 
 
-                    mov1x = (short)(size + (Math.Cos((circle - 20) * (Math.PI / 180)) * radius));
-                    mov1y = (short)(size + (Math.Sin((circle - 20) * (Math.PI / 180)) * radius));
-                    mov2x = (short)(size + (Math.Cos((circle) * (Math.PI / 180)) * radius));
-                    mov2y = (short)(size + (Math.Sin((circle) * (Math.PI / 180)) * radius));
+                    short mov1x = (short)(size + (Math.Cos((circle - 20) * (Math.PI / 180)) * radius));
+                    short mov1y = (short)(size + (Math.Sin((circle - 20) * (Math.PI / 180)) * radius));
+                    short mov2x = (short)(size + (Math.Cos((circle) * (Math.PI / 180)) * radius));
+                    short mov2y = (short)(size + (Math.Sin((circle) * (Math.PI / 180)) * radius));
 
                     // MOVE
                     vdu.Enqueue((byte)25, (byte)4);
@@ -174,7 +170,7 @@ namespace OwlRuntime.platform.riscos
             // plot the circles in the centre
             radius -= 25;            
 
-            for (c = 0; c < 64; c += 21)
+            for (int c = 0; c < 64; c += 21)
             {
                 for (int t = 0; t < 255; t += 64)
                 {

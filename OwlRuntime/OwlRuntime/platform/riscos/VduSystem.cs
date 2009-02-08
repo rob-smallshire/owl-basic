@@ -411,7 +411,7 @@ namespace OwlRuntime.platform.riscos
                     break;
                 case 19:
                     requiredBytes = 5;
-                    SetPalette();
+                    nextCommand = SetPalette;
                     break;
                 case 20:
                     RestoreDefaultColours();
