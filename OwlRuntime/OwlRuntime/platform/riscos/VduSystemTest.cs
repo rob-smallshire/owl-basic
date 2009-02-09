@@ -33,7 +33,7 @@ namespace OwlRuntime.platform.riscos
         public void Test25()
         {
             
-            vdu.Enqueue((byte) 22, (byte) 28); // Change to mode 28
+            vdu.Enqueue((byte) 22, (byte) 22); // Change to mode 2
             vdu.Enqueue((byte) 25, (byte) 4);  // MOVE
             vdu.Enqueue((short) 320, (short) 240);
             vdu.Enqueue((byte) 25, (byte) 5);  // DRAW
@@ -86,9 +86,12 @@ namespace OwlRuntime.platform.riscos
             Console.WriteLine("End");
         }
 
+
+
         [Test]
         public void TestPaletteWheel()
         {
+            // 8bpp modes tested 10,13, 15, 28,21,24,36,40
             vdu.Enqueue((byte)22, (byte)28); // Change to mode 28
             const short size = 220;
             int radius = 250;

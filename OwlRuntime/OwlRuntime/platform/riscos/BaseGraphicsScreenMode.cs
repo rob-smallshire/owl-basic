@@ -46,9 +46,12 @@ namespace OwlRuntime.platform.riscos
             {
                 if (PixelAspect < 1.0)
                 {
-                    return PixelWidth;
+                    // TODO dont think this will work with mode 2, 5 or 10
+                    // PixelAspect will be 0 and should be 0.5
+                    return PixelWidth * 2;
                 }
-                return PixelWidth * PixelAspect;
+
+                return PixelWidth / PixelAspect;
             }
         }
 
@@ -56,10 +59,13 @@ namespace OwlRuntime.platform.riscos
         {
             get
             {
-                if (PixelAspect < 1.0)
-                {
-                    return PixelHeight / PixelAspect;
-                }
+                //if (PixelAspect < 1.0)
+                //{
+                //    // TODO dont think this will work with mode 2, 5 or 10
+                //    // PixelAspect will be 0 and should be 0.5
+                //    return PixelHeight;   
+                //    //return PixelHeight / PixelAspect;
+                //}
                 return PixelHeight;
             }
         }
@@ -80,8 +86,8 @@ namespace OwlRuntime.platform.riscos
         {
             Graphics graphics = vduForm.CreateGraphics();
             graphics.ResetTransform(); // TODO: Is this necessary?
-            graphics.TranslateTransform(0.0f, UnitsHeight, MatrixOrder.Prepend);
-            graphics.ScaleTransform(xxx, -1.0, MatrixOrder.Prepend);
+            graphics.TranslateTransform(0.0f, SquarePixelHeight, MatrixOrder.Prepend);
+            graphics.ScaleTransform( (SquarePixelWidth / (float)UnitsWidth), -(SquarePixelHeight / (float)UnitsHeight) , MatrixOrder.Prepend);
             return graphics;
         }
 
