@@ -150,7 +150,7 @@ namespace OwlRuntime.platform.riscos
             private set
             {
                 logicalGraphicsBackgroundColour = value;
-                screenMode.UpdateGraphicsBackgroundColour(logicalGraphicsBackgroundColour, logicalGraphicsBackgroundTint);
+                ScreenMode.UpdateGraphicsBackgroundColour(logicalGraphicsBackgroundColour, logicalGraphicsBackgroundTint);
             }
         }
 
@@ -160,7 +160,7 @@ namespace OwlRuntime.platform.riscos
             private set
             {
                 logicalGraphicsForegroundColour = value;
-                screenMode.UpdateGraphicsForegroundColour(logicalGraphicsForegroundColour, logicalGraphicsForegroundTint);
+                ScreenMode.UpdateGraphicsForegroundColour(logicalGraphicsForegroundColour, logicalGraphicsForegroundTint);
             }
         }
 
@@ -170,7 +170,7 @@ namespace OwlRuntime.platform.riscos
             private set
             {
                 logicalTextBackgroundColour = value;
-                screenMode.UpdateTextBackgroundColour(logicalTextBackgroundColour, logicalTextBackgroundTint);
+                ScreenMode.UpdateTextBackgroundColour(logicalTextBackgroundColour, logicalTextBackgroundTint);
             }
         }
 
@@ -180,7 +180,7 @@ namespace OwlRuntime.platform.riscos
             private set
             {
                 logicalTextForegroundColour = value;
-                screenMode.UpdateTextForegroundColour(logicalTextForegroundColour, logicalTextForegroundTint);
+                ScreenMode.UpdateTextForegroundColour(logicalTextForegroundColour, logicalTextForegroundTint);
             }
         }
 
@@ -190,7 +190,7 @@ namespace OwlRuntime.platform.riscos
             private set
             {
                 logicalGraphicsBackgroundTint = value;
-                screenMode.UpdateGraphicsBackgroundColour(logicalGraphicsBackgroundColour, logicalGraphicsBackgroundTint);
+                ScreenMode.UpdateGraphicsBackgroundColour(logicalGraphicsBackgroundColour, logicalGraphicsBackgroundTint);
             }
         }
 
@@ -200,7 +200,7 @@ namespace OwlRuntime.platform.riscos
             private set
             {
                 logicalGraphicsForegroundTint = value;
-                screenMode.UpdateGraphicsForegroundColour(logicalGraphicsForegroundColour, logicalGraphicsForegroundTint);
+                ScreenMode.UpdateGraphicsForegroundColour(logicalGraphicsForegroundColour, logicalGraphicsForegroundTint);
             }
         }
 
@@ -210,7 +210,7 @@ namespace OwlRuntime.platform.riscos
             private set
             {
                 logicalTextBackgroundTint = value;
-                screenMode.UpdateTextBackgroundColour(logicalTextBackgroundColour, logicalTextBackgroundTint);
+                ScreenMode.UpdateTextBackgroundColour(logicalTextBackgroundColour, logicalTextBackgroundTint);
             }
         }
 
@@ -220,7 +220,7 @@ namespace OwlRuntime.platform.riscos
             private set
             {
                 logicalTextForegroundTint = value;
-                screenMode.UpdateTextForegroundColour(logicalTextForegroundColour, logicalTextForegroundTint);
+                ScreenMode.UpdateTextForegroundColour(logicalTextForegroundColour, logicalTextForegroundTint);
             }
         }
 
@@ -257,6 +257,11 @@ namespace OwlRuntime.platform.riscos
         public short GraphicsCursorIY
         {
             get { return graphicsCursorIY; }
+        }
+
+        internal AbstractScreenMode ScreenMode
+        {
+            get { return screenMode; }
         }
 
         public void Enqueue(byte b)
@@ -685,36 +690,36 @@ namespace OwlRuntime.platform.riscos
             {
                 // logical colour = physical colour specified by mode
                 byte physcialColour =  mode; // index in the physical palette
-                screenMode.UpdatePalette(logicalColour, physcialColour);
+                ScreenMode.UpdatePalette(logicalColour, physcialColour);
             }
             else
             {
                 switch (mode)
                 {
                     case 16:
-                        screenMode.UpdatePalette(logicalColour, red, green, blue);
+                        ScreenMode.UpdatePalette(logicalColour, red, green, blue);
                         // both flash palettes for logical colour = red units red, green units green, blue units blue
                         break;
                     case 17:
                         // first flash palette for logical colour = red units red, green units green, blue units blue
-                        screenMode.UpdatePaletteFirstFlash(logicalColour, red, green, blue);
+                        ScreenMode.UpdatePaletteFirstFlash(logicalColour, red, green, blue);
                         break;
                     case 18:
                         // second flash palette for logical colour = red units red, green units green, blue units blue
-                        screenMode.UpdatePaletteSecondFlash(logicalColour, red, green, blue);
+                        ScreenMode.UpdatePaletteSecondFlash(logicalColour, red, green, blue);
                         break;
                     case 24:
                         // border colour = red units red, green units green, blue units blue; logical colour is not used, and should be zero
-                        screenMode.UpdatePaletteBorder(logicalColour, red, green, blue);
+                        ScreenMode.UpdatePaletteBorder(logicalColour, red, green, blue);
                         break;
                     case 25:
                         // logical colour (1 - 3) of pointer = red units red, green units green, blue units blue
-                        screenMode.UpdatePointerPalette(logicalColour, red, green, blue);
+                        ScreenMode.UpdatePointerPalette(logicalColour, red, green, blue);
                         break;
                     case 255:
                         // BBC BASIC for Windows compatibility: the physical colour is determined by interpreting
                         // the remaining three parameters as red, green and blue values in the range 0 to 63
-                        screenMode.UpdatePalette(logicalColour, (byte) (red * 4), (byte) (green * 4), (byte) (blue * 4));
+                        ScreenMode.UpdatePalette(logicalColour, (byte) (red * 4), (byte) (green * 4), (byte) (blue * 4));
                         break;
                 }
             }
@@ -722,7 +727,7 @@ namespace OwlRuntime.platform.riscos
 
         private void RestoreDefaultColours()
         {
-            screenMode.ResetPaletteAndColours();
+            ScreenMode.ResetPaletteAndColours();
         }
 
         private void DisableConsoleStream()
@@ -769,95 +774,95 @@ namespace OwlRuntime.platform.riscos
                 switch (plotType & 248)
                 {
                     case 0:
-                        screenMode.SolidLineIncludingBothEndPoints();
+                        ScreenMode.SolidLineIncludingBothEndPoints();
                         break;
 
                     case 8:
-                        screenMode.SolidLineExcludingTheFinalPoint();
+                        ScreenMode.SolidLineExcludingTheFinalPoint();
                         break;
 
                     case 16:
-                        screenMode.DottedLineIncludingBothEndPointsPatternRestarted();
+                        ScreenMode.DottedLineIncludingBothEndPointsPatternRestarted();
                         break;
 
                     case 24:
-                        screenMode.DottedLineExcludingtheFinalPointPatternRestarted();
+                        ScreenMode.DottedLineExcludingtheFinalPointPatternRestarted();
                         break;
 
                     case 32:
-                        screenMode.SolidLineExcludingtheInitialPoint();
+                        ScreenMode.SolidLineExcludingtheInitialPoint();
                         break;
 
                     case 40:
-                        screenMode.SolidLineExcludingBothEndPoints();
+                        ScreenMode.SolidLineExcludingBothEndPoints();
                         break;
 
                     case 48:
-                        screenMode.DottedLineExcludingtheInitialPointPatternContinued();
+                        ScreenMode.DottedLineExcludingtheInitialPointPatternContinued();
                         break;
 
                     case 56:
-                        screenMode.DottedLineExcludingBothEndPointsPatternContinued();
+                        ScreenMode.DottedLineExcludingBothEndPointsPatternContinued();
                         break;
 
                     case 64:
-                        screenMode.PointPlot();
+                        ScreenMode.PointPlot();
                         break;
 
                     case 72:
-                        screenMode.HorizontalLineFillLeftRightToNonBackground();
+                        ScreenMode.HorizontalLineFillLeftRightToNonBackground();
                         break;
 
                     case 80:
-                        screenMode.TriangleFill();
+                        ScreenMode.TriangleFill();
                         break;
 
                     case 88:
-                        screenMode.HorizontalLineFillRightToBackground();
+                        ScreenMode.HorizontalLineFillRightToBackground();
                         break;
 
                     case 96:
-                        screenMode.RectangleFill();
+                        ScreenMode.RectangleFill();
                         break;
 
                     case 104:
-                        screenMode.HorizontalLineFillLeftToForeground();
+                        ScreenMode.HorizontalLineFillLeftToForeground();
                         break;
 
                     case 112:
-                        screenMode.ParallelogramFill();
+                        ScreenMode.ParallelogramFill();
                         break;
 
                     case 120:
-                        screenMode.HorizontalLineFillRightOnlyToNonForeground();
+                        ScreenMode.HorizontalLineFillRightOnlyToNonForeground();
                         break;
 
                     case 128:
-                        screenMode.FloodToNonBackground();
+                        ScreenMode.FloodToNonBackground();
                         break;
 
                     case 136:
-                        screenMode.FloodToForeground();
+                        ScreenMode.FloodToForeground();
                         break;
 
                     case 144:
-                        screenMode.CircleOutline();
+                        ScreenMode.CircleOutline();
                         break;
 
                     case 152:
-                        screenMode.CircleFill();
+                        ScreenMode.CircleFill();
                         break;
 
                     case 160:
-                        screenMode.CircularArc();
+                        ScreenMode.CircularArc();
                         break;
 
                     case 168:
-                        screenMode.Segment();
+                        ScreenMode.Segment();
                         break;
 
                     case 176:
-                        screenMode.Sector();
+                        ScreenMode.Sector();
                         break;
 
                     case 184:
@@ -868,15 +873,15 @@ namespace OwlRuntime.platform.riscos
                                 break;
 
                             case 185:
-                                screenMode.RelativeRectangleMove();
+                                ScreenMode.RelativeRectangleMove();
                                 break;
 
                             case 186:
-                                screenMode.RelativeRectangleCopy();
+                                ScreenMode.RelativeRectangleCopy();
                                 break;
 
                             case 187:
-                                screenMode.RelativeRectangleCopy();
+                                ScreenMode.RelativeRectangleCopy();
                                 break;
 
                             case 188:
@@ -884,32 +889,32 @@ namespace OwlRuntime.platform.riscos
                                 break;
 
                             case 189:
-                                screenMode.AbsoluteRectangleMove();
+                                ScreenMode.AbsoluteRectangleMove();
                                 break;
 
                             case 190:
-                                screenMode.AbsoluteRectangleCopy();
+                                ScreenMode.AbsoluteRectangleCopy();
                                 break;
 
                             case 191:
-                                screenMode.AbsoluteRectangleCopy();
+                                ScreenMode.AbsoluteRectangleCopy();
                                 break;
                         }
                         break;
                     case 192:
-                        screenMode.EllipseOutline();
+                        ScreenMode.EllipseOutline();
                         break;
 
                     case 200:
-                        screenMode.EllipseFill();
+                        ScreenMode.EllipseFill();
                         break;
 
                     case 208:
-                        screenMode.FontPrinting();
+                        ScreenMode.FontPrinting();
                         break;
 
                     case 232:
-                        screenMode.SpritePlot();
+                        ScreenMode.SpritePlot();
                         break;
                 }
             }
@@ -956,7 +961,7 @@ namespace OwlRuntime.platform.riscos
         {
             // PRM 1-585
             byte colour = DequeueByte();
-            byte logicalColour = (byte) (colour % screenMode.BitsPerPixel);
+            byte logicalColour = (byte) (colour % ScreenMode.BitsPerPixel);
 
             if ((logicalColour & 0x80) != 0)
             {
@@ -993,7 +998,7 @@ namespace OwlRuntime.platform.riscos
             modeNumber = DequeueByte();
             screenMode = AbstractScreenMode.CreateScreenMode(this, ModeNumber);
             // TODO: Set default colours
-            switch (screenMode.BitsPerPixel)
+            switch (ScreenMode.BitsPerPixel)
             {
                 // TODO: Other default logical colours needed
 
@@ -1069,7 +1074,7 @@ namespace OwlRuntime.platform.riscos
                 {
                     if (disposeManagedObjs)
                     {
-                        screenMode.Dispose();
+                        ScreenMode.Dispose();
                     }
                     GC.SuppressFinalize(this);
                 }

@@ -22,6 +22,7 @@ namespace OwlRuntime.platform.riscos
             this.pixelWidth = pixelWidth;
             this.pixelHeight = pixelHeight;
             vduForm = new VduForm(SquarePixelWidth, SquarePixelHeight);
+            vduForm.BackColor = Color.Black;
             vduForm.Show(); // TODO: Is this the best place for this?
         }
 
@@ -35,9 +36,14 @@ namespace OwlRuntime.platform.riscos
             get { return pixelHeight; }
         }
 
-        public int PixelAspect
+        public float PixelAspect
         {
-            get { return (UnitsHeight / PixelHeight) / (UnitsWidth / PixelWidth); }
+            get
+            {
+                float widthRatio = UnitsWidth / (float) PixelWidth;
+                float heightRatio = UnitsHeight / (float) PixelHeight;
+                return widthRatio / heightRatio;
+            }
         }
 
         public int SquarePixelWidth
@@ -48,10 +54,10 @@ namespace OwlRuntime.platform.riscos
                 {
                     // TODO dont think this will work with mode 2, 5 or 10
                     // PixelAspect will be 0 and should be 0.5
-                    return PixelWidth * 2;
+                    return PixelWidth;
                 }
 
-                return PixelWidth / PixelAspect;
+                return (int) (PixelWidth * PixelAspect);
             }
         }
 
@@ -59,13 +65,12 @@ namespace OwlRuntime.platform.riscos
         {
             get
             {
-                //if (PixelAspect < 1.0)
-                //{
-                //    // TODO dont think this will work with mode 2, 5 or 10
-                //    // PixelAspect will be 0 and should be 0.5
-                //    return PixelHeight;   
-                //    //return PixelHeight / PixelAspect;
-                //}
+                if (PixelAspect < 1.0)
+                {
+                    // TODO dont think this will work with mode 2, 5 or 10
+                    // PixelAspect will be 0 and should be 0.5
+                    return (int) (PixelHeight / PixelAspect);
+                }
                 return PixelHeight;
             }
         }
@@ -88,6 +93,7 @@ namespace OwlRuntime.platform.riscos
             graphics.ResetTransform(); // TODO: Is this necessary?
             graphics.TranslateTransform(0.0f, SquarePixelHeight, MatrixOrder.Prepend);
             graphics.ScaleTransform( (SquarePixelWidth / (float)UnitsWidth), -(SquarePixelHeight / (float)UnitsHeight) , MatrixOrder.Prepend);
+            graphics.SmoothingMode = SmoothingMode.AntiAlias;
             return graphics;
         }
 

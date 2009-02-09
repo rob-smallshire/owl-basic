@@ -211,5 +211,104 @@ namespace OwlRuntime.platform.riscos
             form.Refresh();
             form.Close();
         }
+
+        [Test]
+        public void ModeSizeTest0()
+        {
+            vdu.Enqueue((byte) 22, (byte) 0);
+            BaseGraphicsScreenMode mode = (BaseGraphicsScreenMode) vdu.ScreenMode;
+            Assert.AreEqual(640, mode.SquarePixelWidth);
+            Assert.AreEqual(512, mode.SquarePixelHeight);
+        }
+
+        [Test]
+        public void ModeSizeTest1()
+        {
+            vdu.Enqueue((byte) 22, (byte) 1);
+            BaseGraphicsScreenMode mode = (BaseGraphicsScreenMode) vdu.ScreenMode;
+            Assert.AreEqual(320, mode.SquarePixelWidth);
+            Assert.AreEqual(256, mode.SquarePixelHeight);
+        }
+
+        [Test]
+        public void ModeSizeTest2()
+        {
+            vdu.Enqueue((byte) 22, (byte) 2);
+            BaseGraphicsScreenMode mode = (BaseGraphicsScreenMode) vdu.ScreenMode;
+            Assert.AreEqual(320, mode.SquarePixelWidth);
+            Assert.AreEqual(256, mode.SquarePixelHeight);
+        }
+
+        [Test]
+        public void ModeSizeTest16()
+        {
+            vdu.Enqueue((byte) 22, (byte) 16);
+            BaseGraphicsScreenMode mode = (BaseGraphicsScreenMode) vdu.ScreenMode;
+            Assert.AreEqual(1056, mode.SquarePixelWidth);
+            Assert.AreEqual(512, mode.SquarePixelHeight);
+        }
+
+        [Test]
+        public void ModeSizeTest17()
+        {
+            vdu.Enqueue((byte) 22, (byte) 17);
+            BaseGraphicsScreenMode mode = (BaseGraphicsScreenMode) vdu.ScreenMode;
+            Assert.AreEqual(1056, mode.SquarePixelWidth);
+            Assert.AreEqual(500, mode.SquarePixelHeight);
+        }
+
+        [Test]
+        public void ModeSizeTest23()
+        {
+            vdu.Enqueue((byte) 22, (byte) 23);
+            BaseGraphicsScreenMode mode = (BaseGraphicsScreenMode) vdu.ScreenMode;
+            Assert.AreEqual(1152, mode.SquarePixelWidth);
+            Assert.AreEqual(896, mode.SquarePixelHeight);
+        }
+
+        [Test]
+        public void ModeSizeTest24()
+        {
+            vdu.Enqueue((byte) 22, (byte) 24);
+            BaseGraphicsScreenMode mode = (BaseGraphicsScreenMode) vdu.ScreenMode;
+            Assert.AreEqual(1056, mode.SquarePixelWidth);
+            Assert.AreEqual(512, mode.SquarePixelHeight);
+        }
+
+        [Test]
+        public void ModeSizeTest44()
+        {
+            vdu.Enqueue((byte) 22, (byte) 44);
+            BaseGraphicsScreenMode mode = (BaseGraphicsScreenMode) vdu.ScreenMode;
+            Assert.AreEqual(640, mode.SquarePixelWidth);
+            Assert.AreEqual(400, mode.SquarePixelHeight);
+        }
+
+        [Test]
+        public void ModeSizeTest22()
+        {
+            vdu.Enqueue((byte) 22, (byte) 22);
+            BaseGraphicsScreenMode mode = (BaseGraphicsScreenMode) vdu.ScreenMode;
+            Assert.AreEqual(768, mode.SquarePixelWidth);
+            Assert.AreEqual(576, mode.SquarePixelHeight);
+        }
+
+        [Test]
+        public void ModeSizeTest45()
+        {
+            vdu.Enqueue((byte) 22, (byte) 45);
+            BaseGraphicsScreenMode mode = (BaseGraphicsScreenMode) vdu.ScreenMode;
+            Assert.AreEqual(640, mode.SquarePixelWidth);
+            Assert.AreEqual(400, mode.SquarePixelHeight);
+        }
+
+        [Test]
+        public void ModeSizeTest46()
+        {
+            vdu.Enqueue((byte) 22, (byte) 46);
+            BaseGraphicsScreenMode mode = (BaseGraphicsScreenMode) vdu.ScreenMode;
+            Assert.AreEqual(640, mode.SquarePixelWidth);
+            Assert.AreEqual(400, mode.SquarePixelHeight);
+        }
     }
 }
