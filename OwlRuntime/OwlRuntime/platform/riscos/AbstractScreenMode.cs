@@ -35,11 +35,11 @@ namespace OwlRuntime.platform.riscos
                 case 0: return new PalettedGraphicsScreenMode(vdu, 1, 80, 32, 640, 256, 1280, 1024);
                 case 1: return new PalettedGraphicsScreenMode(vdu, 2, 40, 32, 320, 256, 1280, 1024);
                 case 2: return new PalettedGraphicsScreenMode(vdu, 4, 20, 32, 160, 256, 1280, 1024);
-                case 3: return new PalettedTextScreenMode(vdu, 1, 80, 25);
+                case 3: return new PalettedTextScreenMode(vdu, 1, 80, 25); // 1280, 1000 checked by using mouse co-ords in this mode
                 case 4: return new PalettedGraphicsScreenMode(vdu, 1, 40, 32, 320, 256, 1280, 1024);
                 case 5: return new PalettedGraphicsScreenMode(vdu, 2, 20, 32, 160, 256, 1280, 1024);
-                case 6: return new PalettedTextScreenMode(vdu, 1, 40, 25);
-                case 7: return new TeletextScreenMode(vdu);
+                case 6: return new PalettedTextScreenMode(vdu, 1, 40, 25); // 1280, 1000
+                case 7: return new TeletextScreenMode(vdu); // 1280, 1000
                 case 8: return new PalettedGraphicsScreenMode(vdu, 2, 80, 32, 640, 256, 1280, 1024);
                 case 9: return new PalettedGraphicsScreenMode(vdu, 4, 40, 32, 320, 256, 1280, 1024); 
                 case 10: return new PalettedGraphicsScreenMode(vdu, 8, 20, 32, 160, 256, 1280, 1024);
