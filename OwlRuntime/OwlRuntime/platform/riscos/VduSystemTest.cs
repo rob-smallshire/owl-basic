@@ -60,10 +60,10 @@ namespace OwlRuntime.platform.riscos
             vdu.Enqueue(7);
             vdu.Enqueue((byte)22, (byte)28); // Change to mode 28
             int c = 0;
-            const int size = 16;
-            for (int y = 0; y < size; ++y)
+            const int size = 32;
+            for (int y = 0; y < 16; ++y)
             {
-                for (int x = 0; x < size; ++x)
+                for (int x = 0; x < 16; ++x)
                 {   
                     // TINT action (2) color (c & 192)
                     vdu.Enqueue((byte)23, (byte)17, (byte)2, (byte)(c & 192));
