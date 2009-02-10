@@ -599,7 +599,9 @@ namespace OwlRuntime.platform.riscos
                     break;
                 case 10:
                     ColourFlashTimingSecond(bytes[0]);
-                // 11 - set colour patterns to their default values
+                    break;
+                case 11:
+                    // - set colour patterns to their default values
                     ResetColourFills();
                     break;
                 case 12:
