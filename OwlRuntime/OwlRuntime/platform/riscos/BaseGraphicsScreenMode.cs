@@ -15,6 +15,7 @@ namespace OwlRuntime.platform.riscos
         private readonly int pixelHeight;
         private Color physicalGraphicsForegroundColour;
         private Color physicalGraphicsBackgroundColour;
+        private byte renderingQuality;
 
         protected BaseGraphicsScreenMode(VduSystem vdu, int textWidth, int textHeight, int pixelWidth, int pixelHeight, int unitsWidth, int unitsHeight) :
             base(vdu, textWidth, textHeight, unitsWidth, unitsHeight)
@@ -87,13 +88,41 @@ namespace OwlRuntime.platform.riscos
             protected set { physicalGraphicsBackgroundColour = value; }
         }
 
+        public byte RenderingQuality
+        {
+            get { return renderingQuality; }
+            protected set { renderingQuality = value; }
+        }
+
         protected Graphics CreateGraphics()
         {
             Graphics graphics = vduForm.CreateGraphics();
-            graphics.ResetTransform(); // TODO: Is this necessary?
+
+            // The transform from OWL BASIC units to Windows pixel coordinates
+            graphics.ResetTransform();
             graphics.TranslateTransform(0.0f, SquarePixelHeight, MatrixOrder.Prepend);
             graphics.ScaleTransform( (SquarePixelWidth / (float)UnitsWidth), -(SquarePixelHeight / (float)UnitsHeight) , MatrixOrder.Prepend);
-            graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+            // Set the rendering quality
+            switch (RenderingQuality)
+            {
+                case 0:
+                    graphics.SmoothingMode = SmoothingMode.None;
+                    graphics.PixelOffsetMode = PixelOffsetMode.None;
+                    break;
+                case 1:
+                    graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    graphics.PixelOffsetMode = PixelOffsetMode.None;
+                    break;
+                case 2:
+                    graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                    break;
+                default:
+                    graphics.SmoothingMode = SmoothingMode.None;
+                    graphics.PixelOffsetMode = PixelOffsetMode.None;
+                    break;
+            }
             return graphics;
         }
 
@@ -329,6 +358,11 @@ namespace OwlRuntime.platform.riscos
         private SolidBrush SolidBrush()
         {
             return new SolidBrush(PhysicalGraphicsForegroundColour);
+        }
+
+        public override void UpdateRenderingQuality(byte quality)
+        {
+            RenderingQuality = quality;
         }
 
         public override void Dispose()

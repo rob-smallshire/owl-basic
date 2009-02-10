@@ -27,7 +27,7 @@ namespace OwlRuntime.platform.riscos
         private Color physicalTextBackgroundColour;
 
         private readonly VduSystem vdu;
-        
+
         public static AbstractScreenMode CreateScreenMode(VduSystem vdu, byte number)
         {
             switch (number & 127) // after reading prm only bottom 7 bits are used for setting mode (top bit is for shadow modes) PRM 1-597
@@ -324,6 +324,11 @@ namespace OwlRuntime.platform.riscos
         }
 
         public virtual void UpdatePointerPalette(byte colour, byte red, byte green, byte blue)
+        {
+            // Do nothing
+        }
+
+        public virtual void UpdateRenderingQuality(byte quality)
         {
             // Do nothing
         }

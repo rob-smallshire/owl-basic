@@ -576,86 +576,349 @@ namespace OwlRuntime.platform.riscos
 
             switch (miscCmd)
             {
-                case 0:
-                    // interlace and cursor apearance
-                    break;
                 case 1:
-                    cursorDisplay(bytes[0]);
+                    CursorDisplay(bytes[0]);
+                    break;
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                    DefineExtendedColourFill((byte) (miscCmd - 1), bytes);
                     break;
                 case 6:
-                    // ignore this command - dotDashLineStyle
+                    DotDashStyle(bytes);
                     break;
                 case 7:
-                    scrollTextWindow(bytes[0], bytes[1], bytes[2]);
+                    ScrollTextWindow(bytes[0], bytes[1], bytes[2]);
                     break;
                 case 8:
-                    // clears a block of the current text viewport
+                    ClearTextBlock(bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5]);
                     break;
-                // 9 - set colour flash timing
-                // 10 - set colour flash timing
+                case 9:
+                    ColourFlashTimingFirst(bytes[0]);
+                    break;
+                case 10:
+                    ColourFlashTimingSecond(bytes[0]);
                 // 11 - set colour patterns to their default values
-                // 12-15 - ECF 1-4
+                    ResetColourFills();
+                    break;
+                case 12:
+                case 13:
+                case 14:
+                case 15:
+                    DefineSimpleExtendedColourFill((byte) (miscCmd - 11), bytes);
+                    break;
                 case 16:
                     // Alter the direction of printing on the screen
-                    setPrintDirection(bytes[0]);
+                    SetPrintDirection(bytes[0]);
                     break;
                 case 17:
-                    // TINT n,m and two others that may not be implimented
-                    setTint(bytes[0], bytes[1]);
+                    switch (bytes[0])
+                    {
+                        case 0:
+                        case 1:
+                        case 2:
+                        case 3:
+                            SetTint(bytes[0], bytes[1]);
+                            break;
+                        case 4:
+                            ColourPatternInterpretation(bytes[1]);
+                            break;
+                        case 5:
+                            ExchangeTextForegroundAndBackgroundColours();
+                            break;
+                        case 6:
+                            short xOrigin = TwoBytesToShort(bytes[1], bytes[2]);
+                            short yOrigin = TwoBytesToShort(bytes[3], bytes[4]);
+                            SetExtendedColourFillOrigin(xOrigin, yOrigin);
+                            break;
+                        case 7:
+                            short xSize = TwoBytesToShort(bytes[2], bytes[3]);
+                            short ySize = TwoBytesToShort(bytes[4], bytes[5]);
+                            SetCharacterSizeSpacing(bytes[1], xSize, ySize);
+                            break;
+                    }
                     break;
-                // 18-26 reserved
+                // According to the PRMs 18-24 are reserved for future expansion
+                // Some of these values are used by BBC BASIC for Windows
+                case 22:
+                    short pixelWidth = TwoBytesToShort(bytes[0], bytes[1]);
+                    short pixelHeight = TwoBytesToShort(bytes[2], bytes[3]);
+                    byte charX = bytes[4];
+                    byte charY = bytes[5];
+                    byte numColours = bytes[6];
+                    byte charSet = bytes[7];
+                    SetUserDefinedMode(pixelWidth, pixelHeight, charX, charY, numColours, charSet);
+                    break;
+                case 23:
+                    short lineWidth = TwoBytesToShort(bytes[0], bytes[1]);
+                    SetLineThickness(lineWidth);
+                    break;
                 case 27:
                     //select a sprite
                     break;
-                // 28-31 reserved
+                // 28-31 Reserved for use by application programs.
+                // We use these for OWL BASIC extensions
+                case 28:
+                    RenderingQuality(bytes[0]);
+                    break;
                 // 32-255 user definable chars
             }
             ExpectVduCommand();
         }
 
-        private void cursorDisplay(byte b)
+        /// <summary>
+        /// Used to set the level of antialiasing
+        /// 0 - No antialiasing (the default)
+        /// 1 - Standard antialiasing
+        /// </summary>
+        /// <param name="quality">Quality level</param>
+        private void RenderingQuality(byte quality)
+        {
+            screenMode.UpdateRenderingQuality(quality);
+        }
+
+        /// <summary>
+        /// Set the line thickness.
+        /// This is a BBC BASIC for Windows extension.
+        /// </summary>
+        /// <param name="width">width in pixels</param>
+        private void SetLineThickness(short width)
         {
             throw new NotImplementedException();
         }
 
-        private void scrollTextWindow(byte b, byte b1, byte b2)
+        /// <summary>
+        /// Set a user defined screen mode.
+        /// This is a BBC BASIC for Windows extension.
+        /// </summary>
+        /// <param name="pixelWidth"></param>
+        /// <param name="pixelHeight"></param>
+        /// <param name="charX"></param>
+        /// <param name="charY"></param>
+        /// <param name="numColours"></param>
+        /// <param name="charSet"></param>
+        private void SetUserDefinedMode(short pixelWidth, short pixelHeight, byte charX, byte charY, byte numColours, byte charSet)
         {
             throw new NotImplementedException();
         }
 
-        private void setPrintDirection(byte flags)
+        /// <summary>
+        /// This command allows changing the size and spacing of VDU 5 characters. They are 
+        /// reset when a mode change occurs. Bit 1 of the flags refers to the size of VDU 5 
+        /// characters. Bit 2 refers to the spacing between VDU 5 characters. x and y are sizes in 
+        /// pixels.
+        /// </summary>
+        /// <param name="flags">What to set the size of</param>
+        /// <param name="xSize">x size in pixels</param>
+        /// <param name="ySize">y size in pixels</param>
+        private void SetCharacterSizeSpacing(byte flags, short xSize, short ySize)
         {
             throw new NotImplementedException();
         }
 
-        private void setTint(byte n, byte m)
+        /// <summary>
+        /// By default, the alignment of ECF patterns is with the bottom left corner of the screen. 
+        /// This command changes it so that the bottom left pixel of the pattern coincides with the 
+        /// pixel at the specified point.
+        /// The origin is restored to the default after a mode change.
+        /// </summary>
+        /// <param name="x">x-coordinate of origin</param>
+        /// <param name="y">y-coordinate of origin</param>
+        private void SetExtendedColourFillOrigin(short x, short y)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Exchange text foreground and background colours.
+        /// This command exchanges the current text foreground and background colours. After the 
+        /// first time it’s called, subsequent characters printed are in inverse video. After the second 
+        /// time it’s called, subsequent characters printed are of normal appearance.
+        /// </summary>
+        private void ExchangeTextForegroundAndBackgroundColours()
+        {
+            int tempColour = LogicalTextForegroundColour;
+            LogicalTextForegroundColour = LogicalTextBackgroundColour;
+            LogicalTextBackgroundColour = tempColour;
+
+            int tempTint = LogicalTextForegroundTint;
+            LogicalTextForegroundTint = LogicalTextBackgroundTint;
+            LogicalTextBackgroundTint = tempTint;
+        }
+
+        /// <summary>
+        /// Choose the patterns used to interpret subsequent VDU 23,2 - 5... calls
+        /// </summary>
+        /// <param name="patterns">0 - use 6502 BBC Micro colour patterns. 1 - Use native colour patterns.</param>
+        private void ColourPatternInterpretation(byte patterns)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// define the four colour patterns in a simpler way than that 
+        /// provided by VDU 23,2-5. The limitation is that you can only set a two-by-four pattern of 
+        /// pixels. 
+        /// The pixels of the top row of the resulting pattern are assigned alternating logical colours 
+        /// n1 and n2, those of the next row have colours n3 and n4 etc.
+        /// In any 256 colour mode, the declared use of the parameters does not apply. In this case, 
+        /// each parameter refers to the colour of each line, from 1 to 8. Use the colour byte as 
+        /// described by VDU 19.
+        /// </summary>
+        /// <param name="pattern">Pattern number 1-4</param>
+        /// <param name="colours">Array defining a two by four block of pixels.</param>
+        private void DefineSimpleExtendedColourFill(byte pattern, byte[] colours)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Selects the Master 128 compatible pattern mode and causes the four colour 
+        /// patterns to be reset to their defaults for the current screen mode.
+        /// </summary>
+        private void ResetColourFills()
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// sets the flash time for the first flashing colour. The length is determined by 
+        /// the value of duration
+        /// </summary>
+        /// <param name="durationInFrames">Number of frames</param>
+        private void ColourFlashTimingFirst(byte durationInFrames)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// sets the flash time for the first flashing colour. The length is determined by 
+        /// the value of duration
+        /// </summary>
+        /// <param name="durationInFrames">Number of frames</param>
+        private void ColourFlashTimingSecond(byte durationInFrames)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Causes a block of the current text window to be cleared to the text background 
+        /// colour. The parameters baseStart and baseEnd indicate base positions relating to the 
+        /// start and end of the block to be cleared respectively:
+        /// 0 top left of window
+        /// 1 top of cursor column
+        /// 2 off top right of window
+        /// 4 left end of cursor line
+        /// 5 cursor position
+        /// 6 off right of cursor line
+        /// 8 bottom left of window
+        /// 9 bottom of cursor column
+        /// 10 off bottom right of window
+        /// </summary>
+        /// <param name="baseStart">Base position of start of block</param>
+        /// <param name="baseEnd">Base position of end of block</param>
+        /// <param name="x1">Displacement from base start in x direction</param>
+        /// <param name="y1">Displacement from base start in y direction</param>
+        /// <param name="x2">Displacement from base end in x direction</param>
+        /// <param name="y2">Displacement from base end in y direction</param>
+        private void ClearTextBlock(byte baseStart, byte baseEnd, byte x1, byte y1, byte x2, byte y2)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// sets the dot-dash line style used by dotted line PLOT commands (see also 
+        /// VDU 25 – which does the plotting.
+        /// Each of the integers n1 to n8 defines eight elements of the line style, n1 being at the start 
+        /// and n8 at the end. The bits in each byte are read from most significant to least 
+        /// significant, each 1-bit indicating a dot and each 0-bit a space. The default is 
+        /// &AAAAAAAA (alternating dots and spaces) with a repeat length of eight (so only n1 is 
+        /// used).
+        /// </summary>
+        /// <param name="bytes"></param>
+        private void DotDashStyle(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Each of the integers n1 to n8 defines the colours of one row of the pattern, n1 being the 
+        /// top row and n8 being the bottom. For a given parameter, the logical colours of the pixels 
+        /// in each row depend upon the number of colours available in the current screen mode and 
+        /// which pattern mode is used. There are two available pattern modes. The default is the 
+        /// BBC/Master compatible mode. The other is the native RISC OS mode which decodes 
+        /// the values in a simpler fashion. To change between these modes use VDU 23,17,4.
+        /// </summary>
+        /// <param name="pattern">A pattern number 1 to 4</param>
+        /// <param name="colours">An array of eight bytes for n1 to n8</param>
+        private void DefineExtendedColourFill(byte pattern, byte[] colours)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Controls the appearance of the text cursor on the screen depending on the 
+        /// value of mode
+        /// </summary>
+        /// <param name="mode">
+        /// 0 - stops the cursor appearing
+        /// 1 - makes the cursor re-appear
+        /// 2 - makes the cursor steady
+        /// 3 - makes the cursor flash
+        /// </param>
+        private void CursorDisplay(byte mode )
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Allows the current text window or whole screen to be scrolled directly in any 
+        /// direction without moving the cursor. The extent, direction and movement determine the 
+        /// area to be scrolled, the direction of scrolling and the amount of scrolling
+        /// </summary>
+        /// <param name="extent">Text window or screen. 0 - scroll the current text window. 1 - scroll the entire screen</param>
+        /// <param name="direction">Direction to scroll</param>
+        /// <param name="movement">How much movement. 0 - scroll by one character cell. 1 - scroll by one character cell vertically or one byte horizontally</param>
+        private void ScrollTextWindow(byte extent, byte direction, byte movement)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void SetPrintDirection(byte flags)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// used to set the amount of white tint given to a colour in the 256-colour 
+        /// modes. The action determines which colour’s tint is set, as follows:
+        /// action Colour
+        /// 0 sets the tint for the text foreground colour
+        /// 1 sets the tint for the text background colour
+        /// 2 sets the tint for the graphics foreground colour
+        /// 3 sets the tint for the graphics background colour
+        /// </summary>
+        /// <param name="action"></param>
+        /// <param name="tint"></param>
+        private void SetTint(byte action, byte tint)
         {
             // m & 192 because only the top 2 bits are used
             // prm1-616
-            switch (n)
+            switch (action)
             {
                 case 0:
-                    LogicalTextForegroundTint=m & 192;
+                    LogicalTextForegroundTint= tint & 192;
                     break;
                 case 1:
-                    LogicalTextBackgroundTint = m & 192;
+                    LogicalTextBackgroundTint = tint & 192;
                     break;
                 case 2:
-                    LogicalGraphicsForegroundTint = m & 192;
+                    LogicalGraphicsForegroundTint = tint & 192;
                     break;
                 case 3:
-                    LogicalGraphicsBackgroundTint = m & 192;
+                    LogicalGraphicsBackgroundTint = tint & 192;
                     break;
-                case 4:
-                    // prm1-617
-                    throw new NotImplementedException();
-                    break;
-                case 5:
-                    // prm1-618
-                    throw new NotImplementedException();
-                    break;
-                default:
-                    throw new NotImplementedException();
             }
         }
 
@@ -1053,8 +1316,13 @@ namespace OwlRuntime.platform.riscos
             // PRM 1-556 - VDU n; sends the number n as two bytes, first n MOD &100, then n DIV &100.
             byte lo = queue.Dequeue();
             byte hi = queue.Dequeue();
-            short s = (short) ((hi << 8) | lo);
+            short s = TwoBytesToShort(hi, lo);
             return s;
+        }
+
+        private static short TwoBytesToShort(byte hi, byte lo)
+        {
+            return (short) ((hi << 8) | lo);
         }
 
         /// <summary>
