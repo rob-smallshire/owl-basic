@@ -93,9 +93,9 @@ class FlowgraphForwardVisitor(Visitor):
         # TODO: targetLogicalLine needs to be a constant for this
         # to work
         #print "CFG goto"
-        print "goto.targetLogicalLine = %s" % goto.targetLogicalLine.value
+        #print "goto.targetLogicalLine = %s" % goto.targetLogicalLine.value
         goto_target = self.statementOnLine(goto.targetLogicalLine)
-        print "goto_target = %s" % goto_target
+        #print "goto_target = %s" % goto_target
         if goto_target:
             self.connect(goto, goto_target)
         else:

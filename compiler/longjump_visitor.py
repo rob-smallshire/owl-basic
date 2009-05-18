@@ -42,7 +42,7 @@ class LongjumpVisitor(Visitor):
         tags in the following statements, replace Goto nodes with Longjump nodes
         and modify the control flow graph.
         """
-        print "createLongjumps"
+        #print "createLongjumps"
         for node in self.longjumps:
             flow_analysis.deTagSuccessors(node)
             

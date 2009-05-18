@@ -215,7 +215,7 @@ def t_CONTINUATION(t):
 def t_EOL(t):
     r'[\r\n]+' 
     t.lexer.lineno += len(t.value) # possible error with line number on different platforms
-    print "t.lexer.lineno = %s" % t.lexer.lineno
+    #print "t.lexer.lineno = %s" % t.lexer.lineno
     return t
 
 # In BBC BASIC identifiers cannot begin with prefixes, so we go contrary

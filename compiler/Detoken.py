@@ -162,6 +162,7 @@ def ReadLines(data):
     """Returns a list of [line number, tokenised line] from a binary
        BBC BASIC format file."""
     fileType=0
+    #print "len(data) = ", len(data)
     if len(data) < 4:
         # TODO unsure how you want to return error
         raise Exception, "Bad Program"
@@ -197,8 +198,8 @@ def ReadLines(data):
         decode = 2 
         lineEnd='\x0d'
         fileTypeName = 'BBC BASIC (80/86)'
-    
-    print fileTypeName
+    #print [hex(ord(x)) for x in fileExt]    
+    #print fileTypeName
     lenLineEnd = len(lineEnd)
     
     lines = []

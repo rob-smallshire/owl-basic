@@ -1,9 +1,14 @@
 #!ipy
 
+import logging
+logging._srcfile = None
+logging.basicConfig(level=logging.DEBUG,
+                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.debug("main.py")
+
 # Python Standard Library
 import sys
 import re
-import logging
 import StringIO
 from optparse import OptionParser
 
@@ -32,81 +37,40 @@ import convert_sub_visitor
 
 from Detoken import Decode
 
-#from errors import warning
-
-logging._srcfile = None
-logging.basicConfig(level=logging.DEBUG)
-
-def tokenize(data):
+def tokenize(data, lexer):
     # Give the lexer some input
-    lex.input(data)
+    lexer.input(data)
 
     # Tokenize
     while 1:
-        tok = lex.token()
+        tok = lexer.token()
         if not tok: break      # No more input
         print tok
 
-def xmlAst(tree, filename):
-    xmlv = xml_visitor.XmlVisitor(filename)
-    tree.accept(xmlv)
-    xmlv.close()
-    
-def xmlCfg(tree, filename):
-    gmlv = gml_visitor.GmlVisitor(filename)
-    tree.accept(gmlv)
-    gmlv.close()
-
-if __name__ == '__main__':
-    
-    parser = OptionParser()
-    parser.add_option("-x", "--debug-lex", action='store_true', dest='debug_lex', default=False)
-    parser.add_option("-l", "--line-numbers", action='store_true', dest="line_numbers", default=False)
-    parser.add_option("-c", "--debug-no-clr", action='store_false', dest='use_clr', default=True)
-    parser.add_option("-p", "--debug-no-separation", action='store_false', dest='use_separation', default=True)
-    parser.add_option("-s", "--debug-no-simplification", action='store_false', dest='use_simplification', default=True)
-    parser.add_option("-t", "--debug-no-typecheck", action='store_false', dest='use_typecheck', default=True)
-    parser.add_option("-f", "--debug-no-flowgraph", action='store_false', dest='use_flowgraph', default=True)
-    parser.add_option("-e", "--debug-no-entrypoints", action='store_false', dest='use_entry_points', default=True)
-    parser.add_option("-j", "--debug-no-longjumps", action='store_false', dest='use_longjumps', default=True)
-    parser.add_option("-g", "--debug-no-convert-subs", action='store_false', dest='use_convert_subs', default=True)
-    parser.add_option("-y", "--debug-no-symbol-tables", action='store_false', dest='use_symbol_tables', default=True)
-    parser.add_option("-v", "--verbose", action='store_true', dest='verbose', default=False)
-    
-    (options, args) = parser.parse_args();
-
-    if options.use_clr:
-        # .NET Framework
-        import clr
-        clr.AddReference('System.Xml')
-        from System.Xml import XmlTextWriter, Formatting
-
-    if len(args) == 0:
-        sys.stderr.write("No filename supplied.\n")
-        sys.exit(1)
-            
-    filename = args[0]
-    
+def readFile(filename):
+    logging.debug("readFile")
     # Read the file - processing it for line numbers if necessary
-    f = open(filename, 'r')
-    
+    f = open(filename, 'rb')
+    data = f.read()
+    f.close()
+    return data
+
+def detokenize(data, options):
+    logging.debug("detokenize")
     if options.verbose:
         sys.stderr.write("Detokenizing...")
-    #call the detokenize routine
+    
+    #print "len(data) = ", len(data)
     detokenized = StringIO.StringIO()
-    lineNoNeeded = Decode(f.read(), detokenized)
-    
-
-    #lineNoNeeded is true if the file has line numbers (need testing for file without line numbers)
-    #I dont know how to change the parameter on the command line
-
-    f.close()
-    
+    lineNoNeeded = Decode(data, detokenized)
     if options.verbose:
         sys.stderr.write("done\n")
     
     detokenHandle = StringIO.StringIO(detokenized.getvalue())
-    
+    return detokenHandle
+
+def indexLineNumbers(detokenHandle, options):
+    logging.debug("indexLineNumbers")
     if options.verbose:
         sys.stderr.write("Mapping physical to logical line numbers... ")
     
@@ -124,103 +88,131 @@ if __name__ == '__main__':
             physical_line += 1
             m = line_number_regex.match(line)
             if not m:
-                logging.error("Missing line number at physical line %d (after logical line %d)", physical_line, logical_line)
-                sys.exit(1)
+                raise CompileException("Missing line number at physical line %d (after logical line %d)" % (physical_line, logical_line))
+            
             logical_line = int(m.group(1))
             physical_to_logical_map.append(logical_line)
             line_bodies.append(m.group(2))
-        #print physical_to_logical_map
+            #print physical_to_logical_map
+        
         data = '\n'.join(line_bodies)
     else:
         physical_to_logical_map = None
         data = detokenHandle.read()
     detokenHandle.close()
-    
-    if options.verbose:
-        sys.stderr.write("done\n")
-    
+    return data, physical_to_logical_map
+
+def warnOnMissingNewline(data):
+    logging.debug("warnOnMissingNewline")
     if not data.endswith('\n'):
         logging.warning("Missing newline at end of file")
         data += '\n'
     
+    return data
+
+def buildLexer(options):
+    logging.debug("buildLexer")
     if options.verbose:
         sys.stderr.write("Building lexer...")
-    
     # Build the lexer and parser
     
-    lex.lex(bbc_lexer)
-    
+    lexer = lex.lex(bbc_lexer)
     if options.verbose:
         sys.stderr.write("done\n")
     
-    if options.debug_lex:
-        tokenize(data)
-    
+    return lexer
+
+def buildParser(options):
+    logging.debug("buildParser")
     if options.verbose:
-        sys.stderr.write("Builder parser... ")
-        
-    yacc.yacc(module=bbc_grammar, debug = 1)
+        sys.stderr.write("Building parser... ")
     
+    parser = yacc.yacc(module=bbc_grammar, debug=1)
     if options.verbose:
         sys.stderr.write("done\n")
+    
+    return parser
+
+def parse(data, lexer, parser, options):
+    logging.debug("parse")
+    if options.verbose:
         sys.stderr.write("Parsing...")
     
-    parse_tree = yacc.parse(data)
-    
+    parse_tree = parser.parse(data, lexer=lexer)
     if options.verbose:
         sys.stderr.write("done\n")
+    
+    return parse_tree
+
+def setParents(parse_tree, options):
+    logging.debug("setParents")
+    if options.verbose:
         sys.stderr.write("Setting parents... ")
     
     parse_tree.accept(parent_visitor.ParentVisitor())
-    
     if options.verbose:
         sys.stderr.write("done\n")
-    
+
+def splitComplexNodes(parse_tree, options):
+    logging.debug("splitComplexNodes")
     if options.use_separation:
         if options.verbose:
             sys.stderr.write("Separating complex Abstract Syntax Tree nodes... ")
+        
         parse_tree.accept(separation_visitor.SeparationVisitor())
         if options.verbose:
             sys.stderr.write("done\n")
-    
+
+def simplifyAst(parse_tree, options):
+    logging.debug("simplifyAst")
     if options.use_simplification:
         if options.verbose:
             sys.stderr.write("Simplifying Abstract Syntax Tree... ")
+        
         parse_tree.accept(simplify_visitor.SimplificationVisitor())
         if options.verbose:
             sys.stderr.write("done\n")
-    
+
+def createLineMapper(parse_tree, physical_to_logical_map):
+    logging.debug("createLineMapper")
     lnv = line_number_visitor.LineNumberVisitor()
     parse_tree.accept(lnv)
-    
-    print lnv.line_to_stmt
-    
+    #print lnv.line_to_stmt
     line_mapper = LineMapper(physical_to_logical_map, lnv.line_to_stmt)
-                                
+    return line_mapper
+
+def typecheck(parse_tree, options):
+    logging.debug("typecheck")
     if options.use_typecheck:
         if options.verbose:
             sys.stderr.write("Type checking... ")
+        
         parse_tree.accept(typecheck_visitor.TypecheckVisitor())
         if options.verbose:
             sys.stderr.write("done\n")
-        
+
+def dumpXmlAst(parse_tree, output_filename, options):
+    logging.debug("dumpXmlAst")
     if options.use_clr:
         if options.verbose:
             sys.stderr.write("Creating XML AST... ")
-        output_filename = filename + "_ast.xml"
-        print "Creating %s" % output_filename
+        
+        #print "Creating %s" % output_filename
         xmlAst(parse_tree, output_filename)
         if options.verbose:
-            sys.stderr.write("done\n") 
-    
+            sys.stderr.write("done\n")
+
+def flowGraph(parse_tree, line_mapper, options):
+    logging.debug("flowgraph")
     if options.use_flowgraph:
         if options.verbose:
             sys.stderr.write("Creating Control Flow Graph...")
         parse_tree.accept(flowgraph_visitor.FlowgraphForwardVisitor(line_mapper))
-        #parse_tree.accept(flowgraph_visitor.FlowgraphBackwardVisitor(lnv.line_to_stmt))
         if options.verbose:
             sys.stderr.write("done\n")
-        
+
+def locateEntryPoints(parse_tree, line_mapper, options):
+    logging.debug("locateEntryPoints")    
     if options.use_entry_points:
         if options.verbose:
             sys.stderr.write("Finding entry points...")
@@ -254,9 +246,12 @@ if __name__ == '__main__':
             flow_analysis.tagSuccessors(entry_point)
         if options.verbose:
             sys.stderr.write("done\n")
-    
-    print epv.entry_points
-    
+        #print epv.entry_points
+        return epv
+    return None
+
+def convertLongjumpsToExceptions(parse_tree, line_mapper, options):
+    logging.debug("convertLongjumpsToExceptions")
     if options.use_longjumps:
         # Insert longjumps where flow control jumps out of a procedure
         if options.verbose:
@@ -271,9 +266,9 @@ if __name__ == '__main__':
         
         if options.verbose:
             sys.stderr.write("done\n")
-    
-    print epv.entry_points
-        
+
+def convertSubroutinesToProcedures(parse_tree, epv, options):
+    logging.debug("convertSubroutinesToProcedures")    
     if options.use_convert_subs:
         # Convert subroutines to procedures
         if options.verbose:
@@ -282,7 +277,7 @@ if __name__ == '__main__':
         entry_points_to_remove = []
         entry_points_to_add = []
         for entry_point in epv.entry_points:
-            print "entry_point = %s at %s" % (entry_point, entry_point.lineNum)
+            #print "entry_point = %s at %s" % (entry_point, entry_point.lineNum)
             # TODO: This will only work with simple (i.e. single entry) subroutines
             subname = iter(entry_point.entryPoints).next()
             if subname.startswith('SUB'):
@@ -305,8 +300,10 @@ if __name__ == '__main__':
         if options.verbose:
             sys.stderr.write("done\n")
     
-    print epv.entry_points
-        
+        #print epv.entry_points
+
+def buildSymbolTables(epv, options):
+    logging.debug("buildSymbolTables")    
     if options.use_symbol_tables:
         # Attach symbol tables to each statement
         if options.verbose:
@@ -316,23 +313,109 @@ if __name__ == '__main__':
         
         # Set the global symbol table for the main program entry point
         # TODO: This assumes the program doesn't start with e.g. a DEF PROC
-        print "epv.entry_points[0] = %s" % epv.entry_points[0]
+        #print "epv.entry_points[0] = %s" % epv.entry_points[0]
         epv.entry_points[0].symbolTable = stv.globalSymbols
         
         for entry_point in epv.entry_points:
-            print "entry_point = %s" % entry_point
+            #print "entry_point = %s" % entry_point
             entry_point.accept(stv)
         if options.verbose:
             sys.stderr.write("done\n")
-        
+
+def dumpXmlCfg(parse_tree, filename, options):
+    logging.debug("dumpXmlCfg")   
     if options.use_clr:
         if options.verbose:
             sys.stderr.write("Creating XML CFG... ")
-        output_filename = filename + "_cfg.graphml"
-        print "Creating %s" % output_filename
-        xmlCfg(parse_tree, output_filename)
+        xmlCfg(parse_tree, filename)
         if options.verbose:
             sys.stderr.write("done\n") 
+
+def xmlAst(tree, filename):
+    xmlv = xml_visitor.XmlVisitor(filename)
+    tree.accept(xmlv)
+    xmlv.close()
+    
+def xmlCfg(tree, filename):
+    gmlv = gml_visitor.GmlVisitor(filename)
+    tree.accept(gmlv)
+    gmlv.close()
+
+class Usage(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+
+class CompileException(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
+    try:
+        usage = "usage: %prog [options] source-file"
+        version = "%prog 0.5"
+        parser = OptionParser(usage=usage, version=version)
+        parser.add_option("-x", "--debug-lex", action='store_true', dest='debug_lex', default=False)
+        parser.add_option("-l", "--line-numbers", action='store_true', dest="line_numbers", default=False)
+        parser.add_option("-c", "--debug-no-clr", action='store_false', dest='use_clr', default=(sys.platform == 'cli'))
+        parser.add_option("-p", "--debug-no-separation", action='store_false', dest='use_separation', default=True)
+        parser.add_option("-s", "--debug-no-simplification", action='store_false', dest='use_simplification', default=True)
+        parser.add_option("-t", "--debug-no-typecheck", action='store_false', dest='use_typecheck', default=True)
+        parser.add_option("-f", "--debug-no-flowgraph", action='store_false', dest='use_flowgraph', default=True)
+        parser.add_option("-e", "--debug-no-entrypoints", action='store_false', dest='use_entry_points', default=True)
+        parser.add_option("-j", "--debug-no-longjumps", action='store_false', dest='use_longjumps', default=True)
+        parser.add_option("-g", "--debug-no-convert-subs", action='store_false', dest='use_convert_subs', default=True)
+        parser.add_option("-y", "--debug-no-symbol-tables", action='store_false', dest='use_symbol_tables', default=True)
+        parser.add_option("-v", "--verbose", action='store_true', dest='verbose', default=False)
+
+        (options, args) = parser.parse_args()
+        if len(args) != 1:
+            parser.error("No source file name supplied")
+        #print args
+        compile(args[0], options)
+    except Usage, err:
+        parser.err(err.msg)
+        return 2
+    except CompileException, err:
+        print >>sys.stderr, err.msg
+        return 1
+ 
+def compile(filename, options):   
+    if options.use_clr:
+        # .NET Framework
+        import clr
+        clr.AddReference('System.Xml')
+        from System.Xml import XmlTextWriter, Formatting
+    
+    if not options.use_clr:
+        # TODO: Use non-recursive code for the flowgraph
+        sys.setrecursionlimit(2000)
+    
+    data = readFile(filename)
+    detokenHandle = detokenize(data, options)
+    data, physical_to_logical_map = indexLineNumbers(detokenHandle, options)
+    data = warnOnMissingNewline(data)
+    lexer = buildLexer(options)
+    
+    if options.debug_lex:
+        tokenize(data, lexer)
+    
+    parser = buildParser(options)
+    parse_tree = parse(data, lexer, parser, options)
+    setParents(parse_tree, options)
+    splitComplexNodes(parse_tree, options)
+    simplifyAst(parse_tree, options)
+    line_mapper = createLineMapper(parse_tree, physical_to_logical_map)
+    typecheck(parse_tree, options)
+    dumpXmlAst(parse_tree, filename + "_ast.xml", options) 
+    flowGraph(parse_tree, line_mapper, options)    
+    epv = locateEntryPoints(parse_tree, line_mapper, options)
+    convertLongjumpsToExceptions(parse_tree, line_mapper, options)
+    convertSubroutinesToProcedures(parse_tree, epv, options)
+    buildSymbolTables(epv, options)
+    dumpXmlCfg(parse_tree, filename + "_cfg.graphml", options)
+
     
     # TODO: Inline single-entry GOSUB
     #
@@ -373,3 +456,6 @@ if __name__ == '__main__':
     # Optimisation
     #foldConstants(parse_tree)
     #elimiateCommonSubexpressions(parse_tree    opti
+
+if __name__ == "__main__":
+    sys.exit(main())
