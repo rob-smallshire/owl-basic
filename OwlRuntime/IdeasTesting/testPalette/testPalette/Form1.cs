@@ -35,8 +35,8 @@ namespace testPalette
             ColorPalette pal = indexedBitmap.Palette;
             for (int i = 0; i < 128; i++)
             {
-                pal.Entries[i] = Color.FromArgb(255, 255 - (i*2), 0);
-                pal.Entries[255 - i] = Color.FromArgb(255, 255 - (i * 2), 0);
+                pal.Entries[i] = Color.FromArgb(0, 255 - (i*2), 0);
+                pal.Entries[255 - i] = Color.FromArgb(0, 255 - (i * 2), 0);
             }
             indexedBitmap.Palette = pal;
             
@@ -54,7 +54,7 @@ namespace testPalette
             }
             graphicsObj.Dispose();
 
-            indexedFromBlueBitmap(myBitmap, indexedBitmap);
+            indexedFromBlueBitmap(myBitmap, indexedBitmap, 8);
 
 
 
@@ -72,15 +72,41 @@ namespace testPalette
         
         }
 
-        unsafe private void indexedFromBlueBitmap(Bitmap sourceBitmap, Bitmap destBitmap)
+        unsafe private void indexedFromBlueBitmap(Bitmap sourceBitmap, Bitmap destBitmap, byte destBpp)
         {
+            PixelFormat bppFormat;
+            switch (destBpp)
+            {
+                case 1:
+                    bppFormat = PixelFormat.Format1bppIndexed;
+                    break;
+                case 2:
+                    //2bpp format is Not supported by DotNet
+                    bppFormat = PixelFormat.Format4bppIndexed;
+                    break;
+                case 4:
+                    bppFormat = PixelFormat.Format4bppIndexed;
+                    break;
+                case 8:
+                    bppFormat = PixelFormat.Format8bppIndexed;
+                    break;
+                default:
+                    // not sure if i need to impliment 16/24(32)
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            int mask = (1 << destBpp)-1;
+            int notMask = 255 - mask;
+
             BitmapData indexedBitmapData = destBitmap.LockBits(
-                new Rectangle(0, 0, destBitmap.Width, destBitmap.Height), ImageLockMode.ReadWrite, PixelFormat.Format8bppIndexed);
+                new Rectangle(0, 0, destBitmap.Width, destBitmap.Height),
+                ImageLockMode.ReadWrite, bppFormat);
+
             // data for the orig bitmap
             BitmapData sourceBitmapData = sourceBitmap.LockBits(
                 new Rectangle(0, 0, sourceBitmap.Width, sourceBitmap.Height),
                 ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
-            // size of the pixels in bytes
+            // size of the source pixels in bytes
             int sourcePixelSize = 3;
 
             for (int y = 0; y < sourceBitmapData.Height; y++)
@@ -91,8 +117,9 @@ namespace testPalette
 
                 for (int x = 0; x < sourceBitmapData.Width; x++)
                 {
-
-                    destRow[x] = sourceRow[x * sourcePixelSize];
+                    int origpixel = destRow[x] & notMask;
+                    int sourcepixel = (sourceRow[x * sourcePixelSize] & mask);
+                    destRow[x] = (byte)(origpixel | sourcepixel);
 
                 }
             }
