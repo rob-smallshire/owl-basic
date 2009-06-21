@@ -65,6 +65,8 @@ class SymbolTableVisitor(Visitor):
         logging.debug("SymbolTableVisitor.visitAstStatement %s at %s", statement, statement.lineNum)
         statement.symbolTable = self.checkPredecessorsAndRefer(statement)
         assert statement.symbolTable is not None
+        # TODO: Check that all other variable references within this statement can
+        #       be successfully looked up.
         self.followSuccessors(statement)
         
     def visitDefinitionStatement(self, defproc):
@@ -186,10 +188,18 @@ class SymbolTableVisitor(Visitor):
     def visitMouse(self, mouse):
         logging.debug("SymbolTableVisitor.visitInput")
         statement.symbolTable = self.checkPredecessorsAndRefer(statement)
+        assert statement.symbolTable is not None
         self.tryAddVariable(statement.symbolTable, statement.xCoord)
         self.tryAddVariable(statement.symbolTable, statement.yCoord)
         self.tryAddVariable(statement.symbolTable, statement.buttons)
         self.tryAddVariable(statement.symbolTable, statement.time)
         self.followSuccessors(statement)
+        
+    def visitRead(self, statement):
+        logging.debug("SymbolTableVisitior.visitRead")
+        statement.symbolTable = self.checkPredecessorsAndRefer(statement)
+        assert statement.symbolTable is not None
+        for writable in statement.writables.writables:
+            self.tryAddVariable(statement.symbolTable, writable)
         
      
