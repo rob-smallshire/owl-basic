@@ -94,6 +94,12 @@ namespace OwlRuntime.platform.riscos
             protected set { renderingQuality = value; }
         }
 
+        // Refactoring for Paletted screen modes:
+        // 1. Make the CreateGraphics method abstract in this class
+        // 2. Override CreateGraphics in TrueGraphicsScreenMode with this original implementation
+        // 3. Override CreateGraphics in PalettedGraphicsScreenMode with a new implementation
+        //    that creates a Graphics object for a bitmap
+        // 4. 
         protected Graphics CreateGraphics()
         {
             Graphics graphics = vduForm.CreateGraphics();
@@ -342,14 +348,22 @@ namespace OwlRuntime.platform.riscos
             }
 
             // TODO: Temporary, so we can see something
+            // Extract this next line into a virtual Refresh method in this class
+            // override in the paletted class to do the conversion to physical colours
             vduForm.Refresh();
         }
 
+        // 1. Make this protected abstract in this class
+        // 2. Push this implementation down into an override in TrueGraphicsScreenMode
+        // 3. Create a new override in PalettedGraphicsScreenMode which sets the pen to blue index colour
         private Pen Pen()
         {
             return new Pen(PhysicalGraphicsForegroundColour);
         }
 
+        // 1. Make this protected abstract in this class
+        // 2. Push this implementation down into an override in TrueGraphicsScreenMode
+        // 3. Create a new override in PalettedGraphicsScreenMode which sets the pen to blue index colour
         /// <summary>
         /// Create a brush for painting solid shapes using the current logical
         /// colour settings in conjunction with any palette settings.
