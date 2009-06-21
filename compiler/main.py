@@ -9,6 +9,7 @@ logging.debug("main.py")
 # Python Standard Library
 import sys
 import re
+import atexit
 import StringIO
 from optparse import OptionParser
 
@@ -25,6 +26,7 @@ import separation_visitor
 import simplify_visitor
 import line_number_visitor
 import typecheck_visitor
+import data_visitor
 import flowgraph_visitor
 import gml_visitor
 import entry_point_visitor
@@ -343,6 +345,19 @@ def buildSymbolTables(epv, options):
             print "-" * width
             print
 
+def extractData(parse_tree, options):
+    """
+    Extract all information from DATA statements
+    """
+    # All DATA is stored as strings, and is converted at run-time by the
+    # READ statement
+    logging.debug("extracting DATA")
+    dv = data_visitor.DataVisitor()
+    parse_tree.accept(dv)
+    print dv.data
+    print dv.index
+    # TODO: Do something with these...
+    
 def dumpXmlCfg(parse_tree, filename, options):
     logging.debug("dumpXmlCfg")   
     if options.use_clr:
@@ -429,11 +444,13 @@ def compile(filename, options):
     simplifyAst(parse_tree, options)
     line_mapper = createLineMapper(parse_tree, physical_to_logical_map)
     typecheck(parse_tree, options)
-    dumpXmlAst(parse_tree, filename + "_ast.xml", options) 
+    dumpXmlAst(parse_tree, filename + "_ast.xml", options)
+    extractData(parse_tree, options)
     flowGraph(parse_tree, line_mapper, options)    
     epv = locateEntryPoints(parse_tree, line_mapper, options)
     convertLongjumpsToExceptions(parse_tree, line_mapper, options)
     convertSubroutinesToProcedures(parse_tree, epv, options)
+    #correlateRepeatUntil
     buildSymbolTables(epv, options)
     dumpXmlCfg(parse_tree, filename + "_cfg.graphml", options)
 
@@ -447,28 +464,16 @@ def compile(filename, options):
     # Locate nodes with no inbound edges and trace unreachable code
     # from them. Remove unreachable code from the CFG and the AST. This
     # will need to be traced from program and procedure entry points
-    
-    
-    # Convert GOSUB blocks to procedures if they are called more than once,
-    # otherwise inline them.
-    
-    
-    
+        
     # TODO: Replace Goto -> ReturnFromProcedure with ReturnFromProcedure
     
     
     
     # Structural analysis
-    #flatten(parse_tree)
-    #assignIds(parse_tree)
     #correlateForNext(parse_tree)
     #correlateRepeatUntil(parse_tree)
     #correlateWhileEndwhile(parse_tree)
-    #correlateDefProcEndproc(parse_tree)
-    #correlateDefFnEndFn(parse_tree)
-    #resolveGotoGosub(parse_tree)
     #splitBasicBlock(parse_tree)
-    #buildSymbolTable(parse_tree)
     #extractData(parse_tree)
     # Type checking and casting
     #determineTypes(parse_tree)
@@ -478,5 +483,12 @@ def compile(filename, options):
     #foldConstants(parse_tree)
     #elimiateCommonSubexpressions(parse_tree    opti
 
+def printProfile():
+    import clr
+    for p in clr.GetProfileData():
+        print '%s\t%d\t%d\t%d' % (p.Name, p.InclusiveTime, p.ExclusiveTime, p.Calls)
+
+
 if __name__ == "__main__":
+    #atexit.register(printProfile)
     sys.exit(main())

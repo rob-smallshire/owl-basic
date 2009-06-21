@@ -128,22 +128,6 @@ class Data(AstStatement):
     # TODO: How to we represent the data list?
     data = StringOption()
 
-    def parse(self, data):
-        "Parse the text following a DATA statement into items"
-        # Break the data into fields
-        raw_items = re.findall(r'(?:\s*"((?:[^"]+|"")*)"(?!")\s*)|([^,]+)', data)
-        items = []
-        for i, (quoted, unquoted) in enumerate(raw_items):
-            if quoted:
-                item = quoted.replace('""', '"')
-            else:
-                item = unquoted.lstrip()
-                # If its the last item on the line, strip trailing space
-                if i == len(raw_items) - 1:
-                    item = item.rstrip()
-            items.append(item)
-        return items
-
 class DefinitionStatement(MarkerStatement):
     name = StringOption()
     formal_parameters = Node()
