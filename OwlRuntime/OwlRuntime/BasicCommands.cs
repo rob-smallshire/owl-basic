@@ -169,6 +169,21 @@ namespace OwlRuntime
             throw new NotImplementedException();
         }
 
+        public static object Read()
+        {
+            throw new NotImplementedException();
+        }
+
+        public static object Restore()
+        {
+            throw new NotImplementedException();
+        }
+
+        public static object Restore(int index)
+        {
+            throw new NotImplementedException();
+        }
+
         public static double Rnd(int n)
         {
             if (n < 0)
