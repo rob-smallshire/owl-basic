@@ -34,6 +34,7 @@ from line_mapper import LineMapper
 import longjump_visitor
 import symbol_table_visitor
 import convert_sub_visitor
+from symbol_tables import SymbolTable
 
 from Detoken import Decode
 
@@ -62,7 +63,7 @@ def detokenize(data, options):
     
     #print "len(data) = ", len(data)
     detokenized = StringIO.StringIO()
-    lineNoNeeded = Decode(data, detokenized)
+    options.line_numbers = Decode(data, detokenized)
     if options.verbose:
         sys.stderr.write("done\n")
     
@@ -313,7 +314,8 @@ def buildSymbolTables(epv, options):
         
         # Set the global symbol table for the main program entry point
         # TODO: This assumes the program doesn't start with e.g. a DEF PROC
-        #print "epv.entry_points[0] = %s" % epv.entry_points[0]
+        print "epv.entry_points[0] = %s" % epv.entry_points[0]
+        print stv.globalSymbols
         epv.entry_points[0].symbolTable = stv.globalSymbols
         
         for entry_point in epv.entry_points:
@@ -321,6 +323,25 @@ def buildSymbolTables(epv, options):
             entry_point.accept(stv)
         if options.verbose:
             sys.stderr.write("done\n")
+        
+        for table in SymbolTable.symbol_tables:
+            title = "Symbol table '%s'" % table.name
+            if table.parent is not None:
+                parent_title = " with parent '%s'" % table.parent.name
+            else:
+                parent_title = "is the root symbol table"
+            width = max(len(title), len(parent_title))
+            print "-" * width
+            print title
+            print parent_title
+            print "-" * width
+            
+            symbols = table.symbols.keys()
+            symbols.sort()
+            for symbol in symbols:
+                print "%-10s %-10s %s" % (symbol, table.symbols[symbol].type.__doc__, table.symbols[symbol].modifier)
+            print "-" * width
+            print
 
 def dumpXmlCfg(parse_tree, filename, options):
     logging.debug("dumpXmlCfg")   

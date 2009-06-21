@@ -6,6 +6,7 @@ from utility import underscoresToCamelCase
 from bbc_types import *
 from bbc_ast import Cast, Concatenate
 from ast_utils import elideNode
+import sigil
 
 class TypecheckVisitor(Visitor):
     """
@@ -170,18 +171,18 @@ class TypecheckVisitor(Visitor):
     def visitArray(self, array):
         # Decode the variable name sigil into the actual type
         # The sigils are one of [$%&~]
-        array.actualType = self.identifierToType(array.identifier)
+        array.actualType = sigil.identifierToType(array.identifier)
     
     def visitVariable(self, variable):
         # Decode the variable name sigil into the actual type
         # The sigils are one of [$%&~]
-        variable.actualType = self.identifierToType(variable.identifier)
+        variable.actualType = sigil.identifierToType(variable.identifier)
         
     def visitIndexer(self, indexer):
         # Decode the variable name sigil into the actual type
         # The sigils are one of [$%&~]
         #print "indexer.identifier = %s" % indexer.identifier
-        indexer.actualType = self.identifierToType(indexer.identifier[:-1])
+        indexer.actualType = sigil.identifierToType(indexer.identifier[:-1])
         #print "indexer.actualType = %s" % indexer.actualType
     
     def visitIf(self, iff):
@@ -319,31 +320,7 @@ class TypecheckVisitor(Visitor):
         cast.value.parent_property = "value"
         cast.value.parent_index = None
         parent.setProperty(cast, parent_property, parent_index)
-        
-    def identifierToType(self, identifier):
-        sigil = identifier[-1]
-        if sigil == '$':
-            return StringType
-        elif sigil == '%':
-            return IntegerType
-        elif sigil == '&':
-            return ByteType
-        elif sigil == '~':
-            return ReferenceType
-        elif sigil == '(':
-            sigil = identifier[-2:-1]
-            if sigil == '$':
-                return StringArrayType
-            elif sigil == '%':
-                return IntegerArrayType
-            elif sigil == '&':
-                return ByteArrayType
-            elif sigil == '~':
-                return ReferenceArrayType
-            else:
-                return FloatArrayType
-        return FloatType 
-            
+                    
     def checkSignature(self, node):
         """
         Check the actualType of each child node against the formalType of each

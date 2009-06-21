@@ -78,7 +78,7 @@ class Bput(AstStatement):
     newline = BoolOption(False)
 
 class Call(AstStatement):
-    address = Node()    # TODO: AddressType?
+    address = Node()    # TODO: PtrType?
     parameters = Node() # TODO: Needs handling in grammar
     
 class Circle(AstStatement):
@@ -553,7 +553,7 @@ class UnaryMinus(UnaryNumericOperator):
     pass
 
 class UnaryIndirection(AstNode):
-    expression = Node(formalType=AddressType)
+    expression = Node(formalType=PtrType)
 
 class UnaryByteIndirection(UnaryIndirection):
     formal_type = TypeOption(ByteType)
@@ -572,7 +572,7 @@ class UnaryFloatIndirection(UnaryIndirection):
     actual_type = formal_type
 
 class DyadicIndirection(AstNode):
-    base   = Node(formalType=AddressType)
+    base   = Node(formalType=PtrType)
     offset = Node(formalType=IntegerType)
 
 class DyadicByteIndirection(DyadicIndirection):
