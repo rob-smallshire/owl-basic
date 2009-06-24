@@ -20,7 +20,7 @@ namespace OwlRuntime.platform.riscos
         //    physicalPalette
 
         //    defaultPalettes = new HashSet<int, Palette>();
-            
+
         //}
 
         public Palette(byte bitsPerPixel)
@@ -81,9 +81,9 @@ namespace OwlRuntime.platform.riscos
                 case 8:
                     for (int i = 0; i <= 255; i++)
                     {
-                        int r = 17*((i & 7) | ((i & 16) >> 1));
-                        int g = 17*((i & 3) | ((i & 96) >> 3));
-                        int b = 17*((i & 3) | ((i & 8) >> 1) | ((i & 128) >> 4));
+                        int r = 17 * ((i & 7) | ((i & 16) >> 1));
+                        int g = 17 * ((i & 3) | ((i & 96) >> 3));
+                        int b = 17 * ((i & 3) | ((i & 8) >> 1) | ((i & 128) >> 4));
                         palette.Add(Color.FromArgb(r, g, b));
                     }
                     break;
@@ -100,7 +100,7 @@ namespace OwlRuntime.platform.riscos
 
         public Color LogicalToPhysical(int logical)
         {
- 	        return palette[logical];
+            return palette[logical];
         }
 
         public Color LogicalToPhysical(int logicalColour, int tint)
@@ -115,6 +115,11 @@ namespace OwlRuntime.platform.riscos
                 return LogicalToPhysical(index);
             }
             return LogicalToPhysical(logicalColour);
+        }
+
+        public Color LogicalToBlue(int logicalColour, int tint)
+        {
+            return Color.FromArgb(0, 0, logicalColour | tint );
         }
     }
 }

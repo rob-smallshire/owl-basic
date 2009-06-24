@@ -4,25 +4,49 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Text;
+using System.Drawing.Imaging;
 
 namespace OwlRuntime.platform.riscos
 {
     public abstract class BaseGraphicsScreenMode : AbstractScreenMode
     {
-        private readonly VduForm vduForm;
+        protected readonly VduForm vduForm;
         private bool hasBeenDisposed = false;
         private readonly int pixelWidth;
         private readonly int pixelHeight;
         private Color physicalGraphicsForegroundColour;
         private Color physicalGraphicsBackgroundColour;
-        private byte renderingQuality;
+        protected byte renderingQuality;
 
-        protected BaseGraphicsScreenMode(VduSystem vdu, int textWidth, int textHeight, int pixelWidth, int pixelHeight, int unitsWidth, int unitsHeight) :
-            base(vdu, textWidth, textHeight, unitsWidth, unitsHeight)
+        protected BaseGraphicsScreenMode(VduSystem vdu, int textWidth, int textHeight, int pixelWidth, int pixelHeight, int unitsWidth, int unitsHeight, byte bitsPerPixel) :
+            base(vdu, textWidth, textHeight, unitsWidth, unitsHeight, bitsPerPixel)
         {
             this.pixelWidth = pixelWidth;
             this.pixelHeight = pixelHeight;
-            vduForm = new VduForm(SquarePixelWidth, SquarePixelHeight);
+            
+            // stored the pixel format from the bpp of screenmode
+            PixelFormat pixelFormat; 
+
+            switch (bitsPerPixel)
+            {
+                case 16:
+                    // 16bpp graphics mode
+                    // TODO check with the PRM's on how RISC OS deals with 16bpp
+                    pixelFormat = PixelFormat.Format16bppRgb555;
+                    break;
+                case 24:
+                    // 24bpp graphics mode
+                    // TODO check with the PRM's on how RISC OS deals with 24bpp
+                    pixelFormat = PixelFormat.Format24bppRgb;
+                    break;
+                default:
+                    // paletted graphics mode
+
+                    // TODO this next line should be 'pixelFormat = PixelFormat.Format8bppIndexed' when vduform had been sorted;
+                    pixelFormat = PixelFormat.Format24bppRgb;
+                    break;
+            }
+            vduForm = new VduForm(SquarePixelWidth, SquarePixelHeight, pixelFormat);
             vduForm.BackColor = Color.Black;
             vduForm.Show(); // TODO: Is this the best place for this?
         }
@@ -95,42 +119,10 @@ namespace OwlRuntime.platform.riscos
         }
 
         // Refactoring for Paletted screen modes:
-        // 1. Make the CreateGraphics method abstract in this class
-        // 2. Override CreateGraphics in TrueGraphicsScreenMode with this original implementation
-        // 3. Override CreateGraphics in PalettedGraphicsScreenMode with a new implementation
-        //    that creates a Graphics object for a bitmap
-        // 4. 
-        protected Graphics CreateGraphics()
-        {
-            Graphics graphics = vduForm.CreateGraphics();
+        // Override CreateGraphics in TrueGraphicsScreenMode
+        // Override CreateGraphics in PalettedGraphicsScreenMode
+        protected abstract Graphics CreateGraphics();
 
-            // The transform from OWL BASIC units to Windows pixel coordinates
-            graphics.ResetTransform();
-            graphics.TranslateTransform(0.0f, SquarePixelHeight, MatrixOrder.Prepend);
-            graphics.ScaleTransform( (SquarePixelWidth / (float)UnitsWidth), -(SquarePixelHeight / (float)UnitsHeight) , MatrixOrder.Prepend);
-
-            // Set the rendering quality
-            switch (RenderingQuality)
-            {
-                case 0:
-                    graphics.SmoothingMode = SmoothingMode.None;
-                    graphics.PixelOffsetMode = PixelOffsetMode.None;
-                    break;
-                case 1:
-                    graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                    graphics.PixelOffsetMode = PixelOffsetMode.None;
-                    break;
-                case 2:
-                    graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                    graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                    break;
-                default:
-                    graphics.SmoothingMode = SmoothingMode.None;
-                    graphics.PixelOffsetMode = PixelOffsetMode.None;
-                    break;
-            }
-            return graphics;
-        }
 
         /// <summary>
         /// Draw a filled rectangle using the current graphics coordinates.
@@ -353,29 +345,23 @@ namespace OwlRuntime.platform.riscos
             vduForm.Refresh();
         }
 
-        // 1. Make this protected abstract in this class
-        // 2. Push this implementation down into an override in TrueGraphicsScreenMode
-        // 3. Create a new override in PalettedGraphicsScreenMode which sets the pen to blue index colour
-        private Pen Pen()
-        {
-            return new Pen(PhysicalGraphicsForegroundColour);
-        }
+        // override in TrueGraphicsScreenMode
+        // override in PalettedGraphicsScreenMode which sets the pen to blue index colour
+        protected abstract Pen Pen();
 
-        // 1. Make this protected abstract in this class
-        // 2. Push this implementation down into an override in TrueGraphicsScreenMode
-        // 3. Create a new override in PalettedGraphicsScreenMode which sets the pen to blue index colour
+
+        // override in TrueGraphicsScreenMode
+        // override in PalettedGraphicsScreenMode which sets the pen to blue index colour
         /// <summary>
         /// Create a brush for painting solid shapes using the current logical
         /// colour settings in conjunction with any palette settings.
         /// </summary>
         /// <returns></returns>
-        private SolidBrush SolidBrush()
-        {
-            return new SolidBrush(PhysicalGraphicsForegroundColour);
-        }
+        protected abstract SolidBrush SolidBrush();
 
         public override void UpdateRenderingQuality(byte quality)
         {
+            // TODO only allow this to be set in a non palletted screen mode due to it being possible to corrupt the BLUE INDEXED image
             RenderingQuality = quality;
         }
 

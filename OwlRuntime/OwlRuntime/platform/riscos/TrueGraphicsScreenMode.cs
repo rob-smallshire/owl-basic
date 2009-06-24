@@ -2,15 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-
 using System.Drawing;
+using System.Drawing.Drawing2D;
 
 namespace OwlRuntime.platform.riscos
 {
     public class TrueGraphicsScreenMode : BaseGraphicsScreenMode
     {
-        public TrueGraphicsScreenMode(VduSystem vdu, int textWidth, int textHeight, int pixelWidth, int pixelHeight, int unitsWidth, int unitsHeight) :
-            base(vdu, textWidth, textHeight, pixelWidth, pixelHeight, unitsWidth, unitsHeight)
+        public TrueGraphicsScreenMode(VduSystem vdu, int textWidth, int textHeight, int pixelWidth, int pixelHeight, int unitsWidth, int unitsHeight, byte bitsPerPixel) :
+            base(vdu, textWidth, textHeight, pixelWidth, pixelHeight, unitsWidth, unitsHeight, bitsPerPixel)
         {
         }
 
@@ -53,5 +53,58 @@ namespace OwlRuntime.platform.riscos
         {
             PhysicalGraphicsForegroundColour = Color.FromArgb(logicalColour);
         }
+
+        // TODO unsure if this should be public or protected
+        /// <summary>
+        /// creates the pen using the HIcolour value from PhysicalGraphicsForegroundColour
+        /// </summary>
+        /// <returns>Pen</returns>
+        protected override Pen Pen()
+        {
+            return new Pen(PhysicalGraphicsForegroundColour);
+        }
+
+        /// <summary>
+        /// Create a brush for painting solid shapes using the current logical
+        /// colour settings in conjunction with any palette settings.
+        /// </summary>
+        /// <returns></returns>
+        protected override SolidBrush SolidBrush()
+        {
+            return new SolidBrush(PhysicalGraphicsForegroundColour);
+        }
+
+        protected override Graphics CreateGraphics()
+        {
+            Graphics graphics = vduForm.CreateGraphics();
+
+            // The transform from OWL BASIC units to Windows pixel coordinates
+            graphics.ResetTransform();
+            graphics.TranslateTransform(0.0f, SquarePixelHeight, MatrixOrder.Prepend);
+            graphics.ScaleTransform((SquarePixelWidth / (float)UnitsWidth), -(SquarePixelHeight / (float)UnitsHeight), MatrixOrder.Prepend);
+
+            // Set the rendering quality
+            switch (RenderingQuality)
+            {
+                case 0:
+                    graphics.SmoothingMode = SmoothingMode.None;
+                    graphics.PixelOffsetMode = PixelOffsetMode.None;
+                    break;
+                case 1:
+                    graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    graphics.PixelOffsetMode = PixelOffsetMode.None;
+                    break;
+                case 2:
+                    graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                    break;
+                default:
+                    graphics.SmoothingMode = SmoothingMode.None;
+                    graphics.PixelOffsetMode = PixelOffsetMode.None;
+                    break;
+            }
+            return graphics;
+        }
+
     }
 }

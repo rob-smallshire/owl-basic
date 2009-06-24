@@ -82,13 +82,14 @@ namespace OwlRuntime.platform.riscos
             }
         }
 
-        protected AbstractScreenMode(VduSystem vdu, int textWidth, int textHeight, int unitsWidth, int unitsHeight)
+        protected AbstractScreenMode(VduSystem vdu, int textWidth, int textHeight, int unitsWidth, int unitsHeight, byte bitsPerPixel)
         {
             this.vdu = vdu;
             this.textWidth = textWidth;
             this.textHeight = textHeight;
             this.unitsWidth = unitsWidth;
             this.unitsHeight = unitsHeight;
+            this.bitsPerPixel = bitsPerPixel;
         }
 
         public int TextWidth
@@ -117,6 +118,8 @@ namespace OwlRuntime.platform.riscos
         }
 
         // TODO: Is this used?
+        // TODO: answer yes for knowing information about the ECF patterns and if 8 or less then paletted mode
+        // in a 1bpp mode then ecf is 8 pixels wide but if in 4bpp then ECF is 2 pixels wide
         public byte BitsPerPixel
         {
             get { return bitsPerPixel; }

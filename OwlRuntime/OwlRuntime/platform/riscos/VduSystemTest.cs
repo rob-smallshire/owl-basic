@@ -194,7 +194,7 @@ namespace OwlRuntime.platform.riscos
                     vdu.Enqueue((short)(size + radius), (short)size);
                 }
             }
-
+            
 
             Console.WriteLine("End");
         }
