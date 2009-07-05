@@ -10,13 +10,14 @@ namespace OwlRuntime.platform.riscos
 {
     public abstract class BaseGraphicsScreenMode : AbstractScreenMode
     {
-        protected readonly VduForm vduForm;
+        private readonly VduForm vduForm;
         private bool hasBeenDisposed = false;
         private readonly int pixelWidth;
         private readonly int pixelHeight;
         private Color physicalGraphicsForegroundColour;
         private Color physicalGraphicsBackgroundColour;
-        protected byte renderingQuality;
+        private byte renderingQuality;
+        private readonly Bitmap bitmap; // true colour 24bpp (always draw on this bitmap)
 
         protected BaseGraphicsScreenMode(VduSystem vdu, int textWidth, int textHeight, int pixelWidth, int pixelHeight, int unitsWidth, int unitsHeight, byte bitsPerPixel) :
             base(vdu, textWidth, textHeight, unitsWidth, unitsHeight, bitsPerPixel)
@@ -25,6 +26,17 @@ namespace OwlRuntime.platform.riscos
             this.pixelHeight = pixelHeight;
             
             // stored the pixel format from the bpp of screenmode
+            PixelFormat pixelFormat = CreatePixelFormat(bitsPerPixel);
+
+            bitmap = new Bitmap(SquarePixelWidth, SquarePixelHeight, pixelFormat);
+
+            vduForm = new VduForm(this);
+            vduForm.BackColor = Color.Black;
+            vduForm.Show(); // TODO: Is this the best place for this?
+        }
+
+        private static PixelFormat CreatePixelFormat(byte bitsPerPixel)
+        {
             PixelFormat pixelFormat; 
 
             switch (bitsPerPixel)
@@ -46,9 +58,7 @@ namespace OwlRuntime.platform.riscos
                     pixelFormat = PixelFormat.Format24bppRgb;
                     break;
             }
-            vduForm = new VduForm(SquarePixelWidth, SquarePixelHeight, pixelFormat);
-            vduForm.BackColor = Color.Black;
-            vduForm.Show(); // TODO: Is this the best place for this?
+            return pixelFormat;
         }
 
         public int PixelWidth
@@ -118,10 +128,15 @@ namespace OwlRuntime.platform.riscos
             protected set { renderingQuality = value; }
         }
 
+        protected Bitmap Bitmap
+        {
+            get { return bitmap; }
+        }
+
         // Refactoring for Paletted screen modes:
-        // Override CreateGraphics in TrueGraphicsScreenMode
-        // Override CreateGraphics in PalettedGraphicsScreenMode
-        protected abstract Graphics CreateGraphics();
+        // Override ConfigureGraphics in TrueGraphicsScreenMode
+        // Override ConfigureGraphics in PalettedGraphicsScreenMode
+        protected abstract Graphics ConfigureGraphics(Graphics graphics);
 
 
         /// <summary>
@@ -396,5 +411,19 @@ namespace OwlRuntime.platform.riscos
         {
             Dispose();
         }
+
+        protected Graphics CreateGraphics()
+        {
+            Graphics graphics = Graphics.FromImage(Bitmap);
+
+            // The transform from OWL BASIC units to Windows pixel coordinates
+            graphics.ResetTransform();
+            graphics.TranslateTransform(0.0f, SquarePixelHeight, MatrixOrder.Prepend);
+            graphics.ScaleTransform((SquarePixelWidth / (float)UnitsWidth), -(SquarePixelHeight / (float)UnitsHeight), MatrixOrder.Prepend);
+            ConfigureGraphics(graphics);
+            return graphics;
+        }
+
+        public abstract void PaintBitmap(Graphics graphics);
     }
 }

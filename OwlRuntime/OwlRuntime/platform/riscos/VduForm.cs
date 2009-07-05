@@ -11,33 +11,19 @@ namespace OwlRuntime.platform.riscos
 {
     public class VduForm : Form
     {
-        // this needs to be a different format of bitmap depending on if the screenmode is paletted or not
-        private readonly Bitmap bitmap;
-        private readonly Bitmap indexedBitmap;
+        private readonly BaseGraphicsScreenMode screenMode;
 
-        public VduForm(int width, int height, PixelFormat pixelFormat)
+        public VduForm(BaseGraphicsScreenMode screenMode)
         {
-            ClientSize = new Size(width, height);
-            bitmap = new Bitmap(ClientSize.Width, ClientSize.Height, pixelFormat);
-        }
-
-        public VduForm(int width, int height)
-        {
-            // TODO may need to remove this constructor
-            // only left it in while testing for the palletted modes
-            ClientSize = new Size(width, height);
-            bitmap = new Bitmap(ClientSize.Width, ClientSize.Height, PixelFormat.Format24bppRgb);
+            this.screenMode = screenMode;
+            ClientSize = new Size(screenMode.SquarePixelWidth, screenMode.SquarePixelHeight);
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            Graphics g = base.CreateGraphics(); 
-            g.DrawImage(bitmap, 0, 0);
-        }
+            Graphics g = CreateGraphics();
+            screenMode.PaintBitmap(g);
 
-        public new Graphics CreateGraphics()
-        {
-            return Graphics.FromImage(bitmap);
         }
     }
 }

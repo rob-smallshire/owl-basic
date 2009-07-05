@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing.Imaging;
 using System.Linq;
 using System.Text;
 using System.Drawing;
@@ -14,13 +16,13 @@ namespace OwlRuntime.platform.riscos
         private Color blueTextBackgroundColour;
         private Color blueGraphicsForegroundColour;
         private Color blueGraphicsBackgroundColour;
-
-
+        private readonly Bitmap indexedBitmap;
 
         public PalettedGraphicsScreenMode(VduSystem vdu, byte bitsPerPixel, int textWidth, int textHeight, int pixelWidth, int pixelHeight, int unitsWidth, int unitsHeight) :
             base(vdu, textWidth, textHeight, pixelWidth, pixelHeight, unitsWidth, unitsHeight, bitsPerPixel)
         {
             palette = new Palette(bitsPerPixel);
+            indexedBitmap = new Bitmap(SquarePixelWidth, SquarePixelHeight, PixelFormat.Format8bppIndexed);
         }
 
         public override void UpdateTextBackgroundColour(int logicalColour, int tint)
@@ -52,7 +54,6 @@ namespace OwlRuntime.platform.riscos
             blueGraphicsForegroundColour = palette.LogicalToBlue(logicalColour, tint);
         }
 
-
         /// <summary>
         /// creates the pen using the 'physical' colour which encodes the logical colour into its blue channel.
         /// </summary>
@@ -75,20 +76,77 @@ namespace OwlRuntime.platform.riscos
             return new SolidBrush(blueGraphicsForegroundColour);
         }
 
-        protected override Graphics CreateGraphics()
+        public override void PaintBitmap(Graphics graphics)
         {
-            Graphics graphics = vduForm.CreateGraphics();
+            // Set the palette
+            ColorPalette pal = indexedBitmap.Palette;
+            for (int i = 0; i < (1 << BitsPerPixel); ++i)
+            {
+                pal.Entries[i] = palette.LogicalToPhysical(i);
+            }
+            //
+            indexedBitmap.Palette = pal;
 
-            // The transform from OWL BASIC units to Windows pixel coordinates
-            graphics.ResetTransform();
-            graphics.TranslateTransform(0.0f, SquarePixelHeight, MatrixOrder.Prepend);
-            graphics.ScaleTransform((SquarePixelWidth / (float)UnitsWidth), -(SquarePixelHeight / (float)UnitsHeight), MatrixOrder.Prepend);
+            IndexedFromBlueBitmap(Bitmap, indexedBitmap);
 
+            // for testing only - need to eventually draw from  indexed bitmap
+            graphics.DrawImage(indexedBitmap, 0, 0);
+        }
+
+        static private void IndexedFromBlueBitmap(Bitmap sourceBitmap, Bitmap destBitmap)
+        {
+
+            BitmapData indexedBitmapData = null;
+            try
+            {
+                Debug.Assert(destBitmap.Height == sourceBitmap.Height);
+                Debug.Assert(destBitmap.Width == sourceBitmap.Width);
+                Rectangle rectangle = new Rectangle(0, 0, sourceBitmap.Width, sourceBitmap.Height);
+                indexedBitmapData = destBitmap.LockBits(
+                    rectangle,
+                    ImageLockMode.ReadWrite, PixelFormat.Format8bppIndexed);
+
+                BitmapData sourceBitmapData = null;
+                try
+                {
+                    // data for the orig bitmap
+                    sourceBitmapData = sourceBitmap.LockBits(
+                        rectangle,
+                        ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+                    // size of the source pixels in bytes
+                    const int sourcePixelSize = 3;
+
+                    for (int y = 0; y < sourceBitmapData.Height; ++y)
+                    {
+                        unsafe
+                        {
+                            byte* sourceRow = (byte*) sourceBitmapData.Scan0 + (y * sourceBitmapData.Stride);
+                            byte* destRow = (byte*) indexedBitmapData.Scan0 + (y * indexedBitmapData.Stride);
+
+                            for (int x = 0; x < sourceBitmapData.Width; ++x)
+                            {
+                                destRow[x] = sourceRow[x * sourcePixelSize];
+                            }
+                        }
+                    }
+                }
+                finally
+                {
+                    sourceBitmap.UnlockBits(sourceBitmapData);
+                }
+            }
+            finally
+            {
+                destBitmap.UnlockBits(indexedBitmapData);
+            }
+        }
+
+        protected override Graphics ConfigureGraphics(Graphics graphics)
+        {
             // Set the rendering quality to standard - may distort colours when editing palette
             graphics.SmoothingMode = SmoothingMode.None;
             graphics.PixelOffsetMode = PixelOffsetMode.None;
             return graphics;
         }
-
     }
 }

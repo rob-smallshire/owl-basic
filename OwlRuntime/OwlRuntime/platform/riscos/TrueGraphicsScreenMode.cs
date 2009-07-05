@@ -74,15 +74,13 @@ namespace OwlRuntime.platform.riscos
             return new SolidBrush(PhysicalGraphicsForegroundColour);
         }
 
-        protected override Graphics CreateGraphics()
+        public override void PaintBitmap(Graphics graphics)
         {
-            Graphics graphics = vduForm.CreateGraphics();
+            graphics.DrawImage(Bitmap, 0, 0);
+        }
 
-            // The transform from OWL BASIC units to Windows pixel coordinates
-            graphics.ResetTransform();
-            graphics.TranslateTransform(0.0f, SquarePixelHeight, MatrixOrder.Prepend);
-            graphics.ScaleTransform((SquarePixelWidth / (float)UnitsWidth), -(SquarePixelHeight / (float)UnitsHeight), MatrixOrder.Prepend);
-
+        protected override Graphics ConfigureGraphics(Graphics graphics)
+        {
             // Set the rendering quality
             switch (RenderingQuality)
             {

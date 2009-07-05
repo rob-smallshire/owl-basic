@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual C# Express 2008
+# Visual Studio 2008
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OwlRuntime", "OwlRuntime\OwlRuntime.csproj", "{F53261E4-9FBC-4434-90D4-58A0242414BC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IanDebugApp", "IanDebugApp\IanDebugApp.csproj", "{61D4F8EA-E359-4160-8036-8B84D8B3056B}"
@@ -22,12 +22,5 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(SourceCodeControl) = preSolution
-		SccNumberOfProjects = 2
-		SccLocalPath0 = .
-		SccProjectUniqueName1 = OwlRuntime\\OwlRuntime.csproj
-		SccLocalPath1 = .
-		SccProjectFilePathRelativizedFromConnection1 = OwlRuntime\\
 	EndGlobalSection
 EndGlobal

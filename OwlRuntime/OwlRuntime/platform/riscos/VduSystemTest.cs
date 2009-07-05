@@ -91,7 +91,7 @@ namespace OwlRuntime.platform.riscos
         [Test]
         public void TestPaletteWheel()
         {
-            // 8bpp modes tested 10,13, 15, 28,21,24,36,40
+            // 8bpp modes tested 10,13,15,21,24,28,36,40
             vdu.Enqueue((byte)22, (byte)28); // Change to mode 28
             const short size = 220;
             int radius = 250;
@@ -199,18 +199,7 @@ namespace OwlRuntime.platform.riscos
             Console.WriteLine("End");
         }
         
-        [Test]
-        public void VduFormTest()
-        {
-            VduForm form = new VduForm(200, 200);
-            form.Show();
-            Graphics g = form.CreateGraphics();
-            Pen pen = new Pen(Color.Red, 1); // TODO: Get current colour
-            pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid;
-            g.DrawLine(pen, 0, 0, 200, 200);
-            form.Refresh();
-            form.Close();
-        }
+
 
         [Test]
         public void ModeSizeTest0()
