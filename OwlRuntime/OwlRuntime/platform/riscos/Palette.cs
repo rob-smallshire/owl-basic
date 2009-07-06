@@ -119,7 +119,16 @@ namespace OwlRuntime.platform.riscos
 
         public Color LogicalToBlue(int logicalColour, int tint)
         {
-            return Color.FromArgb(0, 0, logicalColour | tint );
+            if (BitsPerPixel == 8)
+            {
+                int index = 0;
+                index = index | (logicalColour & 33) << 2;
+                index = index | (logicalColour & 14) << 3;
+                index = index | (logicalColour & 16) >> 1;
+                index = index | tint >> 6;
+                return Color.FromArgb(0, 0, index);
+            }
+            return Color.FromArgb(0, 0, logicalColour);
         }
     }
 }
