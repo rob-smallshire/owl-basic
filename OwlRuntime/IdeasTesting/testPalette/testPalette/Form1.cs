@@ -22,17 +22,37 @@ namespace testPalette
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            // draw red circles on the 
+
+            AcornFont testFont = new AcornFont();
+            testFont.setBackgroundColour(Color.FromArgb(0,0,127));
+            testFont.setForegroundColour(Color.FromArgb(0,0,255));
+
+
             myBitmap = new Bitmap(ClientRectangle.Width, ClientRectangle.Height, PixelFormat.Format24bppRgb);
             indexedBitmap = new Bitmap(myBitmap.Width, myBitmap.Height, PixelFormat.Format8bppIndexed);
 
+
+
+
+
+
+
+
+
+
             // Set the palette
             ColorPalette pal = indexedBitmap.Palette;
-            for (int i = 0; i < 128; i++)
+            for (int i = 0; i < 64; i++)
             {
-                pal.Entries[i] = Color.FromArgb(0, 255 - (i*2), 0);
-                pal.Entries[255 - i] = Color.FromArgb(0, 255 - (i * 2), 0);
+                pal.Entries[i] = Color.FromArgb(0, 255 - (i*4), 0);
+                pal.Entries[127 - i] = Color.FromArgb(0, 255 - (i * 4), 0);
             }
+            for (int i = 0; i < 64; i++)
+            {
+                pal.Entries[128 + i] = Color.FromArgb(0, 255 - (i * 4), 0);
+                pal.Entries[128 + (127 - i)] = Color.FromArgb(0, 255 - (i * 4), 0);
+            }
+            pal.Entries[255] = Color.FromArgb(255, 255 , 255);
             indexedBitmap.Palette = pal;
             
             //following dosnt change any data - unknown reason
@@ -40,13 +60,41 @@ namespace testPalette
             
             //cleat the graphics object to logical colour 0
             Graphics graphicsObj = Graphics.FromImage(myBitmap);
-            graphicsObj.Clear(Color.FromArgb(0, 0, 0));
+            graphicsObj.Clear(Color.FromArgb(0, 0, 128));
             
-            for (int i = 0; i <= 255; ++i)
+            for (int i = 0; i <= 127; ++i)
             {
                 Pen myPen = new Pen(Color.FromArgb(0, 0, i), 3);
                 graphicsObj.DrawEllipse(myPen, new Rectangle(0 + i, 0 + i, 512-(2*i), 512-(2*i)));
             }
+            // TextureBrush brush = new TextureBrush(acornAscii); // SolidBrush(Color.FromArgb(0, 0, 255));
+            // graphicsObj.FillRectangle(brush, 256, 160, 8, 8);
+
+
+
+            // print ascii A-Z
+            for (int i = 65; i < 91; ++i)
+            {
+                graphicsObj.DrawImageUnscaled(testFont.getBitmap(i), ((i-64)*8), 100);
+            }
+
+            // print ascii A-Z
+            testFont.setTransparentBackground(true);
+            for (int i = 65+32; i < (91+32); ++i)
+            {
+                graphicsObj.DrawImageUnscaled(testFont.getBitmap(i), ((i - 96) * 8), 120);
+            }
+
+            // print ascii A-Z
+            testFont.setTransparentBackground(false);
+            for (int i = 48; i < 58; ++i)
+            {
+                graphicsObj.DrawImageUnscaled(testFont.getBitmap(i), ((i - 48) * 8), 140);
+            }
+
+
+
+
             graphicsObj.Dispose();
 
             IndexedFromBlueBitmap(myBitmap, indexedBitmap, 8);
@@ -55,31 +103,11 @@ namespace testPalette
         private void Form1_Paint(object sender, PaintEventArgs e)
         {
             //data for the indexed bitmap
-            e.Graphics.DrawImage(indexedBitmap, 0, 0);
+            e.Graphics.DrawImageUnscaled (indexedBitmap, 0, 0);
         }
 
         static private void IndexedFromBlueBitmap(Bitmap sourceBitmap, Bitmap destBitmap, byte destBpp)
         {
-            PixelFormat bppFormat;
-            switch (destBpp)
-            {
-                case 1:
-                    bppFormat = PixelFormat.Format1bppIndexed;
-                    break;
-                case 2:
-                    //2bpp format is Not supported by DotNet
-                    bppFormat = PixelFormat.Format4bppIndexed;
-                    break;
-                case 4:
-                    bppFormat = PixelFormat.Format4bppIndexed;
-                    break;
-                case 8:
-                    bppFormat = PixelFormat.Format8bppIndexed;
-                    break;
-                default:
-                    // not sure if i need to impliment 16/24(32)
-                    throw new ArgumentOutOfRangeException();
-            }
 
             BitmapData indexedBitmapData = null;
             try
@@ -89,7 +117,7 @@ namespace testPalette
                 Rectangle rectangle = new Rectangle(0, 0, sourceBitmap.Width, sourceBitmap.Height);
                 indexedBitmapData = destBitmap.LockBits(
                     rectangle,
-                    ImageLockMode.ReadWrite, bppFormat);
+                    ImageLockMode.ReadWrite, PixelFormat.Format8bppIndexed);
 
                 BitmapData sourceBitmapData = null;
                 try
@@ -131,13 +159,15 @@ namespace testPalette
             // cycle the palette
             ColorPalette pal = indexedBitmap.Palette;
             Color tmp = pal.Entries[0];
-            for (int i = 0; i < pal.Entries.Length-1; i++)
+            for (int i = 0; i < (pal.Entries.Length/2)-1; i++)
             {
                 pal.Entries[i] = pal.Entries[i+1];
             }
-            pal.Entries[pal.Entries.Length - 1] = tmp;
+            pal.Entries[(pal.Entries.Length/2) - 1] = tmp;
             indexedBitmap.Palette = pal;
             Invalidate();
         }
+
+
     }
 }

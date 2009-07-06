@@ -78,7 +78,7 @@ namespace OwlRuntime.platform.riscos
 
                     // PLOT rectangle fill
                     vdu.Enqueue((byte)25, (byte)101);
-                    vdu.Enqueue((short)((x * size) + (size - 1)), (short)((y * size) + (size - 1)));
+                    vdu.Enqueue((short)((x * size) + (size - 2)), (short)((y * size) + (size - 2)));
 
                     ++c;
                 } 
