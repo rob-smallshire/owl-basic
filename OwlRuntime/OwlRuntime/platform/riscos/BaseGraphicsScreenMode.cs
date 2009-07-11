@@ -29,6 +29,32 @@ namespace OwlRuntime.platform.riscos
             PixelFormat pixelFormat = CreatePixelFormat(bitsPerPixel);
 
             bitmap = new Bitmap(SquarePixelWidth, SquarePixelHeight, pixelFormat);
+            // define the default text window to be full screen
+            // TODO may need this in base class
+            vdu.TextWindowTopRow = 0;
+            vdu.TextWindowBottomRow = textHeight - 1;
+            vdu.TextWindowLeftCol = 0;
+            vdu.TextWindowRightCol = textWidth - 1;
+
+            // define the Graphics char size
+            vdu.GraphicsCharSizeX = pixelWidth / textWidth;
+            vdu.GraphicsCharSizeY = pixelHeight / textHeight;
+            vdu.GraphicsCharSpaceX = pixelWidth / textWidth;
+            vdu.GraphicsCharSpaceY = pixelHeight / textHeight;
+
+            // define the Text char size
+            vdu.TextCharSizeX = pixelWidth / textWidth;
+            vdu.TextCharSizeY = pixelHeight / textHeight;
+            vdu.TextCharSpaceX = pixelWidth / textWidth;
+            vdu.TextCharSpaceY = pixelHeight / textHeight;
+
+            // set the default cursor pos
+            vdu.TextCursorX = 0;
+            vdu.TextCursorY = 0;
+            vdu.CursorControlFlags = 0;
+
+
+
 
             vduForm = new VduForm(this);
             vduForm.BackColor = Color.Black;

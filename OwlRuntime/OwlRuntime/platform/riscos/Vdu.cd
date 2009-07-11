@@ -1,23 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1">
   <Class Name="OwlRuntime.platform.riscos.AbstractScreenMode">
-    <Position X="5" Y="0.5" Width="1.5" />
+    <Position X="4.5" Y="0.5" Width="1.5" />
     <Compartments>
       <Compartment Name="Properties" Collapsed="true" />
       <Compartment Name="Methods" Collapsed="true" />
     </Compartments>
     <TypeIdentifier>
-      <HashCode>CBaCNQBYCiByECAAggEBQwSQBYCFyAAgBDgCCAACACE=</HashCode>
+      <HashCode>KBaCPQBYCiByECAAggEDQwSRBYCFygAgBDiCCAICACE=</HashCode>
       <FileName>platform\riscos\AbstractScreenMode.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
   </Class>
-  <Class Name="OwlRuntime.platform.riscos.VduSystem">
-    <Position X="0.5" Y="0.5" Width="2.25" />
-    <Compartments>
-      <Compartment Name="Properties" Collapsed="true" />
-      <Compartment Name="Methods" Collapsed="true" />
-    </Compartments>
+  <Class Name="OwlRuntime.platform.riscos.VduSystem" BaseTypeListCollapsed="true">
+    <Position X="16" Y="1.5" Width="1.5" />
     <NestedTypes>
       <Enum Name="OwlRuntime.platform.riscos.VduSystem.PlotEffect" Collapsed="true">
         <TypeIdentifier>
@@ -26,58 +22,114 @@
       </Enum>
     </NestedTypes>
     <TypeIdentifier>
-      <HashCode>DMDM9mKcByjDEgeaEQFEQA5JPpEEhCjGUvUQJDTsSlM=</HashCode>
+      <HashCode>DMDE9iKdRyjDEgeaEUVMwA5bP5EkhKjeU/UYBDT8SnM=</HashCode>
       <FileName>platform\riscos\VduSystem.cs</FileName>
     </TypeIdentifier>
-    <Lollipop Position="0.2" />
+    <Lollipop Position="0.2" Collapsed="true" />
   </Class>
   <Class Name="OwlRuntime.platform.riscos.BaseTextScreenMode" Collapsed="true">
-    <Position X="3.5" Y="4.25" Width="1.5" />
+    <Position X="1.75" Y="4.25" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>platform\riscos\BaseTextScreenMode.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="OwlRuntime.platform.riscos.BaseGraphicsScreenMode" Collapsed="true">
-    <Position X="7.25" Y="4.25" Width="2.75" />
+    <Position X="6" Y="4.25" Width="2.75" />
     <TypeIdentifier>
-      <HashCode>CBWUFQBYDChSGAAIggEAQSSShgAAQBAkBCACCAAAAAA=</HashCode>
+      <HashCode>GBWUFQBYDChSGAAIggkAQSSahgAAwhAkBKACCAAAAAA=</HashCode>
       <FileName>platform\riscos\BaseGraphicsScreenMode.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="OwlRuntime.platform.riscos.Palette">
-    <Position X="10.5" Y="2.75" Width="2.25" />
+    <Position X="10.75" Y="4.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAABAIAAAAAAAAAAACAAAAAgAAAAAAAA=</HashCode>
+      <HashCode>AAAAAAAAAAAAAABAIAAAAAAAAAABCAAAAAgAAAAAAAA=</HashCode>
       <FileName>platform\riscos\Palette.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="OwlRuntime.platform.riscos.PalettedGraphicsScreenMode">
-    <Position X="8.75" Y="6.25" Width="2.5" />
+    <Position X="7.25" Y="5.5" Width="2.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAgAAAAIAAAAAAAAIABAAAAABAAAAAAAAA=</HashCode>
+      <HashCode>AACQAAAAAAAgCAAAoAgAAQEAAIARAAAAABAABAAAAAA=</HashCode>
       <FileName>platform\riscos\PalettedGraphicsScreenMode.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="OwlRuntime.platform.riscos.TeletextScreenMode">
-    <Position X="5" Y="5.75" Width="1.5" />
+    <Position X="2.75" Y="5.5" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAACAAAAAAAAAAAAAAAIAAAAAAABAAAAAAAAA=</HashCode>
       <FileName>platform\riscos\TeletextScreenMode.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="OwlRuntime.platform.riscos.PalettedTextScreenMode">
-    <Position X="3.25" Y="5.75" Width="1.5" />
+    <Position X="0.5" Y="5.5" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAACAAAAAAIAAAAAAAAIAAAAAAABAAAAAAAAA=</HashCode>
       <FileName>platform\riscos\PalettedTextScreenMode.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="OwlRuntime.platform.riscos.TrueGraphicsScreenMode">
-    <Position X="6.75" Y="6.25" Width="1.5" />
+    <Position X="5" Y="5.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAgAAAAAAAAAAAAAIABAAAAABAAAAAAAAA=</HashCode>
+      <HashCode>AACQAAAAAAAgCAAAgAAAAAAAAIABAAAAABAAAAAAAAA=</HashCode>
       <FileName>platform\riscos\TrueGraphicsScreenMode.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OwlRuntime.BasicCommands" Collapsed="true">
+    <Position X="12.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AMpKAAEAICAQAAEAAAACAAAkQCAIAAAQAAAQAACEBAA=</HashCode>
+      <FileName>BasicCommands.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OwlRuntime.platform.riscos.NoSuchScreenModeException" Collapsed="true">
+    <Position X="14.25" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>platform\riscos\AbstractScreenMode.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OwlRuntime.platform.riscos.OS" Collapsed="true">
+    <Position X="16" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAEAAAAgAAAAAAAAAAAAAAAABEAAEAAAAAACAAEAQAA=</HashCode>
+      <FileName>platform\riscos\OS.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OwlRuntime.platform.riscos.SwiAttribute" Collapsed="true">
+    <Position X="12.5" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>platform\riscos\SwiAttribute.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OwlRuntime.platform.riscos.VduForm" Collapsed="true">
+    <Position X="14.25" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>platform\riscos\VduForm.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OwlRuntime.platform.riscos.VduSystemTest" Collapsed="true">
+    <Position X="10.75" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ABAAAAAAAEAAAQgCAEAABCCAAAAIAAAAAAAAgAloAAE=</HashCode>
+      <FileName>platform\riscos\VduSystemTest.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OwlRuntime.platform.riscos.VduVariableAttribute" Collapsed="true">
+    <Position X="12.5" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>platform\riscos\VduVariableAttribute.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OwlRuntime.platform.riscos.AcornFont">
+    <Position X="12.5" Y="4" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>IAAACQAAAAAAAgAAAAAwAAAIAAAAAAAAAAAEIAAAAAA=</HashCode>
+      <FileName>platform\riscos\AcornFont.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Font Name="Segoe UI" Size="9" />

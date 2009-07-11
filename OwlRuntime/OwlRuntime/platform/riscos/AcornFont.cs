@@ -6,7 +6,7 @@ using System.Text;
 using System.Drawing.Imaging;
 using System.Drawing;
 
-namespace testPalette
+namespace OwlRuntime.platform.riscos
 {
     public class AcornFont
     {
@@ -287,19 +287,19 @@ namespace testPalette
             return cloneBitmap;
         }
 
-        public void setTransparentBackground(Boolean val)
+        public Boolean setTransparentBackground
         {
-            this.transparentBackground = val;
+            set { transparentBackground = value; }
         }
 
-        public void setForegroundColour(Color colour)
+        public Color setForegroundColour
         {
-            this.foregroundColour = colour;
+            set { foregroundColour = value; }
         }
 
-        public void setBackgroundColour(Color colour)
+        public Color setBackgroundColour
         {
-            this.backgroundColour = colour;
+            set { backgroundColour = value; }
         }
         
     }

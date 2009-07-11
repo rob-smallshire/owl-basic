@@ -55,6 +55,25 @@ namespace OwlRuntime.platform.riscos
         }
 
         [Test]
+        public void TestText()
+        {
+            vdu.Enqueue((byte)22, (byte)28); // Change to mode 28
+            vdu.Enqueue((byte)169);
+            vdu.Enqueue((byte)65);
+            vdu.Enqueue((byte)66);
+            vdu.Enqueue((byte)67);
+            vdu.Enqueue((byte)68);
+            vdu.Enqueue((byte)69);
+            vdu.Enqueue((byte)70);
+            vdu.Enqueue((byte)71);
+            vdu.Enqueue((byte)72);
+            vdu.Enqueue((byte)73);
+            vdu.Enqueue((byte)74);
+            Console.WriteLine("End");
+        }
+
+
+        [Test]
         public void TestPalette()
         {
             vdu.Enqueue(7);

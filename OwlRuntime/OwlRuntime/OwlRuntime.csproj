@@ -59,6 +59,7 @@
   <ItemGroup>
     <Compile Include="BasicCommands.cs" />
     <Compile Include="platform\riscos\AbstractScreenMode.cs" />
+    <Compile Include="platform\riscos\AcornFont.cs" />
     <Compile Include="platform\riscos\BaseGraphicsScreenMode.cs" />
     <Compile Include="platform\riscos\OS.cs" />
     <Compile Include="platform\riscos\Palette.cs" />
@@ -77,7 +78,13 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="ClassDiagram1.cd" />
     <None Include="platform\riscos\Vdu.cd" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="platform\riscos\VduForm.resx">
+      <DependentUpon>VduForm.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="platform\acornmos\" />

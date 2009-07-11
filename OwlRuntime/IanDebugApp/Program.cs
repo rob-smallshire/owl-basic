@@ -12,8 +12,9 @@ namespace IanDebugApp
         {
             VduSystemTest tst = new VduSystemTest();
             //tst.Test25();
-            tst.TestPalette();
-            tst.TestPaletteWheel();
+            //tst.TestPalette();
+            //tst.TestPaletteWheel();
+            tst.TestText();
         }
     }
 }

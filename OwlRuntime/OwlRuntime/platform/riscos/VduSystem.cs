@@ -129,6 +129,17 @@ namespace OwlRuntime.platform.riscos
         private int WindowHeight; // WindowHeight - Rows that will fit in the text window without scrolling it
         #endregion
 
+        #region unofficial VDU variables
+        private int textCursorX;
+        private int textCursorY;
+        private int cursorControlFlags = 0; // bbc basic p185(pdf)
+        private Boolean plotTextAtGraphics = false; // vdu 4/5
+
+
+        #endregion
+
+        private AcornFont acornFont;
+
         private byte modeNumber;
         private AbstractScreenMode screenMode;
         private bool hasBeenDisposed = false;
@@ -143,6 +154,114 @@ namespace OwlRuntime.platform.riscos
             screenMode = AbstractScreenMode.CreateScreenMode(this, 7);
             ExpectVduCommand();
         }
+
+
+        #region getters and setters for VDU variables
+
+        public int CursorControlFlags
+        {
+            get { return cursorControlFlags; }
+            set { cursorControlFlags = value; }
+        }
+
+        public Boolean PlotTextAtGraphics
+        {
+            // vdu 4/5
+            get { return plotTextAtGraphics; }
+            set { plotTextAtGraphics = value; }
+        }
+        
+        public int TextCursorX
+        {
+            get { return textCursorX; }
+            set { textCursorX = value; }
+        }
+
+        public int TextCursorY
+        {
+            get { return textCursorY; }
+            set { textCursorY = value; }
+        }
+        
+        public int TextWindowLeftCol
+        {
+            get { return textWindowLeftCol; }
+            set {
+                // also need to update WindowWidth vdu var
+                // ???? is it best to calculate when asked for or calculate when another variable changed
+                textWindowLeftCol = value;
+            }
+        }
+        
+        public int TextWindowRightCol
+        {
+            // also need to update WindowWidth vdu var
+            get { return textWindowRightCol; }
+            set { textWindowRightCol = value; }
+        }
+
+        public int TextWindowBottomRow
+        {
+            get { return textWindowBottomRow; }
+            set { textWindowBottomRow = value; }
+        }
+
+        public int TextWindowTopRow
+        {
+            get { return textWindowTopRow; }
+            set { textWindowTopRow = value; }
+        }
+
+
+        public int TextCharSizeX
+        {
+            get { return textCharSizeX; }
+            set { textCharSizeX = value; }
+        }
+
+        public int TextCharSizeY
+        {
+            get { return textCharSizeY; }
+            set { textCharSizeY = value; }
+        }
+
+        public int TextCharSpaceX
+        {
+            get { return textCharSpaceX; }
+            set { textCharSpaceX = value; }
+        }
+
+        public int TextCharSpaceY
+        {
+            get { return textCharSpaceY; }
+            set { textCharSpaceY = value; }
+        }
+
+        public int GraphicsCharSizeX
+        {
+            get { return graphicsCharSizeX; }
+            set { graphicsCharSizeX = value; }
+        }
+
+        public int GraphicsCharSizeY
+        {
+            get { return graphicsCharSizeY; }
+            set { graphicsCharSizeY = value; }
+        }
+
+        public int GraphicsCharSpaceX
+        {
+            get { return graphicsCharSpaceX; }
+            set { graphicsCharSpaceX = value; }
+        }
+
+        public int GraphicsCharSpaceY
+        {
+            get { return graphicsCharSpaceY; }
+            set { graphicsCharSpaceY = value; }
+        }
+
+
 
         public int LogicalGraphicsBackgroundColour
         {
@@ -264,6 +383,8 @@ namespace OwlRuntime.platform.riscos
             get { return screenMode; }
         }
 
+        #endregion
+
         public void Enqueue(byte b)
         {
             // If all bytes in the queue have been consumed, wait for the
@@ -348,7 +469,87 @@ namespace OwlRuntime.platform.riscos
 
         private void DisplayCharacter(byte code)
         {
-            throw new NotImplementedException();
+            // TODO
+            // considering extracting this into another class so that the maths
+            // are only processed when the cursor control flags are changed and
+            // then just read the properties from the class in this method
+
+
+            // todo
+            // move thisa to base graphics screenmode
+            // 
+
+
+            // prm v3-1-594
+            //if bit 5 Set then dont move cursor
+            int multiplier = ((cursorControlFlags & 32) != 0) ? 0 : 1;
+
+            //decode text direction (normal without CRLF or EOL
+            int standardMovementX = 0;
+            int standardMovementY = 0;
+            standardMovementX = ((cursorControlFlags & 2) == 0) ? multiplier : 0 - multiplier;
+
+            int EOLmovementX = 0;
+            int EOLmovementY = 0;
+            EOLmovementY = ((cursorControlFlags & 4) == 0) ? multiplier : 0 - multiplier;
+            
+            //if Bit 3 then transpose horiz / vert 
+            if ((cursorControlFlags & 8) != 0)
+            {
+                // transpose standard movement
+                int temp = standardMovementX;
+                standardMovementY = standardMovementX;
+                standardMovementX = temp;
+
+                //transpose EOL movement
+                temp = EOLmovementX;
+                EOLmovementY = EOLmovementX;
+                EOLmovementX = temp;
+
+            }
+
+            // when plotting text at graphics cursor
+            // if bit 6 set then ignore EOL.  DO NOT MOVE TO NEXT LINE
+            Boolean EOLaction = true;
+            if (plotTextAtGraphics & ((cursorControlFlags & 64) != 0))
+            {
+                EOLaction = false;
+            }
+            
+            // plot char on screen
+
+
+
+
+
+            // add printing a char here
+            if (plotTextAtGraphics)
+            {
+                // vdu 5 plotting text at graphics co-ords
+                acornFont.setTransparentBackground(true);
+                // HOW DO I GET THE GRAPHICS COLOUR (WITH / WITHOUT PALETTE)
+                acornFont.setForegroundColour(Color.FromArgb(255, 255, 255));
+
+            }
+            else
+            {
+                acornFont.setTransparentBackground(false);
+                acornFont.setBackgroundColour(Color.FromArgb(0, 0, 0));
+                acornFont.setForegroundColour(Color.FromArgb(255, 255, 255));
+                // vdu 4 plotting text at text co-ords
+            }
+
+
+            // add values to cursor
+
+
+            // check if new line needed and EOLaction variable
+
+
+            
+            
+            
+            //throw new NotImplementedException();
         }
 
         private void Control(byte code)
@@ -465,10 +666,8 @@ namespace OwlRuntime.platform.riscos
 
         private void DoSetCursorPos()
         {
-            // TODO i dont know where the cursor position is stored
-            // x = DequeueByte();
-            // y = DequeueByte();
-            throw new NotImplementedException();
+            textCursorX = DequeueByte();
+            textCursorY = DequeueByte();
         }
 
         private void CursorHome()
@@ -716,7 +915,24 @@ namespace OwlRuntime.platform.riscos
         /// <param name="ySize">y size in pixels</param>
         private void SetCharacterSizeSpacing(byte flags, short xSize, short ySize)
         {
-            throw new NotImplementedException();
+            //bbcbasic.pdf p186
+            //The bits in the flag byte have the following meanings:
+            //Bit Meaning if set
+            //0 Set VDU 4 character size from dx,dy    The bit 0 option is not implemented at present
+            //1 Set VDU 5 character size from dx,dy
+            //2 Set VDU 5 character spacing from dx,dy
+
+            // todo test this section
+            if ((flags & 2) != 0)
+            {
+                graphicsCharSizeX = xSize;
+                graphicsCharSizeY = ySize;
+            }
+            if ((flags & 4) != 0)
+            {
+                graphicsCharSpaceX = xSize;
+                graphicsCharSpaceY = ySize;
+            }
         }
 
         /// <summary>
@@ -889,6 +1105,11 @@ namespace OwlRuntime.platform.riscos
 
         private void SetPrintDirection(byte flags)
         {
+            // prm 1-594 this needs some thinking about how to impliment.
+            // May need to impliment windows and scrolling first.
+            
+            // also risc os 3 prm's say two params
+            
             throw new NotImplementedException();
         }
 
@@ -1012,6 +1233,8 @@ namespace OwlRuntime.platform.riscos
             INVERSE = 2,
             BACKGROUND = 3
         }
+
+
 
         private void DoPlot()
         {
