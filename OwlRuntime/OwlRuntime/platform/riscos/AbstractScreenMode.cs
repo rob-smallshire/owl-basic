@@ -25,6 +25,7 @@ namespace OwlRuntime.platform.riscos
         private byte bitsPerPixel;
         private Color physicalTextForegroundColour;
         private Color physicalTextBackgroundColour;
+        private TextCursor textCursor;
 
         private readonly VduSystem vdu;
 
@@ -90,6 +91,13 @@ namespace OwlRuntime.platform.riscos
             this.unitsWidth = unitsWidth;
             this.unitsHeight = unitsHeight;
             this.bitsPerPixel = bitsPerPixel;
+            this.textCursor = new TextCursor();
+        }
+
+        internal TextCursor TextCursor
+        {
+            get { return textCursor; }
+            set { textCursor = value; }
         }
 
         public int TextWidth
@@ -343,6 +351,10 @@ namespace OwlRuntime.platform.riscos
         public void ResetPaletteAndColours()
         {
             // Do nothing
+        }
+
+        public virtual void PrintChar(byte code)
+        {
         }
     }
 }

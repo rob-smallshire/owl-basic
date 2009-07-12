@@ -68,6 +68,7 @@
     <Compile Include="platform\riscos\SwiAttribute.cs" />
     <Compile Include="platform\riscos\TeletextScreenMode.cs" />
     <Compile Include="platform\riscos\BaseTextScreenMode.cs" />
+    <Compile Include="platform\riscos\TextCursor.cs" />
     <Compile Include="platform\riscos\TrueGraphicsScreenMode.cs" />
     <Compile Include="platform\riscos\VduForm.cs">
       <SubType>Form</SubType>

@@ -51,7 +51,6 @@ namespace OwlRuntime.platform.riscos
             // set the default cursor pos
             vdu.TextCursorX = 0;
             vdu.TextCursorY = 0;
-            vdu.CursorControlFlags = 0;
 
 
 
@@ -451,5 +450,64 @@ namespace OwlRuntime.platform.riscos
         }
 
         public abstract void PaintBitmap(Graphics graphics);
+
+        public override void PrintChar(byte code)
+        {
+            // plot a char on the screen at either the graphics or the text cursor and then move the cursor
+
+            //Vdu.AcornFont.
+            
+            // add printing a char here
+            if (Vdu.PlotTextAtGraphics)
+            {
+
+                // TODO set transparent can be set at vdu 4/5
+                // TODO set colours can be done with COLOUT and TINT
+                
+                // vdu 5 plotting text at graphics co-ords
+
+
+
+
+            }
+            else
+            {
+                Vdu.AcornFont.setTransparentBackground = false;
+                Vdu.AcornFont.setBackgroundColour = Color.FromArgb(0, 0, 0);
+                Vdu.AcornFont.setForegroundColour = Color.FromArgb(255, 255, 255);
+                // vdu 4 plotting text at text co-ords
+                Graphics g = CreateGraphics();
+                // TODO list
+                // plot at correct position
+                // scale using text char size (if graphics mode)
+                // move cursor (inc text spacing size if graphics mode
+
+                // text size in graphics units (needed because of translation matrix on graphics viewport)
+                
+                
+
+                int charWidth = (UnitsWidth / TextWidth);
+                int charHeight = (UnitsHeight / TextHeight);
+
+                int xpos = Vdu.TextCursorX * charWidth; // need to add the code for the scaling here
+                int ypos = (UnitsHeight - (Vdu.TextCursorY * charHeight))- charHeight;
+
+                g.DrawImage(Vdu.AcornFont.getBitmap(code), xpos, ypos, charWidth, charHeight) ;
+                g.Dispose();
+
+                // add values to cursor
+                Vdu.TextCursorX += TextCursor.MovementX;
+                Vdu.TextCursorY += TextCursor.MovementY;
+            
+            }
+
+
+
+
+            // check if new line needed and EOLaction variable
+
+
+            vduForm.Refresh();
+        }
     }
 }

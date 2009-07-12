@@ -58,7 +58,18 @@ namespace OwlRuntime.platform.riscos
         public void TestText()
         {
             vdu.Enqueue((byte)22, (byte)28); // Change to mode 28
-            vdu.Enqueue((byte)169);
+
+            // TODO need to draw a rectangle to calibrate the text plotting position
+            vdu.Enqueue((byte)25, (byte)4);  // MOVE
+            vdu.Enqueue((short)100, (short)100);
+            vdu.Enqueue((byte)25, (byte)4);  // MOVE
+            vdu.Enqueue((short)0, (short)100);
+            vdu.Enqueue((byte)25, (byte)85);  // MOVE
+            vdu.Enqueue((short)100, (short)0);
+
+            // need some good tests for changing the cursor print direction (vdu 23,16,x,y)
+            vdu.Enqueue("test");
+            Console.WriteLine("End");
             vdu.Enqueue((byte)65);
             vdu.Enqueue((byte)66);
             vdu.Enqueue((byte)67);
@@ -69,6 +80,7 @@ namespace OwlRuntime.platform.riscos
             vdu.Enqueue((byte)72);
             vdu.Enqueue((byte)73);
             vdu.Enqueue((byte)74);
+            vdu.Enqueue((byte)169);
             Console.WriteLine("End");
         }
 

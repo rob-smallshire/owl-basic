@@ -132,7 +132,6 @@ namespace OwlRuntime.platform.riscos
         #region unofficial VDU variables
         private int textCursorX;
         private int textCursorY;
-        private int cursorControlFlags = 0; // bbc basic p185(pdf)
         private Boolean plotTextAtGraphics = false; // vdu 4/5
 
 
@@ -152,17 +151,24 @@ namespace OwlRuntime.platform.riscos
         public VduSystem()
         {
             screenMode = AbstractScreenMode.CreateScreenMode(this, 7);
+            acornFont = new AcornFont();
             ExpectVduCommand();
+
+            textCharSizeX = 8;
+            textCharSizeY = 8;
+            textCharSpaceX = 8;
+            textCharSpaceY = 8;
+            graphicsCharSizeX = 8;
+            graphicsCharSizeY = 8;
+            graphicsCharSpaceX = 8;
+            graphicsCharSpaceY = 8;
+            
         }
 
 
         #region getters and setters for VDU variables
 
-        public int CursorControlFlags
-        {
-            get { return cursorControlFlags; }
-            set { cursorControlFlags = value; }
-        }
+
 
         public Boolean PlotTextAtGraphics
         {
@@ -261,6 +267,11 @@ namespace OwlRuntime.platform.riscos
             set { graphicsCharSpaceY = value; }
         }
 
+        public AcornFont AcornFont
+        {
+            get { return acornFont; }
+            set { acornFont = value; }
+        }
 
 
         public int LogicalGraphicsBackgroundColour
@@ -401,6 +412,14 @@ namespace OwlRuntime.platform.riscos
             }
         }
 
+        public void Enqueue(string bs)
+        {
+            foreach (byte b in bs)
+            {
+                Enqueue(b);
+            }
+        }
+
         public void Enqueue(short s)
         {
             // TODO: Check order!
@@ -447,10 +466,6 @@ namespace OwlRuntime.platform.riscos
             {
                 DeleteCharacter();
             }
-            else if (code <= 159)
-            {
-                DisplayUserCharacter(code);
-            }
             else
             {
                 DisplayCharacter(code);
@@ -469,84 +484,12 @@ namespace OwlRuntime.platform.riscos
 
         private void DisplayCharacter(byte code)
         {
-            // TODO
-            // considering extracting this into another class so that the maths
-            // are only processed when the cursor control flags are changed and
-            // then just read the properties from the class in this method
-
-
-            // todo
-            // move thisa to base graphics screenmode
-            // 
-
-
-            // prm v3-1-594
-            //if bit 5 Set then dont move cursor
-            int multiplier = ((cursorControlFlags & 32) != 0) ? 0 : 1;
-
-            //decode text direction (normal without CRLF or EOL
-            int standardMovementX = 0;
-            int standardMovementY = 0;
-            standardMovementX = ((cursorControlFlags & 2) == 0) ? multiplier : 0 - multiplier;
-
-            int EOLmovementX = 0;
-            int EOLmovementY = 0;
-            EOLmovementY = ((cursorControlFlags & 4) == 0) ? multiplier : 0 - multiplier;
-            
-            //if Bit 3 then transpose horiz / vert 
-            if ((cursorControlFlags & 8) != 0)
-            {
-                // transpose standard movement
-                int temp = standardMovementX;
-                standardMovementY = standardMovementX;
-                standardMovementX = temp;
-
-                //transpose EOL movement
-                temp = EOLmovementX;
-                EOLmovementY = EOLmovementX;
-                EOLmovementX = temp;
-
-            }
-
-            // when plotting text at graphics cursor
-            // if bit 6 set then ignore EOL.  DO NOT MOVE TO NEXT LINE
-            Boolean EOLaction = true;
-            if (plotTextAtGraphics & ((cursorControlFlags & 64) != 0))
-            {
-                EOLaction = false;
-            }
-            
-            // plot char on screen
+            screenMode.PrintChar(code);
 
 
 
 
 
-            // add printing a char here
-            if (plotTextAtGraphics)
-            {
-                // vdu 5 plotting text at graphics co-ords
-                acornFont.setTransparentBackground(true);
-                // HOW DO I GET THE GRAPHICS COLOUR (WITH / WITHOUT PALETTE)
-                acornFont.setForegroundColour(Color.FromArgb(255, 255, 255));
-
-            }
-            else
-            {
-                acornFont.setTransparentBackground(false);
-                acornFont.setBackgroundColour(Color.FromArgb(0, 0, 0));
-                acornFont.setForegroundColour(Color.FromArgb(255, 255, 255));
-                // vdu 4 plotting text at text co-ords
-            }
-
-
-            // add values to cursor
-
-
-            // check if new line needed and EOLaction variable
-
-
-            
             
             
             //throw new NotImplementedException();
@@ -1108,9 +1051,10 @@ namespace OwlRuntime.platform.riscos
             // prm 1-594 this needs some thinking about how to impliment.
             // May need to impliment windows and scrolling first.
             
-            // also risc os 3 prm's say two params
+            // also risc os 2 and 3 prm's say two params
             
-            throw new NotImplementedException();
+            screenMode.TextCursor.Flags = flags;
+
         }
 
         /// <summary>

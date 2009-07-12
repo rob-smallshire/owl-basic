@@ -261,7 +261,7 @@ namespace OwlRuntime.platform.riscos
                 for (int y = 0; y < tempBitmap.Height; ++y)
                 {
                     byte* destRow = (byte*)asciiBitmapData.Scan0 + (y * asciiBitmapData.Stride);
-                    destRow[0] = data[y];
+                    destRow[0] = data[7-y]; // store the font upside down because of the translation matrix on the graphics viewport.
                 }
             }
             tempBitmap.UnlockBits(asciiBitmapData);
