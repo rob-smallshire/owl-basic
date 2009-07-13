@@ -154,14 +154,7 @@ namespace OwlRuntime.platform.riscos
             acornFont = new AcornFont();
             ExpectVduCommand();
 
-            textCharSizeX = 8;
-            textCharSizeY = 8;
-            textCharSpaceX = 8;
-            textCharSpaceY = 8;
-            graphicsCharSizeX = 8;
-            graphicsCharSizeY = 8;
-            graphicsCharSpaceX = 8;
-            graphicsCharSpaceY = 8;
+
             
         }
 
@@ -472,10 +465,6 @@ namespace OwlRuntime.platform.riscos
             }
         }
 
-        private void DisplayUserCharacter(byte code)
-        {
-            throw new NotImplementedException();
-        }
 
         private void DeleteCharacter()
         {
@@ -485,14 +474,6 @@ namespace OwlRuntime.platform.riscos
         private void DisplayCharacter(byte code)
         {
             screenMode.PrintChar(code);
-
-
-
-
-
-            
-            
-            //throw new NotImplementedException();
         }
 
         private void Control(byte code)
@@ -584,6 +565,10 @@ namespace OwlRuntime.platform.riscos
                     requiredBytes = 5;
                     nextCommand = DoPlot;
                     break;
+                case 26:
+                    // TODO restore default windows
+                    // this is part of the setup of a mode
+                    break;
                 case 27:
                     // no-op
                     break;
@@ -611,6 +596,7 @@ namespace OwlRuntime.platform.riscos
         {
             textCursorX = DequeueByte();
             textCursorY = DequeueByte();
+            ExpectVduCommand();
         }
 
         private void CursorHome()
@@ -622,6 +608,7 @@ namespace OwlRuntime.platform.riscos
         {
             originX = DequeueShort();
             originX = DequeueShort();
+            ExpectVduCommand();
         }
 
         private void SetGraphicsColour()
@@ -681,22 +668,26 @@ namespace OwlRuntime.platform.riscos
 
         private void Backspace()
         {
-            throw new NotImplementedException();
+            textCursorX -= screenMode.TextCursor.MovementX;
+            textCursorY -= screenMode.TextCursor.MovementY;
         }
 
         private void HorizontalTab()
         {
-            throw new NotImplementedException();
+            textCursorX += screenMode.TextCursor.MovementX;
+            textCursorY += screenMode.TextCursor.MovementY;
         }
 
         private void LineFeed()
         {
-            throw new NotImplementedException();
+            textCursorX += screenMode.TextCursor.MovementXEOL;
+            textCursorY += screenMode.TextCursor.MovementYEOL;
         }
 
         private void VerticalTab()
         {
-            throw new NotImplementedException();
+            textCursorX -= screenMode.TextCursor.MovementXEOL;
+            textCursorY -= screenMode.TextCursor.MovementYEOL;
         }
 
         private void ClearConsole()
@@ -754,7 +745,7 @@ namespace OwlRuntime.platform.riscos
                     break;
                 case 16:
                     // Alter the direction of printing on the screen
-                    SetPrintDirection(bytes[0]);
+                    SetPrintDirection(bytes[0], bytes[1]);
                     break;
                 case 17:
                     switch (bytes[0])
@@ -805,6 +796,17 @@ namespace OwlRuntime.platform.riscos
                 // We use these for OWL BASIC extensions
                 case 28:
                     RenderingQuality(bytes[0]);
+                    break;
+                default:
+                    if (miscCmd > 31)
+                    {
+                        // needs testing
+                        acornFont.define(miscCmd, bytes);
+                    }
+                    else
+                    {
+                        throw new NotImplementedException();
+                    }
                     break;
                 // 32-255 user definable chars
             }
@@ -1046,14 +1048,15 @@ namespace OwlRuntime.platform.riscos
             throw new NotImplementedException();
         }
 
-        private void SetPrintDirection(byte flags)
+        private void SetPrintDirection(byte x, byte y)
         {
             // prm 1-594 this needs some thinking about how to impliment.
             // May need to impliment windows and scrolling first.
             
             // also risc os 2 and 3 prm's say two params
-            
-            screenMode.TextCursor.Flags = flags;
+            byte flags;
+            flags = screenMode.TextCursor.Flags;
+            screenMode.TextCursor.Flags = (byte)((flags & y) ^ x);
 
         }
 
@@ -1393,10 +1396,11 @@ namespace OwlRuntime.platform.riscos
         {
             // PRM 1-585
             byte colour = DequeueByte();
-            byte logicalColour = (byte) (colour % ScreenMode.BitsPerPixel);
+            byte logicalColour = (byte) (colour % ((1 << ScreenMode.BitsPerPixel) -1));
 
-            if ((logicalColour & 0x80) != 0)
+            if ((colour & 0x80) == 0)
             {
+                
                 LogicalTextForegroundColour = logicalColour;
                 
             }

@@ -54,6 +54,16 @@ namespace OwlRuntime.platform.riscos
             PhysicalGraphicsForegroundColour = Color.FromArgb(logicalColour);
         }
 
+        protected override Color TextForegroundPlotColour()
+        {
+            return this.PhysicalTextForegroundColour;
+        }
+
+        protected override Color TextBackgroundPlotColour()
+        {
+            return this.PhysicalTextBackgroundColour;
+        }
+
         // TODO unsure if this should be public or protected
         /// <summary>
         /// creates the pen using the HIcolour value from PhysicalGraphicsForegroundColour

@@ -54,22 +54,72 @@ namespace OwlRuntime.platform.riscos
             Console.WriteLine("End");
         }
 
+        public void plot(byte code, short x, short y)
+        {
+            // move the graphics cursor to x,y)
+            vdu.Enqueue((byte)25, (byte)code);  // MOVE
+            vdu.Enqueue((short)x, (short)y);
+        }
+
+        public void move(short x, short y)
+        {
+            // move the graphics cursor to x,y)
+            vdu.Enqueue((byte)25, (byte)4);  // MOVE
+            vdu.Enqueue((short)x, (short)y);
+        }
+
+        public void textColourFG(byte colour, byte tint)
+        {
+            vdu.Enqueue((byte)23);
+            vdu.Enqueue((byte)17);
+            vdu.Enqueue((byte)0);
+            vdu.Enqueue((byte)tint);
+            vduflush();
+            //23,17,0,tint
+            // 17,col
+            vdu.Enqueue((byte)17);
+            vdu.Enqueue((byte)(colour & 127));
+
+
+        }
+
+        public void textColourBG(byte colour, byte tint)
+        {
+            //23,17,1,tint
+            vdu.Enqueue((byte)23);
+            vdu.Enqueue((byte)17);
+            vdu.Enqueue((byte)1);
+            vdu.Enqueue((byte)tint);
+            vduflush();
+            // 17,col
+            vdu.Enqueue((byte)17);
+            vdu.Enqueue((byte)((colour & 127) | 128));
+ 
+        }
+
+        public void vduflush()
+        {
+            for (int i = 0; i < 10; ++i)
+            {
+                vdu.Enqueue((byte)0);
+            }
+        }
+
         [Test]
         public void TestText()
         {
             vdu.Enqueue((byte)22, (byte)28); // Change to mode 28
 
             // TODO need to draw a rectangle to calibrate the text plotting position
-            vdu.Enqueue((byte)25, (byte)4);  // MOVE
-            vdu.Enqueue((short)100, (short)100);
-            vdu.Enqueue((byte)25, (byte)4);  // MOVE
-            vdu.Enqueue((short)0, (short)100);
-            vdu.Enqueue((byte)25, (byte)85);  // MOVE
-            vdu.Enqueue((short)100, (short)0);
+            move(100, 100);   // MOVE
+            move(0, 100);   // MOVE
+            plot(85, 100, 0);   // triangle
 
             // need some good tests for changing the cursor print direction (vdu 23,16,x,y)
             vdu.Enqueue("test");
             Console.WriteLine("End");
+            textColourFG(0, 0); // should be black
+            textColourBG(63, 192); // should be white
             vdu.Enqueue((byte)65);
             vdu.Enqueue((byte)66);
             vdu.Enqueue((byte)67);
@@ -82,6 +132,25 @@ namespace OwlRuntime.platform.riscos
             vdu.Enqueue((byte)74);
             vdu.Enqueue((byte)169);
             Console.WriteLine("End");
+            vdu.Enqueue((byte)31, (byte) 10, (byte) 10); // move text cursor to 10,10
+            vdu.Enqueue((byte)132); // plot the risc os x FOR WINDOWS
+            vdu.Enqueue((byte)8); // plot backspace (non destructive)
+            vdu.Enqueue((byte)8);
+            vdu.Enqueue((byte)136); // left arrow
+            vdu.Enqueue((byte)9);   // move cursor right one
+            vdu.Enqueue((byte)137); // right arrow
+            vdu.Enqueue((byte)8); // plot backspace (non destructive)
+            vdu.Enqueue((byte)8);
+            vdu.Enqueue((byte)10); // line feed
+            vdu.Enqueue((byte)138);
+            vdu.Enqueue((byte)8); // plot backspace (non destructive)
+            vdu.Enqueue((byte)11); // cursor up
+            vdu.Enqueue((byte)11); 
+            vdu.Enqueue((byte)139);
+            
+            
+            Console.WriteLine("End");
+
         }
 
 

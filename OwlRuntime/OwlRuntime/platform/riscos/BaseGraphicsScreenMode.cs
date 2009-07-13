@@ -78,8 +78,6 @@ namespace OwlRuntime.platform.riscos
                     break;
                 default:
                     // paletted graphics mode
-
-                    // TODO this next line should be 'pixelFormat = PixelFormat.Format8bppIndexed' when vduform had been sorted;
                     pixelFormat = PixelFormat.Format24bppRgb;
                     break;
             }
@@ -389,6 +387,15 @@ namespace OwlRuntime.platform.riscos
         // override in PalettedGraphicsScreenMode which sets the pen to blue index colour
         protected abstract Pen Pen();
 
+        // override in TrueGraphicsScreenMode
+        // override in PalettedGraphicsScreenMode
+        // TODO may need to be in the base class but unsure
+        protected abstract Color TextForegroundPlotColour();
+
+        // override in TrueGraphicsScreenMode
+        // override in PalettedGraphicsScreenMode
+        // TODO may need to be in the base class but unsure
+        protected abstract Color TextBackgroundPlotColour();
 
         // override in TrueGraphicsScreenMode
         // override in PalettedGraphicsScreenMode which sets the pen to blue index colour
@@ -451,6 +458,8 @@ namespace OwlRuntime.platform.riscos
 
         public abstract void PaintBitmap(Graphics graphics);
 
+
+
         public override void PrintChar(byte code)
         {
             // plot a char on the screen at either the graphics or the text cursor and then move the cursor
@@ -462,7 +471,7 @@ namespace OwlRuntime.platform.riscos
             {
 
                 // TODO set transparent can be set at vdu 4/5
-                // TODO set colours can be done with COLOUT and TINT
+
                 
                 // vdu 5 plotting text at graphics co-ords
 
@@ -472,9 +481,10 @@ namespace OwlRuntime.platform.riscos
             }
             else
             {
+                // TODO get the correct text colours
                 Vdu.AcornFont.setTransparentBackground = false;
-                Vdu.AcornFont.setBackgroundColour = Color.FromArgb(0, 0, 0);
-                Vdu.AcornFont.setForegroundColour = Color.FromArgb(255, 255, 255);
+                Vdu.AcornFont.setBackgroundColour = TextBackgroundPlotColour();
+                Vdu.AcornFont.setForegroundColour = TextForegroundPlotColour();
                 // vdu 4 plotting text at text co-ords
                 Graphics g = CreateGraphics();
                 // TODO list

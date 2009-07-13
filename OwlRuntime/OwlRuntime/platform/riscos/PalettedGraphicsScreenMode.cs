@@ -54,6 +54,16 @@ namespace OwlRuntime.platform.riscos
             blueGraphicsForegroundColour = palette.LogicalToBlue(logicalColour, tint);
         }
 
+        protected override Color TextForegroundPlotColour()
+        {
+            return blueTextForegroundColour;
+        }
+
+        protected override Color TextBackgroundPlotColour()
+        {
+            return blueTextBackgroundColour;
+        }
+        
         /// <summary>
         /// creates the pen using the 'physical' colour which encodes the logical colour into its blue channel.
         /// </summary>

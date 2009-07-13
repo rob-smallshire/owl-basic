@@ -125,9 +125,6 @@ namespace OwlRuntime.platform.riscos
             get { return 1 << bitsPerPixel; }
         }
 
-        // TODO: Is this used?
-        // TODO: answer yes for knowing information about the ECF patterns and if 8 or less then paletted mode
-        // in a 1bpp mode then ecf is 8 pixels wide but if in 4bpp then ECF is 2 pixels wide
         public byte BitsPerPixel
         {
             get { return bitsPerPixel; }
