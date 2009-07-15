@@ -416,8 +416,8 @@ namespace OwlRuntime.platform.riscos
         public void Enqueue(short s)
         {
             // TODO: Check order!
-            Enqueue((byte) (s & 0xFF)); // lo byte
-            Enqueue((byte) (s >> 8));   // hi byte
+            Enqueue((byte) (s & 0xFF)); // hi byte
+            Enqueue((byte) (s >> 8));   // lo byte
         }
 
         public void Enqueue(params short[] ss)
@@ -653,12 +653,14 @@ namespace OwlRuntime.platform.riscos
 
         private void SplitCursors()
         {
-            throw new NotImplementedException();
+            plotTextAtGraphics = false;
+            //throw new NotImplementedException();
         }
 
         private void JoinCursors()
         {
-            throw new NotImplementedException();
+            plotTextAtGraphics = true;
+            //throw new NotImplementedException();
         }
 
         private void EnableConsoleStream()
@@ -768,8 +770,8 @@ namespace OwlRuntime.platform.riscos
                             SetExtendedColourFillOrigin(xOrigin, yOrigin);
                             break;
                         case 7:
-                            short xSize = TwoBytesToShort(bytes[2], bytes[3]);
-                            short ySize = TwoBytesToShort(bytes[4], bytes[5]);
+                            short xSize = TwoBytesToShort(bytes[3], bytes[2]);
+                            short ySize = TwoBytesToShort(bytes[5], bytes[4]);
                             SetCharacterSizeSpacing(bytes[1], xSize, ySize);
                             break;
                     }
@@ -1396,6 +1398,7 @@ namespace OwlRuntime.platform.riscos
         {
             // PRM 1-585
             byte colour = DequeueByte();
+            // todo do we need to impliment 6 bit colour for old style palette
             byte logicalColour = (byte) (colour % ((1 << ScreenMode.BitsPerPixel) -1));
 
             if ((colour & 0x80) == 0)

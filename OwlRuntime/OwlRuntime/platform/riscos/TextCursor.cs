@@ -9,8 +9,8 @@ namespace OwlRuntime.platform.riscos
     {
         // private int positionX;
         // private int positionY;
-        private int movementX;
-        private int movementY;
+        private int standardMovementX;
+        private int standardMovementY;
         private int movementXEOL;
         private int movementYEOL;
         private int multiplier;
@@ -21,8 +21,8 @@ namespace OwlRuntime.platform.riscos
         {
             // default actions
             flags = 0;
-            movementX = 1;
-            movementY = 0;
+            standardMovementX = 1;
+            standardMovementY = 0;
             movementXEOL = 0;
             movementYEOL = 1;
             multiplier = 1;
@@ -31,12 +31,12 @@ namespace OwlRuntime.platform.riscos
 
         public int MovementX
         {
-            get { return movementX; }
+            get { return standardMovementX; }
         }
 
         public int MovementY
         {
-            get { return movementY; }
+            get { return standardMovementY; }
         }
 
         public int MovementXEOL
@@ -67,27 +67,27 @@ namespace OwlRuntime.platform.riscos
                 multiplier = ((flags & 32) != 0) ? 0 : 1;
 
                 //decode text direction (normal without CRLF or EOL)
-                int standardMovementX = 0;
-                int standardMovementY = 0;
+                standardMovementX = 0;
+                standardMovementY = 0;
                 standardMovementX = ((flags & 2) == 0) ? multiplier : 0 - multiplier;
 
                 //decode text direction (CRLF or EOL)
-                int EOLmovementX = 0;
-                int EOLmovementY = 0;
-                EOLmovementY = ((flags & 4) == 0) ? multiplier : 0 - multiplier;
+                movementXEOL = 0;
+                movementYEOL = 0;
+                movementYEOL = ((flags & 4) == 0) ? multiplier : 0 - multiplier;
 
                 //if Bit 3 then transpose horiz / vert 
                 if ((flags & 8) != 0)
                 {
                     // transpose standard movement
-                    int temp = standardMovementX;
+                    int temp = standardMovementY;
                     standardMovementY = standardMovementX;
                     standardMovementX = temp;
 
                     //transpose EOL movement
-                    temp = EOLmovementX;
-                    EOLmovementY = EOLmovementX;
-                    EOLmovementX = temp;
+                    temp = movementYEOL;
+                    movementYEOL = movementXEOL;
+                    movementXEOL = temp;
 
                 }
 

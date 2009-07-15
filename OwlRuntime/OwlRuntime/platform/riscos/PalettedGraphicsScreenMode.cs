@@ -63,7 +63,18 @@ namespace OwlRuntime.platform.riscos
         {
             return blueTextBackgroundColour;
         }
-        
+
+        protected override Color GraphicsForegroundPlotColour()
+        {
+            return blueGraphicsForegroundColour;
+        }
+
+        protected override Color GraphicsBackgroundPlotColour()
+        {
+            return blueGraphicsBackgroundColour;
+        }
+
+
         /// <summary>
         /// creates the pen using the 'physical' colour which encodes the logical colour into its blue channel.
         /// </summary>

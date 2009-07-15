@@ -267,6 +267,8 @@ namespace OwlRuntime.platform.riscos
             tempBitmap.UnlockBits(asciiBitmapData);
             acornAscii[index] = tempBitmap;
         }
+        
+        // may override this with a method for scaling the output and see if the interpolation problem can be fixed by scaling the 1bpp image
 
         public Bitmap getBitmap(int index)
         {

@@ -398,6 +398,15 @@ namespace OwlRuntime.platform.riscos
         protected abstract Color TextBackgroundPlotColour();
 
         // override in TrueGraphicsScreenMode
+        // override in PalettedGraphicsScreenMode
+
+        protected abstract Color GraphicsForegroundPlotColour();
+
+        // override in TrueGraphicsScreenMode
+        // override in PalettedGraphicsScreenMode
+        protected abstract Color GraphicsBackgroundPlotColour();
+
+        // override in TrueGraphicsScreenMode
         // override in PalettedGraphicsScreenMode which sets the pen to blue index colour
         /// <summary>
         /// Create a brush for painting solid shapes using the current logical
@@ -464,54 +473,55 @@ namespace OwlRuntime.platform.riscos
         {
             // plot a char on the screen at either the graphics or the text cursor and then move the cursor
 
-            //Vdu.AcornFont.
+            Graphics g = CreateGraphics();
             
-            // add printing a char here
+            // text size in graphics units (needed because of translation matrix on graphics viewport)
+            int charWidth = (UnitsWidth / PixelWidth); // TODO need to take vdu 23,17,7 into account inside if
+            int charHeight = (UnitsHeight / PixelHeight);
+
             if (Vdu.PlotTextAtGraphics)
             {
-
-                // TODO set transparent can be set at vdu 4/5
-
-                
+                charWidth *= Vdu.GraphicsCharSizeX;
+                charHeight *= Vdu.GraphicsCharSizeY;
                 // vdu 5 plotting text at graphics co-ords
+                // scale using text char size (if graphics mode)
+                Vdu.AcornFont.setTransparentBackground = true;
+                Vdu.AcornFont.setForegroundColour = TextForegroundPlotColour();
 
+                int xpos = Vdu.GraphicsCursorIX; // need to add the code for the scaling here
+                int ypos = (Vdu.GraphicsCursorIY) - charHeight;
+                // question. does moving the graphics cursor only move the top item on the co-ords
+                // queue or does it shift the items after each char.
 
+                // TODO due to drawing on the blue channel of an image we have introduced colour artifacts with scaled text
+                // scaling the images are screwing things up....... ARGH
+                // tried changing the graphics interpolation with no succes
+                g.InterpolationMode = InterpolationMode.NearestNeighbor; // NearestNeighbor also scales the left and bottom incorrectly
+                g.DrawImage(Vdu.AcornFont.getBitmap(code), xpos, ypos, charWidth, charHeight);
 
-
+                // move cursor (inc text spacing size
             }
             else
             {
-                // TODO get the correct text colours
+                charWidth *= 8;
+                charHeight *= 8;
+                // vdu 4 plotting text at text co-ords
                 Vdu.AcornFont.setTransparentBackground = false;
                 Vdu.AcornFont.setBackgroundColour = TextBackgroundPlotColour();
                 Vdu.AcornFont.setForegroundColour = TextForegroundPlotColour();
-                // vdu 4 plotting text at text co-ords
-                Graphics g = CreateGraphics();
-                // TODO list
-                // plot at correct position
-                // scale using text char size (if graphics mode)
-                // move cursor (inc text spacing size if graphics mode
-
-                // text size in graphics units (needed because of translation matrix on graphics viewport)
-                
-                
-
-                int charWidth = (UnitsWidth / TextWidth);
-                int charHeight = (UnitsHeight / TextHeight);
 
                 int xpos = Vdu.TextCursorX * charWidth; // need to add the code for the scaling here
-                int ypos = (UnitsHeight - (Vdu.TextCursorY * charHeight))- charHeight;
+                int ypos = (UnitsHeight - (Vdu.TextCursorY * charHeight)) - charHeight;
 
                 g.DrawImage(Vdu.AcornFont.getBitmap(code), xpos, ypos, charWidth, charHeight) ;
-                g.Dispose();
 
                 // add values to cursor
-                Vdu.TextCursorX += TextCursor.MovementX;
-                Vdu.TextCursorY += TextCursor.MovementY;
-            
+
+                Vdu.TextCursorX += this.TextCursor.MovementX;
+                Vdu.TextCursorY += this.TextCursor.MovementY;
             }
 
-
+            g.Dispose();
 
 
             // check if new line needed and EOLaction variable

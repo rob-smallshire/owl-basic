@@ -132,6 +132,8 @@ namespace OwlRuntime.platform.riscos
             vdu.Enqueue((byte)74);
             vdu.Enqueue((byte)169);
             Console.WriteLine("End");
+            vdu.Enqueue((byte)23, (byte)17, (byte)5); // swap text foreground and background colours
+            vduflush(); // flush the vdu queue with 0's
             vdu.Enqueue((byte)31, (byte) 10, (byte) 10); // move text cursor to 10,10
             vdu.Enqueue((byte)132); // plot the risc os x FOR WINDOWS
             vdu.Enqueue((byte)8); // plot backspace (non destructive)
@@ -147,12 +149,56 @@ namespace OwlRuntime.platform.riscos
             vdu.Enqueue((byte)11); // cursor up
             vdu.Enqueue((byte)11); 
             vdu.Enqueue((byte)139);
-            
-            
-            Console.WriteLine("End");
+
+            move(100, 100);   // MOVE
+
+            vdu.Enqueue((byte)5); // plot at graphics cursor
+
+            vdu.Enqueue((byte)23);// reprogram char (c) symbol
+            vdu.Enqueue((byte)169);
+            vdu.Enqueue((byte)129);
+            vdu.Enqueue((byte)66);
+            vdu.Enqueue((byte)36);
+            vdu.Enqueue((byte)24);
+            vdu.Enqueue((byte)24);
+            vdu.Enqueue((byte)60);
+            vdu.Enqueue((byte)126);
+            vdu.Enqueue((byte)255);
+            vdu.Enqueue((byte)169); // should be reprogrammed (c) to look like X with bottom triabgle filled in
+            // todo test 23,17,7
+            move(200, 400);   // MOVE
+            vdu.Enqueue((byte)23, (byte)17, (byte)7, (byte)6);
+            vdu.Enqueue((short)128, (short)128);
+            vduflush(); // flush the vdu queue with 0's
+            vdu.Enqueue((byte)169); // should be reporgrammed (c) to look like X
+            vdu.Enqueue((byte)4); // plor at text cursor 
+            vdu.Enqueue((byte)169); // should be reporgrammed (c) to look like X in the top right corner of the arrows
 
         }
 
+        [Test]
+        public void TestTextDirection()
+        {
+            vdu.Enqueue((byte)22, (byte)28); // Change to mode 28
+
+            vdu.Enqueue((byte)31, (byte)20, (byte)20); // move text cursor
+            vdu.Enqueue((byte)23, (byte)16, (byte)12, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
+            vdu.Enqueue(" test up");
+            vdu.Enqueue((byte)31, (byte)30, (byte)30); // move text cursor
+            vdu.Enqueue((byte)23, (byte)16, (byte)14, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
+            vdu.Enqueue(" test up");
+
+            //vdu.Enqueue((byte)31, (byte)20, (byte)20); // move text cursor
+            //vdu.Enqueue((byte)23, (byte)16, (byte)8, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
+            //vdu.Enqueue(" test down");
+            //vdu.Enqueue((byte)31, (byte)20, (byte)20); // move text cursor
+            //vdu.Enqueue((byte)23, (byte)16, (byte)2, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
+            //vdu.Enqueue(" test left");
+            //vdu.Enqueue((byte)31, (byte)20, (byte)20); // move text cursor
+            //vdu.Enqueue((byte)23, (byte)16, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
+            //vdu.Enqueue(" test right");
+            Console.WriteLine("End");
+        }
 
         [Test]
         public void TestPalette()
