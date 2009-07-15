@@ -171,9 +171,9 @@ namespace OwlRuntime.platform.riscos
             vdu.Enqueue((short)128, (short)128);
             vduflush(); // flush the vdu queue with 0's
             vdu.Enqueue((byte)169); // should be reporgrammed (c) to look like X
-            vdu.Enqueue((byte)4); // plor at text cursor 
+            vdu.Enqueue((byte)4); // plot at text cursor 
             vdu.Enqueue((byte)169); // should be reporgrammed (c) to look like X in the top right corner of the arrows
-
+            Console.WriteLine("End");
         }
 
         [Test]
@@ -183,20 +183,51 @@ namespace OwlRuntime.platform.riscos
 
             vdu.Enqueue((byte)31, (byte)20, (byte)20); // move text cursor
             vdu.Enqueue((byte)23, (byte)16, (byte)12, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
-            vdu.Enqueue(" test up");
-            vdu.Enqueue((byte)31, (byte)30, (byte)30); // move text cursor
+            vdu.Enqueue("*test up");
+            vdu.Enqueue((byte)10);
+            vdu.Enqueue("move right");
+            
+            vdu.Enqueue((byte)31, (byte)40, (byte)40); // move text cursor
             vdu.Enqueue((byte)23, (byte)16, (byte)14, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
-            vdu.Enqueue(" test up");
+            vdu.Enqueue("*test up");
+            vdu.Enqueue((byte)10);
+            vdu.Enqueue("move left");
 
-            //vdu.Enqueue((byte)31, (byte)20, (byte)20); // move text cursor
-            //vdu.Enqueue((byte)23, (byte)16, (byte)8, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
-            //vdu.Enqueue(" test down");
-            //vdu.Enqueue((byte)31, (byte)20, (byte)20); // move text cursor
-            //vdu.Enqueue((byte)23, (byte)16, (byte)2, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
-            //vdu.Enqueue(" test left");
-            //vdu.Enqueue((byte)31, (byte)20, (byte)20); // move text cursor
-            //vdu.Enqueue((byte)23, (byte)16, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
-            //vdu.Enqueue(" test right");
+            vdu.Enqueue((byte)31, (byte)20, (byte)20); // move text cursor
+            vdu.Enqueue((byte)23, (byte)16, (byte)8, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
+            vdu.Enqueue("*test down");
+            vdu.Enqueue((byte)10);
+            vdu.Enqueue("move right");
+            
+            vdu.Enqueue((byte)31, (byte)40, (byte)40); // move text cursor
+            vdu.Enqueue((byte)23, (byte)16, (byte)10, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
+            vdu.Enqueue("*test down");
+            vdu.Enqueue((byte)10);
+            vdu.Enqueue("move left");
+
+            vdu.Enqueue((byte)31, (byte)20, (byte)20); // move text cursor
+            vdu.Enqueue((byte)23, (byte)16, (byte)2, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
+            vdu.Enqueue("*test left");
+            vdu.Enqueue((byte)10);
+            vdu.Enqueue("move down");
+            
+            vdu.Enqueue((byte)31, (byte)40, (byte)40); // move text cursor
+            vdu.Enqueue((byte)23, (byte)16, (byte)6, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
+            vdu.Enqueue("*test left");
+            vdu.Enqueue((byte)10);
+            vdu.Enqueue("move up");
+
+            vdu.Enqueue((byte)31, (byte)20, (byte)20); // move text cursor
+            vdu.Enqueue((byte)23, (byte)16, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
+            vdu.Enqueue("*test right");
+            vdu.Enqueue((byte)10);
+            vdu.Enqueue("move down");
+            vdu.Enqueue((byte)31, (byte)40, (byte)40); // move text cursor
+            vdu.Enqueue((byte)23, (byte)16, (byte)4, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
+            vdu.Enqueue("*test right");
+            vdu.Enqueue((byte)10);
+            vdu.Enqueue("move up");
+            
             Console.WriteLine("End");
         }
 

@@ -289,6 +289,33 @@ namespace OwlRuntime.platform.riscos
             return cloneBitmap;
         }
 
+        public Bitmap getBitmap(int index, int width, int height)
+        {
+            // TODO this is not working and need to work out why!!
+            Bitmap tempBitmap = acornAscii[index];
+
+            Bitmap cloneBitmap = new Bitmap(width, height, PixelFormat.Format1bppIndexed);
+
+            
+
+            // add the palette to the char
+            ColorPalette asciipal = cloneBitmap.Palette;
+            asciipal.Entries[0] = this.backgroundColour;
+            asciipal.Entries[1] = this.foregroundColour;
+            cloneBitmap.Palette = asciipal;
+
+            if (transparentBackground == true)
+            {
+                //cloneBitmap.MakeTransparent(this.backgroundColour);
+            }
+
+            Graphics g = Graphics.FromImage(cloneBitmap);
+            g.DrawImage(tempBitmap, 0, 0, width, height);
+            g.Dispose();
+
+            return cloneBitmap;
+        }
+
         public Boolean setTransparentBackground
         {
             set { transparentBackground = value; }

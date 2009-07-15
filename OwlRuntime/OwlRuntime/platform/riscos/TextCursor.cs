@@ -58,26 +58,28 @@ namespace OwlRuntime.platform.riscos
         {
             get { return flags; }
             set {
-                // unsure if i should impliment how the
-                // BBC basic manual says this is implimented or how the PRM's do
                 flags = value;
 
                 // prm v3-1-594
                 //if bit 5 Set then dont move cursor
                 multiplier = ((flags & 32) != 0) ? 0 : 1;
 
+                int transpose = ((flags & 8) >> 3);
+                int xbit = 1 << (1 + transpose);
+                int ybit = 1 << (2 - transpose);
+
                 //decode text direction (normal without CRLF or EOL)
                 standardMovementX = 0;
                 standardMovementY = 0;
-                standardMovementX = ((flags & 2) == 0) ? multiplier : 0 - multiplier;
+                standardMovementX = ((flags & xbit) == 0) ? multiplier : 0 - multiplier;
 
                 //decode text direction (CRLF or EOL)
                 movementXEOL = 0;
                 movementYEOL = 0;
-                movementYEOL = ((flags & 4) == 0) ? multiplier : 0 - multiplier;
+                movementYEOL = ((flags & ybit) == 0) ? multiplier : 0 - multiplier; // not sure if multiplier is needed here or a static 1
 
                 //if Bit 3 then transpose horiz / vert 
-                if ((flags & 8) != 0)
+                if (transpose == 1)
                 {
                     // transpose standard movement
                     int temp = standardMovementY;

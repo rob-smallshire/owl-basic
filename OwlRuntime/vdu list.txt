@@ -1,0 +1,54 @@
+vdu	done	params	desc book-page
+0	y	0	Does nothing 1-568
+1		1	Sends next character to printer only 1-569
+2		0	Enables printer 1-570
+3		0	Disables printer 1-571
+4	y	0	Writes text at text cursor 1-572
+5	y	0	Writes text at graphics cursor 1-573
+6		0	Enables VDU driver 1-574
+7	y	0	Generates bell sound 1-575
+8	y	0	Moves cursor back one character 1-576
+9	y	0	Moves cursor on one space 1-577
+10	y	0	Moves cursor down one line 1-578
+11	y	0	Moves cursor up one line 1-579
+12		0	Clears text window 1-580
+13		0	Moves cursor to start of current line 1-581
+14		0	Turns on paged mode 1-582
+15		0	Turns off paged mode 1-583
+16		0	Clears graphics window 1-584
+17	y	1	Defines text colour 1-585
+18	y	2	Defines graphics colour 1-586
+19		5	Defines logical colour 1-588
+20		0	Restores default logical colours 1-592
+21		0	Disables VDU drivers 1-593
+22	y	1	Selects screen mode 1-594
+23,0		9	Sets the interlace and controls cursor appearance 1-600
+23,1		9	Controls text cursor appearance 1-601
+23,2-5		9	Defines ECF pattern and colours 1-602
+23,6		9	Sets dot-dash line style 1-603
+23,7		9	Scrolls text window or screen 1-604
+23,8		9	Clears a block of the text window 1-606
+23,9		9	Sets first flash time 1-608
+23,10		9	Sets second flash time 1-609
+23,11		9	Sets default patterns 1-610
+23,12-15		9	Defines simple ECF patterns and colours 1-612
+23,16	y	9	Controls cursor movement after printing 1-614
+23,17,0-3	y	9	Sets the tint for a colour 1-616
+23,17,4		9	Chooses ECF patterns 1-617
+23,17,5	y	9	Exchanges text foreground and background colours 1-618
+23,17,6		9	Sets ECF origin 1-619
+23,17,7	???	9	Sets character size/spacing 1-620
+23,18-24		9	Reserved for future expansion 1-621
+23,25-26		9	Private Font Manager calls 1-622
+23,27		9	Private Sprite Manager calls 1-623
+23,28-31		9	Reserved for use by application programs 1-624
+23,32-255y	9	Redefines printable characters 1-625
+24		8	Defines graphics window 1-627
+25	y	5	PLOT command 1-628
+26		0	Restores default windows 1-631
+27	y	0	Does nothing 1-632
+28		4	Defines text window 1-633
+29		4	Defines graphics origin 1-634
+30		0	Homes text cursor 1-635
+31		2	Moves text cursor 1-636
+127		0	Delete 1-637
