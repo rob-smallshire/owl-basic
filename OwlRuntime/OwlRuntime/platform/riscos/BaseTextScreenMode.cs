@@ -9,7 +9,17 @@ namespace OwlRuntime.platform.riscos
     {
         protected BaseTextScreenMode(VduSystem vdu, int textWidth, int textHeight, byte bitsPerPixel) :
             base(vdu, textWidth, textHeight, 1280, 1024, bitsPerPixel)
-        {  
+        {
+            Console.SetWindowSize(TextWidth, TextHeight);
+            Console.SetBufferSize(TextWidth, TextHeight);
+        }
+
+        public override void PrintChar(char c)
+        {
+            Console.SetCursorPosition(Vdu.TextCursorX, Vdu.TextCursorY);
+            Console.Write(c);
+            Vdu.TextCursorX += TextCursor.MovementX;
+            Vdu.TextCursorY += TextCursor.MovementY;
         }
     }
 }

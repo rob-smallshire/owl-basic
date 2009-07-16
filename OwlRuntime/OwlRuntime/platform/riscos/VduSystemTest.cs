@@ -108,7 +108,7 @@ namespace OwlRuntime.platform.riscos
         [Test]
         public void TestText()
         {
-            vdu.Enqueue((byte)22, (byte)28); // Change to mode 28
+            vdu.Enqueue((byte)22, (byte)3); // Change to mode 28
 
             // TODO need to draw a rectangle to calibrate the text plotting position
             move(100, 100);   // MOVE
@@ -179,7 +179,7 @@ namespace OwlRuntime.platform.riscos
         [Test]
         public void TestTextDirection()
         {
-            vdu.Enqueue((byte)22, (byte)28); // Change to mode 28
+            vdu.Enqueue((byte)22, (byte)3); // Change to mode 28
 
             vdu.Enqueue((byte)31, (byte)20, (byte)20); // move text cursor
             vdu.Enqueue((byte)23, (byte)16, (byte)12, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);

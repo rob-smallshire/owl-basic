@@ -30,30 +30,20 @@ namespace OwlRuntime.platform.riscos
 
             bitmap = new Bitmap(SquarePixelWidth, SquarePixelHeight, pixelFormat);
             // define the default text window to be full screen
-            // TODO may need this in base class
-            vdu.TextWindowTopRow = 0;
-            vdu.TextWindowBottomRow = textHeight - 1;
-            vdu.TextWindowLeftCol = 0;
-            vdu.TextWindowRightCol = textWidth - 1;
 
+            // TODO: Make this a method in VduSystem
             // define the Graphics char size
             vdu.GraphicsCharSizeX = pixelWidth / textWidth;
             vdu.GraphicsCharSizeY = pixelHeight / textHeight;
             vdu.GraphicsCharSpaceX = pixelWidth / textWidth;
             vdu.GraphicsCharSpaceY = pixelHeight / textHeight;
 
+            // TODO: Make this a method in VduSystem
             // define the Text char size
             vdu.TextCharSizeX = pixelWidth / textWidth;
             vdu.TextCharSizeY = pixelHeight / textHeight;
             vdu.TextCharSpaceX = pixelWidth / textWidth;
             vdu.TextCharSpaceY = pixelHeight / textHeight;
-
-            // set the default cursor pos
-            vdu.TextCursorX = 0;
-            vdu.TextCursorY = 0;
-
-
-
 
             vduForm = new VduForm(this);
             vduForm.BackColor = Color.Black;
@@ -469,7 +459,7 @@ namespace OwlRuntime.platform.riscos
 
 
 
-        public override void PrintChar(byte code)
+        public override void PrintChar(char c)
         {
             // plot a char on the screen at either the graphics or the text cursor and then move the cursor
 
@@ -485,8 +475,8 @@ namespace OwlRuntime.platform.riscos
                 charHeight *= Vdu.GraphicsCharSizeY;
                 // vdu 5 plotting text at graphics co-ords
                 // scale using text char size (if graphics mode)
-                Vdu.AcornFont.setTransparentBackground = true;
-                Vdu.AcornFont.setForegroundColour = TextForegroundPlotColour();
+                Vdu.AcornFont.TransparentBackground = true;
+                Vdu.AcornFont.ForegroundColour = TextForegroundPlotColour();
 
                 int xpos = Vdu.GraphicsCursorIX; // need to add the code for the scaling here
                 int ypos = (Vdu.GraphicsCursorIY) - charHeight;
@@ -497,7 +487,7 @@ namespace OwlRuntime.platform.riscos
                 // scaling the images are screwing things up....... ARGH
                 // tried changing the graphics interpolation with no succes
                 g.InterpolationMode = InterpolationMode.NearestNeighbor; // NearestNeighbor also scales the left and bottom incorrectly
-                g.DrawImage(Vdu.AcornFont.getBitmap(code), xpos, ypos, charWidth, charHeight);
+                g.DrawImage(Vdu.AcornFont.GetBitmap(c), xpos, ypos, charWidth, charHeight);
 
                 // move cursor (inc text spacing size
             }
@@ -506,19 +496,19 @@ namespace OwlRuntime.platform.riscos
                 charWidth *= 8;
                 charHeight *= 8;
                 // vdu 4 plotting text at text co-ords
-                Vdu.AcornFont.setTransparentBackground = false;
-                Vdu.AcornFont.setBackgroundColour = TextBackgroundPlotColour();
-                Vdu.AcornFont.setForegroundColour = TextForegroundPlotColour();
+                Vdu.AcornFont.TransparentBackground = false;
+                Vdu.AcornFont.BackgroundColour = TextBackgroundPlotColour();
+                Vdu.AcornFont.ForegroundColour = TextForegroundPlotColour();
 
                 int xpos = Vdu.TextCursorX * charWidth; // need to add the code for the scaling here
                 int ypos = (UnitsHeight - (Vdu.TextCursorY * charHeight)) - charHeight;
 
-                g.DrawImage(Vdu.AcornFont.getBitmap(code), xpos, ypos, charWidth, charHeight) ;
+                g.DrawImage(Vdu.AcornFont.GetBitmap(c), xpos, ypos, charWidth, charHeight) ;
 
                 // add values to cursor
 
-                Vdu.TextCursorX += this.TextCursor.MovementX;
-                Vdu.TextCursorY += this.TextCursor.MovementY;
+                Vdu.TextCursorX += TextCursor.MovementX;
+                Vdu.TextCursorY += TextCursor.MovementY;
             }
 
             g.Dispose();

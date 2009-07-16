@@ -473,7 +473,9 @@ namespace OwlRuntime.platform.riscos
 
         private void DisplayCharacter(byte code)
         {
-            screenMode.PrintChar(code);
+            // TODO: Should look at encoding to be used here maybe...
+            char c = Convert.ToChar(code);
+            screenMode.PrintChar(c);
         }
 
         private void Control(byte code)
@@ -517,7 +519,7 @@ namespace OwlRuntime.platform.riscos
                     VerticalTab();
                     break;
                 case 12:
-                    ClearConsole();
+                    ClearTextWindow();
                     break;
                 case 13:
                     CarriageReturn();
@@ -646,6 +648,38 @@ namespace OwlRuntime.platform.riscos
             ExpectVduCommand();
         }
 
+        /// <summary>
+        /// Reset the text window to the default for the supplied mode.
+        /// </summary>
+        /// <param name="mode">
+        /// A screen mode from which to take the default text window size.
+        /// </param>
+        public void ResetTextWindow(AbstractScreenMode mode)
+        {
+            // The mode parameter is required since the screenMode data member
+            // may not be initialized at the time of the call to this method
+            graphicsWindowLeftCol = 0;
+            graphicsWindowBottomRow = mode.TextHeight - 1;
+            graphicsWindowRightCol = mode.TextWidth - 1;
+            graphicsWindowTopRow = 0;
+        }
+
+        public void ResetGraphicsWindow(AbstractScreenMode mode)
+        {
+            // The mode parameter is required since the screenMode data member
+            // may not be initialized at the time of the call to this method
+            // TODO: Reset the graphics window
+        }
+
+        /// <summary>
+        /// Set the default text cursor position
+        /// </summary>
+        public void ResetTextCursor()
+        {
+            TextCursorX = 0;
+            TextCursorY = 0;    
+        }
+
         private void DisablePrinterStream()
         {
             throw new NotImplementedException();
@@ -692,7 +726,7 @@ namespace OwlRuntime.platform.riscos
             textCursorY -= screenMode.TextCursor.MovementYEOL;
         }
 
-        private void ClearConsole()
+        private void ClearTextWindow()
         {
             throw new NotImplementedException();
         }
@@ -803,7 +837,7 @@ namespace OwlRuntime.platform.riscos
                     if (miscCmd > 31)
                     {
                         // needs testing
-                        acornFont.define(miscCmd, bytes);
+                        acornFont.Define(miscCmd, bytes);
                     }
                     else
                     {
@@ -1056,8 +1090,7 @@ namespace OwlRuntime.platform.riscos
             // May need to impliment windows and scrolling first.
             
             // also risc os 2 and 3 prm's say two params
-            byte flags;
-            flags = screenMode.TextCursor.Flags;
+            byte flags = screenMode.TextCursor.Flags;
             screenMode.TextCursor.Flags = (byte)((flags & y) ^ x);
 
         }
@@ -1381,7 +1414,7 @@ namespace OwlRuntime.platform.riscos
             throw new NotImplementedException();
         }
 
-        private void Bell()
+        private static void Bell()
         {
             // PRM 1-552 console.beep may not be good enough
             // the tone can be altered

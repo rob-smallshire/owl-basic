@@ -305,6 +305,23 @@ def convertSubroutinesToProcedures(parse_tree, epv, options):
     
         #print epv.entry_points
 
+def correlateLoops(epv, options):
+    logging.debug("correlateLoops")
+    if options.verbose:
+        sys.stderr.write("Convert subroutines to procedures")
+    
+    for entry_point in epv.entry_points:
+        # Depth first search from this entry point through the CFG
+        # maintaining a stack of loops as we go. Mark nodes that we
+        visited = set()
+        
+        cv = correlation_visitor.CorrelationVisitor()
+        entry_point.accept(cv)
+        
+        
+         
+    
+
 def buildSymbolTables(epv, options):
     logging.debug("buildSymbolTables")    
     if options.use_symbol_tables:
@@ -450,7 +467,7 @@ def compile(filename, options):
     epv = locateEntryPoints(parse_tree, line_mapper, options)
     convertLongjumpsToExceptions(parse_tree, line_mapper, options)
     convertSubroutinesToProcedures(parse_tree, epv, options)
-    #correlateRepeatUntil
+    correlateLoops(epv, options)
     buildSymbolTables(epv, options)
     dumpXmlCfg(parse_tree, filename + "_cfg.graphml", options)
 

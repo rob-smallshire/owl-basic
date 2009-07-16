@@ -92,6 +92,9 @@ namespace OwlRuntime.platform.riscos
             this.unitsHeight = unitsHeight;
             this.bitsPerPixel = bitsPerPixel;
             this.textCursor = new TextCursor();
+            vdu.ResetTextWindow(this);
+            vdu.ResetGraphicsWindow(this);
+            vdu.ResetTextCursor();
         }
 
         internal TextCursor TextCursor
@@ -350,8 +353,6 @@ namespace OwlRuntime.platform.riscos
             // Do nothing
         }
 
-        public virtual void PrintChar(byte code)
-        {
-        }
+        public abstract void PrintChar(char c);
     }
 }
