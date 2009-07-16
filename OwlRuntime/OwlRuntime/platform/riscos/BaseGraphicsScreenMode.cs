@@ -458,18 +458,19 @@ namespace OwlRuntime.platform.riscos
         public abstract void PaintBitmap(Graphics graphics);
 
 
-
-        public override void PrintChar(char c)
+        /// <summary>
+        /// Plot a character on the screen at the graphics cursor
+        /// </summary>
+        /// <param name="c">The character to plot</param>
+        public override void PrintCharAtGraphics(char c)
         {
             // plot a char on the screen at either the graphics or the text cursor and then move the cursor
 
-            Graphics g = CreateGraphics();
-            
             // text size in graphics units (needed because of translation matrix on graphics viewport)
             int charWidth = (UnitsWidth / PixelWidth); // TODO need to take vdu 23,17,7 into account inside if
             int charHeight = (UnitsHeight / PixelHeight);
 
-            if (Vdu.PlotTextAtGraphics)
+            using (Graphics g = CreateGraphics())
             {
                 charWidth *= Vdu.GraphicsCharSizeX;
                 charHeight *= Vdu.GraphicsCharSizeY;
@@ -489,9 +490,23 @@ namespace OwlRuntime.platform.riscos
                 g.InterpolationMode = InterpolationMode.NearestNeighbor; // NearestNeighbor also scales the left and bottom incorrectly
                 g.DrawImage(Vdu.AcornFont.GetBitmap(c), xpos, ypos, charWidth, charHeight);
 
-                // move cursor (inc text spacing size
+                // TODO: move cursor (inc text spacing size
             }
-            else
+            // check if new line needed and EOLaction variable
+            vduForm.Refresh();
+        }
+
+        /// <summary>
+        /// Plot a character on the screen at the text cursor
+        /// </summary>
+        /// <param name="c">The character to plot</param>
+        public override void PrintCharAtText(char c)
+        {
+            // text size in graphics units (needed because of translation matrix on graphics viewport)
+            int charWidth = (UnitsWidth / PixelWidth); // TODO need to take vdu 23,17,7 into account inside if
+            int charHeight = (UnitsHeight / PixelHeight);
+            
+            using (Graphics g = CreateGraphics())
             {
                 charWidth *= 8;
                 charHeight *= 8;
@@ -503,20 +518,14 @@ namespace OwlRuntime.platform.riscos
                 int xpos = Vdu.TextCursorX * charWidth; // need to add the code for the scaling here
                 int ypos = (UnitsHeight - (Vdu.TextCursorY * charHeight)) - charHeight;
 
-                g.DrawImage(Vdu.AcornFont.GetBitmap(c), xpos, ypos, charWidth, charHeight) ;
+                g.DrawImage(Vdu.AcornFont.GetBitmap(c), xpos, ypos, charWidth, charHeight);
 
                 // add values to cursor
 
                 Vdu.TextCursorX += TextCursor.MovementX;
-                Vdu.TextCursorY += TextCursor.MovementY;
+                Vdu.TextCursorY += TextCursor.MovementY;        
             }
-
-            g.Dispose();
-
-
             // check if new line needed and EOLaction variable
-
-
             vduForm.Refresh();
         }
     }

@@ -353,6 +353,7 @@ namespace OwlRuntime.platform.riscos
             // Do nothing
         }
 
-        public abstract void PrintChar(char c);
+        public abstract void PrintCharAtGraphics(char c);
+        public abstract void PrintCharAtText(char c);
     }
 }

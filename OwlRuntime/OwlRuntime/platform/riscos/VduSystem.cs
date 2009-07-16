@@ -475,7 +475,14 @@ namespace OwlRuntime.platform.riscos
         {
             // TODO: Should look at encoding to be used here maybe...
             char c = Convert.ToChar(code);
-            screenMode.PrintChar(c);
+            if (PlotTextAtGraphics)
+            {
+                screenMode.PrintCharAtGraphics(c);
+            }
+            else
+            {
+                screenMode.PrintCharAtText(c);    
+            }
         }
 
         private void Control(byte code)

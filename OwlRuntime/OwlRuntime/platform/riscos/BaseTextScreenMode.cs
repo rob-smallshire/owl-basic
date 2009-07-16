@@ -14,7 +14,11 @@ namespace OwlRuntime.platform.riscos
             Console.SetBufferSize(TextWidth, TextHeight);
         }
 
-        public override void PrintChar(char c)
+        public override void PrintCharAtGraphics(char c)
+        {
+        }
+
+        public override void PrintCharAtText(char c)
         {
             Console.SetCursorPosition(Vdu.TextCursorX, Vdu.TextCursorY);
             Console.Write(c);
