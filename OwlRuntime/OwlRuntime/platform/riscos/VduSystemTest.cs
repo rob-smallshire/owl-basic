@@ -108,7 +108,7 @@ namespace OwlRuntime.platform.riscos
         [Test]
         public void TestText()
         {
-            vdu.Enqueue((byte)22, (byte)3); // Change to mode 28
+            vdu.Enqueue((byte)22, (byte)28); // Change to mode 28
 
             // TODO need to draw a rectangle to calibrate the text plotting position
             move(100, 100);   // MOVE
@@ -179,54 +179,57 @@ namespace OwlRuntime.platform.riscos
         [Test]
         public void TestTextDirection()
         {
-            vdu.Enqueue((byte)22, (byte)3); // Change to mode 28
+            vdu.Enqueue((byte)22, (byte)28); // Change to mode 3
 
-            vdu.Enqueue((byte)31, (byte)20, (byte)20); // move text cursor
-            vdu.Enqueue((byte)23, (byte)16, (byte)12, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
-            vdu.Enqueue("*test up");
-            vdu.Enqueue((byte)10);
-            vdu.Enqueue("move right");
-            
-            vdu.Enqueue((byte)31, (byte)40, (byte)40); // move text cursor
-            vdu.Enqueue((byte)23, (byte)16, (byte)14, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
-            vdu.Enqueue("*test up");
-            vdu.Enqueue((byte)10);
-            vdu.Enqueue("move left");
+            vdu.Enqueue((byte)28); // define text window
+            vdu.Enqueue((short)10, (short)25);
+            vdu.Enqueue((short)40, (short)5);
 
-            vdu.Enqueue((byte)31, (byte)20, (byte)20); // move text cursor
-            vdu.Enqueue((byte)23, (byte)16, (byte)8, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
-            vdu.Enqueue("*test down");
+            vdu.Enqueue((byte)23, (byte)16, (byte)12, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)30);
+            vdu.Enqueue("*up");
             vdu.Enqueue((byte)10);
-            vdu.Enqueue("move right");
-            
-            vdu.Enqueue((byte)31, (byte)40, (byte)40); // move text cursor
-            vdu.Enqueue((byte)23, (byte)16, (byte)10, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
-            vdu.Enqueue("*test down");
-            vdu.Enqueue((byte)10);
-            vdu.Enqueue("move left");
+            vdu.Enqueue("right");
 
-            vdu.Enqueue((byte)31, (byte)20, (byte)20); // move text cursor
-            vdu.Enqueue((byte)23, (byte)16, (byte)2, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
-            vdu.Enqueue("*test left");
-            vdu.Enqueue((byte)10);
-            vdu.Enqueue("move down");
-            
-            vdu.Enqueue((byte)31, (byte)40, (byte)40); // move text cursor
-            vdu.Enqueue((byte)23, (byte)16, (byte)6, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
-            vdu.Enqueue("*test left");
-            vdu.Enqueue((byte)10);
-            vdu.Enqueue("move up");
 
-            vdu.Enqueue((byte)31, (byte)20, (byte)20); // move text cursor
-            vdu.Enqueue((byte)23, (byte)16, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
-            vdu.Enqueue("*test right");
+            vdu.Enqueue((byte)23, (byte)16, (byte)14, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)30);
+            vdu.Enqueue("*up");
             vdu.Enqueue((byte)10);
-            vdu.Enqueue("move down");
-            vdu.Enqueue((byte)31, (byte)40, (byte)40); // move text cursor
-            vdu.Enqueue((byte)23, (byte)16, (byte)4, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
-            vdu.Enqueue("*test right");
+            vdu.Enqueue("left");
+
+
+            vdu.Enqueue((byte)23, (byte)16, (byte)8, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)30);
+            vdu.Enqueue("*down");
             vdu.Enqueue((byte)10);
-            vdu.Enqueue("move up");
+            vdu.Enqueue("right");
+
+
+            vdu.Enqueue((byte)23, (byte)16, (byte)10, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)30);
+            vdu.Enqueue("*down");
+            vdu.Enqueue((byte)10);
+            vdu.Enqueue("left");
+
+
+            vdu.Enqueue((byte)23, (byte)16, (byte)2, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)30);
+            vdu.Enqueue("*left");
+            vdu.Enqueue((byte)10);
+            vdu.Enqueue("down");
+
+
+            vdu.Enqueue((byte)23, (byte)16, (byte)6, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)30);
+            vdu.Enqueue("*left");
+            vdu.Enqueue((byte)10);
+            vdu.Enqueue("up");
+
+
+            vdu.Enqueue((byte)23, (byte)16, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)30);
+            vdu.Enqueue("*right");
+            vdu.Enqueue((byte)10);
+            vdu.Enqueue("down");
+
+            vdu.Enqueue((byte)23, (byte)16, (byte)4, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)30);
+            vdu.Enqueue("*right");
+            vdu.Enqueue((byte)10);
+            vdu.Enqueue("up");
             
             Console.WriteLine("End");
         }

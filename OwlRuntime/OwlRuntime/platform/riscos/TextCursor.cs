@@ -9,6 +9,7 @@ namespace OwlRuntime.platform.riscos
     {
         // private int positionX;
         // private int positionY;
+
         private int standardMovementX;
         private int standardMovementY;
         private int movementXEOL;
@@ -16,6 +17,7 @@ namespace OwlRuntime.platform.riscos
         private int multiplier;
         private byte flags;
         private Boolean graphicsActionEOL;
+        private Boolean transposed;
 
         public TextCursor()
         {
@@ -26,7 +28,13 @@ namespace OwlRuntime.platform.riscos
             movementXEOL = 0;
             movementYEOL = 1;
             multiplier = 1;
+            transposed = false;
 
+        }
+
+        public Boolean Transposed
+        {
+            get { return transposed; }
         }
 
         public int MovementX
@@ -65,6 +73,7 @@ namespace OwlRuntime.platform.riscos
                 multiplier = ((flags & 32) != 0) ? 0 : 1;
 
                 int transpose = ((flags & 8) >> 3);
+                transposed = (transpose == 1);
                 int xbit = 1 << (1 + transpose);
                 int ybit = 1 << (2 - transpose);
 
@@ -76,7 +85,7 @@ namespace OwlRuntime.platform.riscos
                 //decode text direction (CRLF or EOL)
                 movementXEOL = 0;
                 movementYEOL = 0;
-                movementYEOL = ((flags & ybit) == 0) ? multiplier : 0 - multiplier; // not sure if multiplier is needed here or a static 1
+                movementYEOL = ((flags & ybit) == 0) ? multiplier : 0 - multiplier; //TODO: not sure if multiplier is needed here or a static 1
 
                 //if Bit 3 then transpose horiz / vert 
                 if (transpose == 1)

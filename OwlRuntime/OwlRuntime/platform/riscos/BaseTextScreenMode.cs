@@ -20,8 +20,18 @@ namespace OwlRuntime.platform.riscos
 
         public override void PrintCharAtText(char c)
         {
-            Console.SetCursorPosition(Vdu.TextCursorX, Vdu.TextCursorY);
-            Console.Write(c);
+            // TODO temp code.. until scrolling implimented
+            // make sure co-ords are within screen area and not the bottom left hand corner to stop scrolling screen
+            if (((Vdu.TextCursorX < TextWidth) && 
+               (Vdu.TextCursorX > -1) &&
+               (Vdu.TextCursorY < TextHeight) &&
+               (Vdu.TextCursorY > -1)) &&
+               !((Vdu.TextCursorX == (TextWidth-1)) && (Vdu.TextCursorY == (TextHeight - 1))))
+            {
+                // todo : we need a special case for printing a char in the bottom left hand corner of the window. Unsure how to acheive this.
+                Console.SetCursorPosition(Vdu.TextCursorX, Vdu.TextCursorY);
+                Console.Write(c);
+            }
             Vdu.TextCursorX += TextCursor.MovementX;
             Vdu.TextCursorY += TextCursor.MovementY;
         }

@@ -94,7 +94,7 @@ namespace OwlRuntime.platform.riscos
             this.textCursor = new TextCursor();
             vdu.ResetTextWindow(this);
             vdu.ResetGraphicsWindow(this);
-            vdu.ResetTextCursor();
+            vdu.ResetTextCursor(this);
         }
 
         internal TextCursor TextCursor

@@ -590,7 +590,7 @@ namespace OwlRuntime.platform.riscos
                     nextCommand = DoSetOrigin;
                     break;
                 case 30:
-                    CursorHome();
+                    ResetTextCursor(screenMode);
                     break;
                 case 31:
                     requiredBytes = 2;
@@ -608,10 +608,7 @@ namespace OwlRuntime.platform.riscos
             ExpectVduCommand();
         }
 
-        private void CursorHome()
-        {
-            throw new NotImplementedException();
-        }
+
 
         private void DoSetOrigin()
         {
@@ -648,10 +645,12 @@ namespace OwlRuntime.platform.riscos
 
         private void DoDefineTextWindow()
         {
-            graphicsWindowLeftCol = DequeueShort();
-            graphicsWindowBottomRow = DequeueShort();
-            graphicsWindowRightCol = DequeueShort();
-            graphicsWindowTopRow = DequeueShort();
+            
+            textWindowLeftCol = DequeueShort();
+            textWindowBottomRow = DequeueShort();
+            textWindowRightCol = DequeueShort();
+            textWindowTopRow = DequeueShort();
+            // todo move text cursor??
             ExpectVduCommand();
         }
 
@@ -665,10 +664,10 @@ namespace OwlRuntime.platform.riscos
         {
             // The mode parameter is required since the screenMode data member
             // may not be initialized at the time of the call to this method
-            graphicsWindowLeftCol = 0;
-            graphicsWindowBottomRow = mode.TextHeight - 1;
-            graphicsWindowRightCol = mode.TextWidth - 1;
-            graphicsWindowTopRow = 0;
+            textWindowLeftCol = 0;
+            textWindowBottomRow = mode.TextHeight - 1;
+            textWindowRightCol = mode.TextWidth - 1;
+            textWindowTopRow = 0;
         }
 
         public void ResetGraphicsWindow(AbstractScreenMode mode)
@@ -676,15 +675,36 @@ namespace OwlRuntime.platform.riscos
             // The mode parameter is required since the screenMode data member
             // may not be initialized at the time of the call to this method
             // TODO: Reset the graphics window
+            graphicsWindowLeftCol = 0;
+            graphicsWindowBottomRow = mode.UnitsHeight - 1;
+            graphicsWindowRightCol = mode.UnitsWidth - 1;
+            graphicsWindowTopRow = 0;
         }
 
         /// <summary>
         /// Set the default text cursor position
         /// </summary>
-        public void ResetTextCursor()
+        public void ResetTextCursor(AbstractScreenMode mode)
         {
-            TextCursorX = 0;
-            TextCursorY = 0;    
+            // TODO not allways 0,0
+            // this needs some thinking about
+            // if cursor x direction = left then more right + vise versa
+            // if cursor x direction = top then bottow + vise versa
+            // if cursor y direction = down then top + vise versa
+            // if cursor y direction = left then right + vise versa
+            // and all of them inside the currect text window
+            
+            int y = (mode.TextCursor.Transposed) ? 
+                (mode.TextCursor.MovementY > 0) ? 1 : 0
+                :
+                (mode.TextCursor.MovementYEOL > 0) ? 1 : 0;
+            int x = (mode.TextCursor.Transposed) ? 
+                (mode.TextCursor.MovementXEOL > 0) ? 1 : 0
+                :
+                (mode.TextCursor.MovementX > 0) ? 1 : 0;     
+
+            TextCursorX = (mode.TextWidth - 1) - (x * (mode.TextWidth - 1));
+            TextCursorY = (mode.TextHeight - 1) - (y * (mode.TextHeight - 1));
         }
 
         private void DisablePrinterStream()
@@ -735,6 +755,8 @@ namespace OwlRuntime.platform.riscos
 
         private void ClearTextWindow()
         {
+            //prm pdf1-580
+            // can also clear the current graphics window in in vdu5 mode
             throw new NotImplementedException();
         }
 
