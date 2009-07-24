@@ -16,6 +16,7 @@ namespace IanDebugApp
             //tst.TestPaletteWheel();
             //tst.TestText();
             tst.TestTextDirection();
+            tst.TestTextDirectionOverlap();
         }
     }
 }

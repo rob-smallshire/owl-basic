@@ -173,13 +173,30 @@ namespace OwlRuntime.platform.riscos
         public int TextCursorX
         {
             get { return textCursorX; }
-            set { textCursorX = value; }
+            set
+            {
+                if ((value >= TextWindowLeftCol) && (value <= TextWindowRightCol))
+                {
+                    textCursorX = value;
+                } else {
+                    textCursorX = CursorDefaultX();
+                    textCursorY += screenMode.TextCursor.MovementYEOL;   
+                }    
+            }
         }
 
         public int TextCursorY
         {
             get { return textCursorY; }
-            set { textCursorY = value; }
+            set {
+                if ((value >= TextWindowTopRow) && (value <= TextWindowBottomRow))
+                {
+                    textCursorY = value;
+                } else {
+                    textCursorY = CursorDefaultY();
+                    textCursorX += screenMode.TextCursor.MovementXEOL;   
+                }
+            }
         }
         
         public int TextWindowLeftCol
@@ -603,8 +620,16 @@ namespace OwlRuntime.platform.riscos
 
         private void DoSetCursorPos()
         {
-            textCursorX = DequeueByte();
-            textCursorY = DequeueByte();
+            if (screenMode.TextCursor.Transposed)
+            {
+                textCursorY = CursorDefaultY() + (screenMode.TextCursor.DirectionX * DequeueByte());
+                textCursorX = CursorDefaultX() + (screenMode.TextCursor.DirectionY * DequeueByte());
+            }
+            else
+            {
+                textCursorX = CursorDefaultX() + (screenMode.TextCursor.DirectionX * DequeueByte());
+                textCursorY = CursorDefaultY() + (screenMode.TextCursor.DirectionY * DequeueByte());
+            }
             ExpectVduCommand();
         }
 
@@ -651,6 +676,8 @@ namespace OwlRuntime.platform.riscos
             textWindowRightCol = DequeueShort();
             textWindowTopRow = DequeueShort();
             // todo move text cursor??
+            textCursorX = CursorDefaultX();
+            textCursorY = CursorDefaultY();
             ExpectVduCommand();
         }
 
@@ -694,6 +721,7 @@ namespace OwlRuntime.platform.riscos
             // if cursor y direction = left then right + vise versa
             // and all of them inside the currect text window
             
+            //needs mode passed to this due to the mode may not be initialised completely yet.
             int y = (mode.TextCursor.Transposed) ? 
                 (mode.TextCursor.MovementY > 0) ? 1 : 0
                 :
@@ -701,12 +729,35 @@ namespace OwlRuntime.platform.riscos
             int x = (mode.TextCursor.Transposed) ? 
                 (mode.TextCursor.MovementXEOL > 0) ? 1 : 0
                 :
-                (mode.TextCursor.MovementX > 0) ? 1 : 0;     
+                (mode.TextCursor.MovementX > 0) ? 1 : 0;
 
-            TextCursorX = (mode.TextWidth - 1) - (x * (mode.TextWidth - 1));
-            TextCursorY = (mode.TextHeight - 1) - (y * (mode.TextHeight - 1));
+            int windWidth = textWindowRightCol - textWindowLeftCol;
+            int windHeight = textWindowBottomRow - textWindowTopRow;
+
+            TextCursorX = (textWindowRightCol) - (x * (windWidth));
+            TextCursorY = (textWindowBottomRow) - (y * (windHeight));
         }
 
+        private int CursorDefaultX()
+        {
+
+            int x = (screenMode.TextCursor.Transposed) ?
+                (screenMode.TextCursor.MovementXEOL > 0) ? 1 : 0
+                :
+                (screenMode.TextCursor.MovementX > 0) ? 1 : 0;
+            int windWidth = textWindowRightCol - textWindowLeftCol;
+            return (textWindowRightCol) - (x * (windWidth));
+        }
+
+        private int CursorDefaultY()
+        {
+            int y = (screenMode.TextCursor.Transposed) ?
+                (screenMode.TextCursor.MovementY > 0) ? 1 : 0
+                :
+                (screenMode.TextCursor.MovementYEOL > 0) ? 1 : 0;
+            int windHeight = textWindowBottomRow - textWindowTopRow;
+            return (textWindowBottomRow) - (y * (windHeight));
+        }
         private void DisablePrinterStream()
         {
             throw new NotImplementedException();
