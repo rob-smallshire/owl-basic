@@ -37,6 +37,7 @@ import longjump_visitor
 import symbol_table_visitor
 import convert_sub_visitor
 from symbol_tables import SymbolTable
+import correlation_visitor
 
 from Detoken import Decode
 
@@ -314,14 +315,9 @@ def correlateLoops(epv, options):
         # Depth first search from this entry point through the CFG
         # maintaining a stack of loops as we go. Mark nodes that we
         visited = set()
-        
         cv = correlation_visitor.CorrelationVisitor()
-        entry_point.accept(cv)
+        cv.start(entry_point)
         
-        
-         
-    
-
 def buildSymbolTables(epv, options):
     logging.debug("buildSymbolTables")    
     if options.use_symbol_tables:
