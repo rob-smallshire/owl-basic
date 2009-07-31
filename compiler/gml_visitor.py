@@ -9,7 +9,7 @@ class GmlVisitor(Visitor):
     We traverse the AST rather than the CFG to output the graph. We can more reliably
     visit all nodes, since we know the AST is a single connected component.
     """
-    def __init__(self, filename, out_edges=True, in_edges=False):
+    def __init__(self, filename, out_edges=True, in_edges=False, back_edges=True):
         # .NET Framework
         import clr
         clr.AddReference('System.Xml')
@@ -17,6 +17,7 @@ class GmlVisitor(Visitor):
         
         self.out_edges = out_edges
         self.in_edges  = in_edges
+        self.back_edges = back_edges
         
         self.writer = XmlTextWriter(filename, None)
         
@@ -116,6 +117,22 @@ class GmlVisitor(Visitor):
                 self.writer.WriteStartElement("edge")
                 self.writer.WriteAttributeString("source", str(source.id))
                 self.writer.WriteAttributeString("target", str(node.id))
+                self.writer.WriteStartElement("data")
+                self.writer.WriteAttributeString("key", "d3")
+                self.writer.WriteStartElement("y:PolyLineEdge")
+                self.writer.WriteStartElement("y:Arrows")
+                self.writer.WriteAttributeString("source", "none")
+                self.writer.WriteAttributeString("target", "standard")
+                self.writer.WriteEndElement() # y:Arrows
+                self.writer.WriteEndElement() # y:PolyLineEdge
+                self.writer.WriteEndElement() # data
+                self.writer.WriteEndElement() # edge
+        
+        if self.back_edges:
+             for target in node.backEdges:
+                self.writer.WriteStartElement("edge")
+                self.writer.WriteAttributeString("source", str(node.id))
+                self.writer.WriteAttributeString("target", str(target.id))
                 self.writer.WriteStartElement("data")
                 self.writer.WriteAttributeString("key", "d3")
                 self.writer.WriteStartElement("y:PolyLineEdge")
