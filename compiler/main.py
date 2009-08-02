@@ -483,17 +483,20 @@ def compile(filename, options):
     
     
     # Structural analysis
-    #correlateForNext(parse_tree)
-    #correlateRepeatUntil(parse_tree)
-    #correlateWhileEndwhile(parse_tree)
+
     #splitBasicBlock(parse_tree)
-    #extractData(parse_tree)
+
     # Type checking and casting
-    #determineTypes(parse_tree)
-    #typeCheck(parse_tree)
+    # Have we finished type-checking?
+    
+
     
     # Optimisation
-    #foldConstants(parse_tree)
+    # constant folding
+    # constant propagation
+    # eliminate locals
+    # static single assignment form
+    
     #elimiateCommonSubexpressions(parse_tree    opti
 
 def printProfile():
