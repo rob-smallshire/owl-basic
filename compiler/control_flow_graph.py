@@ -14,7 +14,7 @@ class ControlFlowGraph(object):
     
     def __init__(self):
         self.vertices = [] # Graph 'nodes' containing AST statements
-        self.edges = []    # Adjacing list - contains (from, to) tuples for directed edges
+        self.edges = []    # Adjacency list - contains (from, to) tuples for directed edges
     
     def insert(self, statement):
         """

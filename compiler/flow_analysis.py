@@ -15,6 +15,7 @@ def tagSuccessors(entry_point):
     """
     tag = None
     if isinstance(entry_point, bbc_ast.DefineProcedure):
+        # TODO: There is a bug here, whereby SUBXYZ can get relabelled PROCSUBXYZ
         tag = "PROC" + entry_point.name
     elif isinstance(entry_point, bbc_ast.DefineFunction):
         tag = "FN" + entry_point.name

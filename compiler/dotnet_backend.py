@@ -1,6 +1,7 @@
 import bbc_types
 from visitor import Visitor
 from singleton import Singleton
+from bbc_ast import *
 
 import clr
 clr.AddReference("System")
@@ -31,8 +32,9 @@ def ctsBasicType(t):
         
 def ctsType(symbol):
     """
-    A mapping from BASIC types to .NET types
+    A mapping from BASIC symbol types to .NET types
     """
+    # TODO: Rename to ctsSymbolType
     t = symbol.type
     if t.isA(bbc_types.ArrayType):
         element_type = t._getElementType()
@@ -136,39 +138,45 @@ def generateStaticDataInitialization(data_visitor, type_builder):
         
     generator.Emit(OpCodes.Ldloc_1)                   # Load the dictionary onto the stack
     generator.Emit(OpCodes.Stsfld, data_line_number_map_field)  # Store it in the static field
+
+def methodParameters(statement):
+    '''
+    Convert the formalParameters property of the supplied
+    DefinitionStatement into an Array[Type]
+    '''
+    print "methodParameters for ", statement.name
+    # TODO: Reference and out parameters not dealt with here!
+    assert isinstance(statement, DefinitionStatement)
+    print statement.formalParameters
+    types = ()
+    if statement.formalParameters is not None:
+        formal_parameters = statement.formalParameters.arguments
+        types = [ctsBasicType(param.argument.actualType) for param in formal_parameters]
+    return Array[Type](types)
          
 def generateMethod(type_builder, entry_point):
     """
     Generate the code for a single method starting a the entry_point node in the CFG
     """
     assert(len(entry_point.entryPoints) == 1)
-    basic_name = iter(entry_point.entryPoints).next() # The name used in OWL BASIC. eg. PROCfoo or FNbar
+    #basic_name = iter(entry_point.entryPoints).next() # The name used in OWL BASIC. eg. PROCfoo or FNbar
      # For now we keep the same.  Later we may want to use more .NET-ish names
                              # But we need to avoid collisions between FNfoo and PROCfoo
                              
     method_attributes = MethodAttributes.Static
     method_return_type = None
-
-    if basic_name.startswith('PROC'):
-        method_name = basic_name
+    #print "basic_name = ", basic_name
+    # TODO: Look at using a visitor here
+    if isinstance(entry_point, DefinitionStatement):
+        method_name = entry_point.name
         method_attributes |= MethodAttributes.Public
-        method_return_type = System.Void
-        method_parameters = Array[Type](()) # TODO
-        
-    elif basic_name.startswith('FN'):
-        method_name = basic_name
-        method_attributes |= MethodAttributes.Public
-        method_return_type = clr.GetClrType(System.Int32) # TODO just default to int for now
-        method_parameters = Array[Type](()) # TODO
-        
-    elif basic_name.startswith('SUB'):
-        method_name = basic_name
-        method_attributes |= MethodAttributes.Private
-        method_return_type = System.Void
-        method_parameters = Array[Type](())
-        
+        method_parameters = methodParameters(entry_point)
+        if isinstance (entry_point, DefineProcedure):
+            method_return_type = System.Void
+        elif isinstance (entry_point, DefineProcedure):
+            method_return_type = clr.GetClrType(System.Int32) # TODO just default to int for now        
     else:
-        assert basic_name.startswith('MAIN')
+        assert iter(entry_point.entryPoints).next().startswith('MAIN')
         method_name = 'Main'
         method_attributes |= MethodAttributes.Public
         method_return_type = clr.GetClrType(System.Int32)
