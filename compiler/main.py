@@ -8,6 +8,7 @@ logging.debug("main.py")
 
 # Python Standard Library
 import sys
+import os   
 import re
 import atexit
 import StringIO
@@ -38,6 +39,7 @@ import symbol_table_visitor
 import convert_sub_visitor
 from symbol_tables import SymbolTable
 import correlation_visitor
+import dotnet_backend
 
 from Detoken import Decode
 
@@ -48,8 +50,7 @@ def tokenize(data, lexer):
     # Tokenize
     while 1:
         tok = lexer.token()
-        if not tok: break      # No more input
-        print tok
+        if not tok: break      # No more input        
 
 def readFile(filename):
     logging.debug("readFile")
@@ -64,7 +65,6 @@ def detokenize(data, options):
     if options.verbose:
         sys.stderr.write("Detokenizing...")
     
-    #print "len(data) = ", len(data)
     detokenized = StringIO.StringIO()
     options.line_numbers = Decode(data, detokenized)
     if options.verbose:
@@ -86,7 +86,6 @@ def indexLineNumbers(detokenHandle, options):
         line_bodies = []
         while True:
             line = detokenHandle.readline()
-            #print line   # ians debug line
             if not line:
                 break
             physical_line += 1
@@ -97,7 +96,6 @@ def indexLineNumbers(detokenHandle, options):
             logical_line = int(m.group(1))
             physical_to_logical_map.append(logical_line)
             line_bodies.append(m.group(2))
-            #print physical_to_logical_map
         
         data = '\n'.join(line_bodies)
     else:
@@ -181,7 +179,6 @@ def createLineMapper(parse_tree, physical_to_logical_map):
     logging.debug("createLineMapper")
     lnv = line_number_visitor.LineNumberVisitor()
     parse_tree.accept(lnv)
-    #print lnv.line_to_stmt
     line_mapper = LineMapper(physical_to_logical_map, lnv.line_to_stmt)
     return line_mapper
 
@@ -201,7 +198,6 @@ def dumpXmlAst(parse_tree, output_filename, options):
         if options.verbose:
             sys.stderr.write("Creating XML AST... ")
         
-        #print "Creating %s" % output_filename
         xmlAst(parse_tree, output_filename)
         if options.verbose:
             sys.stderr.write("done\n")
@@ -223,7 +219,6 @@ def locateEntryPoints(parse_tree, line_mapper, options):
         epv = entry_point_visitor.EntryPointVisitor(line_mapper)
         parse_tree.accept(epv)
         first_statement = line_mapper.firstStatement()
-        #print "first_statement = %s" % first_statement
         epv.mainEntryPoint(first_statement)
         if options.verbose:
             sys.stderr.write("done\n")
@@ -250,7 +245,6 @@ def locateEntryPoints(parse_tree, line_mapper, options):
             flow_analysis.tagSuccessors(entry_point)
         if options.verbose:
             sys.stderr.write("done\n")
-        #print epv.entry_points
         return epv
     return None
 
@@ -281,7 +275,6 @@ def convertSubroutinesToProcedures(parse_tree, epv, options):
         entry_points_to_remove = []
         entry_points_to_add = []
         for entry_point in epv.entry_points:
-            #print "entry_point = %s at %s" % (entry_point, entry_point.lineNum)
             # TODO: This will only work with simple (i.e. single entry) subroutines
             subname = iter(entry_point.entryPoints).next()
             if subname.startswith('SUB'):
@@ -304,7 +297,6 @@ def convertSubroutinesToProcedures(parse_tree, epv, options):
         if options.verbose:
             sys.stderr.write("done\n")
     
-        #print epv.entry_points
 
 def correlateLoops(epv, options):
     logging.debug("correlateLoops")
@@ -329,12 +321,9 @@ def buildSymbolTables(epv, options):
         
         # Set the global symbol table for the main program entry point
         # TODO: This assumes the program doesn't start with e.g. a DEF PROC
-        print "epv.entry_points[0] = %s" % epv.entry_points[0]
-        print stv.globalSymbols
         epv.entry_points[0].symbolTable = stv.globalSymbols
         
         for entry_point in epv.entry_points:
-            #print "entry_point = %s" % entry_point
             entry_point.accept(stv)
         if options.verbose:
             sys.stderr.write("done\n")
@@ -357,6 +346,8 @@ def buildSymbolTables(epv, options):
                 print "%-10s %-10s %s" % (symbol, table.symbols[symbol].type.__doc__, table.symbols[symbol].modifier)
             print "-" * width
             print
+        return stv
+    return None
 
 def extractData(parse_tree, options):
     """
@@ -367,9 +358,7 @@ def extractData(parse_tree, options):
     logging.debug("extracting DATA")
     dv = data_visitor.DataVisitor()
     parse_tree.accept(dv)
-    print dv.data
-    print dv.index
-    # TODO: Do something with these...
+    return dv   
     
 def dumpXmlCfg(parse_tree, filename, options):
     logging.debug("dumpXmlCfg")   
@@ -389,6 +378,21 @@ def xmlCfg(tree, filename):
     gmlv = gml_visitor.GmlVisitor(filename)
     tree.accept(gmlv)
     gmlv.close()
+
+def generateAssembly():
+    """
+    Generate code for the main program, and for each procedure or function
+    """
+    # Generate an assembly
+    # add DATA (somehow)
+    # Generate a namespace
+    # Generate a static class
+    # Create global variables as members
+    # For each entry point
+    #  - create a method
+    # Mark the entry point to the assembly 
+    pass
+    
 
 class Usage(Exception):
     def __init__(self, msg):
@@ -421,7 +425,6 @@ def main(argv=None):
         (options, args) = parser.parse_args()
         if len(args) != 1:
             parser.error("No source file name supplied")
-        #print args
         compile(args[0], options)
     except Usage, err:
         parser.err(err.msg)
@@ -458,27 +461,20 @@ def compile(filename, options):
     line_mapper = createLineMapper(parse_tree, physical_to_logical_map)
     typecheck(parse_tree, options)
     dumpXmlAst(parse_tree, filename + "_ast.xml", options)
-    extractData(parse_tree, options)
+    dv = extractData(parse_tree, options)
     flowGraph(parse_tree, line_mapper, options)    
     epv = locateEntryPoints(parse_tree, line_mapper, options)
     convertLongjumpsToExceptions(parse_tree, line_mapper, options)
     convertSubroutinesToProcedures(parse_tree, epv, options)
     correlateLoops(epv, options)
-    buildSymbolTables(epv, options)
+    stv = buildSymbolTables(epv, options)
     dumpXmlCfg(parse_tree, filename + "_cfg.graphml", options)
 
+    output_name = os.path.splitext(os.path.basename(filename))[0]
+    if options.use_clr:
+        dotnet_backend.generateAssembly(output_name, stv.globalSymbols, dv, epv) 
     
-    # TODO: Inline single-entry GOSUB
-    #
-    # Trace back from RETURN statements - if only one
-    # GOSUB is reached - move the code in the GOSUB to the call site
-    # of the GOSUB. 
     
-    # Locate nodes with no inbound edges and trace unreachable code
-    # from them. Remove unreachable code from the CFG and the AST. This
-    # will need to be traced from program and procedure entry points
-        
-    # TODO: Replace Goto -> ReturnFromProcedure with ReturnFromProcedure
     
     
     
@@ -489,14 +485,21 @@ def compile(filename, options):
     # Type checking and casting
     # Have we finished type-checking?
     
-
-    
-    # Optimisation
+    # == Optimisation ==
     # constant folding
     # constant propagation
     # eliminate locals
     # static single assignment form
-    
+    # TODO: Inline single-entry GOSUB
+    #
+    # Trace back from RETURN statements - if only one
+    # GOSUB is reached - move the code in the GOSUB to the call site
+    # of the GOSUB
+    # Locate nodes with no inbound edges and trace unreachable code
+    # from them. Remove unreachable code from the CFG and the AST. This
+    # will need to be traced from program and procedure entry points
+        
+    # TODO: Replace Goto -> ReturnFromProcedure with ReturnFromProcedure
     #elimiateCommonSubexpressions(parse_tree    opti
 
 def printProfile():

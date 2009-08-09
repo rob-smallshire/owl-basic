@@ -5,7 +5,7 @@ import errors
 
 class EntryPointVisitor(Visitor):
     """
-    This enumerates all of the entry-points in the supplies ast
+    This enumerates all of the entry-points in the supplied AST
     """
     
     def __init__(self, line_mapper):

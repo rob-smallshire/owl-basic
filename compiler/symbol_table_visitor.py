@@ -62,7 +62,7 @@ class SymbolTableVisitor(Visitor):
         Attaches the same symbol table as the predecessor statement to this
         statement Depth first search visit of successors statements
         """
-        logging.debug("SymbolTableVisitor.visitAstStatement %s at %s", statement, statement.lineNum)
+        #logging.debug("SymbolTableVisitor.visitAstStatement %s at %s", statement, statement.lineNum)
         statement.symbolTable = self.checkPredecessorsAndRefer(statement)
         assert statement.symbolTable is not None
         # TODO: Check that all other variable references within this statement can
@@ -75,7 +75,7 @@ class SymbolTableVisitor(Visitor):
         parameters of the procedure or function, which also refers to the global symbol
         table.
         """
-        logging.debug("SymbolTableVisitor.visitDefinitionStatement")
+        #logging.debug("SymbolTableVisitor.visitDefinitionStatement")
         if defproc.symbolTable is None:
             symbol_table = None
             if defproc.formalParameters is None or len(defproc.formalParameters.arguments) == 0:
@@ -100,7 +100,7 @@ class SymbolTableVisitor(Visitor):
         self.followSuccessors(defproc)
                     
     def visitLocal(self, local):
-        logging.debug("SymbolTableVisitor.visitLocal")
+        #logging.debug("SymbolTableVisitor.visitLocal")
         # TODO: We should have a warning if LOCAL and PRIVATE are not the first
         #       statements in a definition
         # TODO: REFACTOR This is almost identical to visitPrivate
@@ -121,7 +121,7 @@ class SymbolTableVisitor(Visitor):
         self.followSuccessors(local)
     
     def visitPrivate(self, private):
-        logging.debug("SymbolTableVisitor.visitPrivate")
+        #logging.debug("SymbolTableVisitor.visitPrivate")
         # TODO: We should have a warning if LOCAL and PRIVATE are not the first
         #       statements in a definition
         # TODO: REFACTOR This is almost identical to visitLocal
@@ -142,35 +142,36 @@ class SymbolTableVisitor(Visitor):
         self.followSuccessors(private)
     
     def visitAssignment(self, statement):
-        logging.debug("SymbolTableVisitor.visitAssignment")
+        #logging.debug("SymbolTableVisitor.visitAssignment")
         statement.symbolTable = self.checkPredecessorsAndRefer(statement)       
         assert statement.symbolTable is not None
         self.tryAddVariable(statement.symbolTable, statement.lValue)
         self.followSuccessors(statement)
         
     def visitAllocateArray(self, statement):
-        logging.debug("SymbolTableVisitor.allocateArray")
+        #logging.debug("SymbolTableVisitor.allocateArray")
         statement.symbolTable = self.checkPredecessorsAndRefer(statement)    
-        symbol_info = SymbolInfo(statement.identifier, sigil.identifierToType(statement.identifier))
+        symbol_info = SymbolInfo(statement.identifier, sigil.identifierToType(statement.identifier),
+                                 rank=len(statement.dimensions))
         symbol_table.tryAdd(symbol_info)
         self.followSuccessors(statement)
         
     def visitAllocateBlock(self, statement):
-        logging.debug("SymbolTableVisitor.allocateBlock")
+        #logging.debug("SymbolTableVisitor.allocateBlock")
         statement.symbolTable = self.checkPredecessorsAndRefer(statement)    
         assert statement.symbolTable is not None
         symbol_info = SymbolInfo(statement.identifier, PtrType)
         self.followSuccessors(statement)
     
     def visitForToStep(self, statement):
-        logging.debug("SymbolTableVisitor.visitForToStep")
+        #logging.debug("SymbolTableVisitor.visitForToStep")
         statement.symbolTable = self.checkPredecessorsAndRefer(statement)    
         assert statement.symbolTable is not None
         self.tryAddVariable(statement.symbolTable, statement.identifier)
         self.followSuccessors(statement)
         
     def visitInput(self, statement):
-        logging.debug("SymbolTableVisitor.visitInput")
+        #logging.debug("SymbolTableVisitor.visitInput")
         statement.symbolTable = self.checkPredecessorsAndRefer(statement)       
         assert statement.symbolTable is not None
         for item in statement.inputList.items:
@@ -178,7 +179,7 @@ class SymbolTableVisitor(Visitor):
         self.followSuccessors(statement)
         
     def visitInputFile(self, input):
-        logging.debug("SymbolTableVisitor.visitInputFile")
+        #logging.debug("SymbolTableVisitor.visitInputFile")
         statement.symbolTable = self.checkPredecessorsAndRefer(statement)       
         assert statement.symbolTable is not None
         for item in statement.inputList.items:
@@ -186,7 +187,7 @@ class SymbolTableVisitor(Visitor):
         self.followSuccessors(input)
         
     def visitMouse(self, mouse):
-        logging.debug("SymbolTableVisitor.visitInput")
+        #logging.debug("SymbolTableVisitor.visitInput")
         statement.symbolTable = self.checkPredecessorsAndRefer(statement)
         assert statement.symbolTable is not None
         self.tryAddVariable(statement.symbolTable, statement.xCoord)
@@ -196,7 +197,7 @@ class SymbolTableVisitor(Visitor):
         self.followSuccessors(statement)
         
     def visitRead(self, statement):
-        logging.debug("SymbolTableVisitior.visitRead")
+        #logging.debug("SymbolTableVisitior.visitRead")
         statement.symbolTable = self.checkPredecessorsAndRefer(statement)
         assert statement.symbolTable is not None
         for writable in statement.writables.writables:

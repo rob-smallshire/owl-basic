@@ -1,14 +1,20 @@
 import sys
 
+error_log = set()
+
 def warning(message):
-    sys.stderr.write("Warning: ")
-    sys.stderr.write(message)
-    sys.stderr.write('\n')
+    if message not in error_log:
+        sys.stderr.write("Warning: ")
+        sys.stderr.write(message)
+        sys.stderr.write('\n')
+        error_log.add(message)
     
 def error(message):
-    sys.stderr.write("Error: ")
-    sys.stderr.write(message)
-    sys.stderr.write('\n')
+    if message not in error_log:
+        sys.stderr.write("Error: ")
+        sys.stderr.write(message)
+        sys.stderr.write('\n')
+        error_log.add(message)
 
 def fatalError(message):
     error(message)

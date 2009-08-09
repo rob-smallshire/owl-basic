@@ -1,7 +1,9 @@
+from visitor import Visitable
+
 # TODO: Need to be able to build type expressions
 # TODO: Need support for Constant Types
 
-class Type(object):
+class Type(Visitable):
     "Type"
     
     @classmethod
@@ -34,9 +36,10 @@ class ScalarType(Type):
     "Scalar"
     pass
 
-class ReferenceType(ScalarType):
+class ObjectType(ScalarType):
     "Reference"
     # OWL BASIC only - object reference
+    # TODO: Rename to ObjectType
     pass
 
 class NumericType(ScalarType):

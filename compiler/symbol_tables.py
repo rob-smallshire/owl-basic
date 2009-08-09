@@ -17,11 +17,12 @@ class SymbolInfo(object):
     """
     (modifier_static, modifier_system, modifier_global, modifier_arg, modifier_ref_arg, modifier_local, modifier_private) = range(7)
     
-    def __init__(self, name, type, modifier=None, table=None):
+    def __init__(self, name, type, modifier=None, table=None, rank=None):
         self.name     = name
         self.table    = table
         self.type     = type
         self.modifier = modifier
+        self.rank     = rank
     
 class SymbolTable(object):
     

@@ -12,7 +12,7 @@ def identifierToType(identifier):
     elif sigil == '&':
         return ByteType
     elif sigil == '~':
-        return ReferenceType
+        return ObjectType
     elif sigil == '(':
         sigil = identifier[-2:-1]
         if sigil == '$':
