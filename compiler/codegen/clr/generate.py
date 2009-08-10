@@ -1,45 +1,14 @@
-import bbc_types
-from visitor import Visitor
-from singleton import Singleton
-from bbc_ast import *
-
 import clr
-clr.AddReference("System")
 import System
-from System import Type, Array, String
 from System.Threading import Thread
 from System.Reflection import *
 from System.Reflection.Emit import *
 
+from visitor import Visitor
+from singleton import Singleton
 
-type_map = { bbc_types.VoidType    : 'System.Void',
-             bbc_types.IntegerType : 'System.Int32',
-             bbc_types.FloatType   : 'System.Double',
-             bbc_types.StringType  : 'System.String',
-             bbc_types.ByteType    : 'System.Byte',
-             bbc_types.ObjectType  : 'System.Object'
-            }
-
-# Some useful .NET types
-string_array_type = clr.GetClrType(System.String).MakeArrayType(1)
-generic_dictionary_type = clr.GetClrType(System.Collections.Generic.Dictionary)
-int_int_dictionary_type = generic_dictionary_type.MakeGenericType(
-                           Array[Type]((clr.GetClrType(System.Int32), clr.GetClrType(System.Int32))))
-
-
-def ctsBasicType(t):
-    return Type.GetType(type_map[t])
-        
-def ctsType(symbol):
-    """
-    A mapping from BASIC symbol types to .NET types
-    """
-    # TODO: Rename to ctsSymbolType
-    t = symbol.type
-    if t.isA(bbc_types.ArrayType):
-        element_type = t._getElementType()
-        ctsBasicType(element_type).MakeArrayType(symbol.rank)
-    return ctsBasicType(t)
+from cil_visitor import CilVisitor
+import cts
 
 def ctsIdentifier(symbol):
     """
@@ -77,7 +46,7 @@ def generateAssembly(name, global_symbols, data_visitor, entry_point_visitor):
     
     # Add global variables to the class
     for symbol in global_symbols.symbols.values():
-        field_builder = type_builder.DefineField(ctsIdentifier(symbol), ctsType(symbol),
+        field_builder = type_builder.DefineField(ctsIdentifier(symbol), cts.symbolType(symbol),
                                                  FieldAttributes.Private | FieldAttributes.Static)
     
     if len(data_visitor.data) > 0:
@@ -98,17 +67,17 @@ def generateStaticDataInitialization(data_visitor, type_builder):
     
     # TODO: Replace this with Dictionary<int, int>
     
-    data_field = type_builder.DefineField('data', string_array_type,
+    data_field = type_builder.DefineField('data', cts.string_array_type,
                                                   FieldAttributes.Private | FieldAttributes.Static)
-    data_line_number_map_field = type_builder.DefineField('dataLineNumbers', int_int_dictionary_type,
+    data_line_number_map_field = type_builder.DefineField('dataLineNumbers', cts.int_int_dictionary_type,
                                                   FieldAttributes.Private | FieldAttributes.Static)
     data_line_number_index_field = type_builder.DefineField('dataIndex', clr.GetClrType(System.Int32),
                                                             FieldAttributes.Private | FieldAttributes.Static)
     
     type_constructor_builder = type_builder.DefineTypeInitializer()
     generator = type_constructor_builder.GetILGenerator()
-    generator.DeclareLocal(string_array_type)
-    generator.DeclareLocal(int_int_dictionary_type)
+    generator.DeclareLocal(cts.string_array_type)
+    generator.DeclareLocal(cts.int_int_dictionary_type)
     
     # Initialise the data field
     generator.Emit(OpCodes.Ldc_I4, len(data_visitor.data)) # Load the array length onto the stack
@@ -124,11 +93,15 @@ def generateStaticDataInitialization(data_visitor, type_builder):
     
     # Initialise the data index field -
     # this needs to be initialized with a Dictionary
-    int_int_dictionary_ctor_info = int_int_dictionary_type.GetConstructor(Array[Type](())) # Get the default constructor
+    #generic_dictionary_type = clr.GetClrType(System.Collections.Generic.Dictionary)
+    #int_int_dictionary_type = generic_dictionary_type.MakeGenericType(
+    #                       System.Array[System.Type]((clr.GetClrType(System.Int32), clr.GetClrType(System.Int32))))
+
+    int_int_dictionary_ctor_info = cts.int_int_dictionary_type.GetConstructor(System.Type.EmptyTypes) # Get the default constructor
     generator.Emit(OpCodes.Newobj, int_int_dictionary_ctor_info)
     generator.Emit(OpCodes.Stloc_1) # Store array reference in local 1
     
-    add_method_info = int_int_dictionary_type.GetMethod('Add')
+    add_method_info = cts.int_int_dictionary_type.GetMethod('Add')
     
     for line_number, index in data_visitor.index.items():
         generator.Emit(OpCodes.Ldloc_1)               # Load the dictionary onto the stack
@@ -138,58 +111,14 @@ def generateStaticDataInitialization(data_visitor, type_builder):
         
     generator.Emit(OpCodes.Ldloc_1)                   # Load the dictionary onto the stack
     generator.Emit(OpCodes.Stsfld, data_line_number_map_field)  # Store it in the static field
-
-def methodParameters(statement):
-    '''
-    Convert the formalParameters property of the supplied
-    DefinitionStatement into an Array[Type]
-    '''
-    # TODO: Reference and out parameters not dealt with here!
-    assert isinstance(statement, DefinitionStatement)
-    print statement.formalParameters
-    types = ()
-    if statement.formalParameters is not None:
-        formal_parameters = statement.formalParameters.arguments
-        types = [ctsBasicType(param.argument.actualType) for param in formal_parameters]
-    return Array[Type](types)
          
-def generateMethod(type_builder, entry_point):
+def generateMethod(type_builder, entry_point_node):
     """
     Generate the code for a single method starting a the entry_point node in the CFG
     """
-    assert(len(entry_point.entryPoints) == 1)
-    #basic_name = iter(entry_point.entryPoints).next() # The name used in OWL BASIC. eg. PROCfoo or FNbar
-     # For now we keep the same.  Later we may want to use more .NET-ish names
-                             # But we need to avoid collisions between FNfoo and PROCfoo
-                             
-    method_attributes = MethodAttributes.Static
-    method_return_type = None
-    #print "basic_name = ", basic_name
-    # TODO: Look at using a visitor here
-    if isinstance(entry_point, DefinitionStatement):
-        method_name = entry_point.name
-        method_attributes |= MethodAttributes.Public
-        method_parameters = methodParameters(entry_point)
-        if isinstance (entry_point, DefineProcedure):
-            method_return_type = System.Void
-        elif isinstance (entry_point, DefineProcedure):
-            method_return_type = clr.GetClrType(System.Int32) # TODO just default to int for now        
-    else:
-        assert iter(entry_point.entryPoints).next().startswith('MAIN')
-        method_name = 'Main'
-        method_attributes |= MethodAttributes.Public
-        method_return_type = clr.GetClrType(System.Int32)
-        method_parameters = Array[Type]( (string_array_type,) )
-        
-    print "generating method_name = ", method_name    
-    method_builder = type_builder.DefineMethod(method_name, method_attributes, CallingConventions.Standard,
-                                               method_return_type, method_parameters ) 
-    
-    generator = method_builder.GetILGenerator()
-    generator.Emit(OpCodes.Nop)
-    
+
     # Traverse the CFG from the entry point, generating code as we co
-    #gcv = GenerateCilVisitor()
+    cv = CilVisitor(type_builder, entry_point_node)
     #entry_point.accept(gcv)
     
 

@@ -39,7 +39,6 @@ import symbol_table_visitor
 import convert_sub_visitor
 from symbol_tables import SymbolTable
 import correlation_visitor
-import dotnet_backend
 
 from Detoken import Decode
 
@@ -472,11 +471,8 @@ def compile(filename, options):
 
     output_name = os.path.splitext(os.path.basename(filename))[0]
     if options.use_clr:
-        dotnet_backend.generateAssembly(output_name, stv.globalSymbols, dv, epv) 
-    
-    
-    
-    
+        from codegen.clr.generate import generateAssembly
+        generateAssembly(output_name, stv.globalSymbols, dv, epv) 
     
     # Structural analysis
 
