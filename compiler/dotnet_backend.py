@@ -144,7 +144,6 @@ def methodParameters(statement):
     Convert the formalParameters property of the supplied
     DefinitionStatement into an Array[Type]
     '''
-    print "methodParameters for ", statement.name
     # TODO: Reference and out parameters not dealt with here!
     assert isinstance(statement, DefinitionStatement)
     print statement.formalParameters
@@ -189,5 +188,10 @@ def generateMethod(type_builder, entry_point):
     generator = method_builder.GetILGenerator()
     generator.Emit(OpCodes.Nop)
     
+    # Traverse the CFG from the entry point, generating code as we co
+    #gcv = GenerateCilVisitor()
+    #entry_point.accept(gcv)
+    
+
   
      
