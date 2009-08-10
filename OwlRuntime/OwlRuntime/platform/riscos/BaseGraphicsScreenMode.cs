@@ -18,6 +18,7 @@ namespace OwlRuntime.platform.riscos
         private Color physicalGraphicsBackgroundColour;
         private byte renderingQuality;
         private readonly Bitmap bitmap; // true colour 24bpp (always draw on this bitmap)
+        private bool needsRepaint;
 
         protected BaseGraphicsScreenMode(VduSystem vdu, int textWidth, int textHeight, int pixelWidth, int pixelHeight, int unitsWidth, int unitsHeight, byte bitsPerPixel) :
             base(vdu, textWidth, textHeight, unitsWidth, unitsHeight, bitsPerPixel)
@@ -30,6 +31,8 @@ namespace OwlRuntime.platform.riscos
 
             bitmap = new Bitmap(SquarePixelWidth, SquarePixelHeight, pixelFormat);
             // define the default text window to be full screen
+
+            needsRepaint = true;
 
             // TODO: Make this a method in VduSystem
             // define the Graphics char size
@@ -141,6 +144,23 @@ namespace OwlRuntime.platform.riscos
             protected set { renderingQuality = value; }
         }
 
+        public bool NeedsRepaint
+        {
+            get
+            {
+                return needsRepaint;
+            }
+            protected set
+            {
+                needsRepaint = value;
+                // TODO: This is temporary
+                if (NeedsRepaint)
+                {
+                    vduForm.Refresh();
+                }
+            }
+        }
+
         protected Bitmap Bitmap
         {
             get { return bitmap; }
@@ -166,7 +186,7 @@ namespace OwlRuntime.platform.riscos
             }
 
             // TODO: Temporary, so we can see something
-            vduForm.Refresh();
+            NeedsRepaint = true;
         }
 
         public override void DottedLineIncludingBothEndPointsPatternRestarted()
@@ -215,7 +235,7 @@ namespace OwlRuntime.platform.riscos
             }
 
             // TODO: Temporary, so we can see something
-            vduForm.Refresh();
+            NeedsRepaint = true;
         }
 
         public override void TriangleFill()
@@ -230,7 +250,7 @@ namespace OwlRuntime.platform.riscos
             }
 
             // TODO: Temporary, so we can see something
-            vduForm.Refresh();
+            NeedsRepaint = true;
         }
 
         public override void HorizontalLineFillRightToBackground()
@@ -279,7 +299,7 @@ namespace OwlRuntime.platform.riscos
             // TODO needs testing
 
             // TODO: Temporary, so we can see something
-            vduForm.Refresh();
+            NeedsRepaint = true;
         }
 
         public override void CircleFill()
@@ -295,21 +315,24 @@ namespace OwlRuntime.platform.riscos
             }
 
             // TODO: Temporary, so we can see something
-            vduForm.Refresh();
+            NeedsRepaint = true;
         }
 
         public override void CircularArc()
         {
+            // TODO: Use DrawArc
             throw new NotImplementedException();
         }
 
         public override void Segment()
         {
+            // TOOD: Use DrawArc?
             throw new NotImplementedException();
         }
 
         public override void Sector()
         {
+            // TODO: Use DrawPie
             throw new NotImplementedException();
         }
 
@@ -335,11 +358,13 @@ namespace OwlRuntime.platform.riscos
 
         public override void EllipseFill()
         {
+            // TODO: Use DrawEllipse
             throw new NotImplementedException();
         }
 
         public override void EllipseOutline()
         {
+            // TODO: Use DrawEllipse
             throw new NotImplementedException();
         }
 
@@ -355,7 +380,9 @@ namespace OwlRuntime.platform.riscos
 
         public override void SolidLineExcludingTheFinalPoint()
         {
-            throw new NotImplementedException();
+            // TODO: Store existing final point
+            SolidLineIncludingBothEndPoints();
+            // TODO: Restore final point
         }
 
         public override void SolidLineIncludingBothEndPoints()
@@ -370,7 +397,7 @@ namespace OwlRuntime.platform.riscos
             // TODO: Temporary, so we can see something
             // Extract this next line into a virtual Refresh method in this class
             // override in the paletted class to do the conversion to physical colours
-            vduForm.Refresh();
+            NeedsRepaint = true;
         }
 
         // override in TrueGraphicsScreenMode
@@ -493,7 +520,7 @@ namespace OwlRuntime.platform.riscos
                 // TODO: move cursor (inc text spacing size
             }
             // check if new line needed and EOLaction variable
-            vduForm.Refresh();
+            NeedsRepaint = true;
         }
 
         /// <summary>
@@ -526,7 +553,7 @@ namespace OwlRuntime.platform.riscos
                 Vdu.TextCursorY += TextCursor.MovementY;        
             }
             // check if new line needed and EOLaction variable
-            vduForm.Refresh();
+            NeedsRepaint = true;
         }
     }
 }
