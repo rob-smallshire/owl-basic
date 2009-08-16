@@ -24,7 +24,7 @@ class CilVisitor(Visitor):
     '''
 
 
-    def __init__(self, type_builder, entry_point_node):
+    def __init__(self, assembly_generator, method_builder, entry_point_node):
         '''
         Create a new CilVisitor for generating a CIL method.
         
@@ -32,48 +32,33 @@ class CilVisitor(Visitor):
         :param entry_point_node The entry point CFG node of a method
         '''
         assert(len(entry_point_node.entryPoints) == 1)
+        self.assembly_generator = assembly_generator
+        self.method_builder = method_builder
         
         # Get the type of OwnRuntime.BasicCommand so we can retrieve methods
         self.basic_commands_type = clr.GetClrType(OwlRuntime.BasicCommands)
         
-        # Set up the method attributes
-        method_attributes = MethodAttributes.Static
-        method_return_type = None
-        #print "basic_name = ", basic_name
-        # TODO: Look at using a visitor here
-        if isinstance(entry_point_node, DefinitionStatement):
-            method_name = entry_point_node.name
-            method_attributes |= MethodAttributes.Public
-            method_parameters = self.methodParameters(entry_point_node)
-            if isinstance (entry_point_node, DefineProcedure):
-                method_return_type = System.Void
-            elif isinstance (entry_point_node, DefineFunction):
-                method_return_type = clr.GetClrType(System.Int32) # TODO just default to int for now
-            assert(len(entry_point_node.outEdges) == 1)
-            first_node = entry_point_node.outEdges[0]        
-        else:
-            assert iter(entry_point_node.entryPoints).next().startswith('MAIN')
-            method_name = 'Main'
-            method_attributes |= MethodAttributes.Public
-            method_return_type = clr.GetClrType(System.Int32)
-            method_parameters = System.Array[System.Type]( (cts.string_array_type,) )
-            first_node = entry_point_node
-            
-        print "generating method_name = ", method_name    
-        self.method_builder = type_builder.DefineMethod(method_name, method_attributes, CallingConventions.Standard,
-                                                   method_return_type, method_parameters ) 
-        
         self.generator = self.method_builder.GetILGenerator()
         self.generator.Emit(OpCodes.Nop) # Every method needs at least one OpCode
-        
-        # Get the outgoing node, and visit it
-        first_node.accept(self)
-        
-        node = first_node
+                
+        node = self.successorOf(entry_point_node)
         while True:
             node = node.accept(self)
             if node is None:
                 break
+            
+        if isinstance(entry_point_node, DefineFunction):
+            self.generator.Emit(OpCodes.Ldc_I4, 0)
+            self.generator.Emit(OpCodes.Ret) # Functions must return something
+    
+    def lookupMethod(self, name):
+        '''
+        Return a MethodInfo object for the named PROC or FN
+        using the OWL name, e.g. 'PROCfoo'
+        '''
+        cts_name = self.assembly_generator.lookupCtsMethodName(name)
+        return self.assembly_generator.lookupMethod(cts_name)
+        
     
     def basicCommandMethod(self, name):
         '''
@@ -81,31 +66,17 @@ class CilVisitor(Visitor):
         '''
         return self.basic_commands_type.GetMethod(name)
     
-    def methodParameters(self, statement):
-        '''
-        Convert the formalParameters property of the supplied
-        DefinitionStatement into an Array[Type]
-        
-        :param statement: A DefintionStatement
-        :returns: An Array[Type] containing CTS types
-        '''
-        # TODO: Reference and out parameters not dealt with here!
-        assert isinstance(statement, DefinitionStatement)
-        print statement.formalParameters
-        types = ()
-        if statement.formalParameters is not None:
-            formal_parameters = statement.formalParameters.arguments
-            types = [cts.mapType(param.argument.actualType) for param in formal_parameters]
-        return System.Array[System.Type](types)
-        
+    def visit(self, item):
+        print "Visiting unhandled node", node
+        print "STOPPING"
+        assert 0
+            
     def visitAstStatement(self, node):
-        print "Visiting unhandled", node
+        print "Visiting unhandled statement", node
         print "STOPPING"
         return None
         
     def visitData(self, data):
-        # TODO: Find a way to do this without accumulating the stack
-        print "Visiting ", data
         return self.successorOf(data)
         
     def successorOf(self, node):
@@ -186,5 +157,19 @@ class CilVisitor(Visitor):
             return None
         return self.successorOf(vdu)
                   
+    def visitCallProcedure(self, call_proc):
+        print "Visiting ", call_proc
+        print "name = ", call_proc.name
+        # TODO: Push the procedure call arguments onto the stack
+        print "actual_parameters = ", call_proc.actualParameters
+        for actual_parameter in call_proc.actualParameters:
+            print "Actual parameters are unhandled"
+            return None
+        # TODO: Call the procedure
+        proc_method_info = self.lookupMethod(call_proc.name)
+        print proc_method_info
+        self.generator.Emit(OpCodes.Call, proc_method_info)
+        return self.successorOf(call_proc)
+        
         
         

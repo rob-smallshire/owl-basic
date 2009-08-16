@@ -17,7 +17,7 @@ class ConvertSubVisitor(Visitor):
     def visitGosub(self, gosub):
         if isinstance(gosub.targetLogicalLine, LiteralInteger):
             # Convert to a procedure call
-            proc = CallProcedure(name="SUB" + str(gosub.targetLogicalLine.value))
+            proc = CallProcedure(name="PROCSub" + str(gosub.targetLogicalLine.value))
             ast_utils.insertStatementBefore(gosub, proc)
             ast_utils.removeStatement(gosub)
         else:

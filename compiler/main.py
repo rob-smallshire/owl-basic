@@ -277,7 +277,7 @@ def convertSubroutinesToProcedures(parse_tree, epv, options):
             # TODO: This will only work with simple (i.e. single entry) subroutines
             subname = iter(entry_point.entryPoints).next()
             if subname.startswith('SUB'):
-                procname = subname
+                procname = 'PROCSub' + subname[3:]
                 assert len(entry_point.inEdges) == 0
                 defproc = bbc_ast.DefineProcedure(name=procname, formalParameters=None)
                 ast_utils.insertStatementBefore(entry_point, defproc)
@@ -471,8 +471,9 @@ def compile(filename, options):
 
     output_name = os.path.splitext(os.path.basename(filename))[0]
     if options.use_clr:
-        from codegen.clr.generate import generateAssembly
-        generateAssembly(output_name, stv.globalSymbols, dv, epv) 
+        from codegen.clr.generate import AssemblyGenerator
+        ag = AssemblyGenerator()
+        ag.generateAssembly(output_name, stv.globalSymbols, dv, epv) 
     
     # Structural analysis
 

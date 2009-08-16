@@ -804,12 +804,12 @@ reserved = {
 
 def t_PROC_ID(t):
     r'PROC[a-zA-Z_0-9`@]+'
-    t.value = t.value[4:]
+    t.value = t.value
     return t
 
 def t_FN_ID(t):
     r'FN[a-zA-Z_0-9`@]+'
-    t.value = t.value[2:]
+    t.value = t.value
     return t
 
 def t_ARRAYID_LPAREN(t):
