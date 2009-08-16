@@ -85,6 +85,9 @@ class AssemblyGenerator(object):
             else: # Main
                 assert iter(entry_point.entryPoints).next().startswith('MAIN')
                 self.createCtsMethodName('FNMain')    
+        
+        for owl_name, clr_name in self.owl_to_clr_method_names.items():
+            print owl_name, " ==> ", clr_name
             
         # Generate all the empty methods, so we can retrieve them from the type builder    
         for entry_point in entry_point_visitor.entry_points:
@@ -161,12 +164,10 @@ class AssemblyGenerator(object):
         leading @ will be removed
         The leading PROC or FN will be removed if names clash
         '''
-        print "owl_name = ", owl_name
         m = re.match(r'(PROC|FN)([a-zA-Z_0-9`@]+)', owl_name)
         assert m is not None
         owl_prefix = m.group(1)
         identifier = m.group(2)
-        print "Pre-munging = ", identifier
         # TODO Remove initial digits
         # TODO: Deal with Main - and prior registration of that name, correctly
         identifier = re.sub(r'[@`]', '_', identifier)  # Replace @ and ` with underscores
@@ -179,7 +180,6 @@ class AssemblyGenerator(object):
                 identifier = identifier [1:]
         # Attempt to insert the identifier
         counter = None
-        print "Post-munging = ", identifier
         while True:
             if identifier not in self.clr_to_owl_method_names:
                 self.owl_to_clr_method_names[owl_name] = identifier
@@ -188,18 +188,25 @@ class AssemblyGenerator(object):
             else:
                 # Generated name already used
                 clashing_owl_name = self.clr_to_owl_method_names[identifier]
+                print "clashing_owl_name = ", clashing_owl_name
                 # Attempt to resolve by prefixing with Proc or Fn
                 # TODO: In future could consider simply overloading so
                 #       long as the signatures are different
+                print "owl_prefix = ", owl_prefix
                 if owl_prefix == 'FN':
                     if clashing_owl_name.startswith('PROC'):
                         # Prefix the clashing identifier with 'Proc' and
                         # prefix this new identifier with 'Fn'
-                        # TODO: This is backwards
-                        self.owl_to_clr_method_names[owl_name] = 'Proc' + identifier
-                        #del self.clr_to_owl_method_names[identifier]
+                        
+                        # Modify the clasing entry by prefixing with 'Proc'
+                        self.owl_to_clr_method_names[clashing_owl_name] = 'Proc' + identifier
+                        self.clr_to_owl_method_names['Proc' + identifier] = clashing_owl_name
+                        # Remove the old entry
+                        del self.clr_to_owl_method_names[identifier]
+                        # Add the new entry
                         identifier = 'Fn' + identifier
-                        self.clr_to_owl_method_names [identifier] = owl_name
+                        self.clr_to_owl_method_names[identifier] = owl_name
+                        self.owl_to_clr_method_names[owl_name] = identifier
                         break
                     elif clashing_owl_name.startswith('FN'):
                         # Modify our name in some way to distinguish it
@@ -209,13 +216,16 @@ class AssemblyGenerator(object):
                     if clashing_owl_name.startswith('FN'):
                         # Prefix the clashing identifier with 'Fn' and
                         # prefix this new identifier with 'Proc'
-                        # TODO: This is backwards
-                        self.owl_to_clr_method_names[owl_name] = 'Fn' + identifier
-                        #del self.clr_to_owl_method_names[identifier]
+                        self.owl_to_clr_method_names[clashing_owl_name] = 'Fn' + identifier
+                        self.clr_to_owl_method_names['Fn' + identifier] = clashing_owl_name
+                        # Remove the old entry
+                        del self.clr_to_owl_method_names[identifier]
+                        # Add the new entry
                         identifier = 'Proc' + identifier
-                        self.clr_to_owl_method_names [identifier] = owl_name
+                        self.clr_to_owl_method_names[identifier] = owl_name
+                        self.owl_to_clr_method_names[owl_name] = identifier
                         break
-                    elif clashing_own_name_startswith('FN'):
+                    elif clashing_owl_name.startswith('PROC'):
                         # Modify our name in some way to distinguish it
                         identifier = self.modifyName(identifier)
                         #TODO
