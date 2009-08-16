@@ -171,5 +171,15 @@ class CilVisitor(Visitor):
         self.generator.Emit(OpCodes.Call, proc_method_info)
         return self.successorOf(call_proc)
         
-        
+    def visitRestore(self, restore):
+        # TODO: Can we RESTORE to lines which don't contain DATA?
+        print "Visiting ", restore
+        print "target_logical_line = ", restore.targetLogicalLine
+        # Lookup the data pointer value for this line number
+        self.generator.Emit(OpCodes.Ldsfld, self.assembly_generator.data_line_number_map_field)         # Load the dictionary onto the stack
+        restore.targetLogicalLine.accept(self) # Push the line number onto the stack
+        get_item_method_info = cts.int_int_dictionary_type.GetMethod('get_Item')
+        self.generator.Emit(OpCodes.Call, get_item_method_info) # Call get_Item and the put the new data point result on the stack
+        self.generator.Emit(OpCodes.Stsfld, self.assembly_generator.data_index_field)
+        return self.successorOf(restore)
         

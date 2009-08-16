@@ -106,11 +106,11 @@ class AssemblyGenerator(object):
         
         # TODO: Replace this with Dictionary<int, int>
         
-        data_field = type_builder.DefineField('data', cts.string_array_type,
+        self.data_field = type_builder.DefineField('data', cts.string_array_type,
                                                       FieldAttributes.Private | FieldAttributes.Static)
-        data_line_number_map_field = type_builder.DefineField('dataLineNumbers', cts.int_int_dictionary_type,
+        self.data_line_number_map_field = type_builder.DefineField('dataLineNumbers', cts.int_int_dictionary_type,
                                                       FieldAttributes.Private | FieldAttributes.Static)
-        data_line_number_index_field = type_builder.DefineField('dataIndex', clr.GetClrType(System.Int32),
+        self.data_index_field = type_builder.DefineField('dataIndex', clr.GetClrType(System.Int32),
                                                                 FieldAttributes.Private | FieldAttributes.Static)
         
         type_constructor_builder = type_builder.DefineTypeInitializer()
@@ -128,7 +128,7 @@ class AssemblyGenerator(object):
             generator.Emit(OpCodes.Ldstr, item)   # Load the string onto the stack
             generator.Emit(OpCodes.Stelem_Ref)    # Assign to array element
         generator.Emit(OpCodes.Ldloc_0)            # Load the array onto the stack
-        generator.Emit(OpCodes.Stsfld, data_field) # Store it in the static field
+        generator.Emit(OpCodes.Stsfld, self.data_field) # Store it in the static field
         
         # Initialise the data index field -
         # this needs to be initialized with a Dictionary
@@ -149,7 +149,7 @@ class AssemblyGenerator(object):
             generator.Emit(OpCodes.Call, add_method_info) # Call Dictionary<int,int>.Add()
             
         generator.Emit(OpCodes.Ldloc_1)                   # Load the dictionary onto the stack
-        generator.Emit(OpCodes.Stsfld, data_line_number_map_field)  # Store it in the static field
+        generator.Emit(OpCodes.Stsfld, self.data_line_number_map_field)  # Store it in the static field
     
     def createCtsMethodName(self, owl_name):
         '''
