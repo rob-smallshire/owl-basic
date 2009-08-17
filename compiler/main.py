@@ -484,6 +484,11 @@ def compile(filename, options):
     # == Optimisation ==
     # constant folding
     # constant propagation
+    # Note - during constant propagation we can
+    # eliminate some redundant casts by changing the
+    # type of the constant at compile time
+    # for example A = 5 can become A = 5.0 and
+    # A% = 6.0 can become A% = 6
     # eliminate locals
     # static single assignment form
     # TODO: Inline single-entry GOSUB

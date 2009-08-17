@@ -109,8 +109,7 @@ class CorrelationVisitor(Visitor):
             # TODO: Check that the symbols are equal, not just the names
             if for_stmt.identifier.identifier == next_stmt.identifiers[0].identifier:
                 next_stmt.addBackEdge(for_stmt)
-                break
-        
+                break    
     
         
         

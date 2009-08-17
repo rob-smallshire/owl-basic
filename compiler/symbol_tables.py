@@ -23,6 +23,11 @@ class SymbolInfo(object):
         self.type     = type
         self.modifier = modifier
         self.rank     = rank
+        self.realization = None # Can be used by code generator to attach specific data
+        
+    def __repr__(self):
+        return "SymbolInfo(name=%s, modifier=%s, table=%s, rank=%s, realization=%s)" % (repr(self.name), repr(self.modifier), repr(self.table),
+                                                                                        repr(self.rank), repr(self.realization))
     
 class SymbolTable(object):
     

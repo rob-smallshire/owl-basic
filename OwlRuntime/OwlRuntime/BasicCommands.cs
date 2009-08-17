@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using OwlRuntime.platform.riscos;
 
 namespace OwlRuntime
 {
@@ -9,6 +10,7 @@ namespace OwlRuntime
     {
         private static int channelCounter = 0;
         private static readonly Dictionary<int, FileStream> channels = new Dictionary<int, FileStream>();
+        private static VduSystem vdu = new VduSystem();
 
         public class NoSuchChannelException : ApplicationException
         {
@@ -200,6 +202,16 @@ namespace OwlRuntime
             }
             // TODO: Return an integer between [1, n]
             return n;
+        }
+
+        public static void Vdu(byte b)
+        {
+            vdu.Enqueue(b);
+        }
+
+        public static void VduFlush()
+        {
+            vdu.Enqueue(0, 0, 0, 0, 0, 0, 0, 0, 0);
         }
 
         public static int Himem { get; set; }

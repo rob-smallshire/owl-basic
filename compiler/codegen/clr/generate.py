@@ -48,6 +48,7 @@ def generateAssembly(name, global_symbols, data_visitor, entry_point_visitor):
     for symbol in global_symbols.symbols.values():
         field_builder = type_builder.DefineField(ctsIdentifier(symbol), cts.symbolType(symbol),
                                                  FieldAttributes.Private | FieldAttributes.Static)
+        symbol.realization = field_builder
     
     if len(data_visitor.data) > 0:
         generateStaticDataInitialization(data_visitor, type_builder)
