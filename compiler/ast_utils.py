@@ -123,4 +123,36 @@ def removeStatement(statement):
 
     statement.clearInEdges()
     statement.clearOutEdges()
+
+def replaceStatement(old, new):
+    '''
+    Replace old with new in the AST and CFG
+    '''
+    insertStatementBefore(old, new)
+    removeStatement(old)
+
+def deParentNode(node):
+    '''
+    Disconnect a node from its parent
+    :returns: The node  
+    '''
+    raise "Not implemented"
     
+def parentNode(node, parent, parent_property):
+    '''
+    Parent a node the the given property
+    '''
+    raise "Not implemented"
+    
+def reParentnode(node, new_parent, parent_property=None):
+    '''
+    :param node: The node to be reparented
+    :param new_parent: The new parent for node
+    :paraent_property: The property of the parent to which the node will be attached. If not
+                       supplied this will use the parent_property as the original parent.
+    '''
+    if parent_property is None:
+        parent_property = node.parent_property
+        
+    deParentNode(node)
+    parentNode(node, new_parent, parent_property)

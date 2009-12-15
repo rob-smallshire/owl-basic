@@ -1212,6 +1212,7 @@ def p_expr(p):
         elif p[2] == 'EOR':
             p[0] = Eor(lhs = p[1], rhs = p[3])
         p[0].lineNum = p.lineno(2)
+    p[0].isLValue = False
 
 def p_dyadic_indirection(p):
     """dyadic_indirection : variable QUERY factor
@@ -1243,14 +1244,17 @@ def p_lvalue(p):
               | right_str_lvalue
               | left_str_lvalue'''
     p[0] = p[1]
+    p[0].isLValue = True
 
 # This contains values which can be written or assigned to in 
 # for example FOR and READ
 def p_writable(p):
     '''writable : variable
+                | indexer
                 | unary_indirection
                 | dyadic_indirection'''
     p[0] = p[1]
+    p[0].isLValue = True
     
 def p_writable_list(p):
     '''writable_list : writable

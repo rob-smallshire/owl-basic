@@ -273,6 +273,10 @@ class TypecheckVisitor(Visitor):
         for parameter in func.actualParameters:
             self.visit(parameter)
     
+    # TODO: Casts may be needed so that all three expressions of a FOR TO STEP
+    # statement are the same type as the counter variable
+    
+    
     def insertNumericCasts(self, node):
         """
         Where an Integer value is being passed to a parameter of Numeric type,

@@ -456,7 +456,10 @@ class VariableList(AstNode):
     def append(self, variable):
         self.variables.append(variable)
 
-class Variable(AstNode):
+class Value(AstNode):
+    is_l_value = BoolOption(False)
+
+class Variable(Value):
     identifier = StringOption()
 
 class WritableList(AstNode):
@@ -468,7 +471,7 @@ class WritableList(AstNode):
 class Array(AstNode):
     identifier = StringOption()
 
-class Indexer(AstNode):
+class Indexer(Value):
     identifier = StringOption()
     indices = Node()
 
@@ -536,7 +539,7 @@ class UnaryPlus(UnaryNumericOperator):
 class UnaryMinus(UnaryNumericOperator):
     pass
 
-class UnaryIndirection(AstNode):
+class UnaryIndirection(Value):
     expression = Node(formalType=PtrType)
 
 class UnaryByteIndirection(UnaryIndirection):
@@ -555,7 +558,7 @@ class UnaryFloatIndirection(UnaryIndirection):
     formal_type = TypeOption(FloatType)
     actual_type = formal_type
 
-class DyadicIndirection(AstNode):
+class DyadicIndirection(Value):
     base   = Node(formalType=PtrType)
     offset = Node(formalType=IntegerType)
 
@@ -657,45 +660,45 @@ class Eor(BinaryIntegerOperator):
 class AbsFunc(AstNode):
     factor = Node(formalType=NumericType)
 
-class EndValue(AstNode):
+class EndValue(Value):
     formal_type = TypeOption(IntegerType)
     expression = Node()
 
-class ExtValue(AstNode):
+class ExtValue(Value):
     formal_type = TypeOption(IntegerType)
     channel = Node()
 
-class HimemValue(AstNode):
+class HimemValue(Value):
     formal_type = TypeOption(IntegerType)
 
-class LomemValue(AstNode):
+class LomemValue(Value):
     formal_type = TypeOption(IntegerType)
 
-class PageValue(AstNode):
-    formal_type = TypeOption(IntegerType)
-    pass
-
-class TimeValue(AstNode):
+class PageValue(Value):
     formal_type = TypeOption(IntegerType)
     pass
 
-class TimeStrValue(AstNode):
+class TimeValue(Value):
+    formal_type = TypeOption(IntegerType)
+    pass
+
+class TimeStrValue(Value):
     formal_type = TypeOption(StringType)
     pass
 
-class PtrValue(AstNode):
+class PtrValue(Value):
     channel = Node(formalType=ChannelType)
 
-class MidStrLValue(AstNode):
+class MidStrLValue(Value):
     target = Node(nodeType=Variable, formalType=StringType) # TODO: This needs to constrained by the type checker to be a Variable : nodeType=Variable ?
     position = Node(formalType=IntegerType)
     length = Node(formalType=IntegerType)
     
-class RightStrLValue(AstNode):
+class RightStrLValue(Value):
     target = Node(nodeType=Variable, formalType=StringType) # TODO: This needs to constrained by the type checker to be a Variable : nodeType=Variable ?
     length = Node(formalType=IntegerType)
 
-class LeftStrLValue(AstNode):
+class LeftStrLValue(Value):
     target = Node(nodeType=Variable, formalType=StringType)
     length = Node(formalType=IntegerType)
 
