@@ -396,18 +396,23 @@ class SwapRectangle(RectangleBlit):
     pass
 
 class Read(AstStatement):
+    "READ"
     writables = Node()
     
 class Report(AstStatement):
+    "REPORT"
     pass
 
 class Repeat(MarkerStatement):
+    "REPEAT"
     pass
 
 class Restore(AstStatement):
+    "RESTORE"
     target_logical_line = Node(formalType=IntegerType)
 
 class Sound(AstStatement):
+    "SOUND"
     channel   = Node(formalType=IntegerType)
     amplitude = Node(formalType=IntegerType)
     pitch     = Node(formalType=IntegerType)
@@ -878,6 +883,11 @@ class QuitFunc(AstNode):
     
 class RadFunc(UnaryNumericFunc):
     "RAD"
+
+class ReadFunc(AstNode):
+    "READ"
+    formal_type = TypeOption(ScalarType)
+    actual_type = formal_type
 
 class RightStrFunc(AstNode):
     formal_type = TypeOption(StringType)

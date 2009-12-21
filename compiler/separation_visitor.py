@@ -1,7 +1,8 @@
 # A visitor implementation that creates an XML representation of the abstract syntax tree
 
 from visitor import Visitor
-from bbc_ast import StatementList, Statement, Next, VariableList, Read, WritableList
+from bbc_ast import StatementList, Statement, Assignment, Next, VariableList, Read, ReadFunc, WritableList
+from ast_utils import replaceStatement, insertStatementBefore, removeStatement
     
 class SeparationVisitor(Visitor):
     """
@@ -50,9 +51,12 @@ class SeparationVisitor(Visitor):
     # TODO: Much of this code can be factored out of this method and the above one    
     def visitRead(self, read):
         """
-        Split READ A, B, C statements into READ A : READ B : READ C
+        Split READ A, B, C statements into assignments A = READ : B = READ : C = READ
+        where READ becomes a function.
         """
+        
         # TODO Split READ A, B, C statements into READ A : READ B : READ C
+        self.visit(read.writables)
         statement_list = StatementList()
         statement_list.parent = read.parent
         statement_list.parent_property = read.parent_property
@@ -66,20 +70,12 @@ class SeparationVisitor(Visitor):
             statement.parent_index = len(statement_list.statements)
             statement_list.append(statement)
             
-            new_read = Read()
-            new_read.parent = statement
-            new_read.parent_property = 'body'
-            new_read.lineNum = read.lineNum
-            statement.body = new_read
-            
-            writable_list = WritableList()
-            writable_list.parent = new_read
-            writable_list.parent_property = 'writables'
-            new_read.writables = writable_list
-            
-            writable_list.writables = [writable]
-            
+            read_func = ReadFunc()
+            new_assignment = Assignment(lValue=writable, rValue=read_func)
+            read_func.parent = new_assignment
+            new_assignment.parent = statement
+            new_assignment.parent_property = 'body'
+            new_assignment.lineNum = read.lineNum
+            statement.body = new_assignment
+                         
         getattr(read.parent.parent, read.parent.parent_property)[read.parent.parent_index] = statement_list
-            
-            
-             

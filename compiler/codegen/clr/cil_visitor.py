@@ -11,12 +11,20 @@ from System.Reflection.Emit import *
 
 from visitor import Visitor
 from bbc_ast import *
+from ast_utils import findNode
 import cts
 
 # Load the OWL Runtime library so we may both call and reference
 # methods within it
 clr.AddReferenceToFileAndPath(r'C:\Users\rjs\Documents\dev\p4smallshire\sandbox\bbc_sharp_basic\OwlRuntime\OwlRuntime\bin\Debug\OwlRuntime.dll')
 import OwlRuntime
+
+# TODO: Move this utility function elsewhere
+def hasSymbolTableLookup(node):
+    if hasattr(node, "symbolTable"):
+        if hasattr(node.symbolTable, "lookup"):
+            return True
+    return False
 
 class CilVisitor(Visitor):
     '''
@@ -87,29 +95,33 @@ class CilVisitor(Visitor):
         
     def visitAssignment(self, assignment):
         print "Visiting ", assignment
-        # TODO: If the lhs is not a simple variable, stop.
-        print type(assignment.lValue)
-        assert isinstance(assignment.lValue, Variable)
-        print "Assigning to variable"
-        # Evaluate the expression on the right hand side
-        print type(assignment.rValue)
-        assignment.rValue.accept(self)
-        # Assign to the variable on the left hand side
-        #  Lookup in the symbol table
-        name = assignment.lValue.identifier
-        print name
-        symbol = assignment.symbolTable.lookup(name)
-        assert symbol is not None
-        print repr(symbol)
-        assert symbol.realization is not None
-        print repr(symbol.realization)
-        if isinstance(symbol.realization, FieldBuilder):
-            self.generator.Emit(OpCodes.Stsfld, symbol.realization)
-        else:
-            print clt.GetClrType(symbol.realization)
-            assert "Unknown symbol.realization type"
+        assignment.rValue.accept(self) # Leave the rValue on the stack
+        assignment.lValue.accept(self) # Store the top of the stack into the lValue
         return self.successorOf(assignment)
-        
+                
+    def visitVariable(self, variable):
+        # If this is an l-value take the value from the top of the stack, and assign it,
+        # otherwise read from that value
+        if variable.isLValue:
+            # Store
+            #  Lookup in the symbol table
+            name = variable.identifier
+            print name
+            symbol_node = findNode(variable, hasSymbolTableLookup)
+            symbol = symbol_node.symbolTable.lookup(name)
+            assert symbol is not None
+            print repr(symbol)
+            assert symbol.realization is not None
+            print repr(symbol.realization)
+            if isinstance(symbol.realization, FieldBuilder):
+                self.generator.Emit(OpCodes.Stsfld, symbol.realization)
+            else:
+                print clr.GetClrType(symbol.realization)
+                assert "Unknown symbol.realization type"
+        else:
+            # Load
+            assert 0, "Not implemented"
+                        
     def visitLiteralString(self, literal_string):
         print "Visiting ", literal_string
         print "value = ", literal_string.value
@@ -265,22 +277,35 @@ class CilVisitor(Visitor):
         for_to_step.generateNext = correspondingNext
         return self.successorOf(for_to_step)
     
-    def visitRead(self, read):
+    def visitReadFunc(self, read_func):
         # Determine the type of the value and dispatch appropriately
         # Read the DATA, evaluate the expression in the context of the
-        # value required, and place the value of the stack. Then assign
-        # the value of top of the stack to the value.
-        print "Visiting ", read
+        # value required, and place the value of the stack.
+        print "Visiting ", read_func
         # TODO: Convert IndexOutOfRangeException to NoDataException
         # Get the DATA as a string
         self.generator.Emit(OpCodes.Ldsfld, self.assembly_generator.data_field) # Load the DATA array onto the stack
         self.generator.Emit(OpCodes.Ldsfld, self.assembly_generator.data_index_field) # Load the DATA index onto the stack
+        self.generator.Emit(OpCodes.Dup) # Duplicate the DATA index
+        self.generator.Emit(OpCodes.Ldc_I4_1)    # Load 1 onto the stack
+        self.generator.Emit(OpCodes.Add) # Increment
+        self.generator.Emit(OpCodes.Stsfld, self.assembly_generator.data_index_field) # Store the incremented DATA index
         self.generator.Emit(OpCodes.Ldelem_Ref) # Push the DATA element (a string) onto the stack
+
+        # TODO: Convert to the required type
+        system_convert_type = clr.GetClrType(System.Convert)
+        if read_func.actualType is ByteType:
+            conversion_method = system_convert_type.GetMethod("ToByte", System.Array[System.Type]([clr.GetClrType(str)]))
+        elif read_func.actualType is IntegerType:
+            conversion_method = system_convert_type.GetMethod("ToInt32", System.Array[System.Type]([clr.GetClrType(str)]))
+        elif read_func.actualType is FloatType:
+            conversion_method = system_convert_type.GetMethod("ToDouble", System.Array[System.Type]([clr.GetClrType(str)]))
+        else:
+            conversion_method = None
+        # TODO: etc
         
-        print "READ writables = ", read.writables
-        assert len(read.writables.writables) == 1
-        read.writables.writables[0].accept(self)
-        return self.successorOf(read)
+        if conversion_method:
+            self.generator.Emit(OpCodes.Call, conversion_method)
         
     def visitDyadicByteIndirection(self, dyadic):
         # If this is an l-value take the value from the top of the stack, and assign it
@@ -289,6 +314,7 @@ class CilVisitor(Visitor):
             # Pop the byte on top of the stack and write to the location
             print "Dyadic byte indirection l-value"
             # Are we writing to a block or directly into memory?
+            print dyadic.base.formalType
             if dyadic.base.formalType is PtrType:
                 # Writing directly into address space
                 # TODO: get the array representing our faked address space onto the stack

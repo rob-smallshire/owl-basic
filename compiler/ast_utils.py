@@ -64,6 +64,18 @@ def findRoot(node):
         n = n.parent
     return n
 
+def findNode(node, predicate):
+    """
+    Given an AST node, search up the tree until a node matching the
+    predicate function is found. Returns the Node or None
+    """
+    n = node
+    while n is not None:
+        if predicate(n):
+            return n
+        n = n.parent
+    return None
+
 def insertStatementBefore(statement, target):
     """
     Insert target before statement in the AST, and correct the AST and CFG references to match
@@ -83,7 +95,7 @@ def insertStatementBefore(statement, target):
         statement.parent_index += 1
                   
     else:
-        errors.fatalError("Cannot insert statement before %s at line %s" % (statement, statement.lineNum))
+        errors.fatalError("Cannot insert statement into non-list %s at line %s" % (statement, statement.lineNum))
         return
         
     # Reconnect CFG
@@ -104,7 +116,7 @@ def removeStatement(statement):
     Remove the statement from the AST
     """
     if statement.parent is None:
-        errors.fatalError("Cannot insert statement before %s at line %s" % (statement, statement.lineNum))
+        errors.fatalError("Cannot remove statement %s at line %s" % (statement, statement.lineNum))
         
     # Remove from the parent list
     parent_list = getattr(statement.parent, statement.parent_property)

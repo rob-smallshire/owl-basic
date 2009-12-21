@@ -273,6 +273,13 @@ class TypecheckVisitor(Visitor):
         for parameter in func.actualParameters:
             self.visit(parameter)
     
+    def visitReadFunc(self, read_func):
+        # Infer the type of ReadFunc in x = ReadFunc from the type of x
+        # This depends on the type of the lValue of the assignment having been
+        # determined previously, and assumes that the parent of ReadFunc is always 
+        # an Assignment
+        read_func.actualType = read_func.parent.lValue.actualType
+        
     # TODO: Casts may be needed so that all three expressions of a FOR TO STEP
     # statement are the same type as the counter variable
     
