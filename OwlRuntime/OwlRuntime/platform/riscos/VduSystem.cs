@@ -422,6 +422,12 @@ namespace OwlRuntime.platform.riscos
             }
         }
 
+        public void Enqueue(char c)
+        {
+            byte b = (byte) c;
+            Enqueue(b);
+        }
+
         public void Enqueue(string bs)
         {
             foreach (byte b in bs)

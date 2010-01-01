@@ -72,10 +72,19 @@ class SeparationVisitor(Visitor):
             
             read_func = ReadFunc()
             new_assignment = Assignment(lValue=writable, rValue=read_func)
+            
+            writable.parent = new_assignment
+            writable.parent_property = 'lValue'
+            writable.lineNum = read.lineNum
+            
             read_func.parent = new_assignment
+            read_func.parent_property = 'rValue'
+            read_func.lineNum = read.lineNum
+            
             new_assignment.parent = statement
             new_assignment.parent_property = 'body'
             new_assignment.lineNum = read.lineNum
+            
             statement.body = new_assignment
                          
         getattr(read.parent.parent, read.parent.parent_property)[read.parent.parent_index] = statement_list

@@ -779,15 +779,15 @@ def p_print_item(p):
     '''print_item : expr
                   | tab
                   | spc
-                  | print_manipulator'''
+                  | format_manipulator'''
     p[0] = PrintItem(item = p[1])
     
-def p_print_manipulator(p):
-    '''print_manipulator : TILDE
+def p_format_manipulator(p):
+    '''format_manipulator : TILDE
                          | APOSTROPHE
                          | COMMA
                          | SEMICOLON'''
-    p[0] = PrintManipulator(manipulator = p[1])
+    p[0] = FormatManipulator(manipulator = p[1])
     p[0].lineNum = p.lineno(1)
 
 # PRIVATE statement

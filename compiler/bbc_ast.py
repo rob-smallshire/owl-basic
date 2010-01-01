@@ -354,6 +354,9 @@ class PrintItem(AstNode):
     item = Node()
 
 class PrintManipulator(AstNode):
+    pass
+
+class FormatManipulator(PrintManipulator):
     manipulator = StringOption()
 
 class PrintFile(AstStatement):
@@ -438,10 +441,13 @@ class Sys(AstStatement):
     return_values     = Node()
     flags            = Node()
 
-class TabH(AstNode):
+class Tab(PrintManipulator):
+    pass
+
+class TabH(Tab):
     x_coord = Node(formalType=IntegerType)
 
-class TabXY(AstNode):
+class TabXY(Tab):
     x_coord = Node(formalType=IntegerType)
     y_coord = Node(formalType=IntegerType)
 
@@ -452,7 +458,7 @@ class Tint(AstStatement):
     option = Node(formalType=IntegerType)
     tint   = Node(formalType=IntegerType)
 
-class Spc(AstNode):
+class Spc(PrintManipulator):
     spaces = Node(formalType=IntegerType)
 
 class VariableList(AstNode):

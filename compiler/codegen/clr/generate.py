@@ -10,7 +10,7 @@ from visitor import Visitor
 from singleton import Singleton
 
 from bbc_ast import DefinitionStatement, DefineProcedure, DefineFunction
-from cil_visitor import CilVisitor
+from cil_visitor import CilVisitor, CodeGenerationError
 import cts
 
 def ctsIdentifier(symbol):
@@ -93,9 +93,15 @@ class AssemblyGenerator(object):
         for entry_point in entry_point_visitor.entry_points:
             self.generateMethod(type_builder, entry_point)
                 
-        # Generate the body of each method    
+        # Generate the body of each method
+        stop_on_error = False    
         for entry_point in entry_point_visitor.entry_points:
-            self.generateMethodBody(entry_point)
+            try:
+                self.generateMethodBody(entry_point)
+            except CodeGenerationError, e:
+                print "STOPPING", e
+                if stop_on_error:
+                    break
             
         result = type_builder.CreateType()    
         assembly_builder.Save(name + ".exe")

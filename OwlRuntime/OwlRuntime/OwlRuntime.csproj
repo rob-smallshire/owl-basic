@@ -58,6 +58,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BasicCommands.cs" />
+    <Compile Include="platform\MemoryMap.cs" />
     <Compile Include="platform\riscos\AbstractScreenMode.cs" />
     <Compile Include="platform\riscos\AcornFont.cs" />
     <Compile Include="platform\riscos\BaseGraphicsScreenMode.cs" />
@@ -76,6 +77,7 @@
     <Compile Include="platform\riscos\VduSystem.cs" />
     <Compile Include="platform\riscos\VduSystemTest.cs" />
     <Compile Include="platform\riscos\VduVariableAttribute.cs" />
+    <Compile Include="PrintManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

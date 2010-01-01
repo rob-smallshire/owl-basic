@@ -39,7 +39,6 @@ class ScalarType(Type):
 class ObjectType(ScalarType):
     "Reference"
     # OWL BASIC only - object reference
-    # TODO: Rename to ObjectType
     pass
 
 class NumericType(ScalarType):

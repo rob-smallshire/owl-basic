@@ -7,7 +7,7 @@
       <Compartment Name="Methods" Collapsed="true" />
     </Compartments>
     <TypeIdentifier>
-      <HashCode>KBaCPQBYCiByECAAggEDQwSRBYCFygAgBDiCCAICACE=</HashCode>
+      <HashCode>KB6CPQBYCiB6ECAAggEDQwSRBYCFygAgBDiCCAIKACE=</HashCode>
       <FileName>platform\riscos\AbstractScreenMode.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" />
@@ -22,7 +22,7 @@
       </Enum>
     </NestedTypes>
     <TypeIdentifier>
-      <HashCode>DMDE9iKdRyjDEgeaEUVMwA5bP5EkhKjeU/UYBDT8SnM=</HashCode>
+      <HashCode>DMDM9iLdxyjDAkeaEUdMwA5bP5EkhKjeQ/VYBDT8SnM=</HashCode>
       <FileName>platform\riscos\VduSystem.cs</FileName>
     </TypeIdentifier>
     <Lollipop Position="0.2" Collapsed="true" />
@@ -30,14 +30,14 @@
   <Class Name="OwlRuntime.platform.riscos.BaseTextScreenMode" Collapsed="true">
     <Position X="1.75" Y="4.25" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <HashCode>AAACAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>platform\riscos\BaseTextScreenMode.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="OwlRuntime.platform.riscos.BaseGraphicsScreenMode" Collapsed="true">
     <Position X="6" Y="4.25" Width="2.75" />
     <TypeIdentifier>
-      <HashCode>GBWUFQBYDChSGAAIggkAQSSahgAAwhAkBKACCAAAAAA=</HashCode>
+      <HashCode>GBWWFQBYDChaGAAIggkAQSWajhAAwhAkBKACGAAAABA=</HashCode>
       <FileName>platform\riscos\BaseGraphicsScreenMode.cs</FileName>
     </TypeIdentifier>
   </Class>
@@ -51,7 +51,7 @@
   <Class Name="OwlRuntime.platform.riscos.PalettedGraphicsScreenMode">
     <Position X="7.25" Y="5.5" Width="2.5" />
     <TypeIdentifier>
-      <HashCode>AACQAAAAAAAgCAAAoAgAAQEAAIARAAAAABAABAAAAAA=</HashCode>
+      <HashCode>AACQAAAAAAAgCAAAoAgAAQEACJARAgAAABAABAAAAAA=</HashCode>
       <FileName>platform\riscos\PalettedGraphicsScreenMode.cs</FileName>
     </TypeIdentifier>
   </Class>
@@ -72,15 +72,8 @@
   <Class Name="OwlRuntime.platform.riscos.TrueGraphicsScreenMode">
     <Position X="5" Y="5.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AACQAAAAAAAgCAAAgAAAAAAAAIABAAAAABAAAAAAAAA=</HashCode>
+      <HashCode>AACQAAAAAAAgCAAAgAAAAAEACJABAgAAABAAAAAAAAA=</HashCode>
       <FileName>platform\riscos\TrueGraphicsScreenMode.cs</FileName>
-    </TypeIdentifier>
-  </Class>
-  <Class Name="OwlRuntime.BasicCommands" Collapsed="true">
-    <Position X="12.5" Y="0.5" Width="1.5" />
-    <TypeIdentifier>
-      <HashCode>AMpKAAEAICAQAAEAAAACAAAkQCAIAAAQAAAQAACEBAA=</HashCode>
-      <FileName>BasicCommands.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="OwlRuntime.platform.riscos.NoSuchScreenModeException" Collapsed="true">
@@ -93,7 +86,7 @@
   <Class Name="OwlRuntime.platform.riscos.OS" Collapsed="true">
     <Position X="16" Y="0.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAEAAAAgAAAAAAAAAAAAAAAABEAAEAAAAAACAAEAQAA=</HashCode>
+      <HashCode>AAEAAAAgAAAAAAAAAAAAAAAABEAAEAAAAAACAAEAQAE=</HashCode>
       <FileName>platform\riscos\OS.cs</FileName>
     </TypeIdentifier>
   </Class>
@@ -114,7 +107,7 @@
   <Class Name="OwlRuntime.platform.riscos.VduSystemTest" Collapsed="true">
     <Position X="10.75" Y="2.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>ABAAAAAAAEAAAQgCAEAABCCAAAAIAAAAAAAAgAloAAE=</HashCode>
+      <HashCode>ABAAAAAAAEACAQjCAEAABCCAAAAIAAwAAQAAgAtoAAE=</HashCode>
       <FileName>platform\riscos\VduSystemTest.cs</FileName>
     </TypeIdentifier>
   </Class>
@@ -128,8 +121,15 @@
   <Class Name="OwlRuntime.platform.riscos.AcornFont">
     <Position X="12.5" Y="4" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>IAAACQAAAAAAAgAAAAAwAAAIAAAAAAAAAAAEIAAAAAA=</HashCode>
+      <HashCode>IAAACAAAAAAAAgAAABIQAAAAAAAACAAAAAAAIAAABAA=</HashCode>
       <FileName>platform\riscos\AcornFont.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OwlRuntime.BasicCommands" Collapsed="true">
+    <Position X="12.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AspKCQEBICAQAAGAAAACAAAkQCAIIAAUAAATAACkBIE=</HashCode>
+      <FileName>BasicCommands.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Font Name="Segoe UI" Size="9" />

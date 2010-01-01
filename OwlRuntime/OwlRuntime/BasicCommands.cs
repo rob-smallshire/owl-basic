@@ -10,7 +10,8 @@ namespace OwlRuntime
     {
         private static int channelCounter = 0;
         private static readonly Dictionary<int, FileStream> channels = new Dictionary<int, FileStream>();
-        private static VduSystem vdu = new VduSystem();
+        private static readonly VduSystem vdu = new VduSystem();
+        private static readonly PrintManager printManager = new PrintManager();
 
         public class NoSuchChannelException : ApplicationException
         {
@@ -219,6 +220,77 @@ namespace OwlRuntime
         public static int End { get; set; }
         public static int Page { get; set; }
         public static int Top { get; set; }
+
+        public static void TabH(int x)
+        {
+            printManager.TabH(x);
+        }
+
+        public static void TabXY(int x, int y)
+        {
+            printManager.TabXY(x, y);
+        }
+
+        /// <summary>
+        /// Set the printing system to hex format numbers
+        /// </summary>
+        public static void HexFormat()
+        {
+            printManager.HexFormat();
+        }
+
+        public static void DecFormat()
+        {
+            printManager.DecFormat();
+        }
+
+        /// <summary>
+        /// Print a newline
+        /// </summary>
+        public static void NewLine()
+        {
+            printManager.NewLine();   
+        }
+
+        public static void DisableRightJustifyNumerics()
+        {
+            printManager.DisableRightJustifyNumerics();
+        }
+
+        public static void RightJustifyNumerics()
+        {
+            printManager.RightJustifyNumerics();
+        }
+
+        public static void CompleteField()
+        {
+            printManager.CompleteField();
+        }
+
+        public static void Spc(int padding)
+        {
+            printManager.Spc(padding);
+        }
+
+        public static void Print(string s)
+        {
+            printManager.Print(s);
+        }
+
+        public static void Print(int i)
+        {
+            printManager.Print(i);
+        }
+
+        public static void Print(double d)
+        {
+            printManager.Print(d);
+        }
+
+        public static void Print(object o)
+        {
+            printManager.Print(o);
+        }
 
     }
 }

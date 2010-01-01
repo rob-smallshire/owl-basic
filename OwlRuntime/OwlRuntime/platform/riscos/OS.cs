@@ -7,28 +7,30 @@ namespace OwlRuntime.platform.riscos
 {
     public static class OS
     {
+        private static VduSystem vdu;
+
         [Swi(0x00)]
         public static void WriteC(char c)
         {
-            Console.Write(c);
+            vdu.Enqueue(c);
         }
 
         [Swi(0x01)]
         public static void WriteS(string s)
         {
-            Console.Write(s);
+            vdu.Enqueue(s);
         }
         
         [Swi(0x02)]
         public static void Write0(string s)
         {
-            Console.Write(s);
+            vdu.Enqueue(s);
         }
         
         [Swi(0x03)]
         public static void NewLine()
         {
-            Console.WriteLine();
+            // TODO: Use VDU Queue
         }
         
         [Swi(0x04)]

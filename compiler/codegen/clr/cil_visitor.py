@@ -26,6 +26,12 @@ def hasSymbolTableLookup(node):
             return True
     return False
 
+class CodeGenerationError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
+
 class CilVisitor(Visitor):
     '''
     Emit CIL bytecode whilst traversing the AST/CFG
@@ -43,9 +49,12 @@ class CilVisitor(Visitor):
         self.assembly_generator = assembly_generator
         self.method_builder = method_builder
         
+        # Pending rvalue - used using generation of assignment statements
+        self.__pending_rvalue = None
+        
         # Get the type of OwnRuntime.BasicCommand so we can retrieve methods
         self.basic_commands_type = clr.GetClrType(OwlRuntime.BasicCommands)
-        
+        self.memory_map_type = clr.GetClrType(OwlRuntime.MemoryMap)
         self.generator = self.method_builder.GetILGenerator()
         self.generator.Emit(OpCodes.Nop) # Every method needs at least one OpCode
                 
@@ -58,7 +67,12 @@ class CilVisitor(Visitor):
         if isinstance(entry_point_node, DefineFunction):
             self.generator.Emit(OpCodes.Ldc_I4, 0)
             self.generator.Emit(OpCodes.Ret) # Functions must return something
-    
+
+    def generatePendingRValue(self):
+        assert self.__pending_rvalue
+        self.__pending_rvalue.accept(self)
+        self.__pending_rvalue = None
+
     def lookupMethod(self, name):
         '''
         Return a MethodInfo object for the named PROC or FN
@@ -75,15 +89,11 @@ class CilVisitor(Visitor):
         return self.basic_commands_type.GetMethod(name)
     
     def visit(self, node):
-        print "Visiting unhandled node", node
-        print "STOPPING"
-        assert 0
-            
-    def visitAstStatement(self, node):
-        print "Visiting unhandled statement", node
-        print "STOPPING"
-        return None
-        
+        raise CodeGenerationError("Visiting unhandled node %s" % node)
+    
+    def visitAstStatement(self, statement):
+        raise CodeGenerationError("Visiting unhandled statement %s" % statement)
+    
     def visitData(self, data):
         return self.successorOf(data)
         
@@ -95,24 +105,39 @@ class CilVisitor(Visitor):
         
     def visitAssignment(self, assignment):
         print "Visiting ", assignment
-        assignment.rValue.accept(self) # Leave the rValue on the stack
+        # The code for generating the rvalue may need to be interleaved
+        # with the code for generating the lvalue, in cases where the
+        # lvalue is an assignment to an array element or an indirection
+        # operator.  To handle these cases, we store a reference ot the
+        # rvalue in this visitor and generate the lvalue.  We expect
+        # the lvalue generator to also generate the code for the rvalue at
+        # the appropriate point, and then set the stored rvalue in the
+        # visitor to None. 
+        
+        self.__pending_rvalue = assignment.rValue # Store the rvalue
         assignment.lValue.accept(self) # Store the top of the stack into the lValue
+        assert self.__pending_rvalue is None # Check that the rvalue has been used
         return self.successorOf(assignment)
                 
     def visitVariable(self, variable):
-        # If this is an l-value take the value from the top of the stack, and assign it,
-        # otherwise read from that value
+        
+        name = variable.identifier
+        print name
+        symbol_node = findNode(variable, hasSymbolTableLookup)
+        symbol = symbol_node.symbolTable.lookup(name)
+        assert symbol is not None
+        print repr(symbol)
+        assert symbol.realization is not None
+        print repr(symbol.realization)
+            
+        # If this is an l-value take the rvalue from the top of the stack, and assign it,
+        # otherwise read from that value    
         if variable.isLValue:
-            # Store
+            assert self.__pending_rvalue is not None
+            # Generate the code for the rvalue
+            self.generatePendingRValue()
+            # Store in the lvalue
             #  Lookup in the symbol table
-            name = variable.identifier
-            print name
-            symbol_node = findNode(variable, hasSymbolTableLookup)
-            symbol = symbol_node.symbolTable.lookup(name)
-            assert symbol is not None
-            print repr(symbol)
-            assert symbol.realization is not None
-            print repr(symbol.realization)
             if isinstance(symbol.realization, FieldBuilder):
                 self.generator.Emit(OpCodes.Stsfld, symbol.realization)
             else:
@@ -120,7 +145,12 @@ class CilVisitor(Visitor):
                 assert "Unknown symbol.realization type"
         else:
             # Load
-            assert 0, "Not implemented"
+            if isinstance(symbol.realization, FieldBuilder):
+                self.generator.Emit(OpCodes.Ldsfld, symbol.realization)
+            else:
+                print clr.GetClrType(symbol.realization)
+                assert "Unknown symbol.realization type"
+            
                         
     def visitLiteralString(self, literal_string):
         print "Visiting ", literal_string
@@ -134,11 +164,21 @@ class CilVisitor(Visitor):
         print "value      = ", cast.value
         # Get the value onto the stack
         cast.value.accept(self)
+        
+        # TODO: Use multimethods in here : http://www.artima.com/weblogs/viewpost.jsp?thread=101605
+        # 
         # Convert - Int32 can be exactly converted to Double
         if cast.sourceType is IntegerType:
             if cast.targetType is FloatType:
                 self.generator.Emit(OpCodes.Conv_R8)
                 return
+        elif cast.sourceType is FloatType:
+            if cast.targetType is IntegerType:
+                self.generator.Emit(OpCodes.Conv_Ovf_I4)
+                return
+            if cast.targetType is PtrType:
+                self.generator.Emit(OpCodes.Conv_Ovf_I)
+            
         print "Unsupported cast"
                 
     def visitLiteralInteger(self, literal_integer):
@@ -236,14 +276,15 @@ class CilVisitor(Visitor):
                         
         # The loop body goes in here - later, but first...
         loop_body_label = self.generator.DefineLabel()
+        self.generator.MarkLabel(loop_body_label)
         
         # Define a function (closure) which can be called later to generate
         # the code for the corresponding NEXT statements
         def correspondingNext():
             # Increment the counter
-            self.generator.Emit(OpCodes.Ldloc, step_value_local) # Load the STEP value
+            self.generator.Emit(OpCodes.Ldloc, step_value_local)    # Load the STEP value
             self.generator.Emit(OpCodes.Ldsfld, symbol.realization) # Load the counter
-            self.generator.Emit(Add)
+            self.generator.Emit(OpCodes.Add)                                # Add
             self.generator.Emit(OpCodes.Stsfld, symbol.realization) # Store the counter
             
             # Check the sign of the step value
@@ -251,7 +292,7 @@ class CilVisitor(Visitor):
             self.generator.Emit(OpCodes.Ldc_I4_0)                # Push zero on the stack
             
             positive_step_label = self.generator.DefineLabel()   
-            self.generator.Emit(Bgt_S, positive_step_label)      # if step > 0 jump to positive_step_label
+            self.generator.Emit(OpCodes.Bgt_S, positive_step_label)      # if step > 0 jump to positive_step_label
             
             # step is negative - implement >= as NOT <
             self.generator.Emit(OpCodes.Ldsfld, symbol.realization) # Load the counter
@@ -266,7 +307,7 @@ class CilVisitor(Visitor):
             self.generator.MarkLabel(positive_step_label)
             self.generator.Emit(OpCodes.Ldsfld, symbol.realization) # Load the counter
             self.generator.Emit(OpCodes.Ldloc, last_value_local)    # Load the last value
-            self.generator.Emit(OpCodes.Cgt)                        # Compare less-than
+            self.generator.Emit(OpCodes.Cgt)                        # Compare greater-than
             self.generator.Emit(OpCodes.Not)                        # Not 
             
             # loop back if not finished
@@ -276,6 +317,21 @@ class CilVisitor(Visitor):
         # Attach the closure to the for_to_step object for later use
         for_to_step.generateNext = correspondingNext
         return self.successorOf(for_to_step)
+    
+    def visitNext(self, next):
+        print "Visiting ", next
+        if  len(next.backEdges) != 0:
+            assert len(next.backEdges) == 1
+            # Correlated NEXT
+            for_to_step = next.backEdges[0]
+            print "NEXT correlates with ", for_to_step
+            for_to_step.generateNext()
+        else:
+            # Non-correlated NEXT
+            print "TODO: Non-correlated NEXT"
+            pass
+        return self.successorOf(next)
+         
     
     def visitReadFunc(self, read_func):
         # Determine the type of the value and dispatch appropriately
@@ -311,14 +367,27 @@ class CilVisitor(Visitor):
         # If this is an l-value take the value from the top of the stack, and assign it
         # as a byte to the location, otherwise read from that value
         if dyadic.isLValue:
+            # Check that there is a pending rvalue waiting to be written
+            assert self.__pending_rvalue is not None
             # Pop the byte on top of the stack and write to the location
             print "Dyadic byte indirection l-value"
             # Are we writing to a block or directly into memory?
             print dyadic.base.formalType
             if dyadic.base.formalType is PtrType:
                 # Writing directly into address space
-                # TODO: get the array representing our faked address space onto the stack
-                pass
+                # Push the array representing our faked address space onto the stack
+                memory_getter = self.memory_map_type.GetMethod("get_Memory")
+                self.generator.Emit(OpCodes.Call, memory_getter)
+                
+                dyadic.base.accept(self)  # Push the base address onto the stack
+                dyadic.offset.accept(self) # Push the offset onto the stack
+                self.generator.Emit(OpCodes.Add) # Add base to offset
+                
+                # Get the value on the stack here
+                self.generatePendingRValue()
+                
+                self.generator.Emit(OpCodes.Stelem_I1) # Store into the array
+                
             elif dyadic.base.formalType is ByteArrayType:
                 # Writing into a byte array
                 # TODO: get the array onto the stack
@@ -329,6 +398,58 @@ class CilVisitor(Visitor):
             print "Dyadic byte indirection r-value"
             # Are we reading from a block or directly from memory?
         
+    def visitPrint(self, print_stmt):
+        # Convert each print item into a call to the runtime library
+        # TODO: Special handling of last print_item if it is a semicolon
+        for print_item in print_stmt.printList:
+            item = print_item.item
+            item.accept(self)
+            if not isinstance(item, PrintManipulator):
+                print item
+                print item.formalType
+                print item.actualType
+                self.basic_commands_type.GetMethod("Print", System.Array[System.Type]([cts.mapType(item.actualType)]))
+                
+        suppress_newline = False
+        if len(print_stmt.printList) > 0:
+            last_item = print_stmt.printList[-1].item
+            if isinstance(last_item, PrintManipulator) and last_item.manipulator == ';':
+                suppress_newline = True
+        if not suppress_newline:
+            self.generator.Emit(OpCodes.Call, self.basicCommandMethod('NewLine'))
+        return self.successorOf(print_stmt)
+                   
+    def visitTabH(self, tabh): 
+         tabh.xCoord.accept(self)                                           # Get the horizontal tab value onto the stack
+         self.generator.Emit(OpCodes.Call, self.basicCommandMethod('TabH')) # Call the runtime library
+        
+    def visitTabXY(self, tabxy):
+        tabxy.xCoord.accept(self)
+        tabxy.yCoord.accept(self)
+        self.generator.Emit(OpCodes.Call, self.basicCommandMethod('TabXY'))
+    
+    # TODO: This code for converting manipulators into function calls should happen earlier
+    #       since it is independent of the back-end
+                                
+    def visitFormatManipulator(self, node):
+        manipulator = node.manipulator
+        # TODO: This is likely to result in a lot of redundant function calls, so we
+        #       should be smarter about only making those calls which are necessary
+        if manipulator == "~":
+            self.generator.Emit(OpCodes.Call, self.basicCommandMethod('HexFormat'))
+        elif manipulator == "'":
+            self.generator.Emit(OpCodes.Call, self.basicCommandMethod('NewLine'))
+        elif manipulator == ",":
+            self.generator.Emit(OpCodes.Call, self.basicCommandMethod('RightJustifyNumerics'))
+            self.generator.Emit(OpCodes.Call, self.basicCommandMethod('DecFormat'))
+            self.generator.Emit(OpCodes.Call, self.basicCommandMethod('CompleteField'))
+        elif manipulator == ";":
+            self.generator.Emit(OpCodes.Call, self.basicCommandMethod('DisableRightJustifyNumerics'))
+            self.generator.Emit(OpCodes.Call, self.basicCommandMethod('DecFormat'))
+                    
+    def visitSpc(self, spc):
+        spc.spaces.accept(self)
+        self.generator.Emit(OpCodes.Call, self.basicCommandMethod('Spc'))
              
             
             
