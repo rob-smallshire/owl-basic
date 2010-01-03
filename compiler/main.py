@@ -39,6 +39,7 @@ import symbol_table_visitor
 import convert_sub_visitor
 from symbol_tables import SymbolTable
 import correlation_visitor
+import function_type_inferer
 
 from Detoken import Decode
 
@@ -181,15 +182,28 @@ def createLineMapper(parse_tree, physical_to_logical_map):
     line_mapper = LineMapper(physical_to_logical_map, lnv.line_to_stmt)
     return line_mapper
 
-def typecheck(parse_tree, options):
+def typecheck(parse_tree, epv, options):
     logging.debug("typecheck")
     if options.use_typecheck:
         if options.verbose:
             sys.stderr.write("Type checking... ")
         
+        # TODO: Need to iteratively resolve types here.
+        #       while (pending_types_remaining):
         parse_tree.accept(typecheck_visitor.TypecheckVisitor())
+        inferUserFunctionTypes(parse_tree, epv, options)  
         if options.verbose:
             sys.stderr.write("done\n")
+
+def inferUserFunctionTypes(parse_tree, epv, options):
+    """
+    Iteratively examine the return types of user defined function calls
+    and assign the actual type
+    """
+    logging.debug("Infer user function types")
+    for entry_point in epv.entry_points:
+        if isinstance(entry_point, bbc_ast.DefineFunction):
+            function_type_inferer.inferTypeOfFunction(entry_point)
 
 def dumpXmlAst(parse_tree, output_filename, options):
     logging.debug("dumpXmlAst")
@@ -347,7 +361,7 @@ def buildSymbolTables(epv, options):
             print
         return stv
     return None
-
+            
 def extractData(parse_tree, options):
     """
     Extract all information from DATA statements
@@ -458,15 +472,16 @@ def compile(filename, options):
     splitComplexNodes(parse_tree, options)
     simplifyAst(parse_tree, options)
     line_mapper = createLineMapper(parse_tree, physical_to_logical_map)
-    typecheck(parse_tree, options)
-    dumpXmlAst(parse_tree, filename + "_ast.xml", options)
     dv = extractData(parse_tree, options)
-    flowGraph(parse_tree, line_mapper, options)    
+    flowGraph(parse_tree, line_mapper, options)
     epv = locateEntryPoints(parse_tree, line_mapper, options)
+    typecheck(parse_tree, epv, options)  
     convertLongjumpsToExceptions(parse_tree, line_mapper, options)
     convertSubroutinesToProcedures(parse_tree, epv, options)
     correlateLoops(epv, options)
     stv = buildSymbolTables(epv, options)
+    
+    dumpXmlAst(parse_tree, filename + "_ast.xml", options)
     dumpXmlCfg(parse_tree, filename + "_cfg.graphml", options)
 
     output_name = os.path.splitext(os.path.basename(filename))[0]

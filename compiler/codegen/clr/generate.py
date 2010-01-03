@@ -303,7 +303,9 @@ class AssemblyGenerator(object):
             print entry_point_node.name
             print self.owl_to_clr_method_names
             assert 0
+        print "Creating CIL for", clr_method_name
         method_builder = self.method_builders[clr_method_name]
+        print "entry_point_node = ", entry_point_node
         cv = CilVisitor(self, method_builder, entry_point_node)
 
         

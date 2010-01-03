@@ -57,7 +57,8 @@ class CilVisitor(Visitor):
         self.memory_map_type = clr.GetClrType(OwlRuntime.MemoryMap)
         self.generator = self.method_builder.GetILGenerator()
         self.generator.Emit(OpCodes.Nop) # Every method needs at least one OpCode
-                
+
+        # TODO: This skips the first line of the program!
         node = self.successorOf(entry_point_node)
         while True:
             node = node.accept(self)
@@ -88,7 +89,7 @@ class CilVisitor(Visitor):
         '''
         return self.basic_commands_type.GetMethod(name)
     
-    def visit(self, node):
+    def visitAstNode(self, node):
         raise CodeGenerationError("Visiting unhandled node %s" % node)
     
     def visitAstStatement(self, statement):
@@ -399,6 +400,7 @@ class CilVisitor(Visitor):
             # Are we reading from a block or directly from memory?
         
     def visitPrint(self, print_stmt):
+        print "Visiting", print_stmt
         # Convert each print item into a call to the runtime library
         # TODO: Special handling of last print_item if it is a semicolon
         for print_item in print_stmt.printList:
@@ -408,7 +410,8 @@ class CilVisitor(Visitor):
                 print item
                 print item.formalType
                 print item.actualType
-                self.basic_commands_type.GetMethod("Print", System.Array[System.Type]([cts.mapType(item.actualType)]))
+                print_method = self.basic_commands_type.GetMethod("Print", System.Array[System.Type]([cts.mapType(item.actualType)]))
+                self.generator.Emit(OpCodes.Call, print_method)
                 
         suppress_newline = False
         if len(print_stmt.printList) > 0:
@@ -450,7 +453,21 @@ class CilVisitor(Visitor):
     def visitSpc(self, spc):
         spc.spaces.accept(self)
         self.generator.Emit(OpCodes.Call, self.basicCommandMethod('Spc'))
-             
+        
+    def visitEnd(self, end):
+        # TODO throw an exception signalling END and modify the main method
+        # to catch this exception and exit gracefully
+        return self.successorOf(end)
+    
+    def visitUnaryMinus(self, unary_minus):
+        unary_minus.factor.accept(self)
+        self.generator.Emit(OpCodes.Neg)
+    
+    def visitMultiply(self, multiply):
+        multiply.lhs.accept(self)
+        multiply.rhs.accept(self)
+        self.generator.Emit(OpCodes.Mul)
+        
             
             
         
