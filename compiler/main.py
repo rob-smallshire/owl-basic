@@ -25,8 +25,6 @@ import parent_visitor
 import separation_visitor
 import simplify_visitor
 import line_number_visitor
-#import typing.typecheck_visitor
-#import typing.function_type_inferer
 from typing import typecheck
 import data_visitor
 import flowgraph_visitor

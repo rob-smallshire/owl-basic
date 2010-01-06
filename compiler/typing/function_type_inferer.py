@@ -34,42 +34,17 @@ def inferTypeOfFunction(entry_point):
     if len(return_types) == 0:
         errors.warning("%s never returns at line %s" % (entry_point.name, entry_point.lineNum))
     elif PendingType in return_types:
-         setFunctionType(entry_point.name, PendingType)
+         return PendingType
     elif len(return_types) == 1:
-        setFunctionType(entry_point.name, representative(return_types))
+        return representative(return_types)
     elif reduce(operator.and_, [type.isA(NumericType) for type in return_types]):
         # TODO: Modify all function returns to cast to FloatType, if necessary
-        setFunctionType(entry_point.name, FloatType)
+        return FloatType
     else:
         # TODO: Modify all function returns to box to ObjectType, if necessary
         # TODO: Modify all function calls to unbox from ObjectType, to what?
-        setFunctionType(entry_point.name, ObjectType)
-        pass
+        return ObjectType
         
-        
-        
-        
-
-
-        
-def setFunctionType(function_name, type):
-    '''
-    Given a function name such as 'FNx' set the actual type of all
-    calls to that function.
-    :param function_name: The name of a function including the FN prefix
-    :param type: The type to which the actualType of call should be set
-    '''
-    assert function_name.startswith('FN')
-    # TODO: Visit each function call and the the type of those that match
-    print "Setting type of %s to %s" % (function_name, type)
-    
-        
-        
-        
-            
-            
-        
-
 # TODO: Factor out into a cfg_utils file.
 def depthFirstSearch(vertex, visited = None):
     '''
