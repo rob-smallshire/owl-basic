@@ -4,7 +4,6 @@ import logging
 logging._srcfile = None
 logging.basicConfig(level=logging.DEBUG,
                     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-logging.debug("main.py")
 
 # Python Standard Library
 import sys
@@ -26,7 +25,9 @@ import parent_visitor
 import separation_visitor
 import simplify_visitor
 import line_number_visitor
-import typecheck_visitor
+#import typing.typecheck_visitor
+#import typing.function_type_inferer
+from typing import typecheck
 import data_visitor
 import flowgraph_visitor
 import gml_visitor
@@ -39,7 +40,7 @@ import symbol_table_visitor
 import convert_sub_visitor
 from symbol_tables import SymbolTable
 import correlation_visitor
-import function_type_inferer
+
 
 from Detoken import Decode
 
@@ -181,29 +182,6 @@ def createLineMapper(parse_tree, physical_to_logical_map):
     parse_tree.accept(lnv)
     line_mapper = LineMapper(physical_to_logical_map, lnv.line_to_stmt)
     return line_mapper
-
-def typecheck(parse_tree, epv, options):
-    logging.debug("typecheck")
-    if options.use_typecheck:
-        if options.verbose:
-            sys.stderr.write("Type checking... ")
-        
-        # TODO: Need to iteratively resolve types here.
-        #       while (pending_types_remaining):
-        parse_tree.accept(typecheck_visitor.TypecheckVisitor())
-        inferUserFunctionTypes(parse_tree, epv, options)  
-        if options.verbose:
-            sys.stderr.write("done\n")
-
-def inferUserFunctionTypes(parse_tree, epv, options):
-    """
-    Iteratively examine the return types of user defined function calls
-    and assign the actual type
-    """
-    logging.debug("Infer user function types")
-    for entry_point in epv.entry_points:
-        if isinstance(entry_point, bbc_ast.DefineFunction):
-            function_type_inferer.inferTypeOfFunction(entry_point)
 
 def dumpXmlAst(parse_tree, output_filename, options):
     logging.debug("dumpXmlAst")
