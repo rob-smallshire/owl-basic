@@ -596,18 +596,23 @@ class BinaryNumericOperator(BinaryOperator):
     rhs = Node(formalType=NumericType)
 
 class Plus(BinaryNumericOperator):
+    "+"
     pass
 
 class Minus(BinaryNumericOperator):
+    "-"
     pass
 
 class Multiply(BinaryNumericOperator):
+    "*"
     pass
 
 class Divide(BinaryNumericOperator):
+    "/"
     pass
 
 class Power(BinaryNumericOperator):
+    "^"
     pass
 
 class MatrixMultiply(BinaryOperator):
@@ -630,30 +635,39 @@ class RelationalOperator(BinaryOperator):
     actual_type = formal_type
 
 class Equal(RelationalOperator):
+    "="
     pass
 
 class NotEqual(RelationalOperator):
+    "<>"
     pass
 
 class LessThan(RelationalOperator):
+    "<"
     pass
 
 class LessThanEqual(RelationalOperator):
+    "<="
     pass
 
 class GreaterThan(RelationalOperator):
+    ">"
     pass
 
 class GreaterThanEqual(RelationalOperator):
+    "<"
     pass
 
 class ShiftLeft(BinaryIntegerOperator):
+    "<<"
     pass
 
 class ShiftRight(BinaryIntegerOperator):
+    ">>"
     pass
 
 class ShiftRightUnsigned(BinaryIntegerOperator):
+    "<<<"
     pass
 
 class And(BinaryIntegerOperator):
@@ -669,13 +683,17 @@ class Eor(BinaryIntegerOperator):
     pass
 
 class AbsFunc(AstNode):
+    "ABS"
+    formal_type = TypeOption(NumericType)
     factor = Node(formalType=NumericType)
 
 class EndValue(Value):
+    "END"
     formal_type = TypeOption(IntegerType)
     expression = Node()
 
 class ExtValue(Value):
+    "EXT"
     formal_type = TypeOption(IntegerType)
     channel = Node()
 
@@ -728,10 +746,13 @@ class AcsFunc(UnaryNumericFunc):
     "ACS"
 
 class AdvalFunc(AstNode):
+    "ADVAL"
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
     factor = Node(formalType=IntegerType)
 
 class AscFunc(AstNode):
+    "ASC"
     formal_type = TypeOption(IntegerType)
     actual_type = formal_type
     factor = Node(formalType=StringType)
@@ -744,12 +765,15 @@ class AtnFunc(UnaryNumericFunc):
 
 class BeatFunc(AstNode):
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
 
 class BeatsFunc(AstNode):
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
 
 class BgetFunc(AstNode):
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
     channel = Node()
 
 class ChrStrFunc(AstNode):
@@ -762,28 +786,34 @@ class CosFunc(UnaryNumericFunc):
 
 class CountFunc(AstNode):
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
 
 class DegFunc(UnaryNumericFunc):
     "DEG"
 
 class DimensionsFunc(AstNode):
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
     array = Node(nodeType=Variable, formalType=Array)
 
 class DimensionSizeFunc(AstNode):
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
     array = Node(nodeType=Variable, formalType=Array)
     dimension = Node(formalType=IntegerType)
 
 class EofFunc(AstNode):
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
     channel = Node(formalType=ChannelType)
 
 class ErlFunc(AstNode):
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
 
 class ErrFunc(AstNode):
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
 
 class EvalFunc(AstNode):
     "EVAL"
@@ -800,9 +830,11 @@ class FalseFunc(AstNode):
 
 class GetFunc(AstNode):
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
 
 class GetStrFunc(AstNode):
     formal_type = TypeOption(StringType)
+    actual_type = formal_type
 
 class GetStrFileFunc(AstNode):
     formal_type = TypeOption(StringType)
@@ -810,10 +842,12 @@ class GetStrFileFunc(AstNode):
 
 class InkeyFunc(AstNode):
     formal_type = TypeOption(IntegerType)
+    actual_type = formal_type
     factor = Node(formalType=IntegerType)
 
 class InkeyStrFunc(AstNode):
     formal_type = TypeOption(StringType)
+    actual_type = formal_type
     factor = Node(formalType=IntegerType)
 
 class InstrFunc(AstNode):

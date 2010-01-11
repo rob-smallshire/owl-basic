@@ -61,14 +61,28 @@ class TypecheckVisitor(Visitor):
             else:
                 message = "Cannot assign %s to %s" % (assignment.rValue.actualType, assignment.lValue.actualType)
                 self.typeMismatch(assignment, message)
-            
+    
+    def visitBinaryNumericOperator(self, operator):
+        '''
+        Visit - * / ^
+        '''
+        self.visit(operator.lhs)
+        self.visit(operator.rhs)
+        # TODO: Propagate pending types
+        self.determineNumericResultType(operator)
+        self.promoteNumericOperands(operator)
+                
     def visitPlus(self, plus):
+        '''
+        Specialization of visitBinaryNumericOperator to handle string concatenation
+        '''
         # Determine the actual type of sub-expressions
         self.visit(plus.lhs)
         self.visit(plus.rhs)
         
         # If this is a string concatenation, convert the node and re-visit
         if plus.lhs.actualType == StringType and plus.rhs.actualType == StringType:
+            # TODO: Create a function in ast_utils to replace a node
             concat = Concatenate(lhs = plus.lhs, rhs = plus.rhs)
             concat.lhs.parent = concat
             concat.rhs.parent = concat
@@ -77,97 +91,28 @@ class TypecheckVisitor(Visitor):
             self.visit(concat)
             return
         
-        if not self.checkSignature(plus):
-            return
+        self.determineNumericResultType(plus)
+        self.promoteNumericOperands(plus)
         
-        # Compute the type of the plus expression
-        if plus.lhs.actualType == plus.rhs.actualType:
-            plus.actualType = plus.lhs.actualType
-        elif plus.lhs.actualType == IntegerType and plus.rhs.actualType == FloatType:
-            self.insertCast(plus.lhs, source=IntegerType, target=FloatType)
-            plus.actualType = FloatType
-        elif plus.lhs.actualType == FloatType and plus.rhs.actualType == IntegerType:
-            self.insertCast(plus.rhs, source=IntegerType, target=FloatType)
-            plus.actualType = FloatType
-        else:
-            message = "Cannot add %s to %s" % (plus.lhs.actualType, plus.rhs.actualType)
-            self.typeMismatch(plus, message)
-    
-    def visitMinus(self, minus):
-        # Determine the actual type of sub-expressions
-        self.visit(minus.lhs)
-        self.visit(minus.rhs)
-            
-        if not self.checkSignature(minus):
-            return
+    def visitRelationalOperator(self, operator):
+        '''
+        Visit = <> < > <= >=
+        '''        
+        self.visit(operator.lhs)
+        self.visit(operator.rhs)
         
-        # Compute the type of the minus expression
-        if minus.lhs.actualType == minus.rhs.actualType:
-            minus.actualType = minus.lhs.actualType
-        elif minus.lhs.actualType == IntegerType and minus.rhs.actualType == FloatType:
-            self.insertCast(minus.lhs, source=IntegerType, target=FloatType)
-            minus.actualType = FloatType
-        elif minus.lhs.actualType == FloatType and minus.rhs.actualType == IntegerType:
-            self.insertCast(minus.rhs, source=IntegerType, target=FloatType)
-            minus.actualType = FloatType
-        else:
-            message = "Cannot subtract %s from %s" % (minus.rhs.actualType, minus.lhs.actualType)
-            self.typeMismatch(minus, message)
-    
-    def visitMultiply(self, multiply):
-        # Determine the actual type of sub-expressions
-        self.visit(multiply.lhs)
-        self.visit(multiply.rhs)
+        print operator
+        print operator.lineNum
+        print operator.lhs.actualType
+        print operator.rhs.actualType
         
-        if not self.checkSignature(multiply):
-            return
+        if not (operator.lhs.actualType.isConvertibleTo(operator.rhs.actualType) or operator.rhs.actualType.isConvertibleTo(operator.lhs.actualType)):
+            message = "Cannot compare %s with %s using operator %s" % (operator.lhs.actualType, operator.rhs.actualType, operator.__doc__)
+            self.typeMismatch(operator, message)
         
-        # Compute the type of the multiply expression
-        if multiply.lhs.actualType == multiply.rhs.actualType:
-            multiply.actualType = multiply.lhs.actualType
-        elif multiply.lhs.actualType == IntegerType and multiply.rhs.actualType == FloatType:
-            self.insertCast(multiply.lhs, source=IntegerType, target=FloatType)
-            multiply.actualType = FloatType
-        elif multiply.lhs.actualType == FloatType and multiply.rhs.actualType == IntegerType:
-            self.insertCast(multiply.rhs, source=IntegerType, target=FloatType)
-            multiply.actualType = FloatType
-        else:
-            message = "Cannot multiply %s by %s" % (multiply.lhs.actualType, multiply.rhs.actualType)
-            self.typeMismatch(multiply, message)
-    
-    def visitDivide(self, divide):
-        # Determine the actual type of sub-expressions
-        self.visit(divide.lhs)
-        self.visit(divide.rhs)
-        
-        if not self.checkSignature(divide):
-            return
-        
-        # Compute the type of the division expression
-        divide.actualType = FloatType            
-        if divide.lhs.actualType == IntegerType:
-            self.insertCast(divide.lhs, source=IntegerType, target=FloatType)
-        if divide.rhs.actualType == IntegerType:
-            self.insertCast(divide.rhs, source=IntegerType, target=FloatType)
-            
-    def visitPower(self, power):
-        # Determine the actual type of sub-expressions
-        self.visit(power.lhs)
-        self.visit(power.rhs)
-        
-        if not self.checkSignature(power):
-            return
-        
-        # Compute the actual type of the power expression
-        power.actualType = FloatType
-        if power.lhs.actualType == IntegerType and power.rhs.actualType == FloatType:
-            self.insertCast(power.lhs, source=IntegerType, target=FloatType)
-        elif power.lhs.actualType == FloatType and power.rhs.actualType == IntegerType:
-            self.insertCast(power.rhs, source=IntegerType, target=FloatType)
-        else:
-            message = "Cannot raise %s by %s" % (power.lhs.actualType, power.rhs.actualType)
-            self.typeMismatch(power, message)
-    
+        self.promoteNumericOperands(operator)
+        operator.actualType = IntegerType
+                        
     def visitArray(self, array):
         # Decode the variable name sigil into the actual type
         # The sigils are one of [$%&~]
@@ -243,6 +188,16 @@ class TypecheckVisitor(Visitor):
         if func.factor.actualType is IntegerType:
             self.insertCast(func.factor, source=func.factor.actualType, target=FloatType)
             
+    def visitAbsFunc(self, abs):
+        '''
+        Check that the argument is numeric.  If so, propagate the type of the argument to
+        the type of the ABS function.
+        '''
+        self.visit(abs.factor)
+        if not self.checkSignature(abs):
+            return
+        abs.actualType = abs.factor.actualType
+            
     def visitIntFunc(self, func):
         self.visit(func.factor)
         if not self.checkSignature(func):
@@ -280,9 +235,41 @@ class TypecheckVisitor(Visitor):
         # an Assignment
         read_func.actualType = read_func.parent.lValue.actualType
         
-    # TODO: Casts may be needed so that all three expressions of a FOR TO STEP
-    # statement are the same type as the counter variable
     
+    def determineNumericResultType(self, operator):    
+        if not self.checkSignature(operator):
+            return
+        
+        def opTypes(lhs_type, rhs_type):
+            return operator.lhs.actualType.isA(lhs_type) and operator.rhs.actualType.isA(rhs_type)
+
+        if   opTypes(ObjectType,  NumericType) : operator.actualType = FloatType
+        elif opTypes(NumericType, ObjectType)  : operator.actualType = FloatType
+        elif opTypes(IntegerType, FloatType)   : operator.actualType = FloatType
+        elif opTypes(FloatType,   IntegerType) : operator.actualType = FloatType
+        elif operator.lhs.actualType == operator.rhs.actualType:
+            operator.actualType = operator.lhs.actualType
+        else:
+            message = "Cannot apply operator %s to type of %s and %s" % (operator.__doc__, operator.lhs.actualType, operator.rhs.actualType)
+            self.typeMismatch(operator, message)    
+                   
+    def promoteNumericOperands(self, operator):
+        '''
+        Given a binary operator with lhs and rhs operands, if the operands are of
+        NumericType, insert casts as necessary to promote operands as necessary to
+        FloatType from IntegerType in the case of mixed operand types.
+        e.g. Int op Int     => Int op Int
+             Float op Float => Float op Float
+             Float op Int   => Float op Float
+             Int op FLoat   => Float op Float
+        '''
+        def opTypes(lhs_type, rhs_type):
+            return operator.lhs.actualType.isA(lhs_type) and operator.rhs.actualType.isA(rhs_type)
+        
+        if opTypes(IntegerType, FloatType):
+            self.insertCast(operator.lhs, source=IntegerType, target=FloatType)
+        elif opTypes(FloatType, IntegerType):
+            self.insertCast(operator.rhs, source=IntegerType, target=FloatType)
     
     def insertNumericCasts(self, node):
         """

@@ -32,6 +32,16 @@ class CodeGenerationError(Exception):
     def __str__(self):
         return repr(self.value)
 
+def binaryTypeMatch(operator, lhs_type, rhs_type):
+    '''
+    Returns True if the left hand side and right hand side of the supplied binary operator
+    match the supplied types.
+    :param lhs_type: The Type of the left hand side expression
+    :param rhs_type: The Type of the right hand side expression
+    :returns: True if the types match, otherwise False
+    '''
+    return operator.lhs.actualType.isA(lhs_type) and operator.lhs.actualType.isA(rhs_type)
+
 class CilVisitor(Visitor):
     '''
     Emit CIL bytecode whilst traversing the AST/CFG
@@ -55,6 +65,8 @@ class CilVisitor(Visitor):
         # Get the type of OwnRuntime.BasicCommand so we can retrieve methods
         self.basic_commands_type = clr.GetClrType(OwlRuntime.BasicCommands)
         self.memory_map_type = clr.GetClrType(OwlRuntime.MemoryMap)
+        self.string_type = clr.GetClrType(System.String)
+        self.console_type = clr.GetClrType(System.Console)
         self.generator = self.method_builder.GetILGenerator()
         self.generator.Emit(OpCodes.Nop) # Every method needs at least one OpCode
 
@@ -88,6 +100,13 @@ class CilVisitor(Visitor):
         Return a MethodInfo object for the named method of OwlRuntime.BasicCommands
         '''
         return self.basic_commands_type.GetMethod(name)
+    
+    def convertClrToOwlBool(self):
+        '''
+        Convert the CLR bool value on the stack (0 or 1) to an OWL BASIC
+        integer on the stack (0 or -1)
+        '''
+        self.generator.Emit(OpCodes.Neg)
     
     def visitAstNode(self, node):
         raise CodeGenerationError("Visiting unhandled node %s" % node)
@@ -209,6 +228,11 @@ class CilVisitor(Visitor):
             print "Unhandled"
             return None
         return self.successorOf(vdu)
+    
+    def visitCls(self, cls):
+        print "Visiting ", cls
+        self.generator.Emit(OpCodes.Call, self.basicCommandMethod('Cls'))
+        return self.successorOf(cls)
                   
     def visitCallProcedure(self, call_proc):
         print "Visiting ", call_proc
@@ -235,6 +259,27 @@ class CilVisitor(Visitor):
         self.generator.Emit(OpCodes.Call, get_item_method_info) # Call get_Item and the put the new data point result on the stack
         self.generator.Emit(OpCodes.Stsfld, self.assembly_generator.data_index_field)
         return self.successorOf(restore)
+    
+    def visitRepeat(self, repeat):
+        print "Visiting ", repeat
+        repeat.label = self.generator.DefineLabel()
+        self.generator.MarkLabel(repeat.label)
+        return self.successorOf(repeat)
+        
+    def visitUntil(self, until):
+        print "Visiting ", until
+        if len(until.backEdges) != 0:
+            assert len(until.backEdges) == 1
+            # Correlated NEXT
+            repeat = until.backEdges[0]
+            print "UNTIL correlates with ", repeat
+            until.condition.accept(self)            # Push the condition onto the stack
+            self.generator.Emit(OpCodes.Brfalse_S, repeat.label)  # Branch if false
+        else:
+            # Non-correlated NEXT
+            print "TODO: Non-correlated UNTIL"
+            pass
+        return self.successorOf(until)    
         
     def visitForToStep(self, for_to_step):
         # TODO: Future optimizations
@@ -453,8 +498,13 @@ class CilVisitor(Visitor):
     def visitSpc(self, spc):
         spc.spaces.accept(self)
         self.generator.Emit(OpCodes.Call, self.basicCommandMethod('Spc'))
-        
+    
+    def visitGetFunc(self, get):
+        "GET - read a character from the console"
+        self.generator.Emit(OpCodes.Call, self.basicCommandMethod('Get'))
+              
     def visitEnd(self, end):
+        print "Visiting ", end
         # TODO throw an exception signalling END and modify the main method
         # to catch this exception and exit gracefully
         return self.successorOf(end)
@@ -464,12 +514,50 @@ class CilVisitor(Visitor):
         self.generator.Emit(OpCodes.Neg)
     
     def visitMultiply(self, multiply):
+        # TODO: Deal with unknown types (e.g. Object)
+        # TODO: Factor out for BinaryNumericOperators
         multiply.lhs.accept(self)
         multiply.rhs.accept(self)
         self.generator.Emit(OpCodes.Mul)
+                    
+    def visitEqual(self, operator):
+        operator.lhs.accept(self) # Lhs on the stack
+        operator.rhs.accept(self) # Rhs on the stack
         
+        if binaryTypeMatch(operator, NumericType, NumericType):
+            self.generator.Emit(OpCodes.Ceq)
+            self.convertClrToOwlBool()
+        elif binaryTypeMatch(operator, StringType, StringType):
+            string_equals_method = self.string_type.GetMethod("Equals", System.Array[System.Type]([cts.mapType(StringType),
+                                                                                                   cts.mapType(StringType)]))
+            self.generator.Emit(OpCodes.Call, string_equals_method) 
+            self.convertClrToOwlBool()
+        elif binaryTypeMatch(operator, ObjectType, Type) or \
+             binaryTypeMatch(operator, Type, ObjectType):
+            equal_method = self.basic_commands_type.GetMethod("Equal",
+                                                              System.Array[System.Type]([cts.mapType(operator.lhs.actualType),
+                                                                                         cts.mapType(operator.rhs.actualType)]))
+            self.generator.Emit(OpCodes.Call, equal_method)
             
-            
+    def visitNotEqual(self, operator):
+        operator.lhs.accept(self) # Lhs on the stack
+        operator.rhs.accept(self) # Rhs on the stack
+        
+        if binaryTypeMatch(operator, NumericType, NumericType):
+            self.generator.Emit(OpCodes.Ceq)
+            self.generator.Emit(OpCodes.Ldc_I4_1) # 0 ==> -1, 1 ==> 0
+            self.generator.Emit(OpCodes.Sub)
+        elif binaryTypeMatch(operator, StringType, StringType):
+            self.generator.Emit(OpCodes.Call, "String.Equals")
+            self.generator.Emit(OpCodes.Ldc_I4_1) # 0 ==> -1, 1 ==> 0
+            self.generator.Emit(OpCodes.Sub)
+        elif binaryTypeMatch(operator, ObjectType, Type) or \
+             binaryTypeMatch(operator, Type, ObjectType):
+            equal_method = self.basic_commands_type.GetMethod("NotEqual",
+                                                              System.Array[System.Type]([cts.mapType(operator.lhs.actualType),
+                                                                                         cts.mapType(operator.rhs.actualType)]))
+            self.generator.Emit(OpCodes.Call, equal_method)
+        
         
          
         

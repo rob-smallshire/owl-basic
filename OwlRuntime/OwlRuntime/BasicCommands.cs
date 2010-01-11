@@ -12,6 +12,8 @@ namespace OwlRuntime
         private static readonly Dictionary<int, FileStream> channels = new Dictionary<int, FileStream>();
         private static readonly VduSystem vdu = new VduSystem();
         private static readonly PrintManager printManager = new PrintManager();
+        private const int owlTrue = -1;
+        private const int owlFalse = 0;
 
         public class NoSuchChannelException : ApplicationException
         {
@@ -157,6 +159,17 @@ namespace OwlRuntime
             return 100;
         }
 
+        /// <summary>
+        /// Get the next key pressed on the console.
+        /// </summary>
+        /// <returns>An integer Unicode value.</returns>
+        public static int Get()
+        {
+            ConsoleKeyInfo cki = Console.ReadKey(true);
+            int code = cki.KeyChar;
+            return code;
+        }
+
         public static string InputString()
         {
             throw new NotImplementedException();
@@ -168,21 +181,6 @@ namespace OwlRuntime
         }
 
         public static double InputFloat()
-        {
-            throw new NotImplementedException();
-        }
-
-        public static object Read()
-        {
-            throw new NotImplementedException();
-        }
-
-        public static object Restore()
-        {
-            throw new NotImplementedException();
-        }
-
-        public static object Restore(int index)
         {
             throw new NotImplementedException();
         }
@@ -213,6 +211,11 @@ namespace OwlRuntime
         public static void VduFlush()
         {
             vdu.Enqueue(0, 0, 0, 0, 0, 0, 0, 0, 0);
+        }
+
+        public static void Cls()
+        {
+            vdu.Enqueue(12);
         }
 
         public static int Himem { get; set; }
@@ -292,5 +295,495 @@ namespace OwlRuntime
             printManager.Print(o);
         }
 
+        // Operators
+        /// <summary>
+        /// Numeric addition of a value boxed in an object and an integer. The result type
+        /// is double, since the object may contain a double. If the type object is non-numeric
+        /// a TypeMismatch exception will be thrown.
+        /// </summary>
+        /// <param name="lhs">Left hand side: A boxed numeric value type</param>
+        /// <param name="rhs">Right hand side: An integer</param>
+        /// <returns>lhs plus rhs</returns>
+        /// <exception cref="TypeMismatchException">Thrown if lhs does not contain a boxed numeric type</exception>
+        public static double Add(object lhs, int rhs)
+        {
+            if (lhs is int)
+            {
+                return (int) lhs + rhs;
+            }
+
+            if (lhs is double)
+            {
+                return (double) lhs + rhs;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("Cannot add {0} to {1}", lhs.GetType().FullName, rhs.GetType().FullName);
+            throw new TypeMismatchException(sb.ToString());
+        }
+
+        /// <summary>
+        /// Numeric addition of a value boxed in an object and a double. The result type
+        /// is double. If the type object is non-numeric
+        /// a TypeMismatch exception will be thrown.
+        /// </summary>
+        /// <param name="lhs">Left hand side: A boxed numeric value type</param>
+        /// <param name="rhs">Right hand side: An double</param>
+        /// <returns>lhs plus rhs</returns>
+        /// <exception cref="TypeMismatchException">Thrown if lhs does not contain a boxed numeric type</exception>
+        public static double Add(object lhs, double rhs)
+        {
+            if (lhs is int)
+            {
+                return (int) lhs + rhs;
+            }
+
+            if (lhs is double)
+            {
+                return (double) lhs + rhs;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("Cannot add {0} to {1}", lhs.GetType().FullName, rhs.GetType().FullName);
+            throw new TypeMismatchException(sb.ToString());
+        }
+
+        /// <summary>
+        /// String concatenation of a string value boxed in lhs and a string. The result
+        /// type is string. If the boxed object is not a string a TypeMismatch exception will be thrown.
+        /// </summary>
+        /// <param name="lhs">Left hand side: A boxed string value</param>
+        /// <param name="rhs">Right hand side: A string value</param>
+        /// <returns></returns>
+        public static string Concatenate(object lhs, string rhs)
+        {
+            if (lhs is string)
+            {
+                return (string) lhs + rhs;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("Cannot concatenate {0} and {1}", lhs.GetType().FullName, rhs.GetType().FullName);
+            throw new TypeMismatchException(sb.ToString());
+        }
+
+        /// <summary>
+        /// Add operation on two boxed value types.  If both boxed values are numeric, does addition.
+        /// If both boxed values are strings, does concatenation. Otherwise, throws a TypeMismatchException.
+        /// </summary>
+        /// <param name="lhs">Left hand side: Boxed value type</param>
+        /// <param name="rhs">Right hand side: Boxed value type</param>
+        /// <returns>Boxed value type containing an integer, double or string depending on the type of the operands</returns>
+        /// <exception cref="TypeMismatchException">Thrown if the arguments are a mixture of numeric and string types</exception>
+        public static object Add(object lhs, object rhs)
+        {
+            if (lhs is int)
+            {
+                if (rhs is int)
+                {
+                    object result = (int) lhs + (int) rhs;
+                    return result;
+                }
+
+                if (rhs is double)
+                {
+                    object result = (int) lhs + (double) rhs;
+                    return result;
+                }
+            }
+
+            if (lhs is double)
+            {
+                if (rhs is int)
+                {
+                    object result = (double) lhs + (int) rhs;
+                    return result;
+                }
+
+                if (rhs is double)
+                {
+                    object result = (double) lhs + (double) rhs;
+                    return result;
+                }
+            }
+
+            if (lhs is string && rhs is string)
+            {
+                object result = (string) lhs + (string) rhs;
+                return result;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("Cannot add {0} to {1}", lhs.GetType().FullName, rhs.GetType().FullName);
+            throw new TypeMismatchException(sb.ToString());
+        }
+
+        /// <summary>
+        /// Detmerine if the left hand side and right hand side operands are equal
+        /// </summary>
+        /// <param name="lhs">The left hand side operand</param>
+        /// <param name="rhs">The right hand side operand</param>
+        /// <returns>True (-1) if the objects are equal, otherwise False (0)</returns>
+        /// <exception cref="TypeMismatchException">Thrown if the argument types are incompatible</exception>
+        public static int Equal(object lhs, object rhs)
+        {
+            if (ReferenceEquals(lhs, rhs))
+            {
+                return owlTrue;
+            }
+            if (lhs is int)
+            {
+                if (rhs is int)
+                {
+                    return (int) lhs == (int) rhs ? owlTrue : owlFalse;
+                }
+                if (rhs is double)
+                {
+                    return (int) lhs == (double) rhs ? owlTrue : owlFalse;
+                }
+            }
+            else if (lhs is double)
+            {
+                if (rhs is int)
+                {
+                    return (double) lhs == (int) rhs ? owlTrue : owlFalse;
+                }
+                if (rhs is double)
+                {
+                    return (double) lhs == (double) rhs ? owlTrue : owlFalse;
+                }
+            }
+            else if (lhs is string)
+            {
+                if (rhs is string)
+                {
+                    return (string) lhs == (string) rhs ? owlTrue : owlFalse;
+                }
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("Cannot compare {0} to {1}", lhs.GetType().FullName, rhs.GetType().FullName);
+            throw new TypeMismatchException(sb.ToString());
+        }
+
+
+
+        /// <summary>
+        /// Detmerine if the left hand side and right hand side operands are equal
+        /// </summary>
+        /// <param name="lhs">The left hand side operand</param>
+        /// <param name="rhs">The right hand side operand</param>
+        /// <returns>True (-1) if the objects are equal, otherwise False (0)</returns>
+        /// <exception cref="TypeMismatchException">Thrown if the argument types are incompatible</exception>
+        public static int Equal(object lhs, int rhs)
+        {
+            if (lhs is int)
+            {
+                return (int) lhs == rhs ? owlTrue : owlFalse;
+            }
+            if (lhs is double)
+            {
+                return (double) lhs == rhs ? owlTrue : owlFalse;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("Cannot compare {0} to {1}", lhs.GetType().FullName, rhs.GetType().FullName);
+            throw new TypeMismatchException(sb.ToString());
+        }
+
+        /// <summary>
+        /// Detmerine if the left hand side and right hand side operands are equal
+        /// </summary>
+        /// <param name="lhs">The left hand side operand</param>
+        /// <param name="rhs">The right hand side operand</param>
+        /// <returns>True (-1) if the objects are equal, otherwise False (0)</returns>
+        /// <exception cref="TypeMismatchException">Thrown if the argument types are incompatible</exception>
+        public static int Equal(object lhs, double rhs)
+        {
+            if (lhs is int)
+            {
+                return (int) lhs == rhs ? owlTrue : owlFalse;
+            }
+            if (lhs is double)
+            {
+                return (double) lhs == rhs ? owlTrue : owlFalse;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("Cannot compare {0} to {1}", lhs.GetType().FullName, rhs.GetType().FullName);
+            throw new TypeMismatchException(sb.ToString());
+        }
+
+        /// <summary>
+        /// Detmerine if the left hand side and right hand side operands are equal
+        /// </summary>
+        /// <param name="lhs">The left hand side operand</param>
+        /// <param name="rhs">The right hand side operand</param>
+        /// <returns>True (-1) if the objects are equal, otherwise False (0)</returns>
+        /// <exception cref="TypeMismatchException">Thrown if the argument types are incompatible</exception>
+        public static int Equal(object lhs, string rhs)
+        {
+            if (lhs is string)
+            {
+                return String.Equals((string) lhs, rhs) ? owlTrue : owlFalse;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("Cannot compare {0} to {1}", lhs.GetType().FullName, rhs.GetType().FullName);
+            throw new TypeMismatchException(sb.ToString());
+        }
+
+        /// <summary>
+        /// Detmerine if the left hand side and right hand side operands are equal
+        /// </summary>
+        /// <param name="lhs">The left hand side operand</param>
+        /// <param name="rhs">The right hand side operand</param>
+        /// <returns>True (-1) if the objects are equal, otherwise False (0)</returns>
+        /// <exception cref="TypeMismatchException">Thrown if the argument types are incompatible</exception>
+        public static int Equal(int lhs, object rhs)
+        {
+            if (rhs is int)
+            {
+                return lhs == (int) rhs ? owlTrue : owlFalse;
+            }
+            if (rhs is double)
+            {
+                return lhs == (double) rhs ? owlTrue : owlFalse;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("Cannot compare {0} to {1}", lhs.GetType().FullName, rhs.GetType().FullName);
+            throw new TypeMismatchException(sb.ToString());
+        }
+
+        /// <summary>
+        /// Detmerine if the left hand side and right hand side operands are equal
+        /// </summary>
+        /// <param name="lhs">The left hand side operand</param>
+        /// <param name="rhs">The right hand side operand</param>
+        /// <returns>True (-1) if the objects are equal, otherwise False (0)</returns>
+        /// <exception cref="TypeMismatchException">Thrown if the argument types are incompatible</exception>
+        public static int Equal(double lhs, object rhs)
+        {
+            if (rhs is int)
+            {
+                return lhs == (int) rhs ? owlTrue : owlFalse;
+            }
+            if (rhs is double)
+            {
+                return lhs == (double) rhs ? owlTrue : owlFalse;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("Cannot compare {0} to {1}", lhs.GetType().FullName, rhs.GetType().FullName);
+            throw new TypeMismatchException(sb.ToString());
+        }
+
+        /// <summary>
+        /// Detmerine if the left hand side and right hand side operands are equal
+        /// </summary>
+        /// <param name="lhs">The left hand side operand</param>
+        /// <param name="rhs">The right hand side operand</param>
+        /// <returns>True (-1) if the objects are equal, otherwise False (0)</returns>
+        /// <exception cref="TypeMismatchException">Thrown if the argument types are incompatible</exception>
+        public static int Equal(string lhs, object rhs)
+        {
+            if (rhs is string)
+            {
+                return String.Equals(lhs, (string) rhs) ? owlTrue : owlFalse;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("Cannot compare {0} to {1}", lhs.GetType().FullName, rhs.GetType().FullName);
+            throw new TypeMismatchException(sb.ToString());
+        }
+
+        /// <summary>
+        /// Detmerine if the left hand side and right hand side operands are not equal
+        /// </summary>
+        /// <param name="lhs">The left hand side operand</param>
+        /// <param name="rhs">The right hand side operand</param>
+        /// <returns>True (-1) if the objects are not equal, otherwise False (0)</returns>
+        /// <exception cref="TypeMismatchException">Thrown if the argument types are incompatible</exception>
+        public static int NotEqual(object lhs, object rhs)
+        {
+            if (ReferenceEquals(lhs, rhs))
+            {
+                return owlTrue;
+            }
+            if (lhs is int)
+            {
+                if (rhs is int)
+                {
+                    return (int) lhs != (int) rhs ? owlTrue : owlFalse;
+                }
+                if (rhs is double)
+                {
+                    return (int) lhs != (double) rhs ? owlTrue : owlFalse;
+                }
+            }
+            else if (lhs is double)
+            {
+                if (rhs is int)
+                {
+                    return (double) lhs != (int) rhs ? owlTrue : owlFalse;
+                }
+                if (rhs is double)
+                {
+                    return (double) lhs != (double) rhs ? owlTrue : owlFalse;
+                }
+            }
+            else if (lhs is string)
+            {
+                if (rhs is string)
+                {
+                    return (string) lhs != (string) rhs ? owlTrue : owlFalse;
+                }
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("Cannot compare {0} to {1}", lhs.GetType().FullName, rhs.GetType().FullName);
+            throw new TypeMismatchException(sb.ToString());
+        }
+
+
+
+        /// <summary>
+        /// Detmerine if the left hand side and right hand side operands are not equal
+        /// </summary>
+        /// <param name="lhs">The left hand side operand</param>
+        /// <param name="rhs">The right hand side operand</param>
+        /// <returns>True (-1) if the objects are not equal, otherwise False (0)</returns>
+        /// <exception cref="TypeMismatchException">Thrown if the argument types are incompatible</exception>
+        public static int NotEqual(object lhs, int rhs)
+        {
+            if (lhs is int)
+            {
+                return (int) lhs != rhs ? owlTrue : owlFalse;
+            }
+            if (lhs is double)
+            {
+                return (double) lhs != rhs ? owlTrue : owlFalse;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("Cannot compare {0} to {1}", lhs.GetType().FullName, rhs.GetType().FullName);
+            throw new TypeMismatchException(sb.ToString());
+        }
+
+        /// <summary>
+        /// Detmerine if the left hand side and right hand side operands are not equal
+        /// </summary>
+        /// <param name="lhs">The left hand side operand</param>
+        /// <param name="rhs">The right hand side operand</param>
+        /// <returns>True (-1) if the objects are not equal, otherwise False (0)</returns>
+        /// <exception cref="TypeMismatchException">Thrown if the argument types are incompatible</exception>
+        public static int NotEqual(object lhs, double rhs)
+        {
+            if (lhs is int)
+            {
+                return (int) lhs != rhs ? owlTrue : owlFalse;
+            }
+            if (lhs is double)
+            {
+                return (double) lhs != rhs ? owlTrue : owlFalse;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("Cannot compare {0} to {1}", lhs.GetType().FullName, rhs.GetType().FullName);
+            throw new TypeMismatchException(sb.ToString());
+        }
+
+        /// <summary>
+        /// Detmerine if the left hand side and right hand side operands are not equal
+        /// </summary>
+        /// <param name="lhs">The left hand side operand</param>
+        /// <param name="rhs">The right hand side operand</param>
+        /// <returns>True (-1) if the objects are not equal, otherwise False (0)</returns>
+        /// <exception cref="TypeMismatchException">Thrown if the argument types are incompatible</exception>
+        public static int NotEqual(object lhs, string rhs)
+        {
+            if (lhs is string)
+            {
+                return String.Equals((string) lhs, rhs) ? owlFalse : owlTrue;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("Cannot compare {0} to {1}", lhs.GetType().FullName, rhs.GetType().FullName);
+            throw new TypeMismatchException(sb.ToString());
+        }
+
+        /// <summary>
+        /// Detmerine if the left hand side and right hand side operands are not equal
+        /// </summary>
+        /// <param name="lhs">The left hand side operand</param>
+        /// <param name="rhs">The right hand side operand</param>
+        /// <returns>True (-1) if the objects are not equal, otherwise False (0)</returns>
+        /// <exception cref="TypeMismatchException">Thrown if the argument types are incompatible</exception>
+        public static int NotEqual(int lhs, object rhs)
+        {
+            if (rhs is int)
+            {
+                return lhs != (int) rhs ? owlTrue : owlFalse;
+            }
+            if (rhs is double)
+            {
+                return lhs != (double) rhs ? owlTrue : owlFalse;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("Cannot compare {0} to {1}", lhs.GetType().FullName, rhs.GetType().FullName);
+            throw new TypeMismatchException(sb.ToString());
+        }
+
+        /// <summary>
+        /// Detmerine if the left hand side and right hand side operands are not equal
+        /// </summary>
+        /// <param name="lhs">The left hand side operand</param>
+        /// <param name="rhs">The right hand side operand</param>
+        /// <returns>True (-1) if the objects are not equal, otherwise False (0)</returns>
+        /// <exception cref="TypeMismatchException">Thrown if the argument types are incompatible</exception>
+        public static int NotEqual(double lhs, object rhs)
+        {
+            if (rhs is int)
+            {
+                return lhs != (int) rhs ? owlTrue : owlFalse;
+            }
+            if (rhs is double)
+            {
+                return lhs != (double) rhs ? owlTrue : owlFalse;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("Cannot compare {0} to {1}", lhs.GetType().FullName, rhs.GetType().FullName);
+            throw new TypeMismatchException(sb.ToString());
+        }
+
+        /// <summary>
+        /// Detmerine if the left hand side and right hand side operands are not equal
+        /// </summary>
+        /// <param name="lhs">The left hand side operand</param>
+        /// <param name="rhs">The right hand side operand</param>
+        /// <returns>True (-1) if the objects are not equal, otherwise False (0)</returns>
+        /// <exception cref="TypeMismatchException">Thrown if the argument types are incompatible</exception>
+        public static int NotEqual(string lhs, object rhs)
+        {
+            if (rhs is string)
+            {
+                return String.Equals(lhs, (string) rhs) ? owlFalse : owlTrue;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("Cannot compare {0} to {1}", lhs.GetType().FullName, rhs.GetType().FullName);
+            throw new TypeMismatchException(sb.ToString());
+        }
+    }
+
+    public class TypeMismatchException : Exception
+    {
+        public TypeMismatchException(string message) :
+            base("Type mismatch: " + message)
+        {
+        }
     }
 }
