@@ -53,13 +53,11 @@ class TypecheckVisitor(Visitor):
                 message = "List is only assignable to an array"
                 self.typeMismatch(assignment, message)
         else:
-            #print assignment.rValue
-            #print assignment.rValue.actualType
             if assignment.rValue.actualType.isConvertibleTo(assignment.lValue.actualType):
                 if assignment.rValue.actualType is not assignment.lValue.actualType:
                     self.insertCast(assignment.rValue, assignment.rValue.actualType, assignment.lValue.actualType)
             else:
-                message = "Cannot assign %s to %s" % (assignment.rValue.actualType, assignment.lValue.actualType)
+                message = "Cannot assign %s to %s" % (assignment.rValue.actualType.__doc__, assignment.lValue.actualType.__doc__)
                 self.typeMismatch(assignment, message)
     
     def visitBinaryNumericOperator(self, operator):
@@ -101,13 +99,8 @@ class TypecheckVisitor(Visitor):
         self.visit(operator.lhs)
         self.visit(operator.rhs)
         
-        print operator
-        print operator.lineNum
-        print operator.lhs.actualType
-        print operator.rhs.actualType
-        
         if not (operator.lhs.actualType.isConvertibleTo(operator.rhs.actualType) or operator.rhs.actualType.isConvertibleTo(operator.lhs.actualType)):
-            message = "Cannot compare %s with %s using operator %s" % (operator.lhs.actualType, operator.rhs.actualType, operator.__doc__)
+            message = "Cannot compare %s with %s using operator %s" % (operator.lhs.actualType.__doc__, operator.rhs.actualType.__doc__, operator.__doc__)
             self.typeMismatch(operator, message)
         
         self.promoteNumericOperands(operator)
@@ -126,15 +119,12 @@ class TypecheckVisitor(Visitor):
     def visitIndexer(self, indexer):
         # Decode the variable name sigil into the actual type
         # The sigils are one of [$%&~]
-        #print "indexer.identifier = %s" % indexer.identifier
         indexer.actualType = sigil.identifierToType(indexer.identifier[:-1])
-        #print "indexer.actualType = %s" % indexer.actualType
     
     def visitIf(self, iff):
         self.visit(iff.condition)
         self.visit(iff.trueClause)
         self.visit(iff.falseClause)
-        #print "iff.condition.actualType = %s" % iff.condition.actualType
         if iff.condition.actualType.isConvertibleTo(IntegerType):
             self.insertCast(iff.condition, iff.condition.actualType, iff.condition.formalType)
         else:
@@ -223,8 +213,6 @@ class TypecheckVisitor(Visitor):
     
     def visitUserFunc(self, func):
         # TODO Add to a list of user defined functions to be typechecked
-        #print "func.actualParameters = %s at line %s" % (func.actualParameters, func.lineNum)
-        
         for parameter in func.actualParameters:
             self.visit(parameter)
     
@@ -271,7 +259,7 @@ class TypecheckVisitor(Visitor):
         elif operator.lhs.actualType == operator.rhs.actualType:
             operator.actualType = operator.lhs.actualType
         else:
-            message = "Cannot apply operator %s to type of %s and %s" % (operator.__doc__, operator.lhs.actualType, operator.rhs.actualType)
+            message = "Cannot apply operator %s to operands of type of %s and %s" % (operator.__doc__, operator.lhs.actualType.__doc__, operator.rhs.actualType.__doc__)
             self.typeMismatch(operator, message)    
                    
     def promoteNumericOperands(self, operator):
@@ -347,10 +335,8 @@ class TypecheckVisitor(Visitor):
         IntegerType is compatible with NumericType, and NumericType is compatible
         with ScalarType, but StringType is not compatible with NumericType.
         """
-        #print "node = %s at line %s" % (node, node.lineNum)
         result = True
         for name, info in node.child_infos.items():
-            #print "name = %s" % name
             if isinstance(info, list):
                 info = info[0]
                 formal_type = info.formalType
