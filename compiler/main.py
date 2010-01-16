@@ -217,7 +217,7 @@ def convertLongjumpsToExceptions(parse_tree, line_mapper, options):
         if options.verbose:
             sys.stderr.write("done\n")
 
-def convertSubroutinesToProcedures(parse_tree, epv, options):
+def convertSubroutinesToProcedures(parse_tree, entry_points, options):
     logging.debug("convertSubroutinesToProcedures")    
     if options.use_convert_subs:
         # Convert subroutines to procedures
@@ -226,7 +226,7 @@ def convertSubroutinesToProcedures(parse_tree, epv, options):
         
         entry_point_names_to_remove = []
         entry_points_to_add = {}
-        for name, entry_point in epv.entryPoints.items():
+        for name, entry_point in entry_points.items():
             # TODO: This will only work with simple (i.e. single entry) subroutines
             subname = iter(entry_point.entryPoints).next()
             if subname.startswith('SUB'):
@@ -240,29 +240,25 @@ def convertSubroutinesToProcedures(parse_tree, epv, options):
                 entry_points_to_add[procname] = defproc
                 flow_analysis.tagSuccessors(defproc)
         for name in entry_point_names_to_remove:
-            del epv.entryPoints[name]
-        epv.entryPoints.update(entry_points_to_add)
+            del entry_points[name]
+        entry_points.update(entry_points_to_add)
         
         csv = convert_sub_visitor.ConvertSubVisitor()
         parse_tree.accept(csv)
                 
-        if options.verbose:
-            sys.stderr.write("done\n")
-    
-
-def correlateLoops(epv, options):
+def correlateLoops(entry_points, options):
     logging.debug("correlateLoops")
     if options.verbose:
         sys.stderr.write("Convert subroutines to procedures")
     
-    for entry_point in epv.entryPoints.values():
+    for entry_point in entry_points.values():
         # Depth first search from this entry point through the CFG
         # maintaining a stack of loops as we go. Mark nodes that we
         visited = set()
         cv = correlation_visitor.CorrelationVisitor()
         cv.start(entry_point)
         
-def buildSymbolTables(epv, options):
+def buildSymbolTables(entry_points, options):
     logging.debug("buildSymbolTables")    
     if options.use_symbol_tables:
         # Attach symbol tables to each statement
@@ -272,13 +268,11 @@ def buildSymbolTables(epv, options):
         stv = symbol_table_visitor.SymbolTableVisitor()
         
         # Set the global symbol table for the main program entry point, if there is one
-        if '__owl__main' in epv.entryPoints:
-            epv.entryPoints['__owl__main'].symbolTable = stv.globalSymbols
+        if '__owl__main' in entry_points:
+            entry_points['__owl__main'].symbolTable = stv.globalSymbols
         
-        for entry_point in epv.entryPoints.values():
+        for entry_point in entry_points.values():
             entry_point.accept(stv)
-        if options.verbose:
-            sys.stderr.write("done\n")
         
         for table in SymbolTable.symbol_tables:
             title = "Symbol table '%s'" % table.name
@@ -412,12 +406,12 @@ def compile(filename, options):
     line_mapper = createLineMapper(parse_tree, physical_to_logical_map)
     dv = extractData(parse_tree, options)
     flowGraph(parse_tree, line_mapper, options)
-    epv = locateEntryPoints(parse_tree, line_mapper, options)
-    typecheck(parse_tree, epv, options)  
+    entry_points = locateEntryPoints(parse_tree, line_mapper, options)
+    typecheck(parse_tree, entry_points, options)  
     convertLongjumpsToExceptions(parse_tree, line_mapper, options)
-    convertSubroutinesToProcedures(parse_tree, epv, options)
-    correlateLoops(epv, options)
-    stv = buildSymbolTables(epv, options)
+    convertSubroutinesToProcedures(parse_tree, entry_points, options)
+    correlateLoops(entry_points, options)
+    stv = buildSymbolTables(entry_points, options)
     
     dumpXmlAst(parse_tree, filename + "_ast.xml", options)
     dumpXmlCfg(parse_tree, filename + "_cfg.graphml", options)
@@ -426,7 +420,7 @@ def compile(filename, options):
     if options.use_clr:
         from codegen.clr.generate import AssemblyGenerator
         ag = AssemblyGenerator()
-        ag.generateAssembly(output_name, stv.globalSymbols, dv, epv) 
+        ag.generateAssembly(output_name, stv.globalSymbols, dv, entry_points) 
     
     # Structural analysis
 
