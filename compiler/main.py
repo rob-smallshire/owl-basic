@@ -25,11 +25,11 @@ import parent_visitor
 import separation_visitor
 import simplify_visitor
 import line_number_visitor
+from flow import locateEntryPoints
 from typing import typecheck
 import data_visitor
 import flowgraph_visitor
 import gml_visitor
-import entry_point_visitor
 import ast_utils
 import flow_analysis
 from line_mapper import LineMapper
@@ -199,43 +199,6 @@ def flowGraph(parse_tree, line_mapper, options):
         parse_tree.accept(flowgraph_visitor.FlowgraphForwardVisitor(line_mapper))
         if options.verbose:
             sys.stderr.write("done\n")
-
-def locateEntryPoints(parse_tree, line_mapper, options):
-    logging.debug("locateEntryPoints")    
-    if options.use_entry_points:
-        if options.verbose:
-            sys.stderr.write("Finding entry points...")
-        epv = entry_point_visitor.EntryPointVisitor(line_mapper)
-        parse_tree.accept(epv)
-        first_statement = line_mapper.firstStatement()
-        epv.mainEntryPoint(first_statement)
-        if options.verbose:
-            sys.stderr.write("done\n")
-
-        if options.verbose:
-            sys.stderr.write("Checking for direct execution of function or procedure bodies...")    
-        # Check for incoming execution edges to entry points
-        for entry_point in epv.entryPoints.values():
-            if isinstance(entry_point, bbc_ast.DefinitionStatement):
-                if len(entry_point.inEdges) != 0:
-                    errors.warning("Execution of procedure/function at line %s" % entry_point.lineNum)
-                    # TODO: Could use ERROR statement here
-                    raise_stmt = bbc_ast.Raise(type = "ExecutedDefinitionException")
-                    ast_utils.insertStatementBefore(entry_point, raise_stmt)
-                    raise_stmt.clearOutEdges()
-                    entry_point.clearInEdges()
-        if options.verbose:
-            sys.stderr.write("done\n")
-    
-        # Tag each statement with its predecesor entry point
-        if options.verbose:
-            sys.stderr.write("Tagging statements with entry point\n")
-        for entry_point in epv.entryPoints.values():
-            flow_analysis.tagSuccessors(entry_point)
-        if options.verbose:
-            sys.stderr.write("done\n")
-        return epv
-    return None
 
 def convertLongjumpsToExceptions(parse_tree, line_mapper, options):
     logging.debug("convertLongjumpsToExceptions")
