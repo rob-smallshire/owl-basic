@@ -215,7 +215,7 @@ def locateEntryPoints(parse_tree, line_mapper, options):
         if options.verbose:
             sys.stderr.write("Checking for direct execution of function or procedure bodies...")    
         # Check for incoming execution edges to entry points
-        for entry_point in epv.entry_points:
+        for entry_point in epv.entryPoints.values():
             if isinstance(entry_point, bbc_ast.DefinitionStatement):
                 if len(entry_point.inEdges) != 0:
                     errors.warning("Execution of procedure/function at line %s" % entry_point.lineNum)
@@ -230,7 +230,7 @@ def locateEntryPoints(parse_tree, line_mapper, options):
         # Tag each statement with its predecesor entry point
         if options.verbose:
             sys.stderr.write("Tagging statements with entry point\n")
-        for entry_point in epv.entry_points:
+        for entry_point in epv.entryPoints.values():
             flow_analysis.tagSuccessors(entry_point)
         if options.verbose:
             sys.stderr.write("done\n")
@@ -261,9 +261,9 @@ def convertSubroutinesToProcedures(parse_tree, epv, options):
         if options.verbose:
             sys.stderr.write("Convert subroutines to procedures")
         
-        entry_points_to_remove = []
-        entry_points_to_add = []
-        for entry_point in epv.entry_points:
+        entry_point_names_to_remove = []
+        entry_points_to_add = {}
+        for name, entry_point in epv.entryPoints.items():
             # TODO: This will only work with simple (i.e. single entry) subroutines
             subname = iter(entry_point.entryPoints).next()
             if subname.startswith('SUB'):
@@ -273,12 +273,12 @@ def convertSubroutinesToProcedures(parse_tree, epv, options):
                 ast_utils.insertStatementBefore(entry_point, defproc)
                 flow_analysis.deTagSuccessors(entry_point)
                 entry_point.clearEntryPoints()
-                entry_points_to_remove.append(entry_point)
-                entry_points_to_add.append(defproc)
+                entry_point_names_to_remove.append(name)
+                entry_points_to_add[procname] = defproc
                 flow_analysis.tagSuccessors(defproc)
-        for eptr in entry_points_to_remove:
-            epv.entry_points.remove(eptr)
-        epv.entry_points.extend(entry_points_to_add)
+        for name in entry_point_names_to_remove:
+            del epv.entryPoints[name]
+        epv.entryPoints.update(entry_points_to_add)
         
         csv = convert_sub_visitor.ConvertSubVisitor()
         parse_tree.accept(csv)
@@ -292,7 +292,7 @@ def correlateLoops(epv, options):
     if options.verbose:
         sys.stderr.write("Convert subroutines to procedures")
     
-    for entry_point in epv.entry_points:
+    for entry_point in epv.entryPoints.values():
         # Depth first search from this entry point through the CFG
         # maintaining a stack of loops as we go. Mark nodes that we
         visited = set()
@@ -308,11 +308,11 @@ def buildSymbolTables(epv, options):
         
         stv = symbol_table_visitor.SymbolTableVisitor()
         
-        # Set the global symbol table for the main program entry point
-        # TODO: This assumes the program doesn't start with e.g. a DEF PROC
-        epv.entry_points[0].symbolTable = stv.globalSymbols
+        # Set the global symbol table for the main program entry point, if there is one
+        if '__owl__main' in epv.entryPoints:
+            epv.entryPoints['__owl__main'].symbolTable = stv.globalSymbols
         
-        for entry_point in epv.entry_points:
+        for entry_point in epv.entryPoints.values():
             entry_point.accept(stv)
         if options.verbose:
             sys.stderr.write("done\n")

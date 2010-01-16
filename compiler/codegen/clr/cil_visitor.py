@@ -237,14 +237,17 @@ class CilVisitor(Visitor):
     def visitCallProcedure(self, call_proc):
         print "Visiting ", call_proc
         print "name = ", call_proc.name
-        # TODO: Push the procedure call arguments onto the stack
-        print "actual_parameters = ", call_proc.actualParameters
-        for actual_parameter in call_proc.actualParameters:
-            print "Actual parameters are unhandled"
-            return None
+        
         # TODO: Call the procedure
         proc_method_info = self.lookupMethod(call_proc.name)
         print proc_method_info
+        # TODO: Push the procedure call arguments onto the stack
+        print "actual_parameters = ", call_proc.actualParameters
+        for actual_parameter in call_proc.actualParameters:
+            
+            print "Actual parameters are unhandled"
+            return None
+        
         self.generator.Emit(OpCodes.Call, proc_method_info)
         return self.successorOf(call_proc)
         

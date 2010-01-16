@@ -11,32 +11,33 @@ class EntryPointVisitor(Visitor):
     def __init__(self, line_mapper):
         # TODO: This should locate its own root, finding it on demand
         self.line_mapper = line_mapper
-        self.entry_points = []
+        self.__entry_points = {}
+    
+    entryPoints = property(lambda self: self.__entry_points)
     
     # TODO: Factor this out of here
     def statementOnLine(self, targetLine):
         n = targetLine.value
         return self.line_mapper.logicalStatement(n)        
-        #return self.line_to_stmt.has_key(n) and self.line_to_stmt[n]
-    
+            
     def mainEntryPoint(self, statement):
-        """
+        '''
         Set the main() entrypoint of the program (i.e. the first line)
-        """
+        '''
         if not hasattr(statement, "entryPoint"):
-            statement.entryPoint = "main"
-        self.entry_points.insert(0, statement)
+            statement.entryPoint = "__owl__main"
+        self.__entry_points['__owl__main'] = statement
             
     def visitAstNode(self, node):
         "Visit all children in order"
         node.forEachChild(self.visit)
         
     def visitDefineProcedure(self, defproc):
-        self.entry_points.append(defproc)
+        self.__entry_points[defproc.name] = defproc
         defproc.entryPoint = "public"
         
     def visitDefineFunction(self, deffn):
-        self.entry_points.append(deffn)
+        self.__entry_points[deffn.name] = deffn
         deffn.entryPoint = "public"
         
     def visitGosub(self, gosub):
@@ -45,7 +46,7 @@ class EntryPointVisitor(Visitor):
         gosub_target = self.statementOnLine(gosub.targetLogicalLine)
         if gosub_target:
             #print "target is %s at line %s" % (gosub_target, gosub_target.lineNum)
-            self.entry_points.append(gosub_target)
+            self.__entry_points["gosub%d" % int(gosub.targetLogicalLine.value)] = gosub_target
             gosub_target.entryPoint = "private"
             gosub_target.addComeFromEdge(gosub)
         else:

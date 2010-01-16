@@ -37,7 +37,7 @@ def inferUserFunctionTypes(parse_tree, epv, options):
     """
     logging.debug("Infer user function types")
     pending = False
-    for entry_point in epv.entry_points:
+    for entry_point in epv.entryPoints.values():
         if isinstance(entry_point, DefineFunction):
             function_type = inferTypeOfFunction(entry_point)
             if function_type is not PendingType:

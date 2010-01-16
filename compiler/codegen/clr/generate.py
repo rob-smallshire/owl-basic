@@ -79,10 +79,11 @@ class AssemblyGenerator(object):
         # TODO: This would be sooo much easier if the entry_point.name
         # property had been set useful, and PROC and FN retained in identifier names everywhere!
         # TODO: Should also wrap the main program in DEF PROCMain - safely!
-        for entry_point in entry_point_visitor.entry_points:
+        for name, entry_point in entry_point_visitor.entryPoints.items():
             if isinstance(entry_point, DefinitionStatement):
                 self.createCtsMethodName(entry_point.name)   
             else: # Main
+                assert name == '__owl__main'
                 assert iter(entry_point.entryPoints).next().startswith('MAIN')
                 self.createCtsMethodName('FNMain')    
         
@@ -90,12 +91,12 @@ class AssemblyGenerator(object):
             print owl_name, " ==> ", clr_name
             
         # Generate all the empty methods, so we can retrieve them from the type builder    
-        for entry_point in entry_point_visitor.entry_points:
+        for entry_point in entry_point_visitor.entryPoints.values():
             self.generateMethod(type_builder, entry_point)
                 
         # Generate the body of each method
         stop_on_error = False    
-        for entry_point in entry_point_visitor.entry_points:
+        for entry_point in entry_point_visitor.entryPoints.values():
             try:
                 self.generateMethodBody(entry_point)
             except CodeGenerationError, e:

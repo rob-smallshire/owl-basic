@@ -364,6 +364,7 @@ class PrintFile(AstStatement):
     items = Node()
 
 class CallProcedure(AstStatement):
+    "PROC"
     name = StringOption()
     actual_parameters = Node()
 
