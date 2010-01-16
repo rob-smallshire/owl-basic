@@ -12,7 +12,11 @@ class TypecheckVisitor(Visitor):
     """
     AST visitor for determining the actual type of each node
     """
-    def __init__(self):
+    def __init__(self, entry_points):
+        '''
+        :param entry_points: A dictionary of entry_point names to AstStatements.
+        '''
+        self.__entry_points = entry_points
         pass
     
     def visit(self, node):
@@ -122,20 +126,24 @@ class TypecheckVisitor(Visitor):
         indexer.actualType = sigil.identifierToType(indexer.identifier[:-1])
     
     def visitIf(self, iff):
+        # TODO: Does this do anything that visitAstNode doesn't do?
         self.visit(iff.condition)
         self.visit(iff.trueClause)
         self.visit(iff.falseClause)
-        if iff.condition.actualType.isConvertibleTo(IntegerType):
-            self.insertCast(iff.condition, iff.condition.actualType, iff.condition.formalType)
+        condition_formal_type = iff.child_infos['condition'].formalType
+        if iff.condition.actualType.isConvertibleTo(condition_formal_type):
+            self.insertCast(iff.condition, iff.condition.actualType, condition_formal_type)
         else:
-            self.typeMismatch(iff, "Conditional expression must be convertible to %s." % iff.condition.actualType.__doc__)
+            self.typeMismatch(iff, "Conditional expression must be convertible to %s." % condition_formal_type.__doc__)
     
     def visitOnGoto(self, ongoto):
+        # TODO: Does this do anything that visitAstNode doesn't do?
         self.visit(ongoto.switch)
-        if ongoto.switch.actualType.isConvertibleTo(IntegerType):
-            self.insertCast(ongoto.switch, ongoto.switch.actualType, ongoto.switch.formalType)
+        switch_formal_type = ongoto.child_infos['switch'].formalType
+        if ongoto.switch.actualType.isConvertibleTo(switch_formal_type):
+            self.insertCast(ongoto.switch, ongoto.switch.actualType, switch_formal_type)
         else:
-            self.typeMismatch(ongoto, "Selector expression must be convertible to %s" % ongoto.switch.actualType.__doc__)
+            self.typeMismatch(ongoto, "Selector expression must be convertible to %s" % switch_formal_type.__doc__)
         
         for target in ongoto.targetLogicalLines:
             self.visit(target)
@@ -224,23 +232,45 @@ class TypecheckVisitor(Visitor):
         read_func.actualType = read_func.parent.lValue.actualType
         
     def visitUserFunc(self, user_func):
+        self.visit(user_func.actualParameters)
         # TODO: Check argument types against Procedure
         # TODO: This needs different code for internal and external linkage
         self.checkActualParameters(user_func)
     
     def visitCallProcedure(self, proc):
+        self.visit(proc.actualParameters)
         # TODO: Check argument types against Procedure
         # TODO: This needs different code for internal and external linkage
         self.checkActualParameters(proc)
         
-    def checkActualParameters(self, callable):
+    def checkActualParameters(self, call):
         '''
-        Check the actualParameters of callable against the formal parameters
+        Check the actualParameters of 'call' against the formal parameters
         of the callable.
-        :param callable: An AstNode with an actualParameters property and a name property
+        :param call: An AstNode with an actualParameters property and a name property
         :returns: True is the actual parameter types are compatible with the formal parameter types, otherwise False
         '''
         # Lookup the callable and retrieve its formal paramaters
+        if call.name in self.__entry_points:
+            callable = self.__entry_points[call.name]
+            n = 1
+            for actual, formal in zip(call.actualParameters,
+                                      callable.formalParameters.arguments):
+                if formal.argument.actualType is None:
+                    # There is no type information on the callable yet, so visit it
+                    self.visit(callable)
+                if actual.actualType.isConvertibleTo(formal.argument.actualType):
+                    self.insertCast(actual, source=actual.actualType, target=formal.argument.actualType)
+                else:
+                    message = "Cannot pass actual parameter number %d of type %s to formal parameter type of %s" % (actual.actualType.__doc__, formal.argument.actualType.__doc__)
+                    self.typeMismatch(call, message)
+                n += 1
+
+                    
+                
+                
+        else:
+            error("Did not find entry point for %s" % callable.name)
         
         # Check each formal parameter against an actual parameter
         pass
@@ -272,6 +302,7 @@ class TypecheckVisitor(Visitor):
              Float op Int   => Float op Float
              Int op FLoat   => Float op Float
         '''
+        # TODO: Handle byte types - use the precision of the types to decide how to promote...
         def opTypes(lhs_type, rhs_type):
             return operator.lhs.actualType.isA(lhs_type) and operator.rhs.actualType.isA(rhs_type)
         
@@ -304,14 +335,21 @@ class TypecheckVisitor(Visitor):
                             sys.stderr.write("Compiler construction: Missing formal type information on %s, %s\n" % (node, name))
             
     def insertCast(self, child, source, target):
-        """Wrap the supplied node is a Cast node from source type to target type"""
+        """Wrap the supplied node in a Cast node from source type to target type"""
+       
         if source is target:
             return
+               
+        if source.isA(target):
+            # Implicit conversion allowed, no cast needed
+            logging.debug("%s implicitly converted to %s" % (source, target))
+            return
         
-        if source is FloatType and target is IntegerType:
-            message = "of %s to %s, possible loss of data" % (source.__doc__, target.__doc__)
-            self.castWarning(child, message)
-        
+        if source.isA(NumericType) and target.isA(NumericType):
+            if target.bitsIntegerPrecision() < source.bitsIntegerPrecision():
+                message = "of %s to %s, possible loss of data" % (source.__doc__, target.__doc__)
+                self.castWarning(child, message)
+                
         parent = child.parent
         parent_property = child.parent_property
         parent_index    = child.parent_index

@@ -1,0 +1,44 @@
+PRINT "Function inference"
+END
+
+DEF FN_string
+    = "string"
+ 
+DEF FN_integer
+    = 42
+    
+DEF FN_float
+    = 3.14159
+    
+DEF FN_in_terms_of
+    = FN_float
+    
+DEF FN_in_terms_of_to_be_defined
+    = FN_to_be_defined
+    
+DEF FN_to_be_defined
+    = 1389
+    
+REM Recursive
+DEF FN_factorial(n)
+    IF n=1 OR n=0 THEN =1
+    =n*FN_factorial(n-1)
+
+REM Mutually recursive
+DEF FN_is_even(n)
+	IF n = 0 THEN =TRUE ELSE =FN_is_odd(ABS(n)-1)
+	
+DEF FN_is_odd(n)
+	IF n = 0 THEN =FALSE ELSE =FN_is_even(ABS(n)-1)
+	
+REM TODO: Expression containing untyped functions
+
+REM TODO: Promotion of integer to float
+DEF FN_int_or_float(n)
+	IF n = 0 THEN = 1 ELSE = 3.14159
+
+REM TODO: Promotion of integer, float and string to object
+
+REM TODO: Non-returning infinite
+
+ 

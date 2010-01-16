@@ -30,31 +30,43 @@ class PendingType(Type):
 
 class VoidType(Type):
     "Void"
-    pass
 
 class ScalarType(Type):
     "Scalar"
     pass
 
 class ObjectType(ScalarType):
-    "Reference"
+    "Object"
     # OWL BASIC only - object reference
-    pass
 
 class NumericType(ScalarType):
     "Numeric"
-    pass
     
+    @classmethod
+    def isConvertibleTo(cls, other_type):
+        return other_type.isA(NumericType)
+    
+    @classmethod
+    def bitsIntegerPrecision(cls):
+        assert 0, "bitsIntegerPrecision() not implemented for %s" % cls
+        
 class IntegerType(NumericType):
     "Integer"
     
     @classmethod
-    def isConvertibleTo(cls, other_type):
-        return cls.isA(other_type) or (other_type is FloatType)
-
+    def bitsIntegerPrecision(cls):
+        '''
+        Representing a double precision float with 52 (+ 1 implied) bits in the mantissa.
+        '''
+        return 32
+    
 class PtrType(NumericType):
     "Address"
-    pass
+    
+    @classmethod
+    def bitsIntegerPrecision(cls):
+        # TODO: We use 32 for now(!)
+        return 32
 
 # TODO: Could have a Channel type which is subclass of the Integer type
 #       We could then have a warning mode which warned about Integers
@@ -68,17 +80,25 @@ class FloatType(NumericType):
     "Float"
     
     @classmethod
-    def isConvertibleTo(cls, other_type):
-        return cls.isA(other_type) or (other_type is IntegerType) or (other_type is PtrType) or (other_type is ByteType)
+    def bitsIntegerPrecision(cls):
+        '''
+        Representing a double precision float with 52 (+ 1 implied) bits in the mantissa.
+        '''
+        return 53
 
 class StringType(ScalarType):
     "String"
-    pass
 
 class ByteType(NumericType):
     "Byte"
-    pass
-
+    
+    @classmethod
+    def bitsIntegerPrecision(cls):
+        '''
+        Representing a double precision float with 52 (+ 1 implied) bits in the mantissa.
+        '''
+        return 8
+    
 class BoxType(ScalarType):
     "Box"
     pass
@@ -86,13 +106,9 @@ class BoxType(ScalarType):
 class ArrayType(Type):
     "Array"
     _element_type = None
-    
-    @classmethod
-    def _getElementType(cls):
-        return cls._element_type
-        
+            
     # TODO: Can't call this property on a class!    
-    elementType = property(_getElementType)
+    elementType = property(lambda cls: cls._getElementType)
 
 class ByteArrayType(ArrayType):
     "Array[Byte]"
@@ -109,4 +125,5 @@ class FloatArrayType(ArrayType):
 class StringArrayType(ArrayType):
     "Array[String]"
     _element_type = StringType
+
    

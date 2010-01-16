@@ -26,7 +26,7 @@ def typecheck(parse_tree, entry_points, options):
         
         # TODO: Need to iteratively resolve types here.
         #       while (pending_types_remaining):
-        parse_tree.accept(TypecheckVisitor())
+        parse_tree.accept(TypecheckVisitor(entry_points))
         pending = True
         while pending:
             pending = inferUserFunctionTypes(parse_tree, entry_points, options)  

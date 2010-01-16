@@ -244,9 +244,7 @@ class CilVisitor(Visitor):
         # TODO: Push the procedure call arguments onto the stack
         print "actual_parameters = ", call_proc.actualParameters
         for actual_parameter in call_proc.actualParameters:
-            
-            print "Actual parameters are unhandled"
-            return None
+            actual_parameter.accept(self)
         
         self.generator.Emit(OpCodes.Call, proc_method_info)
         return self.successorOf(call_proc)

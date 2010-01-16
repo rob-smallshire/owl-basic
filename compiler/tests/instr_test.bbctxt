@@ -1,0 +1,3 @@
+b=INSTR("YyNn",a$)
+p%=INSTR(com$,"*FX",10)
+

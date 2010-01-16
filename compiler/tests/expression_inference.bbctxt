@@ -1,0 +1,8 @@
+DEF FNa()
+	= 5
+	
+DEF FNb()
+    = 5
+    
+DEF FNadd()
+	= FNa + FNb
