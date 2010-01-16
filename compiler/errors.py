@@ -1,27 +1,22 @@
 import sys
+import logging
 
 error_log = set()
 
 def warning(message):
     if message not in error_log:
-        sys.stderr.write("Warning: ")
-        sys.stderr.write(message)
-        sys.stderr.write('\n')
+        logging.warning(message)
         error_log.add(message)
     
 def error(message):
     if message not in error_log:
-        sys.stderr.write("Error: ")
-        sys.stderr.write(message)
-        sys.stderr.write('\n')
+        logging.error(message)
         error_log.add(message)
 
 def fatalError(message):
-    error(message)
+    logging.critical(message)
     sys.exit(1)
     
 def internal(message):
-    sys.stderr.write("Internal Compiler Error: ")
-    sys.stderr.write(message)
-    sys.stderr.write('\n')
+    logging.critical(message)
     sys.exit(1)
