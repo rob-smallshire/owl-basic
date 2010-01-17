@@ -425,24 +425,28 @@ class CilVisitor(Visitor):
     def visitPrint(self, print_stmt):
         logging.debug("Visiting %s", print_stmt)
         # Convert each print item into a call to the runtime library
-        # TODO: Special handling of last print_item if it is a semicolon
-        for print_item in print_stmt.printList:
-            item = print_item.item
-            item.accept(self)
-            if not isinstance(item, PrintManipulator):
-                print item
-                print item.formalType
-                print item.actualType
-                print_method = self.basic_commands_type.GetMethod("Print", System.Array[System.Type]([cts.mapType(item.actualType)]))
-                self.generator.Emit(OpCodes.Call, print_method)
-                
+        logging.debug("print list = %s", print_stmt.printList)
         suppress_newline = False
-        if len(print_stmt.printList) > 0:
-            last_item = print_stmt.printList[-1].item
-            if isinstance(last_item, PrintManipulator) and last_item.manipulator == ';':
-                suppress_newline = True
+        
+        if print_stmt.printList is not None:
+            for print_item in print_stmt.printList:
+                item = print_item.item
+                item.accept(self)
+                if not isinstance(item, PrintManipulator):
+                    print item
+                    print item.formalType
+                    print item.actualType
+                    print_method = self.basic_commands_type.GetMethod("Print", System.Array[System.Type]([cts.mapType(item.actualType)]))
+                    self.generator.Emit(OpCodes.Call, print_method)
+                
+            if len(print_stmt.printList) > 0:
+                last_item = print_stmt.printList[-1].item
+                if isinstance(last_item, PrintManipulator) and last_item.manipulator == ';':
+                    suppress_newline = True
+                    
         if not suppress_newline:
             self.generator.Emit(OpCodes.Call, self.basicCommandMethod('NewLine'))
+            
         return self.successorOf(print_stmt)
                    
     def visitTabH(self, tabh):
