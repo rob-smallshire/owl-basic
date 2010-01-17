@@ -5,6 +5,12 @@ from bbc_types import *
 
 # Symbol table
 
+def hasSymbolTableLookup(node):
+    if hasattr(node, "symbolTable"):
+        if hasattr(node.symbolTable, "lookup"):
+            return True
+    return False
+
 class AddSymbolException(Exception):
     def __init__(self, value):
         self.value = value

@@ -1,4 +1,6 @@
 import re
+import logging
+from functools import partial
 
 import clr
 import System
@@ -10,7 +12,10 @@ from visitor import Visitor
 from singleton import Singleton
 
 from bbc_ast import DefinitionStatement, DefineProcedure, DefineFunction
+from ast_utils import findNode
 from cil_visitor import CilVisitor, CodeGenerationError
+from symbol_tables import hasSymbolTableLookup
+from emitters import *
 import cts
 
 def ctsIdentifier(symbol):
@@ -70,7 +75,24 @@ class AssemblyGenerator(object):
         for symbol in global_symbols.symbols.values():
             field_builder = type_builder.DefineField(ctsIdentifier(symbol), cts.symbolType(symbol),
                                                      FieldAttributes.Private | FieldAttributes.Static)
-            symbol.realization = field_builder
+            # Generate a two methods for generating CIL to load and store the value of the global variable (field) 
+            
+            def fieldLoadEmitter(generator):
+                '''
+                A closure which emits CIL into the supplied generator to load a field
+                :param generator: A CIL generator
+                '''
+                generator.Emit(OpCodes.Ldsfld, field_builder)
+                
+            def fieldStoreEmitter(generator):
+                '''
+                A closure which emits CIL into the supplied generator to store a field
+                :param generator: A CIL generator
+                '''
+                generator.Emit(OpCodes.Stsfld, field_builder)
+            
+            symbol.loadEmitter = fieldLoadEmitter
+            symbol.storeEmitter = fieldStoreEmitter 
         
         if len(data_visitor.data) > 0:
             self.generateStaticDataInitialization(data_visitor, type_builder)
@@ -87,8 +109,8 @@ class AssemblyGenerator(object):
                 assert iter(entry_point.entryPoints).next().startswith('MAIN')
                 self.createCtsMethodName('FNMain')    
         
-        for owl_name, clr_name in self.owl_to_clr_method_names.items():
-            print owl_name, " ==> ", clr_name
+        #for owl_name, clr_name in self.owl_to_clr_method_names.items():
+        #    print owl_name, " ==> ", clr_name
             
         # Generate all the empty methods, so we can retrieve them from the type builder    
         for entry_point in entry_points.values():
@@ -100,7 +122,7 @@ class AssemblyGenerator(object):
             try:
                 self.generateMethodBody(entry_point)
             except CodeGenerationError, e:
-                print "STOPPING", e
+                logging.critical("STOPPING %s", e)
                 if stop_on_error:
                     break
             
@@ -129,12 +151,12 @@ class AssemblyGenerator(object):
         generator.DeclareLocal(cts.int_int_dictionary_type)
         
         # Initialise the data field
-        generator.Emit(OpCodes.Ldc_I4, len(data_visitor.data)) # Load the array length onto the stack
+        emitLdc_I4(generator, len(data_visitor.data)) # Load the array length onto the stack
         generator.Emit(OpCodes.Newarr, System.String) # New array with type information
         generator.Emit(OpCodes.Stloc_0) # Store array reference in local 0
         for index, item in enumerate(data_visitor.data):
             generator.Emit(OpCodes.Ldloc_0)       # Load the array onto the stack
-            generator.Emit(OpCodes.Ldc_I4, index) # Load the index onto the stack
+            emitLdc_I4(generator, index)          # Load the index onto the stack
             generator.Emit(OpCodes.Ldstr, item)   # Load the string onto the stack
             generator.Emit(OpCodes.Stelem_Ref)    # Assign to array element
         generator.Emit(OpCodes.Ldloc_0)            # Load the array onto the stack
@@ -154,8 +176,8 @@ class AssemblyGenerator(object):
         
         for line_number, index in data_visitor.index.items():
             generator.Emit(OpCodes.Ldloc_1)               # Load the dictionary onto the stack
-            generator.Emit(OpCodes.Ldc_I4, line_number)   # Load the line_number onto the stack
-            generator.Emit(OpCodes.Ldc_I4, index)         # Load the index onto the stack
+            emitLdc_I4(generator, line_number)                       # Load the line_number onto the stack
+            emitLdc_I4(generator, index)                             # Load the index onto the stack
             generator.Emit(OpCodes.Call, add_method_info) # Call Dictionary<int,int>.Add()
             
         generator.Emit(OpCodes.Ldloc_1)                   # Load the dictionary onto the stack
@@ -195,11 +217,11 @@ class AssemblyGenerator(object):
             else:
                 # Generated name already used
                 clashing_owl_name = self.clr_to_owl_method_names[identifier]
-                print "clashing_owl_name = ", clashing_owl_name
+                logging.debug("clashing_owl_name = %s", clashing_owl_name)
                 # Attempt to resolve by prefixing with Proc or Fn
                 # TODO: In future could consider simply overloading so
                 #       long as the signatures are different
-                print "owl_prefix = ", owl_prefix
+                logging.debug("owl_prefix = %s", owl_prefix)
                 if owl_prefix == 'FN':
                     if clashing_owl_name.startswith('PROC'):
                         # Prefix the clashing identifier with 'Proc' and
@@ -247,8 +269,10 @@ class AssemblyGenerator(object):
                                 
     def generateMethod(self, type_builder, entry_point_node):
         """
-        Generate the code for a single method starting a the entry_point node in the CFG
+        Generate the code for a single method starting a the entry_point node in the CFG. Attaches
+        code generation functionality to the symbols representing the formal parameters of the method.
         """
+        logging.debug("generateMethod")
     
         # Set up the method attributes
         method_attributes = MethodAttributes.Static
@@ -258,12 +282,27 @@ class AssemblyGenerator(object):
             method_attributes |= MethodAttributes.Public
             method_parameters = self.methodParameters(entry_point_node)
             method_name = self.lookupCtsMethodName(entry_point_node.name)
+            logging.debug("name = %s", entry_point_node.name)
+            # Setup code generators for loading and storing the methods arguments
+            if entry_point_node.formalParameters is not None:
+                formal_parameters = entry_point_node.formalParameters.arguments
+                for index, param in enumerate(formal_parameters):
+                    
+                    # TODO: Lookup the argument symbol
+                    name = param.argument.identifier
+                    logging.debug("formal parameter identifier = %s", name)
+                    symbol_node = findNode(entry_point_node, hasSymbolTableLookup)
+                    arg_symbol = symbol_node.symbolTable.lookup(name)
+                    assert arg_symbol is not None
+                    arg_symbol.loadEmitter = partial(emitLdarg, index=index)
+                    arg_symbol.saveEmitter = partial(emitStarg, index=index)
+                    
+            # Setup the return type of the method
             if isinstance (entry_point_node, DefineProcedure):
                 method_return_type = System.Void
             elif isinstance (entry_point_node, DefineFunction):
-                method_return_type = clr.GetClrType(System.Int32) # TODO just default to int for now
-            assert(len(entry_point_node.outEdges) == 1)
-            first_node = entry_point_node.outEdges[0]        
+                # TODO just default to int for now
+                method_return_type = clr.GetClrType(System.Int32)     
         else:
             assert iter(entry_point_node.entryPoints).next().startswith('MAIN')
             method_name = self.lookupCtsMethodName('FNMain')
@@ -271,9 +310,8 @@ class AssemblyGenerator(object):
             method_attributes |= MethodAttributes.Public
             method_return_type = clr.GetClrType(System.Int32)
             method_parameters = System.Array[System.Type]( (cts.string_array_type,) )
-            first_node = entry_point_node
             
-        print "generating method_name = ", method_name    
+        logging.debug("generating method_name = %s", method_name)
         self.method_builders[method_name] = type_builder.DefineMethod(method_name, method_attributes, CallingConventions.Standard,
                                                       method_return_type, method_parameters ) 
     
@@ -304,9 +342,9 @@ class AssemblyGenerator(object):
             print entry_point_node.name
             print self.owl_to_clr_method_names
             assert 0
-        print "Creating CIL for", clr_method_name
+        logging.debug("Creating CIL for %s", clr_method_name)
         method_builder = self.method_builders[clr_method_name]
-        print "entry_point_node = ", entry_point_node
+        logging.debug("entry_point_node = %s", entry_point_node)
         cv = CilVisitor(self, method_builder, entry_point_node)
 
         
