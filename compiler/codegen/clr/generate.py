@@ -101,11 +101,11 @@ class AssemblyGenerator(object):
         # TODO: This would be sooo much easier if the entry_point.name
         # property had been set useful, and PROC and FN retained in identifier names everywhere!
         # TODO: Should also wrap the main program in DEF PROCMain - safely!
-        for name, entry_point in entry_points.items():
+        for entry_name, entry_point in entry_points.items():
             if isinstance(entry_point, DefinitionStatement):
                 self.createCtsMethodName(entry_point.name)   
             else: # Main
-                assert name == '__owl__main'
+                assert entry_name == '__owl__main'
                 assert iter(entry_point.entryPoints).next().startswith('MAIN')
                 self.createCtsMethodName('FNMain')    
         
@@ -126,8 +126,10 @@ class AssemblyGenerator(object):
                 if stop_on_error:
                     break
             
-        result = type_builder.CreateType()    
-        assembly_builder.Save(name + ".exe")
+        result = type_builder.CreateType()
+        name += ".exe"    
+        logging.debug("Creating %s", name)
+        assembly_builder.Save(name)
             
     def generateStaticDataInitialization(self, data_visitor, type_builder):
         """
