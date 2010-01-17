@@ -216,7 +216,8 @@ class CilVisitor(Visitor):
     
     def visitDefineProcedure(self, defproc):
         logging.debug("Visiting %s", defproc)
-        # Generate the 
+        # Generate the
+        pass
                   
     def visitCallProcedure(self, call_proc):
         logging.debug("Visiting %s", call_proc)
@@ -224,8 +225,7 @@ class CilVisitor(Visitor):
         
         # TODO: Call the procedure
         proc_method_info = self.lookupMethod(call_proc.name)
-        print proc_method_info
-        # TODO: Push the procedure call arguments onto the stack
+        
         for actual_parameter in call_proc.actualParameters:
             actual_parameter.accept(self)
         
@@ -245,13 +245,13 @@ class CilVisitor(Visitor):
         return self.successorOf(restore)
     
     def visitRepeat(self, repeat):
-        logging.debug("Visiting = %s", repeat)
+        logging.debug("Visiting %s", repeat)
         repeat.label = self.generator.DefineLabel()
         self.generator.MarkLabel(repeat.label)
         return self.successorOf(repeat)
         
     def visitUntil(self, until):
-        logging.debug("Visiting ", until)
+        logging.debug("Visiting %s", until)
         if len(until.backEdges) != 0:
             assert len(until.backEdges) == 1
             # Correlated NEXT
@@ -421,11 +421,12 @@ class CilVisitor(Visitor):
             # Read from the location and push onto the stack
             logging.critical("TODO: Dyadic byte indirection r-value")
             # Are we reading from a block or directly from memory?
+            pass
         
     def visitPrint(self, print_stmt):
         logging.debug("Visiting %s", print_stmt)
         # Convert each print item into a call to the runtime library
-        logging.debug("print list = %s", print_stmt.printList)
+        logging.debug("print list = %s", str(print_stmt.printList))
         suppress_newline = False
         
         if print_stmt.printList is not None:
