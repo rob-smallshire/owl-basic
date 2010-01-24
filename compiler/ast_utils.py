@@ -111,7 +111,42 @@ def insertStatementBefore(statement, target):
     
     target.clearOutEdges()
     target.addOutEdge(statement)
+
+def insertStatementAfter(statement, target):
+    """
+    Insert target after statement in the AST, and correct the AST and CFG references to match
+    """
+    # TODO: Does this need to correct incoming GOTOs or is that handled by adjusting the AST edges
     
+    if statement.parent is None:
+        errors.fatalError("Cannot insert statement before %s at line %s" % (statement, statement.lineNum))
+    
+    parent_list = getattr(statement.parent, statement.parent_property)
+    
+    if isinstance(parent_list, list):
+        target_index = statement.parent_index + 1
+        parent_list.insert(target_index, target)
+        target.parent = statement.parent
+        target.parent_property = statement.parent_property
+        target.parent_index = target_index
+                  
+    else:
+        errors.fatalError("Cannot insert statement into non-list %s at line %s" % (statement, statement.lineNum))
+        return
+            
+    # Reconnect CFG
+    for next_stmt in statement.outEdges:
+        assert statement in next_stmt.inEdges
+        next_statement.inEdges.remove(statement)
+        next_statement.inEdges.append(target)
+        target.outEdges.append(next_stmt)
+        
+    statement.clearOutEdges()
+    statement.addOutEdge(target)
+    
+    target.clearInEdges()
+    target.addInEdge(statement)
+
 def removeStatement(statement):
     """
     Remove the statement from the AST
