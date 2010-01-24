@@ -1,7 +1,11 @@
+import logging
+
 from visitor import Visitor
 from find_line_visitor import FindLineVisitor
 from ast_utils import *
 import errors
+
+logger = logging.getLogger('flowgraph_visitor')
 
 class FlowgraphForwardVisitor(Visitor):
     """
@@ -93,6 +97,7 @@ class FlowgraphForwardVisitor(Visitor):
         # TODO: targetLogicalLine needs to be a constant for this
         # to work
         #print "CFG goto"
+        logger.debug("visitGoto")
         #print "goto.targetLogicalLine = %s" % goto.targetLogicalLine.value
         goto_target = self.statementOnLine(goto.targetLogicalLine)
         #print "goto_target = %s" % goto_target
@@ -102,20 +107,7 @@ class FlowgraphForwardVisitor(Visitor):
             errors.error("No such line %s at line %s" % (goto.targetLogicalLine.value, goto.lineNum))
             # TODO: Error!
             pass
-            
-#    def visitGosub(self, gosub):
-#        """
-#        Connect the Gosub to the first statement on the target line if
-#        it exists. Error if it does not.
-#        """
-#        gosub_target = self.statementOnLine(gosub.targetLogicalLine)
-#        if gosub_target:
-#            self.connect(gosub, gosub_target)
-#        else:
-#            print "Line not found"
-#            # TODO: Error!
-#            pass
-        
+                    
     def visitOnGoto(self, ongoto):
         """
         Connect the OnGoto to the first statement on each of the target lines
@@ -123,14 +115,13 @@ class FlowgraphForwardVisitor(Visitor):
         the out-of-range clause if present, and process each statement within
         that clause.
         """
+        logger.debug("visitOnGoto")
         for targetLogicalLine in ongoto.targetLogicalLines:
             ongoto_target = self.statementOnLine(targetLogicalLine)
             if ongoto_target:
                 self.connect(ongoto, ongoto_target)
             else:
-                print "Line not found"
-                # TODO: Error!
-                pass
+                errors.error("No such line %s at line %s" % (targetLogicalLine.value, ongoto.lineNum))
             
         if ongoto.outOfRangeClause is not None:
             if isinstance(ongoto.outOfRangeClause, list):
@@ -150,6 +141,7 @@ class FlowgraphForwardVisitor(Visitor):
         Connect the Case statement to the first statement of each when clause and
         the otherwise clause. Process the statements within each clause.
         """
+        logger.debug("visitCase")
         for when_clause in case.whenClauses:
             if when_clause.statements is not None and len(when_clause.statements) > 0:
                 # Connect to the beginning of the when clause
@@ -164,34 +156,35 @@ class FlowgraphForwardVisitor(Visitor):
     
     def visitReturnFromFunction(self, return_from_function):
         # Do not connect to following statement
-        pass
-    
+        logger.debug("visitReturnFromFunction")
+
     def visitReturnFromProcedure(self, return_frin_procedure):
         # Do not connect to following statement
-        pass
-        
+        logger.debug("visitReturnFromProcedure")
+    
     def visitGenerateError(self, generator_error):
         # Do not connect to following statement
-        pass
-    
+        logger.debug("visitGenerateError")
+
     def visitReturnError(self, return_error):
         # Do not connect to following statement
-        pass
-    
+        logger.debug("visitReturnError")
+
     def visitQuit(self, quit):
         # Do not connect to following statement
-        pass
-    
+        logger.debug("visitQuit")
+
     def visitStop(self, stop):
         # Do not connect to following statement
-        pass
-                
+        logger.debug("visitStop")
+            
     def visitEnd(self, end):
         # Do not connect to following statement
-        pass
-    
+        logger.debug("visitEnd")
+
     def visitReturn(self, end):
         # Do not connect to following statement
         # TODO: Rheolism!
-        pass
+        logger.debug("visitReturn")
+    
     
