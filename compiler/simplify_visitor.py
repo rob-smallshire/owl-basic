@@ -1,11 +1,13 @@
-# A visitor implementation that creates an XML representation of the abstract syntax tree
+import logging
 
 from utility import camelCaseToUnderscores
 from visitor import Visitor
 from node import *
 from options import *
-from ast_utils import elideNode
+from ast_utils import elideNode, insertStatementAfter
 from bbc_ast import StatementList, Next
+
+logger = logging.getLogger('simplify_visitor')
 
 class SimplifyStatementListVisitor(Visitor):
     """
@@ -128,13 +130,14 @@ class SimplificationVisitor(Visitor):
         Remove the followingStatement from the Repeat, DefineProcedure, etc, moving it to immediately
         after the statement in the parent StatementList
         """
+        logger.debug("visitMarkerStatement %s at line number %s", marker, marker.lineNum)
         if marker.followingStatement is not None:
-            # TODO: Should probably use parent_property in here
-            marker_index = marker.parent.statements.index(marker)
-            marker.parent.statements.insert(marker_index + 1, marker.followingStatement.body)
+            following = marker.followingStatement
             marker.followingStatement = None
-        # TODO: Does the moved statement node ever get visited? Are we inserting into a sequence during iteration?
-            
+            insertStatementAfter(marker, following)
+            # TODO: Does the moved statement node ever get visited? Are we inserting into a sequence during iteration?
+            #self.visit(following)
+                   
     def visitExpressionList(self, expr_list):
         """
         Remove ExpressionList level from the AST by replacing the contents of
