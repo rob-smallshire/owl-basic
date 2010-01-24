@@ -29,6 +29,9 @@ class StatementList(AstNode):
     def append(self, statement):
         self.statements.append(statement)
         
+    def extend(self, statement_list):
+        self.statements.extend(statement_list.statements)
+        
 class MarkerStatement(AstStatement):
     following_statement = Node()
         

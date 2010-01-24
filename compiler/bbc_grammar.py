@@ -6,6 +6,8 @@ import ply.yacc as yacc
 from bbc_lexer import tokens
 from bbc_ast import *
 
+logger = logging.getLogger('bbc_grammar')
+
 # Precedence table for the above operators
 precedence = (
              ('right', 'UEQUAL'),
@@ -28,9 +30,9 @@ def p_statement_list(p):
                       | statement_list compound_statement'''
     if len(p) == 2:
         p[0] = StatementList()
-        p[0].append(p[1])
+        p[0].extend(p[1])
     elif len(p) == 3:
-        p[1].append(p[2])
+        p[1].extend(p[2])
         p[0] = p[1]
         
 # A single line statement list - use in single-line IF THEN ELSE construct
