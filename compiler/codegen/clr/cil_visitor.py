@@ -216,8 +216,8 @@ class CilVisitor(Visitor):
     
     def visitDefineProcedure(self, defproc):
         logging.debug("Visiting %s", defproc)
-        # Generate the
-        pass
+        # Nothing to do here
+        return self.successorOf(defproc)
                   
     def visitCallProcedure(self, call_proc):
         logging.debug("Visiting %s", call_proc)
@@ -231,6 +231,11 @@ class CilVisitor(Visitor):
         
         self.generator.Emit(OpCodes.Call, proc_method_info)
         return self.successorOf(call_proc)
+    
+    def visitReturnFromProcedure(self, endproc):
+        logging.debug("Visiting %s", endproc)
+        # TODO: Must not be used from within an exception handler
+        self.generator.Emit(OpCodes.Ret)
         
     def visitRestore(self, restore):
         # TODO: Can we RESTORE to lines which don't contain DATA?
@@ -552,6 +557,20 @@ class CilVisitor(Visitor):
                                                                                          cts.mapType(operator.rhs.actualType)]))
             self.generator.Emit(OpCodes.Call, equal_method)
         
+    def visitIf(self, iff):
+        logging.debug("Visiting %s", iff)
+        iff.condition.accept(self) # Result of the condition on the stack
+        else_label = self.generator.DefineLabel()
+        end_label = self.generator.DefineLabel()
+        self.generator.Emit(OpCodes.Brfalse, else_label)
+        for statement in iff.trueClause:
+            statement.accept(self)
+        self.generator.MarkLabel(else_label)
+        self.generator.Emit(OpCodes.Br, end_label)
+        for statement in iff.falseClause:
+            statement.accept(self)
+        self.generator.MarkLabel(end_label)
+        return self.successorOf(iff)
         
          
         
