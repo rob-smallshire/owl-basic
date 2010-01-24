@@ -14,10 +14,6 @@ class AstStatement(AstNode, CfgVertex):
 class Program(AstNode):
     #formal_type = TypeOption(None)
     statements = Node()
-
-class Statement(AstStatement):
-    #formal_type = TypeOption(None)
-    body = Node()
             
 class StatementList(AstNode):
     formal_type = TypeOption(None)

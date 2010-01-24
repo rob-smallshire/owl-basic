@@ -154,7 +154,7 @@ def p_stmt_body(p):
                  | width_stmt
                  | wait_stmt
                  | endwhile_stmt'''
-    p[0] = Statement(body = p[1])
+    p[0] = p[1]
         
 def p_bput_stmt(p):
     '''bput_stmt : BPUT channel COMMA expr

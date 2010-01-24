@@ -1,7 +1,7 @@
 # A visitor implementation that creates an XML representation of the abstract syntax tree
 
 from visitor import Visitor
-from bbc_ast import StatementList, Statement, Assignment, Next, VariableList, Read, ReadFunc, WritableList
+from bbc_ast import StatementList, Assignment, Next, VariableList, Read, ReadFunc, WritableList
 from ast_utils import replaceStatement, insertStatementBefore, removeStatement
     
 class SeparationVisitor(Visitor):
@@ -26,18 +26,13 @@ class SeparationVisitor(Visitor):
         statement_list.parent_index = next.parent_index
         statement_list.statements = []
         
-        for identifier in next.identifiers.variables:
-            statement = Statement()
-            statement.parent = statement_list
-            statement.parent_property = 'statements'
-            statement.parent_index = len(statement_list.statements)
-            statement_list.append(statement)
-            
+        for identifier in next.identifiers.variables:            
             new_next = Next()
-            new_next.parent = statement
-            new_next.parent_property = 'body'
+            new_next.parent = statement_list
+            new_next.parent_property = 'statements'
+            new_next.parent_index = len(statement_list.statements)
             new_next.lineNum = next.lineNum
-            statement.body = new_next
+            statement_list.append(new_next)
             
             variable_list = VariableList()
             variable_list.parent = new_next
@@ -46,7 +41,7 @@ class SeparationVisitor(Visitor):
             
             variable_list.variables = [identifier]
             
-        getattr(next.parent.parent, next.parent.parent_property)[next.parent.parent_index] = statement_list
+        getattr(next.parent, next.parent_property)[next.parent_index] = statement_list
     
     # TODO: Much of this code can be factored out of this method and the above one    
     def visitRead(self, read):
@@ -64,12 +59,6 @@ class SeparationVisitor(Visitor):
         statement_list.statements = []
         
         for writable in read.writables.writables:
-            statement = Statement()
-            statement.parent = statement_list
-            statement.parent_property = 'statements'
-            statement.parent_index = len(statement_list.statements)
-            statement_list.append(statement)
-            
             read_func = ReadFunc()
             new_assignment = Assignment(lValue=writable, rValue=read_func)
             
@@ -81,10 +70,14 @@ class SeparationVisitor(Visitor):
             read_func.parent_property = 'rValue'
             read_func.lineNum = read.lineNum
             
-            new_assignment.parent = statement
-            new_assignment.parent_property = 'body'
+            new_assignment.parent = statement_list
+            new_assignment.parent_property = 'statements'
+            new_assignment.parent_index = len(statement_list.statements)
             new_assignment.lineNum = read.lineNum
             
-            statement.body = new_assignment
-                         
-        getattr(read.parent.parent, read.parent.parent_property)[read.parent.parent_index] = statement_list
+            statement_list.append(new_assignment)
+        
+        print read.parent
+        print read.parent_property
+        print getattr(read.parent, read.parent_property)  
+        getattr(read.parent, read.parent_property)[read.parent_index] = statement_list

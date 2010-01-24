@@ -24,13 +24,8 @@ class SimplifyStatementListVisitor(Visitor):
     def visitStatementList(self, statement_list):
         statement_list.forEachChild(self.visit)
         
-    def visitStatement(self, statement):
-        """
-        Append the body of the current statement, skipping the Statement node and
-        filtering out None (i.e empty) statements
-        """
-        if statement.body is not None:
-            self._accumulated_statements.append(statement.body)
+    def visitAstStatement(self, statement):
+        self._accumulated_statements.append(statement)
                     
     def _accumulatedStatements(self):
         return self._accumulated_statements;
