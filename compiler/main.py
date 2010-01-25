@@ -33,7 +33,6 @@ from typing import typecheck
 import data_visitor
 import gml_visitor
 import ast_utils
-import flow_analysis
 from line_mapper import LineMapper
 import symbol_table_visitor
 from symbol_tables import SymbolTable
