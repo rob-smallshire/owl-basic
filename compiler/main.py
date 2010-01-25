@@ -27,13 +27,13 @@ import simplify_visitor
 import line_number_visitor
 from flow import locateEntryPoints
 from flow import createForwardControlFlowGraph
+from flow import convertLongjumpsToExceptions
 from typing import typecheck
 import data_visitor
 import gml_visitor
 import ast_utils
 import flow_analysis
 from line_mapper import LineMapper
-import longjump_visitor
 import symbol_table_visitor
 import convert_sub_visitor
 from symbol_tables import SymbolTable
@@ -187,23 +187,6 @@ def dumpXmlAst(parse_tree, output_filename, options):
             sys.stderr.write("Creating XML AST... ")
         
         xmlAst(parse_tree, output_filename)
-        if options.verbose:
-            sys.stderr.write("done\n")
-
-def convertLongjumpsToExceptions(parse_tree, line_mapper, options):
-    logging.debug("convertLongjumpsToExceptions")
-    if options.use_longjumps:
-        # Insert longjumps where flow control jumps out of a procedure
-        if options.verbose:
-            sys.stderr.write("Finding longjump locations")
-        ljv = longjump_visitor.LongjumpVisitor(line_mapper)
-        parse_tree.accept(ljv)
-        if options.verbose:
-            sys.stderr.write("done\n")
-            sys.stderr.write("Creating long jumps")
-            
-        ljv.createLongjumps()
-        
         if options.verbose:
             sys.stderr.write("done\n")
 
