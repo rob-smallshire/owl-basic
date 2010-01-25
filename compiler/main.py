@@ -306,9 +306,6 @@ def main(argv=None):
         parser.add_option("-p", "--debug-no-separation", action='store_false', dest='use_separation', default=True)
         parser.add_option("-s", "--debug-no-simplification", action='store_false', dest='use_simplification', default=True)
         parser.add_option("-t", "--debug-no-typecheck", action='store_false', dest='use_typecheck', default=True)
-        parser.add_option("-f", "--debug-no-flowgraph", action='store_false', dest='use_flowgraph', default=True)
-        parser.add_option("-j", "--debug-no-longjumps", action='store_false', dest='use_longjumps', default=True)
-        parser.add_option("-g", "--debug-no-convert-subs", action='store_false', dest='use_convert_subs', default=True)
         parser.add_option("-y", "--debug-no-symbol-tables", action='store_false', dest='use_symbol_tables', default=True)
         parser.add_option("-v", "--verbose", action='store_true', dest='verbose', default=False)
 
