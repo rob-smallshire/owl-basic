@@ -9,7 +9,7 @@ import errors
 from bbc_ast import DefineProcedure
 import traceback
 
-logger = logging.getLogger('flowgraph_visitor')
+logger = logging.getLogger('flow.flowgraph_visitor')
 
 class FlowgraphForwardVisitor(Visitor):
     """

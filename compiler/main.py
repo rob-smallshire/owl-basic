@@ -26,9 +26,9 @@ import separation_visitor
 import simplify_visitor
 import line_number_visitor
 from flow import locateEntryPoints
+from flow import createForwardControlFlowGraph
 from typing import typecheck
 import data_visitor
-import flowgraph_visitor
 import gml_visitor
 import ast_utils
 import flow_analysis
@@ -38,7 +38,6 @@ import symbol_table_visitor
 import convert_sub_visitor
 from symbol_tables import SymbolTable
 import correlation_visitor
-
 
 from Detoken import Decode
 
@@ -188,15 +187,6 @@ def dumpXmlAst(parse_tree, output_filename, options):
             sys.stderr.write("Creating XML AST... ")
         
         xmlAst(parse_tree, output_filename)
-        if options.verbose:
-            sys.stderr.write("done\n")
-
-def flowGraph(parse_tree, line_mapper, options):
-    logging.debug("flowgraph")
-    if options.use_flowgraph:
-        if options.verbose:
-            sys.stderr.write("Creating Control Flow Graph...")
-        parse_tree.accept(flowgraph_visitor.FlowgraphForwardVisitor(line_mapper))
         if options.verbose:
             sys.stderr.write("done\n")
 
@@ -405,7 +395,7 @@ def compile(filename, options):
     simplifyAst(parse_tree, options)
     line_mapper = createLineMapper(parse_tree, physical_to_logical_map)
     dv = extractData(parse_tree, options)
-    flowGraph(parse_tree, line_mapper, options)
+    createForwardControlFlowGraph(parse_tree, line_mapper, options)
     entry_points = locateEntryPoints(parse_tree, line_mapper, options)  
     convertLongjumpsToExceptions(parse_tree, line_mapper, options)
     convertSubroutinesToProcedures(parse_tree, entry_points, options)
