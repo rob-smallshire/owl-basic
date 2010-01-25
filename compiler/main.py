@@ -28,6 +28,7 @@ import line_number_visitor
 from flow import locateEntryPoints
 from flow import createForwardControlFlowGraph
 from flow import convertLongjumpsToExceptions
+from flow import convertSubroutinesToProcedures
 from typing import typecheck
 import data_visitor
 import gml_visitor
@@ -35,7 +36,6 @@ import ast_utils
 import flow_analysis
 from line_mapper import LineMapper
 import symbol_table_visitor
-import convert_sub_visitor
 from symbol_tables import SymbolTable
 import correlation_visitor
 
@@ -190,34 +190,7 @@ def dumpXmlAst(parse_tree, output_filename, options):
         if options.verbose:
             sys.stderr.write("done\n")
 
-def convertSubroutinesToProcedures(parse_tree, entry_points, options):
-    logging.debug("convertSubroutinesToProcedures")    
-    if options.use_convert_subs:
-        # Convert subroutines to procedures
-        if options.verbose:
-            sys.stderr.write("Convert subroutines to procedures")
-        
-        entry_point_names_to_remove = []
-        entry_points_to_add = {}
-        for name, entry_point in entry_points.items():
-            # TODO: This will only work with simple (i.e. single entry) subroutines
-            subname = iter(entry_point.entryPoints).next()
-            if subname.startswith('SUB'):
-                procname = 'PROCSub' + subname[3:]
-                assert len(entry_point.inEdges) == 0
-                defproc = bbc_ast.DefineProcedure(name=procname, formalParameters=None)
-                ast_utils.insertStatementBefore(entry_point, defproc)
-                flow_analysis.deTagSuccessors(entry_point)
-                entry_point.clearEntryPoints()
-                entry_point_names_to_remove.append(name)
-                entry_points_to_add[procname] = defproc
-                flow_analysis.tagSuccessors(defproc)
-        for name in entry_point_names_to_remove:
-            del entry_points[name]
-        entry_points.update(entry_points_to_add)
-        
-        csv = convert_sub_visitor.ConvertSubVisitor()
-        parse_tree.accept(csv)
+
                 
 def correlateLoops(entry_points, options):
     logging.debug("correlateLoops")
