@@ -1,5 +1,5 @@
 from visitor import Visitor
-import ast_utils
+from ast_utils import replaceStatement
 from bbc_ast import LiteralInteger, CallProcedure, ReturnFromProcedure
 import errors
 
@@ -18,8 +18,7 @@ class ConvertSubVisitor(Visitor):
         if isinstance(gosub.targetLogicalLine, LiteralInteger):
             # Convert to a procedure call
             proc = CallProcedure(name="PROCSub" + str(gosub.targetLogicalLine.value))
-            ast_utils.insertStatementBefore(gosub, proc)
-            ast_utils.removeStatement(gosub)
+            replaceStatement(gosub, proc)           
         else:
             errors.fatalError("Cannot compile computed GOSUB target at line %s" % gosub.lineNum)        
         
