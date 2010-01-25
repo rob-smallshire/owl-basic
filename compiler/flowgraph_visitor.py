@@ -5,6 +5,10 @@ from find_line_visitor import FindLineVisitor
 from ast_utils import *
 import errors
 
+# Debugging
+from bbc_ast import DefineProcedure
+import traceback
+
 logger = logging.getLogger('flowgraph_visitor')
 
 class FlowgraphForwardVisitor(Visitor):
@@ -36,6 +40,10 @@ class FlowgraphForwardVisitor(Visitor):
     def connect(self, from_statement, to_statement):
         from_statement.addOutEdge(to_statement)
         to_statement.addInEdge(from_statement)
+        if len(from_statement.outEdges) == 2:
+            print from_statement, from_statement.outEdges
+            if isinstance(from_statement, DefineProcedure):
+                assert 0, "Multiple out edges"
                     
     def visitAstStatement(self, statement):
         """
@@ -65,7 +73,7 @@ class FlowgraphForwardVisitor(Visitor):
                     for statement in iff.trueClause:
                         self.visit(statement)
                 else:
-                    self.connect(iff.following)
+                    self.connect(iff.following) # TODO: Error!
             else:
                 self.connect(iff, iff.trueClause)
                 self.visit(iff.trueClause)                
@@ -82,7 +90,7 @@ class FlowgraphForwardVisitor(Visitor):
                     for statement in iff.falseClause:
                         self.visit(statement)
                 else:
-                    self.connect(iff.following)
+                    self.connect(iff.following) # TODO: Error!
             else:
                 self.connect(iff, iff.falseClause)
                 self.visit(iff.falseClause)

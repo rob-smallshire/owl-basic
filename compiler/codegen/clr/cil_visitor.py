@@ -18,6 +18,7 @@ import cts
 import errors
 from emitters import *
 from symbol_tables import hasSymbolTableLookup
+from algorithms import representative
 
 # Load the OWL Runtime library so we may both call and reference
 # methods within it
@@ -114,10 +115,10 @@ class CilVisitor(Visitor):
         return self.successorOf(data)
         
     def successorOf(self, node):
-        assert(len(node.outEdges) <= 1)
+        assert len(node.outEdges) <= 1
         if len(node.outEdges) == 0:
             return None
-        return node.outEdges[0]
+        return representative(node.outEdges)
         
     def visitAssignment(self, assignment):
         logging.debug("Visiting %s", assignment)
@@ -217,6 +218,7 @@ class CilVisitor(Visitor):
     def visitDefineProcedure(self, defproc):
         logging.debug("Visiting %s", defproc)
         # Nothing to do here
+        print defproc.outEdges
         return self.successorOf(defproc)
                   
     def visitCallProcedure(self, call_proc):
@@ -260,7 +262,7 @@ class CilVisitor(Visitor):
         if len(until.backEdges) != 0:
             assert len(until.backEdges) == 1
             # Correlated NEXT
-            repeat = until.backEdges[0]
+            repeat = representative(until.backEdges)
             logging.debug("UNTIL correlates with %s", repeat)
             until.condition.accept(self)            # Push the condition onto the stack
             self.generator.Emit(OpCodes.Brfalse_S, repeat.label)  # Branch if false
@@ -352,7 +354,7 @@ class CilVisitor(Visitor):
         if  len(next.backEdges) != 0:
             assert len(next.backEdges) == 1
             # Correlated NEXT
-            for_to_step = next.backEdges[0]
+            for_to_step = representative(next.backEdges)
             logging.debug("NEXT correlates with %s", for_to_step)
             for_to_step.generateNext()
         else:
@@ -570,6 +572,7 @@ class CilVisitor(Visitor):
         for statement in iff.falseClause:
             statement.accept(self)
         self.generator.MarkLabel(end_label)
+        # TODO: What is the first statement after the if-then-else construct?
         return self.successorOf(iff)
         
          

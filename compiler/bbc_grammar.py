@@ -531,9 +531,10 @@ def p_clause(p):
 
 def p_implicit_goto(p):
     '''implicit_goto : factor'''
-    p[0] = Goto(targetLogicalLine = p[1])
-    # TODO: Need line number here
-    
+    stmt_list = StatementList()
+    stmt_list.append(Goto(targetLogicalLine = p[1]))
+    p[0] = stmt_list
+        
 def p_if_multi_stmt(p):
     '''if_multi_stmt : IF expr THEN statement_list ENDIF
                      | IF expr THEN statement_list ELSE statement_list ENDIF'''

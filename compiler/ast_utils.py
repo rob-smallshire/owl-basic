@@ -103,8 +103,8 @@ def insertStatementBefore(statement, target):
     for prior_stmt in statement.inEdges:
         assert statement in prior_stmt.outEdges
         prior_stmt.outEdges.remove(statement)
-        prior_stmt.outEdges.append(target)
-        target.inEdges.append(prior_stmt)
+        prior_stmt.outEdges.add(target)
+        target.inEdges.add(prior_stmt)
     
     statement.clearInEdges()    
     statement.addInEdge(target)
@@ -138,8 +138,8 @@ def insertStatementAfter(statement, target):
     for next_stmt in statement.outEdges:
         assert statement in next_stmt.inEdges
         next_statement.inEdges.remove(statement)
-        next_statement.inEdges.append(target)
-        target.outEdges.append(next_stmt)
+        next_statement.inEdges.add(target)
+        target.outEdges.add(next_stmt)
         
     statement.clearOutEdges()
     statement.addOutEdge(target)
@@ -162,12 +162,12 @@ def removeStatement(statement):
     for prior_stmt in statement.inEdges:
         assert statement in prior_stmt.outEdges
         prior_stmt.outEdges.remove(statement)
-        prior_stmt.outEdges.extend(statement.outEdges)
+        prior_stmt.outEdges.update(statement.outEdges)
         
     for next_stmt in statement.outEdges:
         assert statement in next_stmt.inEdges
         next_stmt.inEdges.remove(statement)
-        next_stmt.inEdges.extend(statement.inEdges)
+        next_stmt.inEdges.update(statement.inEdges)
 
     statement.clearInEdges()
     statement.clearOutEdges()
