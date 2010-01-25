@@ -232,16 +232,18 @@ class TypecheckVisitor(Visitor):
         read_func.actualType = read_func.parent.lValue.actualType
         
     def visitUserFunc(self, user_func):
-        self.visit(user_func.actualParameters)
-        # TODO: Check argument types against Procedure
-        # TODO: This needs different code for internal and external linkage
-        self.checkActualParameters(user_func)
+        if user_func.actualParameters:
+            self.visit(user_func.actualParameters)
+            # TODO: Check argument types against Procedure
+            # TODO: This needs different code for internal and external linkage
+            self.checkActualParameters(user_func)
     
     def visitCallProcedure(self, proc):
-        self.visit(proc.actualParameters)
-        # TODO: Check argument types against Procedure
-        # TODO: This needs different code for internal and external linkage
-        self.checkActualParameters(proc)
+        if proc.actualParameters:
+            self.visit(proc.actualParameters)
+            # TODO: Check argument types against Procedure
+            # TODO: This needs different code for internal and external linkage
+            self.checkActualParameters(proc)
         
     def checkActualParameters(self, call):
         '''
@@ -250,7 +252,7 @@ class TypecheckVisitor(Visitor):
         :param call: An AstNode with an actualParameters property and a name property
         :returns: True is the actual parameter types are compatible with the formal parameter types, otherwise False
         '''
-        # Lookup the callable and retrieve its formal paramaters
+        # Lookup the callable and retrieve its formal parameters
         if call.name in self.__entry_points:
             callable = self.__entry_points[call.name]
             n = 1
