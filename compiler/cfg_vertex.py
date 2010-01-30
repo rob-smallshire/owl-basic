@@ -12,6 +12,8 @@ class CfgVertex(object):
         
         CfgVertex.__counter += 1
         self.__id = CfgVertex.__counter
+        
+        self.block = None
     
     def _getId(self):
         return self.__id
@@ -69,4 +71,9 @@ class CfgVertex(object):
         
     def addEntryPoint(self, name):
         self.entryPoints.add(name)
+        
+    inDegree  = property(lambda self: len(self.__in_edges) + len(self.__come_from_edges))
+    outDegree = property(lambda self: len(self.__out_edges) + len(self.__back_edges))
+    
+    
         

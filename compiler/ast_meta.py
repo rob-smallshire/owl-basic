@@ -2,7 +2,7 @@ import re
 import sys
 
 from utility import underscoresToCamelCase, hasprop
-from node import *
+from node import Node
 from options import *
 from bbc_types import *
 from visitor import Visitable

@@ -29,6 +29,7 @@ from flow import locateEntryPoints
 from flow import createForwardControlFlowGraph
 from flow import convertLongjumpsToExceptions
 from flow import convertSubroutinesToProcedures
+from flow import identifyBasicBlocks
 from typing import typecheck
 import data_visitor
 import gml_visitor
@@ -352,6 +353,7 @@ def compile(filename, options):
     convertLongjumpsToExceptions(parse_tree, line_mapper, options)
     convertSubroutinesToProcedures(parse_tree, entry_points, options)
     correlateLoops(entry_points, options)
+    identifyBasicBlocks(entry_points, options)
     typecheck(parse_tree, entry_points, options)
     stv = buildSymbolTables(entry_points, options)
     
