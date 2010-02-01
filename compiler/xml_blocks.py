@@ -1,3 +1,5 @@
+from itertools import chain
+
 from bbc_ast import If, OnGoto
 from flow.traversal import depthFirstSearch
 
@@ -103,7 +105,7 @@ def writeStatementNode(writer, statement):
     writer.WriteEndElement() # node
 
 def writeStatementEdges(writer, statement):
-    for target in statement.outEdges:
+    for target in chain(statement.outEdges, statement.loopBackEdges):
         writer.WriteStartElement("edge")
         writer.WriteAttributeString("source", str(statement.block.id) + '::' + str(statement.id))
         writer.WriteAttributeString("target", str(target.block.id) + '::' + str(target.id))
