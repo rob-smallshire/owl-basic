@@ -48,7 +48,7 @@ class EntryPointVisitor(Visitor):
             #print "target is %s at line %s" % (gosub_target, gosub_target.lineNum)
             self.__entry_points["gosub%d" % int(gosub.targetLogicalLine.value)] = gosub_target
             gosub_target.entryPoint = "private"
-            gosub_target.addComeFromEdge(gosub)
+            gosub_target.addComeFromGosubEdge(gosub)
         else:
             print "Line not found"
             # TODO: Error!

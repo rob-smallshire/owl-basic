@@ -19,7 +19,7 @@ def tagSuccessors(entry_point):
         tag = "PROC" + entry_point.name
     elif isinstance(entry_point, bbc_ast.DefineFunction):
         tag = "FN" + entry_point.name
-    elif len(entry_point.comeFromEdges) != 0:
+    elif len(entry_point.comeFromGosubEdges) != 0:
         tag = "SUB" + str(entry_point.lineNum)
     else:
         # TODO: Find a better way to do this rather than defaulting here

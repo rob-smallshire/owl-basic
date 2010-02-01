@@ -1,7 +1,7 @@
 import errors
 from collections import deque
 from bbc_ast import Repeat, Until, While, Endwhile, ForToStep, Next
-
+from flow.connectors import connectLoop
 from visitor import Visitor
 
 class CorrelationVisitor(Visitor):
@@ -71,7 +71,7 @@ class CorrelationVisitor(Visitor):
         if not isinstance(peek, Repeat):
             errors.fatalError("Not in a REPEAT loop at line %d; currently in %s loop opened at line %d" % (node.lineNum, peek.description, peek.lineNum))
         repeat_stmt = self.loops.pop()
-        until_stmt.addBackEdge(repeat_stmt)
+        connectLoop(until_stmt, repeat_stmt)
         
     def visitWhile(self, while_stmt):
         self.loops.append(while_stmt)
@@ -83,7 +83,7 @@ class CorrelationVisitor(Visitor):
         if not isinstance(peek, While):
             errors.fatalError("Not in a WHILE loop at line %d; currently in %s loop opened at line %d" % (node.lineNum, peek.description, peek.lineNum))
         while_stmt = self.loops.pop()
-        endwhile_stmt.addBackEdge(while_stmt)
+        connectLoop(endwhile_stmt, while_stmt)
         
     def visitForToStep(self, for_stmt):
         self.loops.append(for_stmt)
@@ -108,7 +108,7 @@ class CorrelationVisitor(Visitor):
             print "id2 = ", id2
             # TODO: Check that the symbols are equal, not just the names
             if for_stmt.identifier.identifier == next_stmt.identifiers[0].identifier:
-                next_stmt.addBackEdge(for_stmt)
+                connectLoop(next_stmt, for_stmt)
                 break    
     
         

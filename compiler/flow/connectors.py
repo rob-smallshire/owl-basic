@@ -12,3 +12,8 @@ def connectToFollowing(statement):
 def connect(from_statement, to_statement):
     from_statement.addOutEdge(to_statement)
     to_statement.addInEdge(from_statement)
+
+def connectLoop(from_statement, to_statement):
+    from_statement.addLoopBackEdge(to_statement)
+    to_statement.addLoopFromEdge(from_statement)
+    

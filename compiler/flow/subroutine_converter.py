@@ -27,6 +27,7 @@ def convertSubroutinesToProcedures(parse_tree, entry_points, options):
             entry_point.clearEntryPoints()
             entry_point_names_to_remove.append(name)
             entry_points_to_add[procname] = defproc
+            entry_point.clearComeFromGosubEdges()
             tagSuccessors(defproc)
     for name in entry_point_names_to_remove:
         del entry_points[name]

@@ -129,7 +129,7 @@ class GmlVisitor(Visitor):
                 self.writer.WriteEndElement() # edge
         
         if self.back_edges:
-             for target in node.backEdges:
+             for target in node.loopBackEdges:
                 self.writer.WriteStartElement("edge")
                 self.writer.WriteAttributeString("source", str(node.id))
                 self.writer.WriteAttributeString("target", str(target.id))

@@ -26,12 +26,13 @@ def identifyBasicBlocks(entry_points, options):
     :param entry_points: A sequence of program statements which are the entry point to the program
                          or procedures
     :param options:      Program options
-    :returns:            A sequence of entry blocks - BasicBlock instances through which control
-                         flow enters the graph of each program, function or procedure. 
+    :returns:            A dictionary of entry blocks - BasicBlock instances through which control
+                         flow enters the graph of each program, function or procedure. The keys are
+                         the entry point names
     '''
     logger.info("Identifying basic blocks")
-    print "entry_points", entry_points
-    return [coarsenControlFlowGraph(entry_point) for entry_point in entry_points.values()]
+    print entry_points
+    return dict((k, coarsenControlFlowGraph(v)) for k, v in entry_points.items())
         
 def coarsenControlFlowGraph(entry_point):
     '''
@@ -40,8 +41,9 @@ def coarsenControlFlowGraph(entry_point):
                         for which the control flow graph is to be coarsened to basic blocks.
     :returns: The entry block BasicBlock instance corresponding to entry_point
     '''
-    print entry_point
-    block = assignBlockAndContinue(entry_point, BasicBlock())
+    logger.debug("entry_point = %s", entry_point)
+    block = assignBlockAndContinue(entry_point)
+    return block
 
 # TODO: Decorate as a tail-call    
 def assignBlockAndContinue(vertex, block=None):
@@ -49,13 +51,14 @@ def assignBlockAndContinue(vertex, block=None):
     Assign vertex to block and continue with successor vertices
     '''
     if not vertex.block:           
-        block = (vertex.inDegree == 1) and block or BasicBlock()
+        block = ((vertex.inDegree == 1) and block) or BasicBlock()
         block.statements.append(vertex)
         vertex.block = block
         logger.debug("%s with in-degree %s and out-degree %s at %s in %s", vertex, str(vertex.inDegree), str(vertex.outDegree), str(vertex.lineNum), vertex.block)
         for target in vertex.outEdges:
             successor_block = assignBlockAndContinue(target, block if vertex.outDegree == 1 else None)
-            connect(block, successor_block)             
+            if block is not successor_block:
+                connect(block, successor_block)             
     return vertex.block
            
     

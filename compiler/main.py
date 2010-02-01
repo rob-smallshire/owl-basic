@@ -33,6 +33,7 @@ from flow import identifyBasicBlocks
 from typing import typecheck
 import data_visitor
 import gml_visitor
+from xml_blocks import dumpXmlBlocks
 import ast_utils
 from line_mapper import LineMapper
 import symbol_table_visitor
@@ -353,12 +354,13 @@ def compile(filename, options):
     convertLongjumpsToExceptions(parse_tree, line_mapper, options)
     convertSubroutinesToProcedures(parse_tree, entry_points, options)
     correlateLoops(entry_points, options)
-    identifyBasicBlocks(entry_points, options)
+    basic_blocks = identifyBasicBlocks(entry_points, options)
     typecheck(parse_tree, entry_points, options)
     stv = buildSymbolTables(entry_points, options)
     
     dumpXmlAst(parse_tree, filename + "_ast.xml", options)
     dumpXmlCfg(parse_tree, filename + "_cfg.graphml", options)
+    dumpXmlBlocks(basic_blocks, filename + "_blocks.graphml", options)
 
     output_name = os.path.splitext(os.path.basename(filename))[0]
     if options.use_clr:

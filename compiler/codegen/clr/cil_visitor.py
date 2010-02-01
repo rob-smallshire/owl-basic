@@ -259,10 +259,10 @@ class CilVisitor(Visitor):
         
     def visitUntil(self, until):
         logging.debug("Visiting %s", until)
-        if len(until.backEdges) != 0:
-            assert len(until.backEdges) == 1
+        if len(until.loopBackEdges) != 0:
+            assert len(until.loopBackEdges) == 1
             # Correlated NEXT
-            repeat = representative(until.backEdges)
+            repeat = representative(until.loopBackEdges)
             logging.debug("UNTIL correlates with %s", repeat)
             until.condition.accept(self)            # Push the condition onto the stack
             self.generator.Emit(OpCodes.Brfalse_S, repeat.label)  # Branch if false
@@ -351,10 +351,10 @@ class CilVisitor(Visitor):
     
     def visitNext(self, next):
         logging.debug("Visiting %s", next)
-        if  len(next.backEdges) != 0:
-            assert len(next.backEdges) == 1
+        if  len(next.loopBackEdges) != 0:
+            assert len(next.loopBackEdges) == 1
             # Correlated NEXT
-            for_to_step = representative(next.backEdges)
+            for_to_step = representative(next.loopBackEdges)
             logging.debug("NEXT correlates with %s", for_to_step)
             for_to_step.generateNext()
         else:
