@@ -30,7 +30,8 @@ namespace OwlRuntime.platform.riscos
         [Swi(0x03)]
         public static void NewLine()
         {
-            // TODO: Use VDU Queue
+            vdu.Enqueue((byte)10);
+            vdu.Enqueue((byte)13);
         }
         
         [Swi(0x04)]

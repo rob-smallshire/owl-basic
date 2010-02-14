@@ -302,7 +302,7 @@ namespace OwlRuntime.platform.riscos
 
         public void TestTextDirectionOverlap()
         {
-            vdu.Enqueue((byte)22, (byte)28); // Change to mode 3
+            vdu.Enqueue((byte)22, (byte)3); // Change to mode 3
 
             vdu.Enqueue((byte)23, (byte)16, (byte)12, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0, (byte)0);
             vdu.Enqueue((byte)28); // define text window
@@ -407,7 +407,7 @@ namespace OwlRuntime.platform.riscos
             vdu.Enqueue((byte)28); // define text window
             vdu.Enqueue((short)10, (short)20, (short)40, (short)5);
             Console.Clear();
-            for (int j = 0; j < 2000; ++j)
+            for (int j = 0; j < 500; ++j)
             {
                 vdu.Enqueue(".");
             }
@@ -415,6 +415,8 @@ namespace OwlRuntime.platform.riscos
             for (int j = 0; j < 10; ++j)
             {
                 vdu.Enqueue("right up ");
+                vdu.Enqueue((byte) 10);
+                vdu.Enqueue((byte) 13);
             }
             Console.WriteLine("End");
         }

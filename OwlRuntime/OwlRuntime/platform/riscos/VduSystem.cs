@@ -764,6 +764,7 @@ namespace OwlRuntime.platform.riscos
             int windHeight = textWindowBottomRow - textWindowTopRow;
             return (textWindowBottomRow) - (y * (windHeight));
         }
+
         private void DisablePrinterStream()
         {
             throw new NotImplementedException();
@@ -1172,7 +1173,7 @@ namespace OwlRuntime.platform.riscos
 
         private void SetPrintDirection(byte x, byte y)
         {
-            // prm 1-594 this needs some thinking about how to impliment.
+            // prm v3-1-594 this needs some thinking about how to impliment.
             // May need to impliment windows and scrolling first.
             
             // also risc os 2 and 3 prm's say two params
@@ -1497,7 +1498,8 @@ namespace OwlRuntime.platform.riscos
         private void CarriageReturn()
         {
             // make sure cursor editing is disabled if enabled (PRM 1-550)
-            throw new NotImplementedException();
+            // TODO : check how cursor movement is done in graphics.
+            TextCursorX = CursorDefaultX();
         }
 
         private static void Bell()
