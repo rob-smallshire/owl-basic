@@ -32,7 +32,7 @@ vdu	done	params	desc book-page
 23,10		9	Sets second flash time 1-609
 23,11		9	Sets default patterns 1-610
 23,12-15		9	Defines simple ECF patterns and colours 1-612
-23,16	y	9	Controls cursor movement after printing 1-614
+23,16	0.5	9	Controls cursor movement after printing 1-614
 23,17,0-3	y	9	Sets the tint for a colour 1-616
 23,17,4		9	Chooses ECF patterns 1-617
 23,17,5	y	9	Exchanges text foreground and background colours 1-618
