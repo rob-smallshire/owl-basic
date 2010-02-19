@@ -66,6 +66,15 @@ def writeHeader(writer):
 def writeBlock(writer, block):
     writer.WriteStartElement("node")
     writer.WriteAttributeString("id", str(block.id))
+    
+    writer.WriteStartElement("data")
+    writer.WriteAttributeString("key", "d0") # Shape and label
+    writer.WriteStartElement("y:ShapeNode")
+    writer.WriteStartElement("y:NodeLabel")
+    writer.WriteString(str(block.topological_order))
+    writer.WriteEndElement() # y:NodeLabel
+    writer.WriteEndElement() # y:ShapeNode
+    writer.WriteEndElement() # data
         
     writer.WriteStartElement("graph")
     writer.WriteAttributeString("edgedefault", "directed")

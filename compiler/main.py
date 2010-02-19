@@ -30,6 +30,7 @@ from flow import createForwardControlFlowGraph
 from flow import convertLongjumpsToExceptions
 from flow import convertSubroutinesToProcedures
 from flow import identifyBasicBlocks
+from flow import orderBasicBlocks
 from typing import typecheck
 import data_visitor
 import gml_visitor
@@ -355,6 +356,7 @@ def compile(filename, options):
     convertSubroutinesToProcedures(parse_tree, entry_points, options)
     correlateLoops(entry_points, options)
     basic_blocks = identifyBasicBlocks(entry_points, options)
+    ordered_basic_blocks = orderBasicBlocks(basic_blocks, options)
     typecheck(parse_tree, entry_points, options)
     stv = buildSymbolTables(entry_points, options)
     
@@ -366,7 +368,7 @@ def compile(filename, options):
     if options.use_clr:
         from codegen.clr.generate import AssemblyGenerator
         ag = AssemblyGenerator()
-        ag.generateAssembly(output_name, stv.globalSymbols, dv, entry_points) 
+        ag.generateAssembly(output_name, stv.globalSymbols, dv, ordered_basic_blocks) 
     
     # Structural analysis
 
@@ -374,8 +376,9 @@ def compile(filename, options):
 
     # Type checking and casting
     # Have we finished type-checking?
-    
     # == Optimisation ==
+    # Remove basic blocks containing only GOTO. Is this the same as replacing all GOTOs
+    #  with edges in the CFG?
     # constant folding
     # constant propagation
     # Note - during constant propagation we can

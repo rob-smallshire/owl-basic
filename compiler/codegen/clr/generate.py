@@ -50,9 +50,11 @@ class AssemblyGenerator(object):
         '''
         return self.owl_to_clr_method_names[owl_name]
                    
-    def generateAssembly(self, name, global_symbols, data_visitor, entry_points):
+    def generateAssembly(self, name, global_symbols, data_visitor, ordered_basic_blocks):
         """
-        name - the name given to the assembly to be generated
+        :param name: The name given to the assembly to be generated.
+        :param ordered_basic_blocks: A mapping type where keys are the entry point name
+                                     and values are a sequence of BasicBlocks for that method/program.
         """
         # Generate an assembly
         # Generate a namespace
@@ -77,14 +79,14 @@ class AssemblyGenerator(object):
                                                      FieldAttributes.Private | FieldAttributes.Static)
             # Generate a two methods for generating CIL to load and store the value of the global variable (field) 
             
-            def fieldLoadEmitter(generator):
+            def fieldLoadEmitter(generator, field_builder=field_builder):
                 '''
                 A closure which emits CIL into the supplied generator to load a field
                 :param generator: A CIL generator
                 '''
                 generator.Emit(OpCodes.Ldsfld, field_builder)
                 
-            def fieldStoreEmitter(generator):
+            def fieldStoreEmitter(generator, field_builder=field_builder):
                 '''
                 A closure which emits CIL into the supplied generator to store a field
                 :param generator: A CIL generator
@@ -101,7 +103,8 @@ class AssemblyGenerator(object):
         # TODO: This would be sooo much easier if the entry_point.name
         # property had been set useful, and PROC and FN retained in identifier names everywhere!
         # TODO: Should also wrap the main program in DEF PROCMain - safely!
-        for entry_name, entry_point in entry_points.items():
+        for entry_name, basic_blocks in ordered_basic_blocks.items():
+            entry_point = basic_blocks[0].entryPoint
             if isinstance(entry_point, DefinitionStatement):
                 self.createCtsMethodName(entry_point.name)   
             else: # Main
@@ -113,14 +116,14 @@ class AssemblyGenerator(object):
         #    print owl_name, " ==> ", clr_name
             
         # Generate all the empty methods, so we can retrieve them from the type builder    
-        for entry_point in entry_points.values():
-            self.generateMethod(type_builder, entry_point)
+        for basic_blocks in ordered_basic_blocks.values():
+            self.generateMethod(type_builder, basic_blocks)
                 
         # Generate the body of each method
         stop_on_error = False    
-        for entry_point in entry_points.values():
+        for basic_blocks in ordered_basic_blocks.values():
             try:
-                self.generateMethodBody(entry_point)
+                self.generateMethodBody(basic_blocks)
             except CodeGenerationError, e:
                 logging.critical("STOPPING %s", e)
                 if stop_on_error:
@@ -269,13 +272,16 @@ class AssemblyGenerator(object):
         '''
         raise NotImplementedException;
                                 
-    def generateMethod(self, type_builder, entry_point_node):
+    def generateMethod(self, type_builder, basic_blocks):
         """
         Generate the code for a single method starting a the entry_point node in the CFG. Attaches
         code generation functionality to the symbols representing the formal parameters of the method.
         """
         logging.debug("generateMethod")
-    
+
+        # The first statement of the first basic block is the entry point
+        entry_point_node = basic_blocks[0].entryPoint
+
         # Set up the method attributes
         method_attributes = MethodAttributes.Static
         method_return_type = None
@@ -334,7 +340,9 @@ class AssemblyGenerator(object):
             types = [cts.mapType(param.argument.actualType) for param in formal_parameters]
         return System.Array[System.Type](types)
     
-    def generateMethodBody(self, entry_point_node):
+    def generateMethodBody(self, basic_blocks):
+        # The first statement of the first basic block is the entry point
+        entry_point_node = basic_blocks[0].entryPoint
         try:
             name = entry_point_node.name
             if name == 'Main':
@@ -347,9 +355,20 @@ class AssemblyGenerator(object):
         logging.debug("Creating CIL for %s", clr_method_name)
         method_builder = self.method_builders[clr_method_name]
         logging.debug("entry_point_node = %s", entry_point_node)
-        cv = CilVisitor(self, method_builder, entry_point_node)
 
+        # For each basic block (including the first, if it has an in-degree > 1)
+        # define a label, and attach it to the block
+        cv = CilVisitor(self, method_builder)
         
+        for basic_block in basic_blocks:
+            basic_block.label = cv.generator.DefineLabel()
+            basic_block.is_label_marked = False
 
-  
-     
+        # Generate the code for blocks and statements in sequence
+        for basic_block in basic_blocks:
+            for statement in basic_block.statements:
+                cv.visit(statement)
+                assert statement.block.is_label_marked
+            
+                
+                           

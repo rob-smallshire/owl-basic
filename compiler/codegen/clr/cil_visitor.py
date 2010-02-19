@@ -47,17 +47,15 @@ class CilVisitor(Visitor):
     '''
 
 
-    def __init__(self, assembly_generator, method_builder, entry_point_node):
+    def __init__(self, assembly_generator, method_builder):
         '''
         Create a new CilVisitor for generating a CIL method.
-        
         :param type_builder A System.Reflection.Emit.TypeBuilder
         :param entry_point_node The entry point CFG node of a method
         '''
-        assert(len(entry_point_node.entryPoints) == 1)
         self.assembly_generator = assembly_generator
         self.method_builder = method_builder
-        
+
         # Pending rvalue - used using generation of assignment statements
         self.__pending_rvalue = None
         
@@ -68,16 +66,6 @@ class CilVisitor(Visitor):
         self.console_type = clr.GetClrType(System.Console)
         self.generator = self.method_builder.GetILGenerator()
         self.generator.Emit(OpCodes.Nop) # Every method needs at least one OpCode
-
-        node = entry_point_node
-        while True:
-            node = node.accept(self)
-            if node is None:
-                break
-            
-        if isinstance(entry_point_node, DefineFunction):
-            emitLdc_I4(self.generator, 0)
-            self.generator.Emit(OpCodes.Ret) # Functions must return something
 
     def generatePendingRValue(self):
         assert self.__pending_rvalue
@@ -104,6 +92,21 @@ class CilVisitor(Visitor):
         integer on the stack (0 or -1)
         '''
         self.generator.Emit(OpCodes.Neg)
+                
+    def successorOf(self, node):
+        assert len(node.outEdges) <= 1
+        if len(node.outEdges) == 0:
+            return None
+        return representative(node.outEdges)
+    
+    def checkMark(self, statement):
+        '''
+        If this basic block has not yet been marked, mark the label prior
+        to the next instruction to be emitted into the CIL stream.
+        '''
+        if not statement.block.is_label_marked:
+            self.generator.MarkLabel(statement.block.label)
+            statement.block.is_label_marked = True
     
     def visitAstNode(self, node):
         raise CodeGenerationError("Visiting unhandled node %s" % node)
@@ -112,16 +115,11 @@ class CilVisitor(Visitor):
         raise CodeGenerationError("Visiting unhandled statement %s" % statement)
     
     def visitData(self, data):
-        return self.successorOf(data)
-        
-    def successorOf(self, node):
-        assert len(node.outEdges) <= 1
-        if len(node.outEdges) == 0:
-            return None
-        return representative(node.outEdges)
-        
+        self.checkMark(data)
+    
     def visitAssignment(self, assignment):
         logging.debug("Visiting %s", assignment)
+        self.checkMark(assignment)
         # The code for generating the rvalue may need to be interleaved
         # with the code for generating the lvalue, in cases where the
         # lvalue is an assignment to an array element or an indirection
@@ -134,7 +132,6 @@ class CilVisitor(Visitor):
         self.__pending_rvalue = assignment.rValue # Store the rvalue
         assignment.lValue.accept(self) # Store the top of the stack into the lValue
         assert self.__pending_rvalue is None # Check that the rvalue has been used
-        return self.successorOf(assignment)
                 
     def visitVariable(self, variable):
         logging.debug("Visiting %s", variable)
@@ -153,6 +150,8 @@ class CilVisitor(Visitor):
             self.generatePendingRValue()
             # Store in the lvalue
             #  Lookup in the symbol table
+            print "symbol = %s" % symbol
+            print "symbol.storeEmitter = %s" % symbol.storeEmitter
             symbol.storeEmitter(self.generator)
         else:
             symbol.loadEmitter(self.generator)
@@ -191,6 +190,7 @@ class CilVisitor(Visitor):
     
     def visitVdu(self, vdu):
         logging.debug("Visiting %s", vdu)
+        self.checkMark(vdu)
         assert hasattr(vdu.bytes, '__getitem__')
         assert hasattr(vdu.bytes, '__len__')
         if len(vdu.bytes) == 1:
@@ -208,22 +208,20 @@ class CilVisitor(Visitor):
             # TODO: Avoid multiple VDU calls
             logging.internal("TODO: Unhandled multiple item VDU")
             return None
-        return self.successorOf(vdu)
     
     def visitCls(self, cls):
         logging.debug("Visiting %s", cls)
+        self.checkMark(cls)
         self.generator.Emit(OpCodes.Call, self.basicCommandMethod('Cls'))
-        return self.successorOf(cls)
     
     def visitDefineProcedure(self, defproc):
         logging.debug("Visiting %s", defproc)
-        # Nothing to do here
-        print defproc.outEdges
-        return self.successorOf(defproc)
+        self.checkMark(defproc)
                   
     def visitCallProcedure(self, call_proc):
         logging.debug("Visiting %s", call_proc)
         logging.debug("name = %s", call_proc.name)
+        self.checkMark(call_proc)
         
         # TODO: Call the procedure
         proc_method_info = self.lookupMethod(call_proc.name)
@@ -232,33 +230,34 @@ class CilVisitor(Visitor):
             actual_parameter.accept(self)
         
         self.generator.Emit(OpCodes.Call, proc_method_info)
-        return self.successorOf(call_proc)
     
     def visitReturnFromProcedure(self, endproc):
         logging.debug("Visiting %s", endproc)
         # TODO: Must not be used from within an exception handler
+        self.checkMark(endproc)
         self.generator.Emit(OpCodes.Ret)
         
     def visitRestore(self, restore):
         # TODO: Can we RESTORE to lines which don't contain DATA?
         logging.debug("Visiting %s", restore)
         logging.debug("target_logical_line = %s", restore.targetLogicalLine)
+        self.checkMark(restore)
         # Lookup the data pointer value for this line number
         self.generator.Emit(OpCodes.Ldsfld, self.assembly_generator.data_line_number_map_field)         # Load the dictionary onto the stack
         restore.targetLogicalLine.accept(self) # Push the line number onto the stack
         get_item_method_info = cts.int_int_dictionary_type.GetMethod('get_Item')
         self.generator.Emit(OpCodes.Call, get_item_method_info) # Call get_Item and the put the new data point result on the stack
         self.generator.Emit(OpCodes.Stsfld, self.assembly_generator.data_index_field)
-        return self.successorOf(restore)
     
     def visitRepeat(self, repeat):
         logging.debug("Visiting %s", repeat)
+        self.checkMark(repeat)
         repeat.label = self.generator.DefineLabel()
         self.generator.MarkLabel(repeat.label)
-        return self.successorOf(repeat)
         
     def visitUntil(self, until):
         logging.debug("Visiting %s", until)
+        self.checkMark(until)
         if len(until.loopBackEdges) != 0:
             assert len(until.loopBackEdges) == 1
             # Correlated NEXT
@@ -269,8 +268,6 @@ class CilVisitor(Visitor):
         else:
             # Non-correlated UNTIL
             errors.internal("TODO: Non-correlated UNTIL")
-            
-        return self.successorOf(until)    
         
     def visitForToStep(self, for_to_step):
         # TODO: Future optimizations
@@ -306,8 +303,9 @@ class CilVisitor(Visitor):
         self.generator.Emit(OpCodes.Stloc, step_value_local)
                         
         # The loop body goes in here - later, but first...
-        loop_body_label = self.generator.DefineLabel()
-        self.generator.MarkLabel(loop_body_label)
+        # loop_body_label = self.generator.DefineLabel()
+        # loop_body_label = for_to_step.block.label
+        self.checkMark(for_to_step)
         
         # Define a function (closure) which can be called later to generate
         # the code for the corresponding NEXT statements
@@ -343,14 +341,14 @@ class CilVisitor(Visitor):
             
             # loop back if not finished
             self.generator.MarkLabel(loop_back_label)
-            self.generator.Emit(OpCodes.Brtrue, loop_body_label)
+            self.generator.Emit(OpCodes.Brtrue, for_to_step.block.label)
         
         # Attach the closure to the for_to_step object for later use
         for_to_step.generateNext = correspondingNext
-        return self.successorOf(for_to_step)
     
     def visitNext(self, next):
         logging.debug("Visiting %s", next)
+        self.checkMark(next)
         if  len(next.loopBackEdges) != 0:
             assert len(next.loopBackEdges) == 1
             # Correlated NEXT
@@ -360,9 +358,7 @@ class CilVisitor(Visitor):
         else:
             # Non-correlated NEXT
             errors.internal("TODO: Non-correlated NEXT")
-        return self.successorOf(next)
-         
-    
+       
     def visitReadFunc(self, read_func):
         # Determine the type of the value and dispatch appropriately
         # Read the DATA, evaluate the expression in the context of the
@@ -428,10 +424,10 @@ class CilVisitor(Visitor):
             # Read from the location and push onto the stack
             logging.critical("TODO: Dyadic byte indirection r-value")
             # Are we reading from a block or directly from memory?
-            pass
         
     def visitPrint(self, print_stmt):
         logging.debug("Visiting %s", print_stmt)
+        self.checkMark(print_stmt)
         # Convert each print item into a call to the runtime library
         logging.debug("print list = %s", str(print_stmt.printList))
         suppress_newline = False
@@ -454,8 +450,6 @@ class CilVisitor(Visitor):
                     
         if not suppress_newline:
             self.generator.Emit(OpCodes.Call, self.basicCommandMethod('NewLine'))
-            
-        return self.successorOf(print_stmt)
                    
     def visitTabH(self, tabh):
         logging.debug("Visiting %s", tabh) 
@@ -501,15 +495,21 @@ class CilVisitor(Visitor):
               
     def visitEnd(self, end):
         logging.debug("Visiting %s", end)
+        self.checkMark(end)
         # TODO throw an exception signalling END and modify the main method
         # to catch this exception and exit gracefully
         logging.critical("TODO: Throw an EndException")
-        return self.successorOf(end)
     
     def visitUnaryMinus(self, unary_minus):
         logging.debug("Visiting %s", unary_minus)
         unary_minus.factor.accept(self)
         self.generator.Emit(OpCodes.Neg)
+    
+    def visitPlus(self, plus):
+        logging.debug("Visiting %s", plus)
+        plus.lhs.accept(self)
+        plus.rhs.accept(self)
+        self.generator.Emit(OpCodes.Add)
     
     def visitMultiply(self, multiply):
         logging.debug("Visiting %s", multiply)
@@ -558,22 +558,6 @@ class CilVisitor(Visitor):
                                                               System.Array[System.Type]([cts.mapType(operator.lhs.actualType),
                                                                                          cts.mapType(operator.rhs.actualType)]))
             self.generator.Emit(OpCodes.Call, equal_method)
-        
-    def visitIf(self, iff):
-        logging.debug("Visiting %s", iff)
-        iff.condition.accept(self) # Result of the condition on the stack
-        else_label = self.generator.DefineLabel()
-        end_label = self.generator.DefineLabel()
-        self.generator.Emit(OpCodes.Brfalse, else_label)
-        for statement in iff.trueClause:
-            statement.accept(self)
-        self.generator.MarkLabel(else_label)
-        self.generator.Emit(OpCodes.Br, end_label)
-        for statement in iff.falseClause:
-            statement.accept(self)
-        self.generator.MarkLabel(end_label)
-        # TODO: What is the first statement after the if-then-else construct?
-        return self.successorOf(iff)
-        
+
          
         
