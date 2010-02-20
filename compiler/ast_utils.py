@@ -71,7 +71,6 @@ def findNode(node, predicate):
     """
     n = node
     while n is not None:
-        print "findNode(%s)" % n
         if predicate(n):
             return n
         n = n.parent

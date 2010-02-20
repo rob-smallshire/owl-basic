@@ -150,8 +150,6 @@ class CilVisitor(Visitor):
             self.generatePendingRValue()
             # Store in the lvalue
             #  Lookup in the symbol table
-            print "symbol = %s" % symbol
-            print "symbol.storeEmitter = %s" % symbol.storeEmitter
             symbol.storeEmitter(self.generator)
         else:
             symbol.loadEmitter(self.generator)
@@ -399,7 +397,6 @@ class CilVisitor(Visitor):
             # Pop the byte on top of the stack and write to the location
             logging.debug("Dyadic byte indirection l-value")
             # Are we writing to a block or directly into memory?
-            print dyadic.base.formalType
             if dyadic.base.formalType is PtrType:
                 # Writing directly into address space
                 # Push the array representing our faked address space onto the stack
@@ -437,9 +434,6 @@ class CilVisitor(Visitor):
                 item = print_item.item
                 item.accept(self)
                 if not isinstance(item, PrintManipulator):
-                    print item
-                    print item.formalType
-                    print item.actualType
                     print_method = self.basic_commands_type.GetMethod("Print", System.Array[System.Type]([cts.mapType(item.actualType)]))
                     self.generator.Emit(OpCodes.Call, print_method)
                 
@@ -559,5 +553,45 @@ class CilVisitor(Visitor):
                                                                                          cts.mapType(operator.rhs.actualType)]))
             self.generator.Emit(OpCodes.Call, equal_method)
 
-         
+    def visitIf(self, if_stmt):
+        logging.debug("Visiting %s", if_stmt)
+        self.checkMark(if_stmt)
+        if_stmt.condition.accept(self) # Condition on the stack
+        assert if_stmt.trueClause is not None
+        first_true_stmt = if_stmt.trueClause[0] 
+        
+        # Find the target statement for the negative (ELSE) case, which is
+        # either the ELSE clause or just the following statement if there is
+        # no else clause
+        outEdges = set(if_stmt.outEdges)
+        outEdges.discard(first_true_stmt)
+        assert len(outEdges) == 1
+        representative(outEdges)
+        first_false_stmt = representative(outEdges)
+        if if_stmt.falseClause:
+            assert if_stmt.falseClause[0] is first_false_stmt
+        # Usually (always?) only one of the following calls will result in a generated branch
+        # Whether we branch to the trueClause, the falseClause or both depends of the
+        # ordering of the basic blocks
+        this_block_ordinal = if_stmt.block.topological_order
+        true_block_ordinal = first_true_stmt.block.topological_order
+        false_block_ordinal = first_false_stmt.block.topological_order
+        
+        if true_block_ordinal == this_block_ordinal + 1:
+            # The true block immediately succeeds this block
+            # Branch on the negative case
+            self.generator.Emit(OpCodes.Brfalse, first_false_stmt.block.label)
+            # Fall through to the true block
+        elif false_block_ordinal == this_block_ordinal + 1:
+            # The false block immediately succeeds this block
+            # Branch on the positive case
+            self.generator.Emit(OpCodes.Brtrue, first_true_stmt.block.label)
+            # Fall through to the false block
+        else:
+            # Neither the true block nor the false block immediately succeed this block
+            # Conditionally branch on the true case
+            self.generator.Emit(OpCodes.Brtrue, first_true_stmt.block.label)
+            self.generator.Emit(OpCodes.Br, first_false_stmt.block.label)
+            # Unconditionally branch on the false case 
+     
         

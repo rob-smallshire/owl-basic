@@ -17,6 +17,7 @@ from cil_visitor import CilVisitor, CodeGenerationError
 from symbol_tables import hasSymbolTableLookup
 from emitters import *
 import cts
+from algorithms import representative
 
 def ctsIdentifier(symbol):
     """
@@ -125,7 +126,7 @@ class AssemblyGenerator(object):
             try:
                 self.generateMethodBody(basic_blocks)
             except CodeGenerationError, e:
-                logging.critical("STOPPING %s", e)
+                logging.critical("STOPPING %s\n\n\n", e)
                 if stop_on_error:
                     break
             
@@ -369,6 +370,24 @@ class AssemblyGenerator(object):
             for statement in basic_block.statements:
                 cv.visit(statement)
                 assert statement.block.is_label_marked
-            
+            self.transferControlToNextBlock(cv.generator, basic_block)
+    
+    def transferControlToNextBlock(self, generator, current_block):
+        '''
+        Transfer control to the next block for blocks with
+        an out-degree of one.  (More complex block exits should
+        already have been dealt with by code generation of the
+        last statement of the block). If control can fall through
+        to the next block because they are consecutive in the topological
+        order no code is generated, otherwise an unconditional branch is inserted.
+        :param generator: A code generator.
+        :param current_block: The block from which to transfer control.
+        '''
+        
+        if current_block.outDegree == 1:
+            successor_block = representative(current_block.outEdges)
+            # If we can't fall through to the next block, branch unconditionally to it
+            if successor_block.topological_order != current_block.topological_order + 1:
+                generator.Emit(OpCodes.Br, successor_block.label)
                 
                            
