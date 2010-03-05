@@ -19,6 +19,7 @@ class SetFunctionTypeVisitor(Visitor):
         
     def visitUserFunc(self, user_func):
         if user_func.name == self.function_name:
+            print "Setting type of call to %s to %s" % (self.function_name, self.function_type) 
             user_func.actualType = self.function_type
         user_func.forEachChild(self.visit)
         

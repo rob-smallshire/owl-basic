@@ -39,5 +39,5 @@ def locateEntryPoints(parse_tree, line_mapper, options):
     # Tag each statement with its predecessor entry point
     logging.debug("Tagging statements with entry point\n")
     for entry_point in entry_points.values():
-        flow_analysis.tagSuccessors(entry_point)
+        flow_analysis.tagSuccessors(entry_point, line_mapper)
     return entry_points

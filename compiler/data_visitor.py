@@ -5,7 +5,7 @@ from visitor import Visitor
 class DataVisitor(Visitor):
     def __init__(self):
         self.data = []
-        self.index = {} # line number -> data[index]
+        self.index = {} # physical 0-based line number -> data[index]
 
     def parse(self, data):
         "Parse the text following a DATA statement into items"

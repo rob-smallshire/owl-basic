@@ -29,10 +29,12 @@ class TypecheckVisitor(Visitor):
     
     def visitAstNode(self, node):
         node.forEachChild(self.visit)
-        self.checkSignature(node)
+        self.checkSignature(node) # TODO: What about return types
+        self.insertNumericCasts(node)
     
     def visitAstStatement(self, statement):
         "Generic visitor for simple statements"
+        # TODO: If this is the same as above, it can be removed
         statement.forEachChild(self.visit)      
         if not self.checkSignature(statement):
             return
@@ -47,22 +49,25 @@ class TypecheckVisitor(Visitor):
             # Deal with L-values which are lists
             if assignment.lValue.actualType.isA(ArrayType):
                 for item in assignment.rValue:
-                    if item.actualType.isConvertibleTo(assignment.lValue.actualType._getElementType()):
-                        if item.actualType is not assignment.lValue.actualType._getElementType():
-                            self.insertCast(item, item.actualType, target=assignment.lValue.actualType._getElementType())
-                    else:
-                        message = "Cannot assign list item of type %s to elements of %s" % (item.actualType.__doc__, assignment.lValue.actualType.__doc__)
-                        self.typeMismatch(assignment, message)
+                    self.checkAndInsertRValueCast(item, assignment.lValue.actualType._getElementType())
             else:
                 message = "List is only assignable to an array"
                 self.typeMismatch(assignment, message)
         else:
-            if assignment.rValue.actualType.isConvertibleTo(assignment.lValue.actualType):
-                if assignment.rValue.actualType is not assignment.lValue.actualType:
-                    self.insertCast(assignment.rValue, assignment.rValue.actualType, assignment.lValue.actualType)
-            else:
-                message = "Cannot assign %s to %s" % (assignment.rValue.actualType.__doc__, assignment.lValue.actualType.__doc__)
-                self.typeMismatch(assignment, message)
+            self.checkAndInsertRValueCast(assignment.rValue, assignment.lValue.actualType)
+        
+    def visitForToStep(self, for_stmt):
+        '''
+        Visit FOR N=1 TO 10 STEP 2
+        '''
+        self.visit(for_stmt.identifier)
+        self.visit(for_stmt.first)
+        self.visit(for_stmt.last)
+        self.visit(for_stmt.step)
+        counter_type = for_stmt.identifier.actualType
+        self.checkAndInsertRValueCast(for_stmt.first, counter_type)
+        self.checkAndInsertRValueCast(for_stmt.last, counter_type)
+        self.checkAndInsertRValueCast(for_stmt.step, counter_type)
     
     def visitBinaryNumericOperator(self, operator):
         '''
@@ -266,11 +271,7 @@ class TypecheckVisitor(Visitor):
                 else:
                     message = "Cannot pass actual parameter number %d of type %s to formal parameter type of %s" % (actual.actualType.__doc__, formal.argument.actualType.__doc__)
                     self.typeMismatch(call, message)
-                n += 1
-
-                    
-                
-                
+                n += 1 
         else:
             error("Did not find entry point for %s" % callable.name)
         
@@ -293,7 +294,7 @@ class TypecheckVisitor(Visitor):
         else:
             message = "Cannot apply operator %s to operands of type of %s and %s" % (operator.__doc__, operator.lhs.actualType.__doc__, operator.rhs.actualType.__doc__)
             self.typeMismatch(operator, message)    
-                   
+                       
     def promoteNumericOperands(self, operator):
         '''
         Given a binary operator with lhs and rhs operands, if the operands are of
@@ -310,8 +311,12 @@ class TypecheckVisitor(Visitor):
         
         if opTypes(IntegerType, FloatType):
             self.insertCast(operator.lhs, source=IntegerType, target=FloatType)
+        elif opTypes(ByteType, FloatType):
+            self.insertCast(operator.lhs, source=ByteType, target=FloatType)
         elif opTypes(FloatType, IntegerType):
             self.insertCast(operator.rhs, source=IntegerType, target=FloatType)
+        elif opTypes(FloatType, ByteType):
+            self.insertCast(operator.rhs, source=ByteType, target=FloatType)
     
     def insertNumericCasts(self, node):
         """
@@ -340,6 +345,10 @@ class TypecheckVisitor(Visitor):
         """Wrap the supplied node in a Cast node from source type to target type"""
        
         if source is target:
+            return
+        
+        if source.isA(PendingType):
+            logging.debug("Ignoring request to insert cast from PendingType")
             return
                
         if source.isA(target):
@@ -410,6 +419,21 @@ class TypecheckVisitor(Visitor):
                     return False
         return True
     
+    def checkAndInsertRValueCast(self, r_value, target_type):
+        '''
+        Check the value of the given r_value for compatibility with the target_type
+        and insert casts as necessary, or raise an error if no conversion is possible.
+        :param r_value: The r_value Node which is to be type checked. 
+        :param target_type: The type to which the r_value should be converted.
+        '''
+        if r_value is not None:
+            if r_value.actualType.isConvertibleTo(target_type):
+                if r_value.actualType is not target_type:
+                    self.insertCast(r_value, r_value.actualType, target_type)
+            else:
+                message = "Cannot assign %s to %s" % (r_value.actualType.__doc__, target_type.__doc__)
+                self.typeMismatch(r_value, message)
+                
     def typeError(self, node, message):
         message = "%s at line %d" % (message, node.lineNum)
         internal(message)

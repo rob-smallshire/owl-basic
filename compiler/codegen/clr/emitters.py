@@ -47,11 +47,22 @@ def emitLdc_I4(generator, constant):
         generator.Emit.Overloads[OpCode, System.SByte](OpCodes.Ldc_I4_S, System.SByte(constant))
     else:
         generator.Emit(OpCodes.Ldc_I4, constant)
+
+def emitLdc_T(generator, constant, type):
+    '''
+    Given a type emit either an integer or floating point number
+    '''
+    if type == System.Int32:
+        emitLdc_I4(generator, int(constant))
+    elif type == System.Double:
+        generator.Emit(OpCodes.Ldc_R8, float(constant))
+    else:
+        assert 0, "Unsupported type %s" % type
     
 def emitStarg(generator, index):
     assert 0 <= index <= 65535
     if index <= 255:
-        generator.Emit[OpCode, System.Byte](OpCodes.Starg_S, System.SByte(index))
+        generator.Emit.Overloads[OpCode, System.Byte](OpCodes.Starg_S, System.SByte(index))
     else:
         generator.Emit(OpCodes.Starg, index)
 

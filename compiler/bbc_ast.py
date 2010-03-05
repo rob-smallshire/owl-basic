@@ -133,7 +133,7 @@ class DefinitionStatement(MarkerStatement):
 
 class DefineFunction(DefinitionStatement):
     "DEF FN"
-    pass
+    return_type = TypeOption(None) # Used to store the return type
 
 class ReturnFromFunction(AstStatement):
     return_value = Node(formalType=ScalarType) # TODO: Can functions return arrays 
@@ -884,7 +884,7 @@ class LogFunc(UnaryNumericFunc):
 class MidStrFunc(AstNode):
     formal_type = TypeOption(StringType)
     actual_type = formal_type
-    source   = Node()
+    source   = Node(formalType=StringType)
     position = Node(formalType=IntegerType)
     length   = Node(formalType=IntegerType)
     

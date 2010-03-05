@@ -5,7 +5,7 @@ class LineMapper(object):
         
     def physicalToLogical(self, physical_line_number):
         if self.physical_to_logical_map is not None:
-            return self.physical_to_logical_map(physical_line_number)
+            return self.physical_to_logical_map[physical_line_number]
         else:
             return physical_line_number
     
@@ -31,3 +31,13 @@ class LineMapper(object):
         #print "first_statement_line = %s" % first_statement_line
         first_statement = self.line_to_stmt_map[first_statement_line]
         return first_statement
+    
+    def statementOnLine(self, integer_node):
+        '''
+        :param integer_node: A LiteralInteger node containing a logical line number
+        :returns: The first AstStatement node on that logical source code line
+        '''
+        logical_line_number = integer_node.value
+        statement = self.logicalStatement(logical_line_number)
+        print "logical_line_number = %d, statement = %s" % (logical_line_number, statement)
+        return statement

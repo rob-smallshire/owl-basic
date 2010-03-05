@@ -5,37 +5,42 @@ using System.Text;
 
 namespace OwlRuntime.platform.riscos
 {
-    public static class OS
+    public class OS
     {
-        private static VduSystem vdu;
+        private readonly VduSystem vdu = new VduSystem();
+
+        public OS(VduSystem vdu)
+        {
+            this.vdu = vdu;
+        }
 
         [Swi(0x00)]
-        public static void WriteC(char c)
+        public void WriteC(char c)
         {
             vdu.Enqueue(c);
         }
 
         [Swi(0x01)]
-        public static void WriteS(string s)
+        public void WriteS(string s)
         {
             vdu.Enqueue(s);
         }
         
         [Swi(0x02)]
-        public static void Write0(string s)
+        public void Write0(string s)
         {
             vdu.Enqueue(s);
         }
         
         [Swi(0x03)]
-        public static void NewLine()
+        public void NewLine()
         {
             vdu.Enqueue((byte)10);
             vdu.Enqueue((byte)13);
         }
         
         [Swi(0x04)]
-        public static char ReadC()
+        public char ReadC()
         {
             int i = Console.Read();
             char c = Convert.ToChar(i);
@@ -43,31 +48,31 @@ namespace OwlRuntime.platform.riscos
         }
         
         [Swi(0x05)]
-        public static void CLI(string command)
+        public void CLI(string command)
         {
             throw new NotImplementedException();
         }
         
         [Swi(0x06)]
-        public static int Byte(int reason, out int r2)
+        public int Byte(int reason, out int r2)
         {
             throw new NotImplementedException();
         }
         
         [Swi(0x07)]
-        public static int Word(int reason, byte[] block)
+        public int Word(int reason, byte[] block)
         {
             throw new NotImplementedException();
         }
         
         [Swi(0x38)]
-        public static string SWINumberToString(int number)
+        public string SWINumberToString(int number)
         {
             throw new NotImplementedException();
         }
         
         [Swi(0x39)]
-        public static int SWINumberFromString(string name)
+        public int SWINumberFromString(string name)
         {
             throw new NotImplementedException();
         }

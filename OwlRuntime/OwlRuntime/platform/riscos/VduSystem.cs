@@ -1216,12 +1216,12 @@ namespace OwlRuntime.platform.riscos
 
         private void PagedModeOn()
         {
-            throw new NotImplementedException();
+            //throw new NotImplementedException();
         }
 
         private void PagedModeOff()
         {
-            throw new NotImplementedException();
+            //throw new NotImplementedException();
         }
 
         private void ClearGraphicsWindow()

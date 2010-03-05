@@ -11,13 +11,19 @@ from System.Reflection.Emit import *
 from visitor import Visitor
 from singleton import Singleton
 
-from bbc_ast import DefinitionStatement, DefineProcedure, DefineFunction
+from bbc_ast import DefinitionStatement, DefineProcedure, DefineFunction, Local
 from ast_utils import findNode
 from cil_visitor import CilVisitor, CodeGenerationError
-from symbol_tables import hasSymbolTableLookup
+from symbol_tables import hasSymbolTableLookup, StaticSymbolTable
 from emitters import *
 import cts
 from algorithms import representative
+from flow.traversal import depthFirstSearch
+
+# Load the OWL Runtime library so we may both call and reference
+# methods within it
+clr.AddReferenceToFileAndPath(r'C:\Users\rjs\Documents\dev\p4smallshire\sandbox\bbc_sharp_basic\OwlRuntime\OwlRuntime\bin\Debug\OwlRuntime.dll')
+import OwlRuntime
 
 def ctsIdentifier(symbol):
     """
@@ -42,7 +48,6 @@ class AssemblyGenerator(object):
         '''
         Lookup a MethodBuilder using is CLR name
         '''
-        
         return self.method_builders[clr_name]
          
     def lookupCtsMethodName(self, owl_name):
@@ -72,30 +77,22 @@ class AssemblyGenerator(object):
         assembly_builder = domain.DefineDynamicAssembly(assembly_name, AssemblyBuilderAccess.RunAndSave)
         
         module_builder = assembly_builder.DefineDynamicModule(name + ".exe")
-        type_builder = module_builder.DefineType(name, TypeAttributes.Class | TypeAttributes.Public, object().GetType())
+        owl_module = clr.GetClrType(OwlRuntime.OwlModule)
+        type_builder = module_builder.DefineType(name,
+                                                 TypeAttributes.Class | TypeAttributes.Public,
+                                                 object().GetType())
         
-        # Add global variables to the class
+        # Add accessors for the inherited static variables
+        static_symbols = StaticSymbolTable.getInstance()
+        for symbol in static_symbols.symbols.values():
+            field_info = owl_module.GetField(ctsIdentifier(symbol))
+            self.createAndAttachFieldEmitters(field_info, symbol)
+            
+        # Add global variables and their accessors to the class
         for symbol in global_symbols.symbols.values():
             field_builder = type_builder.DefineField(ctsIdentifier(symbol), cts.symbolType(symbol),
                                                      FieldAttributes.Private | FieldAttributes.Static)
-            # Generate a two methods for generating CIL to load and store the value of the global variable (field) 
-            
-            def fieldLoadEmitter(generator, field_builder=field_builder):
-                '''
-                A closure which emits CIL into the supplied generator to load a field
-                :param generator: A CIL generator
-                '''
-                generator.Emit(OpCodes.Ldsfld, field_builder)
-                
-            def fieldStoreEmitter(generator, field_builder=field_builder):
-                '''
-                A closure which emits CIL into the supplied generator to store a field
-                :param generator: A CIL generator
-                '''
-                generator.Emit(OpCodes.Stsfld, field_builder)
-            
-            symbol.loadEmitter = fieldLoadEmitter
-            symbol.storeEmitter = fieldStoreEmitter 
+            self.createAndAttachFieldEmitters(field_builder, symbol) 
         
         if len(data_visitor.data) > 0:
             self.generateStaticDataInitialization(data_visitor, type_builder)
@@ -129,11 +126,41 @@ class AssemblyGenerator(object):
                 logging.critical("STOPPING %s\n\n\n", e)
                 if stop_on_error:
                     break
-            
+        
+        if 'Main' in self.method_builders:
+            logging.debug("Setting assembly entry point")
+            assembly_builder.SetEntryPoint(self.method_builders['Main'])
+        
         result = type_builder.CreateType()
         name += ".exe"    
         logging.debug("Creating %s", name)
         assembly_builder.Save(name)
+    
+    def createAndAttachFieldEmitters(self, field_info, symbol):
+        '''
+        Generate a two methods for generating CIL to load and store the value of the global variable (field)
+        :param generator: A CIL generator
+        :param field_info: The FieldInfo metadata
+        :param symbol: The symbol to which fieldStoreEmitter and fieldLoadEmitter methods will be attached
+        ''' 
+        def fieldLoadEmitter(generator, field_info=field_info):
+            '''
+            A closure which emits CIL into the supplied generator to load a field
+            :param generator: A CIL generator
+            :param field_info: The FieldInfo metadata
+            '''
+            generator.Emit(OpCodes.Ldsfld, field_info)
+            
+        def fieldStoreEmitter(generator, field_info=field_info):
+            '''
+            A closure which emits CIL into the supplied generator to store a field
+            :param generator: A CIL generator
+            :param field_info: The FieldInfo metadata
+            '''
+            generator.Emit(OpCodes.Stsfld, field_info)
+        
+        symbol.loadEmitter = fieldLoadEmitter
+        symbol.storeEmitter = fieldStoreEmitter
             
     def generateStaticDataInitialization(self, data_visitor, type_builder):
         """
@@ -153,19 +180,19 @@ class AssemblyGenerator(object):
         
         type_constructor_builder = type_builder.DefineTypeInitializer()
         generator = type_constructor_builder.GetILGenerator()
-        generator.DeclareLocal(cts.string_array_type)
-        generator.DeclareLocal(cts.int_int_dictionary_type)
+        data_local = generator.DeclareLocal(cts.string_array_type)
+        data_index_local = generator.DeclareLocal(cts.int_int_dictionary_type)
         
         # Initialise the data field
         emitLdc_I4(generator, len(data_visitor.data)) # Load the array length onto the stack
         generator.Emit(OpCodes.Newarr, System.String) # New array with type information
-        generator.Emit(OpCodes.Stloc_0) # Store array reference in local 0
+        generator.Emit(OpCodes.Stloc, data_local) # Store array reference in local 0
         for index, item in enumerate(data_visitor.data):
-            generator.Emit(OpCodes.Ldloc_0)       # Load the array onto the stack
+            generator.Emit(OpCodes.Ldloc, data_local)       # Load the array onto the stack
             emitLdc_I4(generator, index)          # Load the index onto the stack
             generator.Emit(OpCodes.Ldstr, item)   # Load the string onto the stack
             generator.Emit(OpCodes.Stelem_Ref)    # Assign to array element
-        generator.Emit(OpCodes.Ldloc_0)            # Load the array onto the stack
+        generator.Emit(OpCodes.Ldloc, data_local)            # Load the array onto the stack
         generator.Emit(OpCodes.Stsfld, self.data_field) # Store it in the static field
         
         # Initialise the data index field -
@@ -176,18 +203,19 @@ class AssemblyGenerator(object):
     
         int_int_dictionary_ctor_info = cts.int_int_dictionary_type.GetConstructor(System.Type.EmptyTypes) # Get the default constructor
         generator.Emit(OpCodes.Newobj, int_int_dictionary_ctor_info)
-        generator.Emit(OpCodes.Stloc_1) # Store array reference in local 1
+        generator.Emit(OpCodes.Stloc, data_index_local) # Store dictionary reference in local 1
         
         add_method_info = cts.int_int_dictionary_type.GetMethod('Add')
         
         for line_number, index in data_visitor.index.items():
-            generator.Emit(OpCodes.Ldloc_1)               # Load the dictionary onto the stack
-            emitLdc_I4(generator, line_number)                       # Load the line_number onto the stack
-            emitLdc_I4(generator, index)                             # Load the index onto the stack
-            generator.Emit(OpCodes.Call, add_method_info) # Call Dictionary<int,int>.Add()
+            generator.Emit(OpCodes.Ldloc, data_index_local)   # Load the dictionary onto the stack
+            emitLdc_I4(generator, line_number)                # Load the line_number onto the stack
+            emitLdc_I4(generator, index)                      # Load the index onto the stack
+            generator.Emit(OpCodes.Call, add_method_info)     # Call Dictionary<int,int>.Add()
             
-        generator.Emit(OpCodes.Ldloc_1)                   # Load the dictionary onto the stack
+        generator.Emit(OpCodes.Ldloc, data_index_local)       # Load the dictionary onto the stack
         generator.Emit(OpCodes.Stsfld, self.data_line_number_map_field)  # Store it in the static field
+        generator.Emit(OpCodes.Ret)
     
     def createCtsMethodName(self, owl_name):
         '''
@@ -288,41 +316,49 @@ class AssemblyGenerator(object):
         method_return_type = None
         
         if isinstance(entry_point_node, DefinitionStatement):
-            method_attributes |= MethodAttributes.Public
-            method_parameters = self.methodParameters(entry_point_node)
-            method_name = self.lookupCtsMethodName(entry_point_node.name)
-            logging.debug("name = %s", entry_point_node.name)
-            # Setup code generators for loading and storing the methods arguments
-            if entry_point_node.formalParameters is not None:
-                formal_parameters = entry_point_node.formalParameters.arguments
-                for index, param in enumerate(formal_parameters):
-                    
-                    # TODO: Lookup the argument symbol
-                    name = param.argument.identifier
-                    logging.debug("formal parameter identifier = %s", name)
-                    symbol_node = findNode(entry_point_node, hasSymbolTableLookup)
-                    arg_symbol = symbol_node.symbolTable.lookup(name)
-                    assert arg_symbol is not None
-                    arg_symbol.loadEmitter = partial(emitLdarg, index=index)
-                    arg_symbol.saveEmitter = partial(emitStarg, index=index)
-                    
-            # Setup the return type of the method
-            if isinstance (entry_point_node, DefineProcedure):
-                method_return_type = System.Void
-            elif isinstance (entry_point_node, DefineFunction):
-                # TODO just default to int for now
-                method_return_type = clr.GetClrType(System.Int32)     
+            method_name, method_return_type, method_attributes, method_parameters = self.generateDefinedMethod(entry_point_node, method_attributes)     
         else:
-            assert iter(entry_point_node.entryPoints).next().startswith('MAIN')
-            method_name = self.lookupCtsMethodName('FNMain')
-            entry_point_node.name = method_name
-            method_attributes |= MethodAttributes.Public
-            method_return_type = clr.GetClrType(System.Int32)
-            method_parameters = System.Array[System.Type]( (cts.string_array_type,) )
+            method_name, method_return_type, method_attributes, method_parameters = self.generateMainProgram(entry_point_node, method_attributes)
             
-        logging.debug("generating method_name = %s", method_name)
+        logging.debug("generating method %s with type %s", method_name, method_return_type)
         self.method_builders[method_name] = type_builder.DefineMethod(method_name, method_attributes, CallingConventions.Standard,
                                                       method_return_type, method_parameters ) 
+
+    def generateDefinedMethod(self, entry_point_node, method_attributes):
+        method_attributes |= MethodAttributes.Public
+        method_parameters = self.methodParameters(entry_point_node)
+        method_name = self.lookupCtsMethodName(entry_point_node.name)
+        logging.debug("name = %s", entry_point_node.name)
+        # Setup code generators for loading and storing the methods arguments
+        if entry_point_node.formalParameters is not None:
+            formal_parameters = entry_point_node.formalParameters.arguments
+            for index, param in enumerate(formal_parameters):
+            # TODO: Lookup the argument symbol
+                name = param.argument.identifier
+                logging.debug("formal parameter identifier = %s", name)
+                symbol_node = findNode(entry_point_node, hasSymbolTableLookup)
+                arg_symbol = symbol_node.symbolTable.lookup(name)
+                assert arg_symbol is not None
+                arg_symbol.loadEmitter  = partial(emitLdarg, index=index)
+                arg_symbol.storeEmitter = partial(emitStarg, index=index)
+                # Setup the return type of the method
+            
+        if isinstance(entry_point_node, DefineProcedure):
+            method_return_type = System.Void
+        elif isinstance(entry_point_node, DefineFunction):
+            method_return_type = cts.mapType(entry_point_node.returnType)
+        
+        return method_name, method_return_type, method_attributes, method_parameters
+    
+    def generateMainProgram(self, entry_point_node, method_attributes):
+        assert iter(entry_point_node.entryPoints).next().startswith('MAIN')
+        method_name = self.lookupCtsMethodName('FNMain')
+        entry_point_node.name = method_name
+        method_attributes |= MethodAttributes.Public
+        # TODO: Parameters and returns from Main
+        method_return_type = None
+        method_parameters = None
+        return method_name, method_return_type, method_attributes, method_parameters
     
     def methodParameters(self, statement):
         '''
@@ -357,10 +393,21 @@ class AssemblyGenerator(object):
         method_builder = self.method_builders[clr_method_name]
         logging.debug("entry_point_node = %s", entry_point_node)
 
-        # For each basic block (including the first, if it has an in-degree > 1)
-        # define a label, and attach it to the block
+        # Create the visitor which holds the code generator 
         cv = CilVisitor(self, method_builder)
         
+        # Declare LOCAL variables and attach load and store emitters to the symbols
+        for node in depthFirstSearch(entry_point_node):
+            if isinstance(node, Local):
+                symbol_table = node.symbolTable
+                for symbol in symbol_table.symbols.values():
+                    local_builder = cv.generator.DeclareLocal(cts.symbolType(symbol))
+                    self.createAndAttachLocalEmitters(local_builder, symbol)
+        
+        # TODO: Declare PRIVATE variables and attach load and store emitters to the symbols
+        
+        # For each basic block (including the first, if it has an in-degree > 1)
+        # define a label, and attach it to the block
         for basic_block in basic_blocks:
             basic_block.label = cv.generator.DefineLabel()
             basic_block.is_label_marked = False
@@ -371,7 +418,34 @@ class AssemblyGenerator(object):
                 cv.visit(statement)
                 assert statement.block.is_label_marked
             self.transferControlToNextBlock(cv.generator, basic_block)
-    
+        logging.debug("COMPLETE\n\n\n")
+        
+    def createAndAttachLocalEmitters(self, local_builder, symbol):
+        '''
+        Generate a two methods for generating CIL to load and store the value of the global variable (field)
+        :param generator: A CIL generator
+        :param local_builder: The LocalBuilder metadata
+        :param symbol: The symbol to which localStoreEmitter and localLoadEmitter methods will be attached
+        ''' 
+        def localLoadEmitter(generator, local_builder=local_builder):
+            '''
+            A closure which emits CIL into the supplied generator to load a field
+            :param generator: A CIL generator
+            :param local_builder: The LocalBuilder metadata
+            '''
+            generator.Emit(OpCodes.Ldloc, local_builder)
+            
+        def localStoreEmitter(generator, local_builder=local_builder):
+            '''
+            A closure which emits CIL into the supplied generator to store a field
+            :param generator: A CIL generator
+            :param local_builder: The LocalBuilder metadata
+            '''
+            generator.Emit(OpCodes.Stloc, local_builder)
+        
+        symbol.loadEmitter = localLoadEmitter
+        symbol.storeEmitter = localStoreEmitter
+        
     def transferControlToNextBlock(self, generator, current_block):
         '''
         Transfer control to the next block for blocks with

@@ -35,14 +35,16 @@ def inferTypeOfFunction(entry_point):
     if len(return_types) == 0:
         errors.warning("%s never returns at line %s" % (entry_point.name, entry_point.lineNum))
     elif PendingType in return_types:
-         return PendingType
+         return_type = PendingType
     elif len(return_types) == 1:
-        return representative(return_types)
+        return_type = representative(return_types)
     elif reduce(operator.and_, [type.isA(NumericType) for type in return_types]):
         # TODO: Modify all function returns to cast to FloatType, if necessary
-        return FloatType
+        return_type = FloatType
     else:
         # TODO: Modify all function returns to box to ObjectType, if necessary
         # TODO: Modify all function calls to unbox from ObjectType, to what?
-        return ObjectType
+        return_type =  ObjectType
+    entry_point.returnType = return_type
+    return return_type
             

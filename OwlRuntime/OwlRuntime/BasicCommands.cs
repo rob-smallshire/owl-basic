@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -10,10 +11,18 @@ namespace OwlRuntime
     {
         private static int channelCounter = 0;
         private static readonly Dictionary<int, FileStream> channels = new Dictionary<int, FileStream>();
-        private static readonly VduSystem vdu = new VduSystem();
-        private static readonly PrintManager printManager = new PrintManager();
+        private static readonly VduSystem vdu;
+        private static readonly OS os;
+        private static readonly PrintManager printManager;
         private const int owlTrue = -1;
         private const int owlFalse = 0;
+
+        static BasicCommands()
+        {
+            vdu = new VduSystem();
+            os = new OS(vdu);
+            printManager = new PrintManager(os, vdu);
+        }
 
         public class NoSuchChannelException : ApplicationException
         {
@@ -24,6 +33,20 @@ namespace OwlRuntime
             {
                 this.channel = channel;
             }
+        }
+
+        public static int Asc(string s)
+        {
+            if (s.Length == 0)
+            {
+                return -1;    
+            }
+            return s[0];
+        }
+
+        public static string Chr(int i)
+        {
+            return new string((char) i, 1);
         }
 
         public static void Bput(int channel, byte value)
@@ -159,6 +182,36 @@ namespace OwlRuntime
             return 100;
         }
 
+        public static int Instr(string searched, string substring)
+        {
+            return InstrAt(searched, substring, 1);
+        }
+
+        /// <summary>
+        /// Remove the rightmost character from the supplied string
+        /// equivalent to LEFT$(s)
+        /// </summary>
+        /// <param name="s"></param>
+        /// <returns></returns>
+        public static string TruncateRight(string s)
+        {
+            return s.Substring(0, s.Length - 1);
+        }
+
+        public static int InstrAt(string searched, string substring, int startIndex)
+        {
+            if (substring.Length == 0)
+            {
+                return startIndex;
+            }
+            if (substring.Length > searched.Length)
+            {
+                return 0;
+            }
+            int index = searched.IndexOf(substring, startIndex - 1);
+            return index + 1;
+        }
+
         /// <summary>
         /// Get the next key pressed on the console.
         /// </summary>
@@ -168,21 +221,6 @@ namespace OwlRuntime
             ConsoleKeyInfo cki = Console.ReadKey(true);
             int code = cki.KeyChar;
             return code;
-        }
-
-        public static string InputString()
-        {
-            throw new NotImplementedException();
-        }
-
-        public static int InputInteger()
-        {
-            throw new NotImplementedException();
-        }
-
-        public static double InputFloat()
-        {
-            throw new NotImplementedException();
         }
 
         public static double Rnd(int n)
@@ -216,6 +254,12 @@ namespace OwlRuntime
         public static void Cls()
         {
             vdu.Enqueue(12);
+        }
+
+        public static void Mode(int m)
+        {
+            vdu.Enqueue(22);
+            vdu.Enqueue((byte) m);
         }
 
         public static int Himem { get; set; }
@@ -293,6 +337,52 @@ namespace OwlRuntime
         public static void Print(object o)
         {
             printManager.Print(o);
+        }
+        
+        public static Queue<object> Input(bool prompt, params Type[] types)
+        {
+            Queue<string> strings = new Queue<string>();
+            do
+            {
+                if (prompt)
+                {
+                    printManager.Print('?');
+                }
+                string line = Console.ReadLine();
+                foreach (string field in line.Split(','))
+                {
+                    strings.Enqueue(field);
+                }
+                prompt = true;
+            }
+            while (strings.Count < types.Length);
+
+            Queue<object> objects = new Queue<object>();
+            foreach (Type type in types)
+            {
+                string field = strings.Dequeue();
+
+                object obj = null;
+                try
+                {
+                    obj = Convert.ChangeType(field.TrimStart(), type);
+                }
+                catch (Exception ex)
+                {
+                    if (ex is FormatException ||
+                        ex is OverflowException)
+                    {
+                        obj = type.IsValueType ? Activator.CreateInstance(type) : null;
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+
+                objects.Enqueue(obj);
+            }
+            return objects;
         }
 
         // Operators
@@ -777,6 +867,11 @@ namespace OwlRuntime
             sb.AppendFormat("Cannot compare {0} to {1}", lhs.GetType().FullName, rhs.GetType().FullName);
             throw new TypeMismatchException(sb.ToString());
         }
+
+        public static int Pos()
+        {
+            return vdu.TextCursorX;
+        }
     }
 
     public class TypeMismatchException : Exception
@@ -786,4 +881,39 @@ namespace OwlRuntime
         {
         }
     }
+
+    public class LongJumpException : Exception
+    {
+        public int TargetLogicalLine;
+        public LongJumpException(int targetLogicalLine)
+        {
+            TargetLogicalLine = targetLogicalLine;
+        }
+    }
+
+    /// <summary>
+    /// Thrown when ON GOTO argument is out of range
+    /// </summary>
+    public class OnRangeException :Exception
+    {
+        public OnRangeException():
+            base("On range")
+        {
+        }
+    }
+
+    /// <summary>
+    /// Thrown when a program attempts to directly execute a
+    /// procedure or function definition. Usually indicated a
+    /// missing END statement.  
+    /// </summary>
+    public class ExecutedDefinitionException :Exception
+    {
+        public ExecutedDefinitionException() :
+            base("Executed definition")
+        {
+        }
+    }
+
+
 }

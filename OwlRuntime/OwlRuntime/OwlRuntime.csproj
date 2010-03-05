@@ -58,6 +58,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BasicCommands.cs" />
+    <Compile Include="BasicCommandsTest.cs" />
+    <Compile Include="OwlModule.cs" />
     <Compile Include="platform\MemoryMap.cs" />
     <Compile Include="platform\riscos\AbstractScreenMode.cs" />
     <Compile Include="platform\riscos\AcornFont.cs" />

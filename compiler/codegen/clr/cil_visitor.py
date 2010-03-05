@@ -41,6 +41,14 @@ def binaryTypeMatch(operator, lhs_type, rhs_type):
     '''
     return operator.lhs.actualType.isA(lhs_type) and operator.lhs.actualType.isA(rhs_type)
 
+def getMethod(type, name, *args):
+    '''
+    Obtain the MethodInfo object from a type for a method called name
+    with argument types equivalent to the OWL BASIC types supplied in
+    *args.
+    '''
+    return type.GetMethod(name, System.Array[System.Type]([cts.mapType(arg) for arg in args]))
+
 class CilVisitor(Visitor):
     '''
     Emit CIL bytecode whilst traversing the AST/CFG
@@ -57,19 +65,37 @@ class CilVisitor(Visitor):
         self.method_builder = method_builder
 
         # Pending rvalue - used using generation of assignment statements
+        # A callable used to defer generation of code to get the right stack sequence
         self.__pending_rvalue = None
+        
+        # Used for tracking whether we need to generation a query on INPUT
+        self.__query = True
         
         # Get the type of OwnRuntime.BasicCommand so we can retrieve methods
         self.basic_commands_type = clr.GetClrType(OwlRuntime.BasicCommands)
         self.memory_map_type = clr.GetClrType(OwlRuntime.MemoryMap)
         self.string_type = clr.GetClrType(System.String)
+        self.math_type = clr.GetClrType(System.Math)
         self.console_type = clr.GetClrType(System.Console)
+        self.type_type = clr.GetClrType(System.Type)
+        generic_queue_type = clr.GetClrType(System.Collections.Generic.Queue)
+        self.object_queue_type = generic_queue_type.MakeGenericType(
+                           System.Array[System.Type]([clr.GetClrType(System.Object)]))
         self.generator = self.method_builder.GetILGenerator()
         self.generator.Emit(OpCodes.Nop) # Every method needs at least one OpCode
 
+    def symbolFromVariable(self, variable):
+        name = variable.identifier
+        logging.debug("identifier = %s", name)
+        symbol_node = findNode(variable, hasSymbolTableLookup)
+        symbol = symbol_node.symbolTable.lookup(name)
+        assert symbol is not None
+        return symbol
+
+
     def generatePendingRValue(self):
         assert self.__pending_rvalue
-        self.__pending_rvalue.accept(self)
+        self.__pending_rvalue()
         self.__pending_rvalue = None
 
     def lookupMethod(self, name):
@@ -129,17 +155,16 @@ class CilVisitor(Visitor):
         # the appropriate point, and then set the stored rvalue in the
         # visitor to None. 
         
-        self.__pending_rvalue = assignment.rValue # Store the rvalue
+        def generateRValue(self=self, r_value=assignment.rValue):
+            r_value.accept(self) # Store the rvalue
+        
+        self.__pending_rvalue = generateRValue
         assignment.lValue.accept(self) # Store the top of the stack into the lValue
         assert self.__pending_rvalue is None # Check that the rvalue has been used
                 
     def visitVariable(self, variable):
         logging.debug("Visiting %s", variable)
-        name = variable.identifier
-        logging.debug("identifier = %s", name)
-        symbol_node = findNode(variable, hasSymbolTableLookup)
-        symbol = symbol_node.symbolTable.lookup(name)
-        assert symbol is not None
+        symbol = self.symbolFromVariable(variable)
         logging.debug(repr(symbol))
             
         # If this is an l-value take the rvalue from the top of the stack, and assign it,
@@ -171,12 +196,27 @@ class CilVisitor(Visitor):
             if cast.targetType is FloatType:
                 self.generator.Emit(OpCodes.Conv_R8)
                 return
+            if cast.targetType is ByteType:
+                # TODO: Are BBC BASIC bytes signed, or unsigned?
+                # Should we truncate the value here to 0-255 ?
+                return
+        elif cast.sourceType is ByteType:
+            if cast.targetType is FloatType:
+                self.generator.Emit(OpCodes.Conv_R8)
+                return
+            if cast.targetType is IntegerType:
+                # TODO: Is this correct?
+                pass
         elif cast.sourceType is FloatType:
             if cast.targetType is IntegerType:
                 self.generator.Emit(OpCodes.Conv_Ovf_I4)
                 return
             if cast.targetType is PtrType:
                 self.generator.Emit(OpCodes.Conv_Ovf_I)
+                return
+            if cast.targetType is ByteType:
+                # TODO: Are BBC BASIC bytes signed, or unsigned?
+                self.generator.Emit(OpCodes.Conv_Ovf_I4)
                 return
             
         errors.internal("Unsupported cast from %s to %s" % (cast.sourceType, cast.targetType))
@@ -185,6 +225,11 @@ class CilVisitor(Visitor):
         logging.debug("Visiting %s", literal_integer)
         logging.debug("value = %s", literal_integer.value)
         emitLdc_I4(self.generator, literal_integer.value)
+    
+    def visitLiteralFloat(self, literal_float):
+        logging.debug("Visiting %s", literal_float)
+        logging.debug("value = %s", literal_float.value)
+        self.generator.Emit(OpCodes.Ldc_R8, literal_float.value)
     
     def visitVdu(self, vdu):
         logging.debug("Visiting %s", vdu)
@@ -215,13 +260,16 @@ class CilVisitor(Visitor):
     def visitDefineProcedure(self, defproc):
         logging.debug("Visiting %s", defproc)
         self.checkMark(defproc)
+    
+    def visitDefineFunction(self, deffn):
+        logging.debug("Visiting %s", deffn)
+        self.checkMark(deffn)
                   
     def visitCallProcedure(self, call_proc):
         logging.debug("Visiting %s", call_proc)
         logging.debug("name = %s", call_proc.name)
         self.checkMark(call_proc)
         
-        # TODO: Call the procedure
         proc_method_info = self.lookupMethod(call_proc.name)
         
         for actual_parameter in call_proc.actualParameters:
@@ -234,7 +282,25 @@ class CilVisitor(Visitor):
         # TODO: Must not be used from within an exception handler
         self.checkMark(endproc)
         self.generator.Emit(OpCodes.Ret)
+    
+    def visitUserFunc(self, user_func):
+        logging.debug("Visiting %s", user_func)
+        logging.debug("name = %s", user_func.name)
         
+        user_func_method_info = self.lookupMethod(user_func.name)
+        
+        for actual_parameter in user_func.actualParameters:
+            actual_parameter.accept(self)
+        
+        self.generator.Emit(OpCodes.Call, user_func_method_info)
+    
+    def visitReturnFromFunction(self, func):
+        logging.debug("Visiting %s", func)
+        self.checkMark(func)
+        # TODO: Must not be used from within an exception handler
+        func.returnValue.accept(self)
+        self.generator.Emit(OpCodes.Ret)
+       
     def visitRestore(self, restore):
         # TODO: Can we RESTORE to lines which don't contain DATA?
         logging.debug("Visiting %s", restore)
@@ -286,48 +352,50 @@ class CilVisitor(Visitor):
         name = for_to_step.identifier.identifier
         logging.debug("counter identifier = %s", name)
         counter_symbol = for_to_step.symbolTable.lookup(name)
+        counter_type = cts.symbolType(counter_symbol)
         assert counter_symbol is not None
         logging.debug(repr(counter_symbol))
         counter_symbol.storeEmitter(self.generator)
         
         # Evaluate the last value and store in an unnamed local
-        last_value_local = self.generator.DeclareLocal(cts.symbolType(counter_symbol))
+        last_value_local = self.generator.DeclareLocal(counter_type)
         for_to_step.last.accept(self)
         self.generator.Emit(OpCodes.Stloc, last_value_local)
         
         # Evaluate the step value and store in an unnamed local
-        step_value_local = self.generator.DeclareLocal(cts.symbolType(counter_symbol))
+        step_value_local = self.generator.DeclareLocal(counter_type)
         for_to_step.step.accept(self)
         self.generator.Emit(OpCodes.Stloc, step_value_local)
                         
         # The loop body goes in here - later, but first...
         # loop_body_label = self.generator.DefineLabel()
         # loop_body_label = for_to_step.block.label
-        self.checkMark(for_to_step)
+        self.checkMark(for_to_step) # TODO: Rethink this line
         
         # Define a function (closure) which can be called later to generate
         # the code for the corresponding NEXT statements
         def correspondingNext():
             # Increment the counter
-            self.generator.Emit(OpCodes.Ldloc, step_value_local)    # Load the STEP value
             counter_symbol.loadEmitter(self.generator)              # Load the counter
+            self.generator.Emit(OpCodes.Ldloc, step_value_local)    # Load the STEP value
             self.generator.Emit(OpCodes.Add)                        # Add
             counter_symbol.storeEmitter(self.generator)             # Load the counter # Store the counter
             
             # Check the sign of the step value
             self.generator.Emit(OpCodes.Ldloc, step_value_local) # Load the STEP value
-            emitLdc_I4(self.generator, 0)                        # Push zero on the stack
+            emitLdc_T(self.generator, 0, counter_type)           # Push zero on the stack
             
             positive_step_label = self.generator.DefineLabel()   
             self.generator.Emit(OpCodes.Bgt_S, positive_step_label)      # if step > 0 jump to positive_step_label
+            
+            loop_back_label = self.generator.DefineLabel()
             
             # step is negative - implement >= as NOT <
             counter_symbol.loadEmitter(self.generator)              # Load the counter
             self.generator.Emit(OpCodes.Ldloc, last_value_local)    # Load the last value
             self.generator.Emit(OpCodes.Clt)                        # Compare less-than
-            self.generator.Emit(OpCodes.Not)                        # Not 
-            
-            loop_back_label = self.generator.DefineLabel()
+            emitLdc_I4(self.generator, 0)                           # Load 0
+            self.generator.Emit(OpCodes.Ceq)                        # Compare equal
             self.generator.Emit(OpCodes.Br_S, loop_back_label)
             
             # step is positive - implement <= as NOT >
@@ -335,11 +403,12 @@ class CilVisitor(Visitor):
             counter_symbol.loadEmitter(self.generator)              # Load the counter
             self.generator.Emit(OpCodes.Ldloc, last_value_local)    # Load the last value
             self.generator.Emit(OpCodes.Cgt)                        # Compare greater-than
-            self.generator.Emit(OpCodes.Not)                        # Not 
+            emitLdc_I4(self.generator, 0)                           # Load 0
+            self.generator.Emit(OpCodes.Ceq)                        # Compare equal
             
             # loop back if not finished
             self.generator.MarkLabel(loop_back_label)
-            self.generator.Emit(OpCodes.Brtrue, for_to_step.block.label)
+            self.generator.Emit(OpCodes.Brtrue, for_to_step.block.label) # TODO: Rethink this line
         
         # Attach the closure to the for_to_step object for later use
         for_to_step.generateNext = correspondingNext
@@ -366,14 +435,22 @@ class CilVisitor(Visitor):
         # Get the DATA as a string
         self.generator.Emit(OpCodes.Ldsfld, self.assembly_generator.data_field) # Load the DATA array onto the stack
         self.generator.Emit(OpCodes.Ldsfld, self.assembly_generator.data_index_field) # Load the DATA index onto the stack
-        self.generator.Emit(OpCodes.Dup) # Duplicate the DATA index
         emitLdc_I4(self.generator, 1)    # Load 1 onto the stack
         self.generator.Emit(OpCodes.Add) # Increment
+        self.generator.Emit(OpCodes.Dup) # Duplicate the incremented DATA index
         self.generator.Emit(OpCodes.Stsfld, self.assembly_generator.data_index_field) # Store the incremented DATA index
         self.generator.Emit(OpCodes.Ldelem_Ref) # Push the DATA element (a string) onto the stack
 
+        # DEBUG
+        #self.generator.Emit(OpCodes.Dup)
+        #print_method = self.basic_commands_type.GetMethod("Print", System.Array[System.Type]([cts.mapType(StringType)]))
+        #self.generator.Emit(OpCodes.Call, print_method)
+        #self.generator.Emit(OpCodes.Call, self.basicCommandMethod('NewLine'))
+        # END DEBUG
+
         # TODO: Convert to the required type
         system_convert_type = clr.GetClrType(System.Convert)
+        
         if read_func.actualType is ByteType:
             conversion_method = system_convert_type.GetMethod("ToByte", System.Array[System.Type]([clr.GetClrType(str)]))
         elif read_func.actualType is IntegerType:
@@ -383,6 +460,7 @@ class CilVisitor(Visitor):
         else:
             conversion_method = None
         # TODO: etc
+        # TODO: Should handle conversion failures gracefully. How does BBC BASIC do this?
         
         if conversion_method:
             self.generator.Emit(OpCodes.Call, conversion_method)
@@ -415,12 +493,26 @@ class CilVisitor(Visitor):
             elif dyadic.base.formalType is ByteArrayType:
                 # Writing into a byte array
                 # TODO: get the array onto the stack
+                logging.critical("TODO: Dyadic byte indirection array l-value")
                 pass
             # TODO: Index and write into the array
         else:
             # Read from the location and push onto the stack
-            logging.critical("TODO: Dyadic byte indirection r-value")
+            logging.debug("Dyadic byte indirection r-value")
             # Are we reading from a block or directly from memory?
+            if dyadic.base.formalType is PtrType:
+                # Reading directly from address space
+                # Push the array representing our faked address space onto the stack
+                memory_getter = self.memory_map_type.GetMethod("get_Memory")
+                self.generator.Emit(OpCodes.Call, memory_getter)
+                
+                dyadic.base.accept(self)  # Push the base address onto the stack
+                dyadic.offset.accept(self) # Push the offset onto the stack
+                self.generator.Emit(OpCodes.Add) # Add base to offset
+                
+                self.generator.Emit(OpCodes.Ldelem_I1) # Store into the array
+            else:
+                logging.critical("TODO: Dyadic byte indirection array r-value") 
         
     def visitPrint(self, print_stmt):
         logging.debug("Visiting %s", print_stmt)
@@ -444,7 +536,79 @@ class CilVisitor(Visitor):
                     
         if not suppress_newline:
             self.generator.Emit(OpCodes.Call, self.basicCommandMethod('NewLine'))
-                   
+    
+    def visitInput(self, input):
+        logging.debug("Visiting %s", input)
+        self.checkMark(input)
+        # Convert each input item int a call to the runtime library
+        logging.debug("input list = %s", str(input.inputList))
+        self.__query = True
+        items = input.inputList
+        if items is not None:
+            print items
+            while len(items) > 0:
+                item = items.pop(0).item
+                if not isinstance(item, Variable):
+                    print "Input Item = ", item
+                    item.accept(self)
+                    if isinstance(item, LiteralString):
+                        self.__query = False
+                        print_method = self.basic_commands_type.GetMethod("Print", System.Array[System.Type]([cts.mapType(item.actualType)]))
+                        self.generator.Emit(OpCodes.Call, print_method)
+                else:
+                    variables = [item]
+                    while len(items) > 0 and isinstance(items[0], Variable):
+                        item = items.pop(0).item
+                        variables.append(item)
+                    # Set up the function call to input
+                    emitLdc_I4(self.generator, 1 if self.__query else 0) # Push __query on the stack
+                    emitLdc_I4(self.generator, len(variables)) # Push the number of variables onto the stack
+                    self.generator.Emit(OpCodes.Newarr, clr.GetClrType(System.Type)) # Array of Types on the stack
+                    
+                    var_types = (cts.symbolType(self.symbolFromVariable(var)) for var in variables)
+                    for i, type in enumerate(var_types):
+                        self.generator.Emit(OpCodes.Dup) # Array on the stack # TODO: Load local
+                        emitLdc_I4(self.generator, i)    # Index on the stack
+                        self.generator.Emit(OpCodes.Ldtoken, type) # Type token on the stack
+                        get_type_from_handle_method = self.type_type.GetMethod("GetTypeFromHandle", System.Array[System.Type]([clr.GetClrType(System.RuntimeTypeHandle)]))
+                        self.generator.Emit(OpCodes.Call, get_type_from_handle_method) # Type on the stack
+                        self.generator.Emit(OpCodes.Stelem_Ref) # Store in the array
+                    
+                    # Call the function
+                    self.generator.Emit(OpCodes.Call, self.basicCommandMethod('Input')) # Queue on the stack
+                    # Store the queue in a local
+                    queue_builder = self.generator.DeclareLocal(clr.GetClrType(self.object_queue_type))
+                    self.generator.Emit(OpCodes.Stloc, queue_builder)
+                    
+                    # Dequeue the results into the variables
+                    dequeue_method = self.object_queue_type.GetMethod("Dequeue")
+                    for variable in variables:
+                        def generateRValue(self=self, variable=variable, queue_builder=queue_builder):
+                            self.generator.Emit(OpCodes.Ldloc, queue_builder) # Load queue local
+                            self.generator.Emit(OpCodes.Call, dequeue_method)
+                            cts_type = cts.symbolType(self.symbolFromVariable(variable))
+                            if cts_type.IsValueType:
+                                self.generator.Emit(OpCodes.Unbox, cts_type)
+                            else:
+                                self.generator.Emit(OpCodes.Castclass, cts.mapType(StringType))
+                        self.__pending_rvalue = generateRValue
+                        variable.accept(self)
+                        assert self.__pending_rvalue is None
+                                                
+    def visitInputManipulator(self, node):
+        logging.debug("Visiting %s", node)
+        manipulator = node.manipulator
+        logging.debug("manipulator = %s", manipulator)
+        # TODO: This is likely to result in a lot of redundant function calls, so we
+        #       should be smarter about only making those calls which are necessary
+        if manipulator == "'":
+            self.generator.Emit(OpCodes.Call, self.basicCommandMethod('NewLine'))
+            self.__query = False
+        elif manipulator == ",":
+            self.__query = True
+        elif manipulator == ";":
+            self.__query = True
+
     def visitTabH(self, tabh):
         logging.debug("Visiting %s", tabh) 
         tabh.xCoord.accept(self)                                           # Get the horizontal tab value onto the stack
@@ -493,17 +657,30 @@ class CilVisitor(Visitor):
         # TODO throw an exception signalling END and modify the main method
         # to catch this exception and exit gracefully
         logging.critical("TODO: Throw an EndException")
+        # TODO: Temportary
+        self.generator.Emit(OpCodes.Ret)
     
     def visitUnaryMinus(self, unary_minus):
         logging.debug("Visiting %s", unary_minus)
+        # TODO: Deal with unknown types (e.g. Object)
         unary_minus.factor.accept(self)
         self.generator.Emit(OpCodes.Neg)
     
     def visitPlus(self, plus):
         logging.debug("Visiting %s", plus)
+        # TODO: Deal with unknown types (e.g. Object)
+        # TODO: Factor out for BinaryNumericOperators
         plus.lhs.accept(self)
         plus.rhs.accept(self)
         self.generator.Emit(OpCodes.Add)
+    
+    def visitMinus(self, minus):
+        logging.debug("Visiting %s", minus)
+        # TODO: Deal with unknown types (e.g. Object)
+        # TODO: Factor out for BinaryNumericOperators
+        minus.lhs.accept(self)
+        minus.rhs.accept(self)
+        self.generator.Emit(OpCodes.Sub)
     
     def visitMultiply(self, multiply):
         logging.debug("Visiting %s", multiply)
@@ -512,7 +689,33 @@ class CilVisitor(Visitor):
         multiply.lhs.accept(self)
         multiply.rhs.accept(self)
         self.generator.Emit(OpCodes.Mul)
-                    
+    
+    def visitAnd(self, op):
+        # TODO: Deal with unknown types (e.g. Object)
+        logging.debug("Visiting %s", op)
+        op.lhs.accept(self)
+        op.rhs.accept(self)
+        self.generator.Emit(OpCodes.And)
+        
+    def visitOr(self, op):
+        # TODO: Deal with unknown types (e.g. Object)
+        logging.debug("Visiting %s", op)
+        op.lhs.accept(self)
+        op.rhs.accept(self)
+        self.generator.Emit(OpCodes.Or)    
+           
+    def visitEor(self, op):
+        # TODO: Deal with unknown types (e.g. Object)
+        logging.debug("Visiting %s", op)
+        op.lhs.accept(self)
+        op.rhs.accept(self)
+        self.generator.Emit(OpCodes.Xor)
+        
+    def visitNot(self, op):
+        op.factor.accept(self)
+        # TODO: Deal with unknown types (e.g. Object)
+        self.generator.Emit(OpCodes.Not)
+           
     def visitEqual(self, operator):
         logging.debug("Visiting %s", operator)
         operator.lhs.accept(self) # Lhs on the stack
@@ -543,7 +746,9 @@ class CilVisitor(Visitor):
             emitLdc_I4(self.generator, 1) # 0 ==> -1, 1 ==> 0
             self.generator.Emit(OpCodes.Sub)
         elif binaryTypeMatch(operator, StringType, StringType):
-            self.generator.Emit(OpCodes.Call, "String.Equals")
+            string_equals_method = self.string_type.GetMethod("Equals", System.Array[System.Type]([cts.mapType(StringType),
+                                                                                                    cts.mapType(StringType)]))
+            self.generator.Emit(OpCodes.Call, string_equals_method)
             emitLdc_I4(self.generator, 1) # 0 ==> -1, 1 ==> 0
             self.generator.Emit(OpCodes.Sub)
         elif binaryTypeMatch(operator, ObjectType, Type) or \
@@ -552,6 +757,93 @@ class CilVisitor(Visitor):
                                                               System.Array[System.Type]([cts.mapType(operator.lhs.actualType),
                                                                                          cts.mapType(operator.rhs.actualType)]))
             self.generator.Emit(OpCodes.Call, equal_method)
+
+    def visitLessThan(self, operator):
+        logging.debug("Visiting %s", operator)
+        operator.lhs.accept(self) # Lhs on the stack
+        operator.rhs.accept(self) # Rhs on the stack
+        
+        if binaryTypeMatch(operator, NumericType, NumericType):
+            self.generator.Emit(OpCodes.Clt)
+            self.convertClrToOwlBool()
+        elif binaryTypeMatch(operator, StringType, StringType):
+            string_equals_method = self.string_type.GetMethod("Compare", System.Array[System.Type]([cts.mapType(StringType),
+                                                                                                   cts.mapType(StringType)]))
+            self.generator.Emit(OpCodes.Call, string_equals_method)
+            # Convert -1 => -1, 0 => 0, +1 => 0
+            emitLdc_I4(self.generator, -1)
+            self.generator.Emit(OpCodes.Ceq)
+            self.convertClrToOwlBool()
+        elif binaryTypeMatch(operator, ObjectType, Type) or \
+             binaryTypeMatch(operator, Type, ObjectType):
+            logging.critical("Unsupported less-than operand types")
+
+    def visitLessThanEqual(self, operator):
+        logging.debug("Visiting %s", operator)
+        operator.lhs.accept(self) # Lhs on the stack
+        operator.rhs.accept(self) # Rhs on the stack
+        if binaryTypeMatch(operator, NumericType, NumericType):
+            self.generator.Emit(OpCodes.Cgt)
+            emitLdc_I4(self.generator, 0)
+            self.generator.Emit(OpCodes.Ceq)
+            self.convertClrToOwlBool()
+        elif binaryTypeMatch(operator, StringType, StringType):
+            string_equals_method = self.string_type.GetMethod("Compare", System.Array[System.Type]([cts.mapType(StringType),
+                                                                                                   cts.mapType(StringType)]))
+            self.generator.Emit(OpCodes.Call, string_equals_method)
+            # Convert -1 => -1, 0 => -1, +1 => 0
+            emitLdc_I4(self.generator, 1)
+            self.generator.Emit(OpCodes.Ceq)
+            emitLdc_I4(self.generator, 1)
+            self.generator.Emit(OpCodes.Sub)
+            
+        elif binaryTypeMatch(operator, ObjectType, Type) or \
+             binaryTypeMatch(operator, Type, ObjectType):
+            logging.critical("Unsupported less-than operand types")
+
+    def visitGreaterThan(self, operator):
+        logging.debug("Visiting %s", operator)
+        operator.lhs.accept(self) # Lhs on the stack
+        operator.rhs.accept(self) # Rhs on the stack
+        
+        if binaryTypeMatch(operator, NumericType, NumericType):
+            self.generator.Emit(OpCodes.Clt)
+            self.convertClrToOwlBool()
+        elif binaryTypeMatch(operator, StringType, StringType):
+            string_equals_method = self.string_type.GetMethod("Compare", System.Array[System.Type]([cts.mapType(StringType),
+                                                                                                   cts.mapType(StringType)]))
+            self.generator.Emit(OpCodes.Call, string_equals_method)
+            # Convert -1 => 0, 0 => 0, +1 => -1
+            emitLdc_I4(self.generator, +1)
+            self.generator.Emit(OpCodes.Ceq)
+            self.convertClrToOwlBool()
+        elif binaryTypeMatch(operator, ObjectType, Type) or \
+             binaryTypeMatch(operator, Type, ObjectType):
+            logging.critical("Unsupported greater-than operand types")
+
+    def visitGreaterThanEqual(self, operator):
+        logging.debug("Visiting %s", operator)
+        operator.lhs.accept(self) # Lhs on the stack
+        operator.rhs.accept(self) # Rhs on the stack
+        
+        if binaryTypeMatch(operator, NumericType, NumericType):
+            self.generator.Emit(OpCodes.Clt)
+            emitLdc_I4(self.generator, 0)
+            self.generator.Emit(OpCodes.Ceq)
+            self.convertClrToOwlBool()
+        elif binaryTypeMatch(operator, StringType, StringType):
+            string_equals_method = self.string_type.GetMethod("Compare", System.Array[System.Type]([cts.mapType(StringType),
+                                                                                                   cts.mapType(StringType)]))
+            self.generator.Emit(OpCodes.Call, string_equals_method)
+            # Convert -1 => 0, 0 => -1, +1 => -1
+            emitLdc_I4(self.generator, -1)
+            self.generator.Emit(OpCodes.Ceq)
+            emitLdc_I4(self.generator, 1)
+            self.generator.Emit(OpCodes.Sub)
+            
+        elif binaryTypeMatch(operator, ObjectType, Type) or \
+             binaryTypeMatch(operator, Type, ObjectType):
+            logging.critical("Unsupported greater-than operand types")
 
     def visitIf(self, if_stmt):
         logging.debug("Visiting %s", if_stmt)
@@ -593,5 +885,170 @@ class CilVisitor(Visitor):
             self.generator.Emit(OpCodes.Brtrue, first_true_stmt.block.label)
             self.generator.Emit(OpCodes.Br, first_false_stmt.block.label)
             # Unconditionally branch on the false case 
-     
+    
+    def visitOnGoto(self, ongoto):
+        logging.debug("Visiting %s", ongoto)
+        self.checkMark(ongoto)
+        # Build the jump table
+        # TODO: There is some duplication here with the flowgraph visitor
+        jump_table = []
+        for target_statement in ongoto.targetStatements:
+            jump_table.append(target_statement.block.label)
+            
+        ongoto.switch.accept(self) # Integer on the stack
+        self.generator.Emit.Overloads[OpCode, System.Array[Label]](OpCodes.Switch, System.Array[Label](jump_table))
+        if ongoto.outOfRangeStatement is not None:
+            self.generator.Emit(OpCodes.Br, ongoto.outOfRangeStatement.block.label)
+        else:
+            on_range_exception_ctor = clr.GetClrType(OwlRuntime.OnRangeException).GetConstructor(System.Array[System.Type]([]))
+            assert on_range_exception_ctor
+            self.generator.Emit(OpCodes.Newobj, on_range_exception_ctor) # OnRangeException on the stack
+            self.generator.Emit(OpCodes.Throw)
+            
+    def visitLocal(self, local):
+        logging.debug("Visiting %s", local)
+        self.checkMark(local)
         
+    def visitGoto(self, goto):
+        logging.debug("Visiting %s", goto)
+        self.checkMark(goto)
+        # No code needs to be generated for GOTO statements here, so the
+        # routine which generates code for transfering control from the end
+        # of a basic block with out-degree one will do it.
+
+    def visitAscFunc(self, asc):
+        logging.debug("Visiting %s", asc)
+        asc.factor.accept(self)
+        asc_method = self.basicCommandMethod("Asc")
+        self.generator.Emit(OpCodes.Call, asc_method)
+
+    def visitAbsFunc(self, abs):
+        logging.debug("Visiting %s", abs)
+        abs.factor.accept(self)
+        abs_method = getMethod(self.math_type, "Abs", abs.factor.actualType)
+        self.generator.Emit(OpCodes.Call, abs_method)
+    
+    def visitChrStrFunc(self, chr):
+        logging.debug("Visiting %s", chr)
+        chr.factor.accept(self)
+        chr_method = self.basicCommandMethod("Chr")
+        self.generator.Emit(OpCodes.Call, chr_method)
+        
+    def visitRndFunc(self, rnd):
+        logging.debug("Visiting %s", rnd)
+        rnd.option.accept(self)
+        rnd_method = self.basicCommandMethod("Rnd")
+        self.generator.Emit(OpCodes.Call, rnd_method)
+        
+    def visitInstrFunc(self, instr):
+        logging.debug("Visiting %s", instr)
+        instr.source.accept(self)
+        instr.subString.accept(self)
+        if instr.startPosition is not None:
+            instr.startPosition.accept(self)
+            instr_method = self.basicCommandMethod("InstrAt")
+        else:
+            instr_method = self.basicCommandMethod("Instr")
+        self.generator.Emit(OpCodes.Call, instr_method)
+    
+    def visitLenFunc(self, len_func):
+        logging.debug("Visiting %s", len_func)
+        len_func.factor.accept(self)
+        string_count_method = getMethod(self.string_type, "get_Length")
+        self.generator.Emit(OpCodes.Call, string_count_method)
+        
+    def visitSgnFunc(self, sgn):
+        logging.debug("Visiting %s", sgn)
+        sgn.factor.accept(self)
+        sgn_method = getMethod(self.math_type, "Sign", sgn.factor.actualType)
+        self.generator.Emit(OpCodes.Call, sgn_method)
+        
+    def visitConcatenate(self, concat):
+        logging.debug("Visiting %s", concat)
+        concat.lhs.accept(self)
+        concat.rhs.accept(self)
+        string_concat_method = getMethod(self.string_type, "Concat", StringType, StringType)
+        self.generator.Emit(OpCodes.Call, string_concat_method)
+        
+    def visitLeftStrFunc(self, left_str):
+        logging.debug("Visiting %s", left_str)
+        left_str.source.accept(self)  # String the the stack
+        if left_str.length is not None:
+            emitLdc_I4(self.generator, 0) # Start index on the stack
+            left_str.length.accept(self)  # Length on the stack
+            method = getMethod(self.string_type, "Substring", IntegerType, IntegerType)
+        else:
+            method = self.basicCommand("TruncateRight")
+        self.generator.Emit(OpCodes.Call, method)
+                    
+    def visitMidStrFunc(self, mid_str):
+        logging.debug("Visiting %s", mid_str)
+        mid_str.source.accept(self) # String on the stack
+        mid_str.position.accept(self) # 1-based index on stack
+        emitLdc_I4(self.generator, 1) # 1 on the stack
+        self.generator.Emit(OpCodes.Sub) # 0-based index on stack
+        if mid_str.length is not None:
+            mid_str.length.accept(self) # length on the stack
+            method = getMethod(self.string_type, "Substring", IntegerType, IntegerType)
+        else:
+            method = getMethod(self.string_type, "Substring", IntegerType)
+        self.generator.Emit(OpCodes.Call, method)
+
+    def visitRightStrFunc(self, right_str):
+        logging.debug("Visiting %s", right_str)
+        right_str.source.accept(self) # String on the stack
+        
+        self.generator.Emit(OpCodes.Dup) # String on the stack
+        string_count_method = getMethod(self.string_type, "get_Length")
+        self.generator.Emit(OpCodes.Call, string_count_method) # Length on the stack
+        
+        if right_str.length is None:
+            emitLdc_I4(self.generator, 1)
+        else:
+            right_str.length.accept(self)
+        self.generator.Emit(OpCodes.Sub) # Length - n on the stack (start index)
+        method = getMethod(self.string_type, "Substring", IntegerType)
+        self.generator.Emit(OpCodes.Call, method)
+        
+    def visitPosFunc(self, pos):
+        logging.debug("Visiting %s", pos)
+        pos_method = self.basicCommandMethod("Pos")
+        self.generator.Emit(OpCodes.Call, pos_method)
+        
+    def visitMode(self, mode):
+        logging.debug("Visiting %s", mode)
+        self.checkMark(mode)
+        assert mode.number is not None
+        # TODO: Extended MODE syntax not yet supported
+        mode.number.accept(self)
+        mode_method = self.basicCommandMethod("Mode")
+        self.generator.Emit(OpCodes.Call, mode_method)
+        
+    def visitLongJump(self, long_jump):
+        logging.debug("Visiting %s", long_jump)
+        self.checkMark(long_jump)
+        long_jump.targetLogicalLine.accept(self) # Target line on the stack
+        long_jump_exception_ctor = clr.GetClrType(OwlRuntime.LongJumpException).GetConstructor(System.Array[System.Type]([System.Int32]))
+        assert long_jump_exception_ctor
+        self.generator.Emit(OpCodes.Newobj, long_jump_exception_ctor) # LongJumpException on the stack
+        self.generator.Emit(OpCodes.Throw)
+    
+    def visitRaise(self, raise_stmt):
+        logging.debug("Visiting %s", raise_stmt)
+        self.checkMark(raise_stmt)
+        exception_type = getattr(OwlRuntime, raise_stmt.type)
+        exception_ctor = clr.GetClrType(exception_type).GetConstructor(System.Array[System.Type]([]))
+        assert exception_ctor
+        self.generator.Emit(OpCodes.Newobj, exception_ctor) # LongJumpException on the stack
+        self.generator.Emit(OpCodes.Throw)
+        
+    def visitIntFunc(self, int_func):
+        logging.debug("Visiting %s", int_func)
+        int_func.factor.accept(self)
+        floor_method = getMethod(self.math_type, "Floor", int_func.factor.actualType)
+        self.generator.Emit(OpCodes.Call, floor_method)
+        self.generator.Emit(OpCodes.Conv_Ovf_I4)
+        
+    
+        
+                                                                                

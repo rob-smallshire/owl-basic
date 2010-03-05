@@ -10,7 +10,8 @@ namespace OwlRuntime
 {
     internal class PrintManager
     {
-        private readonly VduSystem vdu = new VduSystem();
+        private readonly VduSystem vdu;
+        private readonly OS os;
 
         private enum NumberBase
         {
@@ -29,7 +30,7 @@ namespace OwlRuntime
         private Justification numberJustification;
 
         private int count = 0;
-        private int width = 0;
+        private int width = 0; // A width of 0 means that width is ignored
 
         // Variables for @% functionality
 
@@ -70,6 +71,13 @@ namespace OwlRuntime
         /// width for tabulating using commas. 
         /// </summary>
         private byte fieldWidth;
+
+        public PrintManager(OS os, VduSystem vdu)
+        {
+            this.os = os;
+            this.vdu = vdu;
+            FormatNumber = 0x90A;
+        }
 
         /// <summary>
         /// Set the BBC BASIC @% value according to the rules specified by the
@@ -182,8 +190,8 @@ namespace OwlRuntime
             {
                 int byte4 = (affectStr ? 1 : 0) << 24;
                 int byte3 = (int) numberFormat  << 16;
-                int byte2 = fieldWidth          << 8;
-                int byte1 = precision;
+                int byte2 = precision          << 8;
+                int byte1 = fieldWidth;
                 return byte4 | byte3 | byte2 | byte1;
             }
 
@@ -196,8 +204,8 @@ namespace OwlRuntime
 
                 affectStr = (byte4 != 0);
                 numberFormat = (NumberFormat) byte3;
-                fieldWidth = (byte) byte2;
-                precision = (byte) byte1;
+                precision = (byte) byte2;
+                fieldWidth = (byte) byte1;
             }
         }
 
@@ -253,7 +261,7 @@ namespace OwlRuntime
 
         public void NewLine()
         {
-            OS.NewLine();
+            os.NewLine();
             count = 0;
         }
 
@@ -286,7 +294,7 @@ namespace OwlRuntime
 
         public void Print(char c)
         {
-            if (count > width)
+            if (width > 0 && count > width)
             {
                 NewLine();
             }
@@ -297,14 +305,14 @@ namespace OwlRuntime
             }
             else
             {
-                OS.WriteC(c);
+                os.WriteC(c);
             }
         }
 
         public void Print(int i)
         {
             string format = numberBase == NumberBase.Decimal
-                            ? (FormatChar + precision).ToString()
+                            ? FormatChar + precision.ToString()
                             : "X" + precision;
 
             string s = i.ToString(format);
@@ -320,7 +328,7 @@ namespace OwlRuntime
             }
             else
             {
-                string format = (FormatChar + precision).ToString();
+                string format = FormatChar + precision.ToString();
                 string s = d.ToString(format);
                 Spc(fieldWidth - s.Length);
                 Print(s);

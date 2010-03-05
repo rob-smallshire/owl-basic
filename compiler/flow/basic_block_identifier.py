@@ -3,6 +3,7 @@ Grouping of statements into basic blocks - resulting in a coarser grained contro
 '''
 import logging
 logger = logging.getLogger('flow.basic_block_identifier')
+logger.setLevel(logging.WARNING)
 
 from connectors import connect
 from traversal import depthFirstSearch

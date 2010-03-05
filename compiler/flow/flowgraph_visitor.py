@@ -2,7 +2,6 @@ import logging
 
 from visitor import Visitor
 from ast_utils import findFollowingStatement
-from find_line_visitor import FindLineVisitor
 from connectors import connect, connectToFollowing
 import errors
 
@@ -17,12 +16,7 @@ class FlowgraphForwardVisitor(Visitor):
     
     def __init__(self, line_mapper):
         self.line_mapper = line_mapper
-    
-    # TODO: Factor this out of here
-    def statementOnLine(self, targetLine):
-        n = targetLine.value
-        return self.line_mapper.logicalStatement(n)          
-            
+               
     def visitAstNode(self, node):
         "Visit all children in order"
         node.forEachChild(self.visit)
@@ -87,7 +81,7 @@ class FlowgraphForwardVisitor(Visitor):
         #print "CFG goto"
         logger.debug("visitGoto")
         #print "goto.targetLogicalLine = %s" % goto.targetLogicalLine.value
-        goto_target = self.statementOnLine(goto.targetLogicalLine)
+        goto_target = self.line_mapper.statementOnLine(goto.targetLogicalLine)
         #print "goto_target = %s" % goto_target
         if goto_target:
             connect(goto, goto_target)
@@ -102,13 +96,16 @@ class FlowgraphForwardVisitor(Visitor):
         that clause.
         """
         logger.debug("visitOnGoto")
+        ongoto.targetStatements = [] # TODO: Fix this so it isn't a monkey patch!
         for targetLogicalLine in ongoto.targetLogicalLines:
-            ongoto_target = self.statementOnLine(targetLogicalLine)
+            ongoto_target = self.line_mapper.statementOnLine(targetLogicalLine)
             if ongoto_target:
                 connect(ongoto, ongoto_target)
+                ongoto.targetStatements.append(ongoto_target)
             else:
                 errors.error("No such line %s at line %s" % (targetLogicalLine.value, ongoto.lineNum))
-            
+        
+        first_else_statement = None    
         if ongoto.outOfRangeClause is not None:
             if isinstance(ongoto.outOfRangeClause, list):
                 if len(ongoto.outOfRangeClause) > 0:
@@ -118,9 +115,14 @@ class FlowgraphForwardVisitor(Visitor):
                     
                     for statement in ongoto.outOfRangeClause:
                         self.visit(statement)
-                else:
-                    connect(ongoto, ongoto.outOfRangeClause)
-                    self.visit(ongoto.outOfRangeClause)
+            else:
+                first_else_statement = ongoto.outOfRangeClause
+                connect(ongoto, ongoto.outOfRangeClause)
+                self.visit(ongoto.outOfRangeClause)
+        ongoto.outOfRangeStatement = first_else_statement  # TODO: Fix this so it isn't a monkey patch!
+
+        assert hasattr(ongoto, "targetStatements")
+        assert hasattr(ongoto, "outOfRangeStatement")
             
     def visitCase(self, case):
         """

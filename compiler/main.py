@@ -82,26 +82,30 @@ def indexLineNumbers(detokenHandle, options):
         line_number_regex = re.compile(r'\s*(\d+)\s*(.*)')
         physical_line = 0
         logical_line = 0
-        physical_to_logical_map = [0]
+        physical_to_logical_map = []
         line_bodies = []
         while True:
             line = detokenHandle.readline()
             if not line:
                 break
-            physical_line += 1
             m = line_number_regex.match(line)
             if not m:
                 raise CompileException("Missing line number at physical line %d (after logical line %d)" % (physical_line, logical_line))
             
-            logical_line = int(m.group(1))
+            logical_line_string = m.group(1)
+            print "physical_line = %d, logical_line_string = '%s'" % (physical_line, logical_line_string)
+            logical_line = int(logical_line_string)
             physical_to_logical_map.append(logical_line)
             line_bodies.append(m.group(2))
+            physical_line += 1
         
         data = '\n'.join(line_bodies)
     else:
         physical_to_logical_map = None
         data = detokenHandle.read()
     detokenHandle.close()
+    print "(physical, logical)"
+    print list(enumerate(physical_to_logical_map))
     return data, physical_to_logical_map
 
 def warnOnMissingNewline(data):
@@ -353,7 +357,9 @@ def compile(filename, options):
     createForwardControlFlowGraph(parse_tree, line_mapper, options)
     entry_points = locateEntryPoints(parse_tree, line_mapper, options)  
     convertLongjumpsToExceptions(parse_tree, line_mapper, options)
-    convertSubroutinesToProcedures(parse_tree, entry_points, options)
+    print "Before subroutine conversion ", entry_points
+    convertSubroutinesToProcedures(parse_tree, entry_points, line_mapper, options)
+    print "After subroutine conversion ", entry_points
     correlateLoops(entry_points, options)
     basic_blocks = identifyBasicBlocks(entry_points, options)
     ordered_basic_blocks = orderBasicBlocks(basic_blocks, options)
@@ -386,9 +392,13 @@ def compile(filename, options):
     # type of the constant at compile time
     # for example A = 5 can become A = 5.0 and
     # A% = 6.0 can become A% = 6
+    # String Concatenation using the different forms
+    # of String.Concat
     # eliminate locals
     # static single assignment form
     # TODO: Inline single-entry GOSUB
+    # Optimise by combining conditions and branches better
+    # rather than relying on Brtrue and Brfalse.  
     #
     # Trace back from RETURN statements - if only one
     # GOSUB is reached - move the code in the GOSUB to the call site

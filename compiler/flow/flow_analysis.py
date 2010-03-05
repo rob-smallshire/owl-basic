@@ -8,10 +8,13 @@ def tagNode(tag, node):
         node.addEntryPoint(tag)
         tagFollowingStatements(node, tag)
 
-def tagSuccessors(entry_point):
+def tagSuccessors(entry_point, line_mapper):
     """
-    Given an entry point tag all successors of that entry point
+    Given an entry point node, tag all successors of that entry point
     with the routine name
+    :param entry_point: A node which is the entry point into a routine
+    :param line_mapper: An object which supports a physicalToLogical method call
+                        to convert line numbers.
     """
     tag = None
     if isinstance(entry_point, bbc_ast.DefineProcedure):
@@ -20,7 +23,8 @@ def tagSuccessors(entry_point):
     elif isinstance(entry_point, bbc_ast.DefineFunction):
         tag = "FN" + entry_point.name
     elif len(entry_point.comeFromGosubEdges) != 0:
-        tag = "SUB" + str(entry_point.lineNum)
+        logical_line_number = line_mapper.physicalToLogical(entry_point.lineNum)
+        tag = "SUB%d" % logical_line_number
     else:
         # TODO: Find a better way to do this rather than defaulting here
         tag = "MAIN"

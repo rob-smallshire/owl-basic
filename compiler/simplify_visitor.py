@@ -92,6 +92,27 @@ class SimplificationVisitor(Visitor):
             self.visit(iff.falseClause)
                     
         self.visit(iff.condition)
+    
+    def visitOnGoto(self, ongoto):
+        if ongoto.outOfRangeClause is not None:
+            if isinstance(ongoto.outOfRangeClause, StatementList):
+                sslv = SimplifyStatementListVisitor()
+                sslv.visit(ongoto.outOfRangeClause)
+                ongoto.child_infos['out_of_range_clause'] = ongoto.outOfRangeClause.child_infos['statements']
+                ongoto.outOfRangeClause = sslv.accumulatedStatements
+                if len(ongoto.outOfRangeClause) == 0:
+                    ongoto.outOfRangeClause = None
+                else:
+                    for index, statement in enumerate(ongoto.outOfRangeClause):
+                        statement.parent = ongoto
+                        statement.parent_property = 'outOfRangeClause'
+                        statement.parent_index = index
+                        self.visit(statement)
+            else:
+                self.visit(ongoto.outOfRangeClause)
+                
+        self.visit(ongoto.switch)
+        self.visit(ongoto.targetLogicalLines)
                                     
     def visitDim(self, dim):
         """
@@ -172,6 +193,14 @@ class SimplificationVisitor(Visitor):
         """
         print_list.forEachChild(self.visit)
         elideNode(print_list, liftFormalTypes=True)
+    
+    def visitInputList(self, input_list):
+        """
+        Remove the InputList level from the AST by replacing the contents of the
+        owning attribute of its parent.
+        """
+        input_list.forEachChild(self.visit)
+        elideNode(input_list, liftFormalTypes=True)
         
     def visitVariableList(self, variable_list):
         """

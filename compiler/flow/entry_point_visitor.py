@@ -1,5 +1,4 @@
 from visitor import Visitor
-from find_line_visitor import FindLineVisitor
 from ast_utils import *
 import errors
 
@@ -14,12 +13,7 @@ class EntryPointVisitor(Visitor):
         self.__entry_points = {}
     
     entryPoints = property(lambda self: self.__entry_points)
-    
-    # TODO: Factor this out of here
-    def statementOnLine(self, targetLine):
-        n = targetLine.value
-        return self.line_mapper.logicalStatement(n)        
-            
+                
     def mainEntryPoint(self, statement):
         '''
         Set the main() entrypoint of the program (i.e. the first line)
@@ -41,11 +35,8 @@ class EntryPointVisitor(Visitor):
         deffn.entryPoint = "public"
         
     def visitGosub(self, gosub):
-        #print "EntryPointVisitor.visitGosub"
-        #print "GOSUB at line %s" % gosub.lineNum
-        gosub_target = self.statementOnLine(gosub.targetLogicalLine)
+        gosub_target = self.line_mapper.statementOnLine(gosub.targetLogicalLine)
         if gosub_target:
-            #print "target is %s at line %s" % (gosub_target, gosub_target.lineNum)
             self.__entry_points["gosub%d" % int(gosub.targetLogicalLine.value)] = gosub_target
             gosub_target.entryPoint = "private"
             gosub_target.addComeFromGosubEdge(gosub)

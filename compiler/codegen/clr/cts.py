@@ -16,7 +16,7 @@ type_map = { bbc_types.VoidType    : System.Void,
              bbc_types.ObjectType  : System.Object }
 
 # Some useful .NET types
-string_array_type = clr.GetClrType(System.String).MakeArrayType(1)
+string_array_type = clr.GetClrType(System.String).MakeArrayType()
 generic_dictionary_type = clr.GetClrType(System.Collections.Generic.Dictionary)
 int_int_dictionary_type = generic_dictionary_type.MakeGenericType(
                            System.Array[System.Type]((clr.GetClrType(System.Int32), clr.GetClrType(System.Int32))))
