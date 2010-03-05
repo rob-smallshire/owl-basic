@@ -214,6 +214,11 @@ namespace OwlRuntime
             get { return count; }
         }
 
+        public void ResetCount()
+        {
+            count = 0;
+        }
+
         public int Width
         {
             get { return width; }

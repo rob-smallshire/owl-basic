@@ -253,6 +253,7 @@ namespace OwlRuntime
 
         public static void Cls()
         {
+            printManager.ResetCount();
             vdu.Enqueue(12);
         }
 

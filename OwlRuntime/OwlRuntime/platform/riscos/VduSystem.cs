@@ -814,7 +814,10 @@ namespace OwlRuntime.platform.riscos
         private void ClearTextWindow()
         {
             //prm pdf1-580
-            // can also clear the current graphics window in in vdu5 mode
+            // TODO: can also clear the current graphics window in in vdu5 mode
+            ResetTextCursor(screenMode);
+            // TODO: What should we do here?  Just loop over every position
+            //       in the current text window and print a space?
             throw new NotImplementedException();
         }
 
