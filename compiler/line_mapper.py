@@ -4,7 +4,7 @@ class LineMapper(object):
         self.line_to_stmt_map = line_to_stmt_map
         
     def physicalToLogical(self, physical_line_number):
-        if self.physical_to_logical_map is not None:
+        if self.physical_to_logical_map is not None and physical_line_number is not None:
             return self.physical_to_logical_map[physical_line_number]
         else:
             return physical_line_number

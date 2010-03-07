@@ -21,33 +21,22 @@ namespace OwlRuntime.platform.riscos
         public override void PrintCharAtText(char c)
         {
             // check that the co-ords are within the current text window
-            if (((Vdu.TextCursorX <= Vdu.TextWindowRightCol) && (Vdu.TextCursorX >= (Vdu.TextWindowLeftCol)) &&
-               (Vdu.TextCursorY <= Vdu.TextWindowBottomRow) && (Vdu.TextCursorY >= (Vdu.TextWindowTopRow))))
+            int textCursorX = Vdu.TextCursorX;
+            int textCursorY = Vdu.TextCursorY;
+            // TODO temp code.. until scrolling implimented
+            // make sure co-ords are within screen area and not the bottom left
+            // hand corner to stop scrolling screen
+            Console.SetCursorPosition(textCursorX, textCursorY);
+            Console.Write(c);
+            if ((textCursorX == (TextWidth - 1)) && (textCursorY == (TextHeight - 1)))
             {
-
-                // TODO temp code.. until scrolling implimented
-                // make sure co-ords are within screen area and not the bottom left
-                // hand corner to stop scrolling screen
-                if (((Vdu.TextCursorX < TextWidth) &&
-                   (Vdu.TextCursorX > -1) &&
-                   (Vdu.TextCursorY < TextHeight) &&
-                   (Vdu.TextCursorY > -1)) &&
-                   !((Vdu.TextCursorX == (TextWidth - 1)) && (Vdu.TextCursorY == (TextHeight - 1))))
-                {
-                    // todo : we need a special case for printing a char in the bottom left hand corner of the window. Unsure how to acheive this.
-                    Console.SetCursorPosition(Vdu.TextCursorX, Vdu.TextCursorY);
-                    Console.Write(c);
-                }
-
-
-
-
+                // todo : we need a special case for printing a char in the bottom left
+                //        hand corner of the window. Unsure how to acheive this.
+                // Apparently it can be done using Console.MoveBufferArea
+                // There is more information here http://stackoverflow.com/questions/739526/disabling-scroll-with-system-console-write
+                Console.MoveBufferArea(0, 0, Console.WindowWidth, Console.WindowHeight, 0, 1);
             }
-            else
-            {
-            }
-            Vdu.TextCursorX += TextCursor.MovementX;
-            Vdu.TextCursorY += TextCursor.MovementY;
         }
+
     }
 }

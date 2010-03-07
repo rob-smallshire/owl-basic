@@ -55,7 +55,7 @@ class CilVisitor(Visitor):
     '''
 
 
-    def __init__(self, assembly_generator, method_builder):
+    def __init__(self, assembly_generator, method_builder, line_mapper):
         '''
         Create a new CilVisitor for generating a CIL method.
         :param type_builder A System.Reflection.Emit.TypeBuilder
@@ -63,6 +63,7 @@ class CilVisitor(Visitor):
         '''
         self.assembly_generator = assembly_generator
         self.method_builder = method_builder
+        self.line_mapper = line_mapper
 
         # Pending rvalue - used using generation of assignment statements
         # A callable used to defer generation of code to get the right stack sequence
@@ -70,6 +71,9 @@ class CilVisitor(Visitor):
         
         # Used for tracking whether we need to generation a query on INPUT
         self.__query = True
+        
+        # Used for the local variable builder for the temporary queue used by INPUT
+        self.__queue_builder = None
         
         # Get the type of OwnRuntime.BasicCommand so we can retrieve methods
         self.basic_commands_type = clr.GetClrType(OwlRuntime.BasicCommands)
@@ -106,11 +110,23 @@ class CilVisitor(Visitor):
         cts_name = self.assembly_generator.lookupCtsMethodName(name)
         return self.assembly_generator.lookupMethod(cts_name)
         
-    def basicCommandMethod(self, name):
+    def basicCommandMethod(self, name, *args):
         '''
         Return a MethodInfo object for the named method of OwlRuntime.BasicCommands
         '''
-        return self.basic_commands_type.GetMethod(name)
+        print args
+        method = self.basic_commands_type.GetMethod(name)
+        assert method, "Could not locate BasicCommands method %s" % name
+        return method
+    
+    def basicCommandOverloadedMethod(self, name, *args):
+        '''
+        Return a MethodInfo object for the named method of OwlRuntime.BasicCommands
+        '''
+        print args
+        method = self.basic_commands_type.GetMethod(name, System.Array[System.Type]([cts.mapType(arg) for arg in args]))
+        assert method, "Could not locate BasicCommands method %s" % name
+        return method
     
     def convertClrToOwlBool(self):
         '''
@@ -577,14 +593,15 @@ class CilVisitor(Visitor):
                     # Call the function
                     self.generator.Emit(OpCodes.Call, self.basicCommandMethod('Input')) # Queue on the stack
                     # Store the queue in a local
-                    queue_builder = self.generator.DeclareLocal(clr.GetClrType(self.object_queue_type))
-                    self.generator.Emit(OpCodes.Stloc, queue_builder)
+                    if self.__queue_builder is None:
+                        self.__queue_builder = self.generator.DeclareLocal(clr.GetClrType(self.object_queue_type))
+                    self.generator.Emit(OpCodes.Stloc, self.__queue_builder)
                     
                     # Dequeue the results into the variables
                     dequeue_method = self.object_queue_type.GetMethod("Dequeue")
                     for variable in variables:
-                        def generateRValue(self=self, variable=variable, queue_builder=queue_builder):
-                            self.generator.Emit(OpCodes.Ldloc, queue_builder) # Load queue local
+                        def generateRValue(self=self, variable=variable):
+                            self.generator.Emit(OpCodes.Ldloc, self.__queue_builder) # Load queue local
                             self.generator.Emit(OpCodes.Call, dequeue_method)
                             cts_type = cts.symbolType(self.symbolFromVariable(variable))
                             if cts_type.IsValueType:
@@ -657,8 +674,16 @@ class CilVisitor(Visitor):
         # TODO throw an exception signalling END and modify the main method
         # to catch this exception and exit gracefully
         logging.critical("TODO: Throw an EndException")
-        # TODO: Temportary
-        self.generator.Emit(OpCodes.Ret)
+        # TODO: If we know we are in the Main method we could emit ret here
+        #self.generator.Emit(OpCodes.Ret)
+        
+        logging.debug("Visiting %s", end)
+        self.checkMark(end)
+        emitLdc_I4(self.generator, self.line_mapper.physicalToLogical(end.lineNum)) # Load logical line number onto the stack
+        end_exception_ctor = clr.GetClrType(OwlRuntime.EndException).GetConstructor(System.Array[System.Type]([System.Int32]))
+        assert end_exception_ctor
+        self.generator.Emit(OpCodes.Newobj, end_exception_ctor) # EndException on the stack
+        self.generator.Emit(OpCodes.Throw)
     
     def visitUnaryMinus(self, unary_minus):
         logging.debug("Visiting %s", unary_minus)
@@ -974,40 +999,31 @@ class CilVisitor(Visitor):
         logging.debug("Visiting %s", left_str)
         left_str.source.accept(self)  # String the the stack
         if left_str.length is not None:
-            emitLdc_I4(self.generator, 0) # Start index on the stack
             left_str.length.accept(self)  # Length on the stack
-            method = getMethod(self.string_type, "Substring", IntegerType, IntegerType)
+            method = self.basicCommandOverloadedMethod("LeftStr", StringType, IntegerType)
         else:
-            method = self.basicCommand("TruncateRight")
+            method = self.basicCommandOverloadedMethod("LeftStr", StringType)
         self.generator.Emit(OpCodes.Call, method)
                     
     def visitMidStrFunc(self, mid_str):
         logging.debug("Visiting %s", mid_str)
         mid_str.source.accept(self) # String on the stack
         mid_str.position.accept(self) # 1-based index on stack
-        emitLdc_I4(self.generator, 1) # 1 on the stack
-        self.generator.Emit(OpCodes.Sub) # 0-based index on stack
         if mid_str.length is not None:
             mid_str.length.accept(self) # length on the stack
-            method = getMethod(self.string_type, "Substring", IntegerType, IntegerType)
+            method = self.basicCommandOverloadedMethod("MidStr", StringType, IntegerType, IntegerType)
         else:
-            method = getMethod(self.string_type, "Substring", IntegerType)
+            method = self.basicCommandOverloadedMethod("MidStr", StringType, IntegerType)
         self.generator.Emit(OpCodes.Call, method)
 
     def visitRightStrFunc(self, right_str):
         logging.debug("Visiting %s", right_str)
-        right_str.source.accept(self) # String on the stack
-        
-        self.generator.Emit(OpCodes.Dup) # String on the stack
-        string_count_method = getMethod(self.string_type, "get_Length")
-        self.generator.Emit(OpCodes.Call, string_count_method) # Length on the stack
-        
-        if right_str.length is None:
-            emitLdc_I4(self.generator, 1)
-        else:
+        right_str.source.accept(self) # String on the stack        
+        if right_str.length is not None:
             right_str.length.accept(self)
-        self.generator.Emit(OpCodes.Sub) # Length - n on the stack (start index)
-        method = getMethod(self.string_type, "Substring", IntegerType)
+            method = self.basicCommandOverloadedMethod("RightStr", StringType, IntegerType)
+        else:
+            method = self.basicCommandOverloadedMethod("RightStr", StringType)
         self.generator.Emit(OpCodes.Call, method)
         
     def visitPosFunc(self, pos):
@@ -1036,8 +1052,9 @@ class CilVisitor(Visitor):
     def visitRaise(self, raise_stmt):
         logging.debug("Visiting %s", raise_stmt)
         self.checkMark(raise_stmt)
+        emitLdc_I4(self.generator, self.line_mapper.physicalToLogical(raise_stmt.lineNum)) # Source line on the stack
         exception_type = getattr(OwlRuntime, raise_stmt.type)
-        exception_ctor = clr.GetClrType(exception_type).GetConstructor(System.Array[System.Type]([]))
+        exception_ctor = clr.GetClrType(exception_type).GetConstructor(System.Array[System.Type]([System.Int32]))
         assert exception_ctor
         self.generator.Emit(OpCodes.Newobj, exception_ctor) # LongJumpException on the stack
         self.generator.Emit(OpCodes.Throw)

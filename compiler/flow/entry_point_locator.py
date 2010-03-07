@@ -32,6 +32,7 @@ def locateEntryPoints(parse_tree, line_mapper, options):
                 errors.warning("Execution of procedure/function at line %s" % entry_point.lineNum)
                 # TODO: Could use ERROR statement here
                 raise_stmt = bbc_ast.Raise(type = "ExecutedDefinitionException")
+                raise_stmt.lineNum = entry_point.lineNum
                 ast_utils.insertStatementBefore(entry_point, raise_stmt)
                 raise_stmt.clearOutEdges()
                 entry_point.clearInEdges()

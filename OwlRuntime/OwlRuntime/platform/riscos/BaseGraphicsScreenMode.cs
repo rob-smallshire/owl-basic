@@ -545,12 +545,7 @@ namespace OwlRuntime.platform.riscos
                 int xpos = Vdu.TextCursorX * charWidth; // need to add the code for the scaling here
                 int ypos = (UnitsHeight - (Vdu.TextCursorY * charHeight)) - charHeight;
 
-                g.DrawImage(Vdu.AcornFont.GetBitmap(c), xpos, ypos, charWidth, charHeight);
-
-                // add values to cursor
-
-                Vdu.TextCursorX += TextCursor.MovementX;
-                Vdu.TextCursorY += TextCursor.MovementY;        
+                g.DrawImage(Vdu.AcornFont.GetBitmap(c), xpos, ypos, charWidth, charHeight);        
             }
             // check if new line needed and EOLaction variable
             NeedsRepaint = true;

@@ -371,8 +371,8 @@ class Private(AstStatement):
     variables = Node()
 
 class Quit(AstStatement):
-    # TODO: Iyonix BASIC support exit value
-    pass
+    "QUIT"
+    code = Node(formalType=IntegerType)
 
 class Rectangle(AstStatement):
     x_coord = Node(formalType=IntegerType)

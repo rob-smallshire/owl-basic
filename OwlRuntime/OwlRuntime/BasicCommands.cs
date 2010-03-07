@@ -187,19 +187,9 @@ namespace OwlRuntime
             return InstrAt(searched, substring, 1);
         }
 
-        /// <summary>
-        /// Remove the rightmost character from the supplied string
-        /// equivalent to LEFT$(s)
-        /// </summary>
-        /// <param name="s"></param>
-        /// <returns></returns>
-        public static string TruncateRight(string s)
-        {
-            return s.Substring(0, s.Length - 1);
-        }
-
         public static int InstrAt(string searched, string substring, int startIndex)
         {
+            // Do converstion through unsigned int for startIndex
             if (substring.Length == 0)
             {
                 return startIndex;
@@ -210,6 +200,96 @@ namespace OwlRuntime
             }
             int index = searched.IndexOf(substring, startIndex - 1);
             return index + 1;
+        }
+
+        /// <summary>
+        /// Function returning the left part of a string
+        /// </summary>
+        /// <param name="s">A string</param>
+        /// <param name="length">The number of characters from the left of thge string that
+        /// are to be returned.</param>
+        /// <returns></returns>
+        public static string LeftStr(string s, int length)
+        {
+            // The conversions through unsigned types are for behavioural compatibility
+            // with BBC BASIC.
+            int substringLength = (int) Math.Min((uint) length, (uint) s.Length);
+            return s.Substring(0, substringLength);
+        }
+
+        /// <summary>
+        /// Remove the rightmost character from the supplied string
+        /// equivalent to LEFT$(s)
+        /// </summary>
+        /// <param name="s">A string</param>
+        /// <returns></returns>
+        public static string LeftStr(string s)
+        {
+            return s.Substring(0, Math.Max(s.Length - 1, 0));
+        }
+
+        /// <summary>
+        /// Function returning a substring of a string.
+        /// </summary>
+        /// <param name="s">A string</param>
+        /// <param name="startIndex">The one-based position within the string of the first
+        /// character required.</param>
+        /// <param name="length">The number of characters in the substring.</param>
+        /// <returns></returns>
+        public static string MidStr(string s, int startIndex, int length)
+        {
+            // The conversions through unsigned types are for behavioural compatibility
+            // with BBC BASIC.
+            int zeroBasedStartIndex = (int) (Math.Max((uint) startIndex, 1) - 1);
+            if (zeroBasedStartIndex >= s.Length)
+            {
+                return "";
+            }
+
+            int substringLength = (int) Math.Min((uint) length, (uint) (s.Length - zeroBasedStartIndex));
+            return s.Substring(zeroBasedStartIndex, substringLength);
+        }
+
+        public static string MidStr(string s, int startIndex)
+        {
+            // The conversions through unsigned types are for behavioural compatibility
+            // with BBC BASIC.
+            int zeroBasedStartIndex = (int) (Math.Max((uint) startIndex, 1) - 1);
+            if (zeroBasedStartIndex >= s.Length)
+            {
+                return "";
+            }
+
+            int substringLength = s.Length - zeroBasedStartIndex;
+            return s.Substring(zeroBasedStartIndex, substringLength);    
+        }
+
+
+        /// <summary>
+        /// Function returning the rightmost 'length' characters of a string.
+        /// </summary>
+        /// <param name="s"></param>
+        /// <param name="length"></param>
+        /// <returns></returns>
+        public static string RightStr(string s, int length)
+        {
+            // The conversions through unsigned types are for behavioural compatibility
+            // with BBC BASIC.
+            int substringLength = (int) Math.Min((uint) length, (uint) s.Length);
+            int startIndex = s.Length - substringLength;
+            return s.Substring(startIndex);            
+        }
+
+        /// <summary>
+        /// Function returning the rightmost character of a string.
+        /// </summary>
+        /// <param name="s"></param>
+        /// <returns></returns>
+        public static string RightStr(string s)
+        {
+            int substringLength = Math.Min(1, s.Length);
+            int startIndex = s.Length - substringLength;
+            return s.Substring(startIndex, substringLength);
         }
 
         /// <summary>
@@ -875,7 +955,15 @@ namespace OwlRuntime
         }
     }
 
-    public class TypeMismatchException : Exception
+    public class OwlRuntimeException : Exception
+    {
+        public OwlRuntimeException(string message) :
+            base("OwlRuntimeException: " + message)
+        {
+        }
+    }
+
+    public class TypeMismatchException :OwlRuntimeException
     {
         public TypeMismatchException(string message) :
             base("Type mismatch: " + message)
@@ -883,10 +971,11 @@ namespace OwlRuntime
         }
     }
 
-    public class LongJumpException : Exception
+    public class LongJumpException :OwlRuntimeException
     {
         public int TargetLogicalLine;
-        public LongJumpException(int targetLogicalLine)
+        public LongJumpException(int targetLogicalLine) :
+            base("Longjump to line " + targetLogicalLine)
         {
             TargetLogicalLine = targetLogicalLine;
         }
@@ -895,7 +984,7 @@ namespace OwlRuntime
     /// <summary>
     /// Thrown when ON GOTO argument is out of range
     /// </summary>
-    public class OnRangeException :Exception
+    public class OnRangeException :OwlRuntimeException
     {
         public OnRangeException():
             base("On range")
@@ -908,13 +997,55 @@ namespace OwlRuntime
     /// procedure or function definition. Usually indicated a
     /// missing END statement.  
     /// </summary>
-    public class ExecutedDefinitionException :Exception
+    public class ExecutedDefinitionException :OwlRuntimeException
     {
-        public ExecutedDefinitionException() :
-            base("Executed definition")
+        public ExecutedDefinitionException(int logicalLineNumber) :
+            base("Executed definition at line " + logicalLineNumber)
         {
         }
     }
 
+    /// <summary>
+    /// To be thrown by END statements. Caught by exception handlers
+    /// in the Main program.
+    /// </summary>
+    public class EndException :OwlRuntimeException
+    {
+        public EndException(int logicalLineNumber) :
+            base("END at line " + logicalLineNumber)
+        {
+        }
+    }
 
+    /// <summary>
+    /// To be thrown by STOP statements. Caught by exception handlers
+    /// in the Main program.
+    /// </summary>
+    public class StopException :OwlRuntimeException
+    {
+        public StopException(int logicalLineNumber) :
+            base("STOP at line " + logicalLineNumber)
+        {
+        }
+    }
+
+    /// <summary>
+    /// To be thrown by STOP statements. Caught by exception handlers
+    /// in the Main program.
+    /// </summary>
+    public class QuitException :OwlRuntimeException
+    {
+        private readonly int returnCode;
+
+        public QuitException(int returnCode, int logicalLineNumber) :
+            base("STOP at line " + logicalLineNumber)
+        {
+            this.returnCode = returnCode;
+        }
+
+        public int ReturnCode
+        {
+            get { return returnCode; }
+        }
+    }
 }

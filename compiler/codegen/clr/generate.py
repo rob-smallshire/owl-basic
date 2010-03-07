@@ -39,7 +39,8 @@ def ctsIdentifier(symbol):
     return 'f' + symbol.name
 
 class AssemblyGenerator(object):
-    def __init__(self):
+    def __init__(self, line_mapper):
+        self.line_mapper = line_mapper
         self.owl_to_clr_method_names = {} # A map of OWL basic names to CLR names
         self.clr_to_owl_method_names = {} # A map of CLR names to OWL basic names
         self.method_builders = {}         # A map of CLR names to MethodBuilders
@@ -394,7 +395,7 @@ class AssemblyGenerator(object):
         logging.debug("entry_point_node = %s", entry_point_node)
 
         # Create the visitor which holds the code generator 
-        cv = CilVisitor(self, method_builder)
+        cv = CilVisitor(self, method_builder, self.line_mapper)
         
         # Declare LOCAL variables and attach load and store emitters to the symbols
         for node in depthFirstSearch(entry_point_node):

@@ -141,6 +141,7 @@ namespace OwlRuntime.platform.riscos
 
         private byte modeNumber;
         private AbstractScreenMode screenMode;
+        private TextCursor textCursor;
         private bool hasBeenDisposed = false;
 
         // The VDU queue
@@ -151,17 +152,12 @@ namespace OwlRuntime.platform.riscos
         public VduSystem()
         {
             screenMode = AbstractScreenMode.CreateScreenMode(this, 7);
+            textCursor = new TextCursor();
             acornFont = new AcornFont();
             ExpectVduCommand();
-
-
-            
         }
 
-
         #region getters and setters for VDU variables
-
-
 
         public Boolean PlotTextAtGraphics
         {
@@ -180,7 +176,7 @@ namespace OwlRuntime.platform.riscos
                     textCursorX = value;
                 } else {
                     textCursorX = CursorDefaultX();
-                    textCursorY += screenMode.TextCursor.MovementYEOL;   
+                    textCursorY += textCursor.MovementYEOL;   
                 }    
             }
         }
@@ -194,7 +190,7 @@ namespace OwlRuntime.platform.riscos
                     textCursorY = value;
                 } else {
                     textCursorY = CursorDefaultY();
-                    textCursorX += screenMode.TextCursor.MovementXEOL;   
+                    textCursorX += textCursor.MovementXEOL;   
                 }
             }
         }
@@ -504,7 +500,14 @@ namespace OwlRuntime.platform.riscos
             }
             else
             {
-                screenMode.PrintCharAtText(c);    
+                if (IsWithinTextWindow(TextCursorX, TextCursorY) &&
+                    IsWithinDisplayArea(TextCursorX, TextCursorY))
+                {
+                    screenMode.PrintCharAtText(c);
+                }
+                // TODO: Should we also do this in VDU (PlotTextAtGraphics) mode?
+                TextCursorX += textCursor.MovementX;
+                TextCursorY += textCursor.MovementY;
             }
         }
 
@@ -613,7 +616,7 @@ namespace OwlRuntime.platform.riscos
                     nextCommand = DoSetOrigin;
                     break;
                 case 30:
-                    ResetTextCursor(screenMode);
+                    ResetTextCursor();
                     break;
                 case 31:
                     requiredBytes = 2;
@@ -626,15 +629,15 @@ namespace OwlRuntime.platform.riscos
 
         private void DoSetCursorPos()
         {
-            if (screenMode.TextCursor.Transposed)
+            if (textCursor.Transposed)
             {
-                textCursorY = CursorDefaultY() + (screenMode.TextCursor.DirectionX * DequeueByte());
-                textCursorX = CursorDefaultX() + (screenMode.TextCursor.DirectionY * DequeueByte());
+                textCursorY = CursorDefaultY() + (textCursor.DirectionX * DequeueByte());
+                textCursorX = CursorDefaultX() + (textCursor.DirectionY * DequeueByte());
             }
             else
             {
-                textCursorX = CursorDefaultX() + (screenMode.TextCursor.DirectionX * DequeueByte());
-                textCursorY = CursorDefaultY() + (screenMode.TextCursor.DirectionY * DequeueByte());
+                textCursorX = CursorDefaultX() + (textCursor.DirectionX * DequeueByte());
+                textCursorY = CursorDefaultY() + (textCursor.DirectionY * DequeueByte());
             }
             ExpectVduCommand();
         }
@@ -693,31 +696,45 @@ namespace OwlRuntime.platform.riscos
         /// <param name="mode">
         /// A screen mode from which to take the default text window size.
         /// </param>
-        public void ResetTextWindow(AbstractScreenMode mode)
+        public void ResetTextWindow()
         {
             // The mode parameter is required since the screenMode data member
             // may not be initialized at the time of the call to this method
             textWindowLeftCol = 0;
-            textWindowBottomRow = mode.TextHeight - 1;
-            textWindowRightCol = mode.TextWidth - 1;
+            textWindowBottomRow = screenMode.TextHeight - 1;
+            textWindowRightCol = screenMode.TextWidth - 1;
             textWindowTopRow = 0;
         }
 
-        public void ResetGraphicsWindow(AbstractScreenMode mode)
+        private bool IsWithinTextWindow(int cursorX, int cursorY)
+        {
+            return ((cursorX <= TextWindowRightCol) && (cursorX >= (TextWindowLeftCol)) &&
+                    (cursorY <= TextWindowBottomRow) && (cursorY >= (TextWindowTopRow)));
+        }
+
+        private bool IsWithinDisplayArea(int cursorX, int cursorY)
+        {
+            return ((cursorX < screenMode.TextWidth) &&
+                    (cursorX >= 0) &&
+                    (cursorY < screenMode.TextHeight) &&
+                    (cursorY >= 0));
+        }
+
+        public void ResetGraphicsWindow()
         {
             // The mode parameter is required since the screenMode data member
             // may not be initialized at the time of the call to this method
             // TODO: Reset the graphics window
             graphicsWindowLeftCol = 0;
-            graphicsWindowBottomRow = mode.UnitsHeight - 1;
-            graphicsWindowRightCol = mode.UnitsWidth - 1;
+            graphicsWindowBottomRow = screenMode.UnitsHeight - 1;
+            graphicsWindowRightCol = screenMode.UnitsWidth - 1;
             graphicsWindowTopRow = 0;
         }
 
         /// <summary>
         /// Set the default text cursor position
         /// </summary>
-        public void ResetTextCursor(AbstractScreenMode mode)
+        public void ResetTextCursor()
         {
             // TODO not allways 0,0
             // this needs some thinking about
@@ -728,15 +745,16 @@ namespace OwlRuntime.platform.riscos
             // and all of them inside the currect text window
             
             //needs mode passed to this due to the mode may not be initialised completely yet.
-            int y = (mode.TextCursor.Transposed) ? 
-                (mode.TextCursor.MovementY > 0) ? 1 : 0
+            int y = (textCursor.Transposed) ? 
+                (textCursor.MovementY > 0) ? 1 : 0
                 :
-                (mode.TextCursor.MovementYEOL > 0) ? 1 : 0;
-            int x = (mode.TextCursor.Transposed) ? 
-                (mode.TextCursor.MovementXEOL > 0) ? 1 : 0
+                (textCursor.MovementYEOL > 0) ? 1 : 0;
+            int x = (textCursor.Transposed) ? 
+                (textCursor.MovementXEOL > 0) ? 1 : 0
                 :
-                (mode.TextCursor.MovementX > 0) ? 1 : 0;
+                (textCursor.MovementX > 0) ? 1 : 0;
 
+            // TODO: Are these correct? Should 1 be added?
             int windWidth = textWindowRightCol - textWindowLeftCol;
             int windHeight = textWindowBottomRow - textWindowTopRow;
 
@@ -747,20 +765,20 @@ namespace OwlRuntime.platform.riscos
         private int CursorDefaultX()
         {
 
-            int x = (screenMode.TextCursor.Transposed) ?
-                (screenMode.TextCursor.MovementXEOL > 0) ? 1 : 0
+            int x = (textCursor.Transposed) ?
+                (textCursor.MovementXEOL > 0) ? 1 : 0
                 :
-                (screenMode.TextCursor.MovementX > 0) ? 1 : 0;
+                (textCursor.MovementX > 0) ? 1 : 0;
             int windWidth = textWindowRightCol - textWindowLeftCol;
             return (textWindowRightCol) - (x * (windWidth));
         }
 
         private int CursorDefaultY()
         {
-            int y = (screenMode.TextCursor.Transposed) ?
-                (screenMode.TextCursor.MovementY > 0) ? 1 : 0
+            int y = (textCursor.Transposed) ?
+                (textCursor.MovementY > 0) ? 1 : 0
                 :
-                (screenMode.TextCursor.MovementYEOL > 0) ? 1 : 0;
+                (textCursor.MovementYEOL > 0) ? 1 : 0;
             int windHeight = textWindowBottomRow - textWindowTopRow;
             return (textWindowBottomRow) - (y * (windHeight));
         }
@@ -773,13 +791,11 @@ namespace OwlRuntime.platform.riscos
         private void SplitCursors()
         {
             plotTextAtGraphics = false;
-            //throw new NotImplementedException();
         }
 
         private void JoinCursors()
         {
             plotTextAtGraphics = true;
-            //throw new NotImplementedException();
         }
 
         private void EnableConsoleStream()
@@ -789,36 +805,40 @@ namespace OwlRuntime.platform.riscos
 
         private void Backspace()
         {
-            textCursorX -= screenMode.TextCursor.MovementX;
-            textCursorY -= screenMode.TextCursor.MovementY;
+            textCursorX -= textCursor.MovementX;
+            textCursorY -= textCursor.MovementY;
         }
 
         private void HorizontalTab()
         {
-            textCursorX += screenMode.TextCursor.MovementX;
-            textCursorY += screenMode.TextCursor.MovementY;
+            textCursorX += textCursor.MovementX;
+            textCursorY += textCursor.MovementY;
         }
 
         private void LineFeed()
         {
-            textCursorX += screenMode.TextCursor.MovementXEOL;
-            textCursorY += screenMode.TextCursor.MovementYEOL;
+            textCursorX += textCursor.MovementXEOL;
+            textCursorY += textCursor.MovementYEOL;
         }
 
         private void VerticalTab()
         {
-            textCursorX -= screenMode.TextCursor.MovementXEOL;
-            textCursorY -= screenMode.TextCursor.MovementYEOL;
+            textCursorX -= textCursor.MovementXEOL;
+            textCursorY -= textCursor.MovementYEOL;
         }
 
         private void ClearTextWindow()
         {
             //prm pdf1-580
             // TODO: can also clear the current graphics window in in vdu5 mode
-            ResetTextCursor(screenMode);
-            // TODO: What should we do here?  Just loop over every position
-            //       in the current text window and print a space?
-            throw new NotImplementedException();
+            for (textCursorY = textWindowTopRow; textCursorY <= textWindowBottomRow; ++textCursorY)
+            {
+                for (textCursorX = textWindowLeftCol; textCursorX <= textWindowRightCol; ++textCursorX)
+                {
+                    screenMode.PrintCharAtText(' '); 
+                }
+            }
+            ResetTextCursor();
         }
 
         private void EnablePrinterStream()
@@ -1180,8 +1200,8 @@ namespace OwlRuntime.platform.riscos
             // May need to impliment windows and scrolling first.
             
             // also risc os 2 and 3 prm's say two params
-            byte flags = screenMode.TextCursor.Flags;
-            screenMode.TextCursor.Flags = (byte)((flags & y) ^ x);
+            byte flags = textCursor.Flags;
+            textCursor.Flags = (byte)((flags & y) ^ x);
 
         }
 
@@ -1560,6 +1580,9 @@ namespace OwlRuntime.platform.riscos
             //prm 1-594
             modeNumber = DequeueByte();
             screenMode = AbstractScreenMode.CreateScreenMode(this, ModeNumber);
+            ResetTextWindow();
+            ResetGraphicsWindow();
+            ResetTextCursor();
             // TODO: Set default colours
             switch (ScreenMode.BitsPerPixel)
             {

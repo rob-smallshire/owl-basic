@@ -373,7 +373,7 @@ def compile(filename, options):
     output_name = os.path.splitext(os.path.basename(filename))[0]
     if options.use_clr:
         from codegen.clr.generate import AssemblyGenerator
-        ag = AssemblyGenerator()
+        ag = AssemblyGenerator(line_mapper)
         ag.generateAssembly(output_name, stv.globalSymbols, dv, ordered_basic_blocks) 
     
     # Structural analysis
