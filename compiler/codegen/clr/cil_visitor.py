@@ -159,6 +159,9 @@ class CilVisitor(Visitor):
     def visitData(self, data):
         self.checkMark(data)
     
+    def visitRem(self, rem):
+        self.checkMark(rem)
+    
     def visitAssignment(self, assignment):
         logging.debug("Visiting %s", assignment)
         self.checkMark(assignment)
@@ -326,7 +329,9 @@ class CilVisitor(Visitor):
         self.generator.Emit(OpCodes.Ldsfld, self.assembly_generator.data_line_number_map_field)         # Load the dictionary onto the stack
         restore.targetLogicalLine.accept(self) # Push the line number onto the stack
         get_item_method_info = cts.int_int_dictionary_type.GetMethod('get_Item')
-        self.generator.Emit(OpCodes.Call, get_item_method_info) # Call get_Item and the put the new data point result on the stack
+        self.generator.Emit(OpCodes.Call, get_item_method_info) # Call get_Item and the put the new data pointer result on the stack
+        emitLdc_I4(self.generator, 1)
+        self.generator.Emit(OpCodes.Sub) # Subtract 1, because READ will pre-increment the data index
         self.generator.Emit(OpCodes.Stsfld, self.assembly_generator.data_index_field)
     
     def visitRepeat(self, repeat):
@@ -832,7 +837,7 @@ class CilVisitor(Visitor):
         operator.rhs.accept(self) # Rhs on the stack
         
         if binaryTypeMatch(operator, NumericType, NumericType):
-            self.generator.Emit(OpCodes.Clt)
+            self.generator.Emit(OpCodes.Cgt)
             self.convertClrToOwlBool()
         elif binaryTypeMatch(operator, StringType, StringType):
             string_equals_method = self.string_type.GetMethod("Compare", System.Array[System.Type]([cts.mapType(StringType),

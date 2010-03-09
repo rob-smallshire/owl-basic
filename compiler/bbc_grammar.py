@@ -136,6 +136,7 @@ def p_stmt_body(p):
                  | quit_stmt
                  | read_stmt
                  | rectangle_stmt
+                 | rem_stmt
                  | repeat_stmt
                  | report_stmt
                  | restore_stmt
@@ -258,6 +259,12 @@ def p_colour_stmt(p):
 def p_data_statement(p):
     'data_stmt : DATA'
     p[0] = Data(data = p[1])
+    p[0].lineNum = p.lineno(1) - 1
+
+# REM
+def p_rem_statement(p):
+    'rem_stmt : COMMENT'
+    p[0] = Rem(data = p[1])
     p[0].lineNum = p.lineno(1) - 1
     
 def p_def_stmt(p):

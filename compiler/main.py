@@ -256,6 +256,8 @@ def extractData(parse_tree, options):
     logging.debug("extracting DATA")
     dv = data_visitor.DataVisitor()
     parse_tree.accept(dv)
+    print dv.data
+    print dv.index
     return dv   
     
 def dumpXmlCfg(parse_tree, filename, options):

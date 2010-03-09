@@ -198,12 +198,19 @@ tokens = (
     'BY',
     'EXIT',
     'NOT',
-    'MANDEL'
+    'MANDEL',
+    'COMMENT'
 )
 
 def t_COMMENT(t):
     r'REM[^\n]*'
-    pass
+    # Note: REM captures everything until the
+    #       end of the line. We need to capture
+    #       REMs because its is possible to RESTORE
+    #       to a REMed line and use the DATA within it
+    m = re.match(r'REM([^\n]*)', t.value)
+    t.value = m.group(1)
+    return t
 
 # Define a rule so we can split lines with a trailing backslash and leading backslash
 def t_CONTINUATION(t):

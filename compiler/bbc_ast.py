@@ -124,7 +124,9 @@ class Close(AstStatement):
     channel = Node(formalType=ChannelType)
 
 class Data(AstStatement):
-    # TODO: How to we represent the data list?
+    data = StringOption()
+    
+class Rem(AstStatement):
     data = StringOption()
 
 class DefinitionStatement(MarkerStatement):
