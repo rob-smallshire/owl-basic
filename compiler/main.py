@@ -17,6 +17,7 @@ import ply.lex as lex
 import ply.yacc as yacc
 
 import errors
+from decoder import decode
 import bbc_lexer
 import bbc_grammar
 import bbc_ast
@@ -41,8 +42,6 @@ import symbol_table_visitor
 from symbol_tables import SymbolTable
 import correlation_visitor
 
-from Detoken import Decode
-
 def tokenize(data, lexer):
     # Give the lexer some input
     lexer.input(data)
@@ -66,7 +65,7 @@ def detokenize(data, options):
         sys.stderr.write("Detokenizing...")
     
     detokenized = StringIO.StringIO()
-    options.line_numbers = Decode(data, detokenized)
+    options.line_numbers = decode(data, detokenized)
     if options.verbose:
         sys.stderr.write("done\n")
     
@@ -78,6 +77,7 @@ def indexLineNumbers(detokenHandle, options):
     if options.verbose:
         sys.stderr.write("Mapping physical to logical line numbers... ")
     
+    print "options.line_numbers = %s" % options.line_numbers
     if options.line_numbers:
         line_number_regex = re.compile(r'\s*(\d+)\s*(.*)')
         physical_line = 0
@@ -319,6 +319,7 @@ def main(argv=None):
         parser.add_option("-v", "--verbose", action='store_true', dest='verbose', default=False)
 
         (options, args) = parser.parse_args()
+        print "options.line_numbers = ", options.line_numbers
         if len(args) != 1:
             parser.error("No source file name supplied")
         compile(args[0], options)
@@ -339,6 +340,8 @@ def compile(filename, options):
     if not options.use_clr:
         # TODO: Use non-recursive code for the flowgraph
         sys.setrecursionlimit(2000)
+    
+    print "options.line_numbers = ", options.line_numbers
     
     data = readFile(filename)
     detokenHandle = detokenize(data, options)
