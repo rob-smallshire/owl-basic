@@ -157,23 +157,21 @@ def setParents(parse_tree, options):
 
 def splitComplexNodes(parse_tree, options):
     logging.debug("splitComplexNodes")
-    if options.use_separation:
-        if options.verbose:
-            sys.stderr.write("Separating complex Abstract Syntax Tree nodes... ")
-        
-        parse_tree.accept(separation_visitor.SeparationVisitor())
-        if options.verbose:
-            sys.stderr.write("done\n")
+    if options.verbose:
+        sys.stderr.write("Separating complex Abstract Syntax Tree nodes... ")
+    
+    parse_tree.accept(separation_visitor.SeparationVisitor())
+    if options.verbose:
+        sys.stderr.write("done\n")
 
 def simplifyAst(parse_tree, options):
     logging.debug("simplifyAst")
-    if options.use_simplification:
-        if options.verbose:
-            sys.stderr.write("Simplifying Abstract Syntax Tree... ")
-        
-        parse_tree.accept(simplify_visitor.SimplificationVisitor())
-        if options.verbose:
-            sys.stderr.write("done\n")
+    if options.verbose:
+        sys.stderr.write("Simplifying Abstract Syntax Tree... ")
+    
+    parse_tree.accept(simplify_visitor.SimplificationVisitor())
+    if options.verbose:
+        sys.stderr.write("done\n")
 
 def createLineMapper(parse_tree, physical_to_logical_map):
     logging.debug("createLineMapper")
@@ -191,9 +189,7 @@ def dumpXmlAst(parse_tree, output_filename, options):
         xmlAst(parse_tree, output_filename)
         if options.verbose:
             sys.stderr.write("done\n")
-
-
-                
+           
 def correlateLoops(entry_points, options):
     logging.debug("correlateLoops")
     if options.verbose:
@@ -208,40 +204,38 @@ def correlateLoops(entry_points, options):
         
 def buildSymbolTables(entry_points, options):
     logging.debug("buildSymbolTables")    
-    if options.use_symbol_tables:
-        # Attach symbol tables to each statement
-        if options.verbose:
-            sys.stderr.write("Building symbol tables")
+    # Attach symbol tables to each statement
+    if options.verbose:
+        sys.stderr.write("Building symbol tables")
+    
+    stv = symbol_table_visitor.SymbolTableVisitor()
+    
+    # Set the global symbol table for the main program entry point, if there is one
+    if '__owl__main' in entry_points:
+        entry_points['__owl__main'].symbolTable = stv.globalSymbols
+    
+    for entry_point in entry_points.values():
+        entry_point.accept(stv)
+    
+    for table in SymbolTable.symbol_tables:
+        title = "Symbol table '%s'" % table.name
+        if table.parent is not None:
+            parent_title = " with parent '%s'" % table.parent.name
+        else:
+            parent_title = "is the root symbol table"
+        width = max(len(title), len(parent_title))
+        print "-" * width
+        print title
+        print parent_title
+        print "-" * width
         
-        stv = symbol_table_visitor.SymbolTableVisitor()
-        
-        # Set the global symbol table for the main program entry point, if there is one
-        if '__owl__main' in entry_points:
-            entry_points['__owl__main'].symbolTable = stv.globalSymbols
-        
-        for entry_point in entry_points.values():
-            entry_point.accept(stv)
-        
-        for table in SymbolTable.symbol_tables:
-            title = "Symbol table '%s'" % table.name
-            if table.parent is not None:
-                parent_title = " with parent '%s'" % table.parent.name
-            else:
-                parent_title = "is the root symbol table"
-            width = max(len(title), len(parent_title))
-            print "-" * width
-            print title
-            print parent_title
-            print "-" * width
-            
-            symbols = table.symbols.keys()
-            symbols.sort()
-            for symbol in symbols:
-                print "%-10s %-10s %s" % (symbol, table.symbols[symbol].type.__doc__, table.symbols[symbol].modifier)
-            print "-" * width
-            print
-        return stv
-    return None
+        symbols = table.symbols.keys()
+        symbols.sort()
+        for symbol in symbols:
+            print "%-10s %-10s %s" % (symbol, table.symbols[symbol].type.__doc__, table.symbols[symbol].modifier)
+        print "-" * width
+        print
+    return stv
             
 def extractData(parse_tree, options):
     """
@@ -275,21 +269,6 @@ def xmlCfg(tree, filename):
     tree.accept(gmlv)
     gmlv.close()
 
-def generateAssembly():
-    """
-    Generate code for the main program, and for each procedure or function
-    """
-    # Generate an assembly
-    # add DATA (somehow)
-    # Generate a namespace
-    # Generate a static class
-    # Create global variables as members
-    # For each entry point
-    #  - create a method
-    # Mark the entry point to the assembly 
-    pass
-    
-
 class Usage(Exception):
     def __init__(self, msg):
         self.msg = msg
@@ -307,10 +286,6 @@ def main(argv=None):
         parser = OptionParser(usage=usage, version=version)
         parser.add_option("-x", "--debug-lex", action='store_true', dest='debug_lex', default=False)
         parser.add_option("-c", "--debug-no-clr", action='store_false', dest='use_clr', default=(sys.platform == 'cli'))
-        parser.add_option("-p", "--debug-no-separation", action='store_false', dest='use_separation', default=True)
-        parser.add_option("-s", "--debug-no-simplification", action='store_false', dest='use_simplification', default=True)
-        parser.add_option("-t", "--debug-no-typecheck", action='store_false', dest='use_typecheck', default=True)
-        parser.add_option("-y", "--debug-no-symbol-tables", action='store_false', dest='use_symbol_tables', default=True)
         parser.add_option("-v", "--verbose", action='store_true', dest='verbose', default=False)
 
         (options, args) = parser.parse_args()

@@ -20,16 +20,14 @@ def typecheck(parse_tree, entry_points, options):
     :param entry_points: A dictionary of entry point names to AstStatements
     :param options: Command line options.
     '''
-    logging.debug("typecheck")
-    if options.use_typecheck:
-        logging.debug("Type checking... ")
-        
-        # TODO: Need to iteratively resolve types here.
-        #       while (pending_types_remaining):
-        parse_tree.accept(TypecheckVisitor(entry_points))
-        pending = True
-        while pending:
-            pending = inferUserFunctionTypes(parse_tree, entry_points, options)  
+    logging.debug("Type checking... ")
+    
+    # TODO: Need to iteratively resolve types here.
+    #       while (pending_types_remaining):
+    parse_tree.accept(TypecheckVisitor(entry_points))
+    pending = True
+    while pending:
+        pending = inferUserFunctionTypes(parse_tree, entry_points, options)  
 
 def inferUserFunctionTypes(parse_tree, entry_points, options):
     """
