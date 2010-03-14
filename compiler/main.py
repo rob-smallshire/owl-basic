@@ -287,6 +287,7 @@ def main(argv=None):
         parser.add_option("-x", "--debug-lex", action='store_true', dest='debug_lex', default=False)
         parser.add_option("-c", "--debug-no-clr", action='store_false', dest='use_clr', default=(sys.platform == 'cli'))
         parser.add_option("-v", "--verbose", action='store_true', dest='verbose', default=False)
+        parser.add_option("-i", "--il", action='store_true', dest='create_il', default=False)
 
         (options, args) = parser.parse_args()
         if len(args) != 1:
@@ -346,8 +347,22 @@ def compile(filename, options):
     if options.use_clr:
         from codegen.clr.generate import AssemblyGenerator
         ag = AssemblyGenerator(line_mapper)
-        ag.generateAssembly(output_name, stv.globalSymbols, dv, ordered_basic_blocks) 
-    
+        exe_filename = ag.generateAssembly(output_name, stv.globalSymbols, dv, ordered_basic_blocks)
+        
+        if options.create_il:
+            # Create debuggable CIL files by disassebling and reassembling the
+            # executable
+            # Run ILDASM on the produced file
+            # TODO: Should be able to determine this path using the information at http://bytes.com/topic/net/answers/106694-code-obtain-path-ildasm-exe
+            logging.debug("Disassembling to CIL")
+            ildasm_exe = r'C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\NETFX 4.0 Tools\x64\ildasm.exe'
+            il_filename = exe_filename[:-3] + 'il'
+            process(ildasm_exe, '/OUT=%s' % il_filename, exe_filename)
+            
+            logging.debug("Reassembling with CIL debug info")
+            ilasm_exe = r'C:\Windows\Microsoft.NET\Framework\v2.0.50727\ilasm.exe'
+            process(ilasm_exe, '/EXE', '/DEBUG', il_filename)
+                                      
     # Structural analysis
 
     #splitBasicBlock(parse_tree)
@@ -382,6 +397,19 @@ def compile(filename, options):
     # TODO: Replace Goto -> ReturnFromProcedure with ReturnFromProcedure
     #elimiateCommonSubexpressions(parse_tree    opti
 
+def process(name, *args):
+    '''
+    Execute an external process, and wait for it to complete
+    '''
+    from System.Diagnostics import Process
+    p = Process()
+    p.StartInfo.FileName = name
+    p.StartInfo.Arguments = ' '.join(args)
+    p.StartInfo.CreateNoWindow = True
+    p.Start()
+    p.WaitForExit()
+    p.Close()
+    
 def printProfile():
     import clr
     for p in clr.GetProfileData():

@@ -136,6 +136,7 @@ class AssemblyGenerator(object):
         name += ".exe"    
         logging.debug("Creating %s", name)
         assembly_builder.Save(name)
+        return name
     
     def createAndAttachFieldEmitters(self, field_info, symbol):
         '''
