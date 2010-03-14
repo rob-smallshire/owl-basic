@@ -65,7 +65,7 @@ def detokenize(data, options):
         sys.stderr.write("Detokenizing...")
     
     detokenized = StringIO.StringIO()
-    options.line_numbers = decode(data, detokenized)
+    decode(data, detokenized)
     if options.verbose:
         sys.stderr.write("done\n")
     
@@ -77,32 +77,28 @@ def indexLineNumbers(detokenHandle, options):
     if options.verbose:
         sys.stderr.write("Mapping physical to logical line numbers... ")
     
-    print "options.line_numbers = %s" % options.line_numbers
-    if options.line_numbers:
-        line_number_regex = re.compile(r'\s*(\d+)\s*(.*)')
-        physical_line = 0
-        logical_line = 0
-        physical_to_logical_map = []
-        line_bodies = []
-        while True:
-            line = detokenHandle.readline()
-            if not line:
-                break
-            m = line_number_regex.match(line)
-            if not m:
-                raise CompileException("Missing line number at physical line %d (after logical line %d)" % (physical_line, logical_line))
-            
-            logical_line_string = m.group(1)
-            print "physical_line = %d, logical_line_string = '%s'" % (physical_line, logical_line_string)
-            logical_line = int(logical_line_string)
-            physical_to_logical_map.append(logical_line)
-            line_bodies.append(m.group(2))
-            physical_line += 1
+    line_number_regex = re.compile(r'\s*(\d+)\s*(.*)') # TODO: Factor this out of here and decoder
+    physical_line = 0
+    logical_line = 0
+    physical_to_logical_map = []
+    line_bodies = []
+    while True:
+        line = detokenHandle.readline()
+        if not line:
+            break
+        print line
+        m = line_number_regex.match(line)
+        if not m:
+            raise CompileException("Missing line number at physical line %d (after logical line %d)" % (physical_line, logical_line))
         
-        data = '\n'.join(line_bodies)
-    else:
-        physical_to_logical_map = None
-        data = detokenHandle.read()
+        logical_line_string = m.group(1)
+        print "physical_line = %d, logical_line_string = '%s'" % (physical_line, logical_line_string)
+        logical_line = int(logical_line_string)
+        physical_to_logical_map.append(logical_line)
+        line_bodies.append(m.group(2))
+        physical_line += 1
+    
+    data = '\n'.join(line_bodies)
     detokenHandle.close()
     print "(physical, logical)"
     print list(enumerate(physical_to_logical_map))
@@ -310,7 +306,6 @@ def main(argv=None):
         version = "%prog 0.5"
         parser = OptionParser(usage=usage, version=version)
         parser.add_option("-x", "--debug-lex", action='store_true', dest='debug_lex', default=False)
-        parser.add_option("-l", "--line-numbers", action='store_true', dest="line_numbers", default=False)
         parser.add_option("-c", "--debug-no-clr", action='store_false', dest='use_clr', default=(sys.platform == 'cli'))
         parser.add_option("-p", "--debug-no-separation", action='store_false', dest='use_separation', default=True)
         parser.add_option("-s", "--debug-no-simplification", action='store_false', dest='use_simplification', default=True)
@@ -319,7 +314,6 @@ def main(argv=None):
         parser.add_option("-v", "--verbose", action='store_true', dest='verbose', default=False)
 
         (options, args) = parser.parse_args()
-        print "options.line_numbers = ", options.line_numbers
         if len(args) != 1:
             parser.error("No source file name supplied")
         compile(args[0], options)
@@ -340,8 +334,6 @@ def compile(filename, options):
     if not options.use_clr:
         # TODO: Use non-recursive code for the flowgraph
         sys.setrecursionlimit(2000)
-    
-    print "options.line_numbers = ", options.line_numbers
     
     data = readFile(filename)
     detokenHandle = detokenize(data, options)

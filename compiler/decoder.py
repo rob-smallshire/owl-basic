@@ -36,13 +36,37 @@ class PlainTextDecoder(Decoder):
     
     def __init__(self, data):
         super(PlainTextDecoder, self).__init__(data)
-    
-    def hasLineNumbers(self):
-        pass
-    
+        
     def decode(self):
-        # TODO: The contents of this method seem completely wrong!
-        self.lines = self.data.split(self.lineEnd)
+        split_lines = self.data.split(self.lineEnd)
+        
+        # Remove any trailing empty line
+        if len(split_lines[-1]) == 0:
+            split_lines = split_lines[:-1]
+            
+        has_line_numbers = None # Tri-state None, True or False
+        logical_line_number = 10
+        
+        for line in split_lines:
+            m = re.match(r'\s*(\d+)?\s?(.*)', line) # TODO: Factor this regex out of here and decoder
+            line_number, line_body = m.group(1), m.group(2)
+            current_line_has_number = line_number is not None
+            
+            if has_line_numbers is None:
+                has_line_numbers = current_line_has_number
+            else:
+                if current_line_has_number != has_line_numbers:
+                    raise Exception, "Inconsistent line numbering" 
+            
+            # Fake line numbers if they are missing
+            if has_line_numbers == False:
+                line_number = logical_line_number
+                
+            logical_line_number += 10
+                            
+            self.lines.append((line_number, line_body))
+            
+        return self.lines
 
 class PlainTextCrDecoder(PlainTextDecoder):
     lineEnd = '\x0d'
@@ -208,19 +232,22 @@ def fileType(data):
     
     fileExt = data[-4:]
     
-    if fileExt[3] == '\x0d':
-        return PlainTextCrDecoder(data);
-    elif fileExt[3] == '\x0a':
-        return PlainTextLfDecoder(data)
+    # Check final byte sequence (longest sequence first)
+    if fileExt == '\x0d\x00\xff\xff':
+        return BbcBasic8086Decoder(data)
     elif fileExt[2:4] == '\x0a\x0d':
         return PlainTextLfCrDecoder(data)  
     elif fileExt[2:4] == '\x0d\x0a':
         return PlainTextCrLfDecoder(data)
     elif fileExt[2:4] == '\x0d\xff':
         return BbcBasicAcornDecoder(data)
-    elif fileExt == '\x0d\x00\xff\xff':
-        return BbcBasic8086Decoder(data)
-
+    elif fileExt[3] == '\x0d':
+        return PlainTextCrDecoder(data);
+    elif fileExt[3] == '\x0a':
+        return PlainTextLfDecoder(data)
+    else:
+        raise Exception, "Unrecognised program format"
+    
 tokens = [
     'OTHERWISE', # 7f
     'AND', 'DIV', 'EOR', 'MOD', 'OR', 'ERROR', 'LINE', 'OFF',
@@ -290,22 +317,16 @@ def ReadLines(data):
     """Returns a list of [line number, tokenised line] from a binary
        BBC BASIC format file."""
     decoder = fileType(data)
-    print decoder
     lines = decoder.decode()
-    print lines
     return lines
     
 def decode(data, output):
     """Decode binary data 'data' and write the result to 'output'."""
-    lineNoNeeded = False
-    if None != re.search('\x8d', data): #check if line number references are used anywhere in the file
-        lineNoNeeded = True
     lines = ReadLines(data)
     for lineNumber, lineData in lines:
-        if lineNoNeeded:
-            output.write(str(lineNumber) + ' ')
+        output.write(str(lineNumber) + ' ')
+        # Normalise line endings to \n
         output.write(lineData.strip() + '\n')
-    return lineNoNeeded
 
 if __name__ == "__main__":
     optlist, args = getopt.getopt(sys.argv[1:], '')
