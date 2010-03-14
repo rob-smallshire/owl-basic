@@ -24,68 +24,79 @@ import struct, re, getopt, sys
 # The list of BBC BASIC V tokens:
 # Base tokens, starting at 0x7f
 
-class PlainText(object):
+class Decoder(object):
     
-    def decode(self, data):
-        lenLineEnd = len(lineEnd)
-        lines = []
-        while True:
-            #  {[<text>] [<cr>|<lf>|<cr><lf>|<lf><cr>]}  
-            lineNumber = ''
-            findStart=lenLineEnd
-            #make sure dont miss first chars of plain text
-            if data[0:lenLineEnd] != lineEnd:
-                findStart=0
-            length = data.find(lineEnd,findStart)
-            lineData = data[findStart:length]
-            lines.append([lineNumber, Detokenise(lineData, decode)])
-            data = data[length:]
-            if len(data) <= len(lineEnd):
-                # may need to check what data is in last chars
-                # all tests have been ending tokens/CR/LF
-                break
-        return lines
+    def __init__(self, data):
+        self.data = data
+        self.lines = []
+        
+    #data = property(lambda self: self.__data)
+        
+class PlainTextDecoder(Decoder):
+    
+    def __init__(self, data):
+        super(PlainTextDecoder, self).__init__(data)
+    
+    def hasLineNumbers(self):
+        pass
+    
+    def decode(self):
+        # TODO: The contents of this method seem completely wrong!
+        self.lines = self.data.split(self.lineEnd)
 
-class PlainTextCr(PlainText):
+class PlainTextCrDecoder(PlainTextDecoder):
     lineEnd = '\x0d'
     fileTypeName = 'plain text CR'
 
-class PlainTextLf(PlainText):
+    def __init__(self, data):
+        super(PlainTextCrDecoder, self).__init__(data)
+
+class PlainTextLfDecoder(PlainTextDecoder):
     lineEnd = '\x0a'
     fileTypeName = 'plain text LF'
+    
+    def __init__(self, data):
+        super(PlainTextLfDecoder, self).__init__(data)
 
-class PlainTextLfCr(PlainText):
+class PlainTextLfCrDecoder(PlainTextDecoder):
     lineEnd = '\x0a\x0d'
     fileTypeName = 'plain text LFCR'
     
-class PlainTextCrLf(PlainText):
+    def __init__(self, data):
+        super(PlainTextLfCrDecoder, self).__init__(data)
+    
+class PlainTextCrLfDecoder(PlainTextDecoder):
     lineEnd = '\x0d\x0a'
     fileTypeName = 'plain text CRLF'
+    
+    def __init__(self, data):
+        super(PlainTextCrLfDecoder, self).__init__(data)
 
-class BbcBasicAcorn(object):
+class BbcBasicAcornDecoder(Decoder):
     lineEnd = '\x0d'
     fileTypeName = 'BBC BASIC (Acorn)'
     
-    def decode(self, data):
+    def __init__(self, data):
+        super(BbcBasicAcornDecoder, self).__init__(data)
+    
+    def decode(self):
         lenLineEnd = len(self.lineEnd)
-        lines = []
         while True:
-            if len(data) < 2:
+            if len(self.data) < 2:
                 raise Exception, "Bad program"
-            if data[1] == '\xff':
+            if self.data[1] == '\xff':
                 break
             #  {<cr> <linehi> <linelo> <len> <text>} <cr> <ff>
-            lineNumber=(ord(data[2]) + (ord(data[1]) * 256))
-            length=ord(data[3])
-            lineData = data[4:length]
-            lines.append([lineNumber, self.detokenise(lineData)])
-            data = data[length:]
-            if len(data) <= len(self.lineEnd):
+            lineNumber=(ord(self.data[2]) + (ord(self.data[1]) * 256))
+            length=ord(self.data[3])
+            lineData = self.data[4:length]
+            self.lines.append([lineNumber, self.detokenise(lineData)])
+            self.data = self.data[length:]
+            if len(self.data) <= len(self.lineEnd):
                 # may need to check what data is in last chars
                 # all tests have been ending tokens/CR/LF
                 break
-        print lines
-        return lines
+        return self.lines
     
     def detokenise(self, lineData):
         # Acorn encoding
@@ -100,7 +111,7 @@ class BbcBasicAcorn(object):
         # OR
         # (any token)
         return re.sub(r'"(?:(?:[^"]+|"")*)"(?!")|( ?)([\xc6-\xc8])?(\xf4.*|\x8d[\x40-\x7f]{3}|[\x7f-\xff])',
-                      BbcBasicAcorn.replaceFunc, lineData)
+                      BbcBasicAcornDecoder.replaceFunc, lineData)
     
     @staticmethod
     def replaceFunc(match):
@@ -126,32 +137,35 @@ class BbcBasicAcorn(object):
                 else:
                     return prefix + tokens[tokenOrd - 127] + token[1:]
 
-class BbcBasic8086(object):
+class BbcBasic8086(Decoder):
     lineEnd = '\x0d'
     fileTypeName = 'BBC BASIC (80/86)'
+    
+    def __init__(self, data):
+        super(BbcBasic8086, self).__init__(data)
         
-    def decode(self, data):
+    def decode(self):
         # TODO this needs testing 
         # i have read somewhere that bb4w uses different tokens
         # and also has diff line number formatting
         # (http://bb4w.wikispaces.com/Format)
         # {<len> <linelo> <linehi> <text> <cr>} <00> <ff> <ff>
         lenLineEnd = len(self.lineEnd)
-        lines = []
+        
         while True:
             # TODO check if order of bytes is correct
-            lineNumber=(ord(data[1]) + (ord(data[2]) * 256)) # line number bytes in different order
-            length=ord(data[0])
+            lineNumber=(ord(self.data[1]) + (ord(self.data[2]) * 256)) # line number bytes in different order
+            length=ord(self.data[0])
             if lineNumber == -1:
                 break
-            lineData = data[3:length]
-            lines.append([lineNumber, self.detokenise(lineData)])
-            data = data[length:]
-            if len(data) <= len(self.lineEnd):
+            lineData = self.data[3:length]
+            self.lines.append([lineNumber, self.detokenise(lineData)])
+            self.data = self.data[length:]
+            if len(self.data) <= len(self.lineEnd):
                 # may need to check what data is in last chars
                 # all tests have been ending tokens/CR/LF
                 break
-        return lines
+        return self.lines
     
     def detokenise(self, lineData):
         # This uses BB4W encoding
@@ -167,14 +181,13 @@ class BbcBasic8086(object):
         # OR
         # (any token 0-15) TODO check if 16 is needed (EXIT) i think
         return re.sub(r'"(?:(?:[^"]+|"")*)"(?!")|( ?)(\xf4.*|\x8d[\x40-\x7f]{3}|[\x7f-\xff]|[\x00-\x0f])',
-                      BbcBasic8086.replaceFunc, line)
+                      BbcBasic8086Decoder.replaceFunc, line)
     
     @staticmethod
     def replaceFunc(match):
         if match.group().startswith('"'):
             return match.group()
         else:
-            print match.groups()
             prefix, token = match.groups()
             if len(prefix) == 0:
                 prefix = ' '
@@ -196,17 +209,17 @@ def fileType(data):
     fileExt = data[-4:]
     
     if fileExt[3] == '\x0d':
-        return PlainTextCr();
+        return PlainTextCrDecoder(data);
     elif fileExt[3] == '\x0a':
-        return PlainTextLf()
+        return PlainTextLfDecoder(data)
     elif fileExt[2:4] == '\x0a\x0d':
-        return PlainTextLfCr(object)  
+        return PlainTextLfCrDecoder(data)  
     elif fileExt[2:4] == '\x0d\x0a':
-        return PlainTextCrLf(object)
+        return PlainTextCrLfDecoder(data)
     elif fileExt[2:4] == '\x0d\xff':
-        return BbcBasicAcorn()
+        return BbcBasicAcornDecoder(data)
     elif fileExt == '\x0d\x00\xff\xff':
-        return BbcBasic8086()
+        return BbcBasic8086Decoder(data)
 
 tokens = [
     'OTHERWISE', # 7f
@@ -278,17 +291,16 @@ def ReadLines(data):
        BBC BASIC format file."""
     decoder = fileType(data)
     print decoder
-    lines = decoder.decode(data)
+    lines = decoder.decode()
     print lines
     return lines
-
+    
 def decode(data, output):
     """Decode binary data 'data' and write the result to 'output'."""
     lineNoNeeded = False
     if None != re.search('\x8d', data): #check if line number references are used anywhere in the file
         lineNoNeeded = True
     lines = ReadLines(data)
-    print lines
     for lineNumber, lineData in lines:
         if lineNoNeeded:
             output.write(str(lineNumber) + ' ')
