@@ -129,7 +129,7 @@ def buildParser(options):
     if options.verbose:
         sys.stderr.write("Building parser... ")
     
-    parser = yacc.yacc(module=bbc_grammar, debug=1)
+    parser = yacc.yacc(module=bbc_grammar, picklefile="parsetab.pickle", debug=1)
     if options.verbose:
         sys.stderr.write("done\n")
     
@@ -412,10 +412,12 @@ def process(name, *args):
     
 def printProfile():
     import clr
-    for p in clr.GetProfileData():
+    for p in sorted(clr.GetProfilerData(), key=lambda p: p.ExclusiveTime):
         print '%s\t%d\t%d\t%d' % (p.Name, p.InclusiveTime, p.ExclusiveTime, p.Calls)
 
 
 if __name__ == "__main__":
-    #atexit.register(printProfile)
+    import clr
+    clr.EnableProfiler(False)
+    atexit.register(printProfile)
     sys.exit(main())

@@ -365,7 +365,8 @@ class CilVisitor(Visitor):
         #       code gen FOR i% = 0 TO 9
         
         logging.debug("Visiting %s", for_to_step)
-
+        self.checkMark(for_to_step)
+        
         # Load the initial counter value onto the stack
         for_to_step.first.accept(self)
 
@@ -389,9 +390,8 @@ class CilVisitor(Visitor):
         self.generator.Emit(OpCodes.Stloc, step_value_local)
                         
         # The loop body goes in here - later, but first...
-        # loop_body_label = self.generator.DefineLabel()
-        # loop_body_label = for_to_step.block.label
-        self.checkMark(for_to_step) # TODO: Rethink this line
+        loop_body_label = self.generator.DefineLabel()
+        self.generator.MarkLabel(loop_body_label)
         
         # Define a function (closure) which can be called later to generate
         # the code for the corresponding NEXT statements
@@ -417,7 +417,7 @@ class CilVisitor(Visitor):
             self.generator.Emit(OpCodes.Clt)                        # Compare less-than
             emitLdc_I4(self.generator, 0)                           # Load 0
             self.generator.Emit(OpCodes.Ceq)                        # Compare equal
-            self.generator.Emit(OpCodes.Br_S, loop_back_label)
+            self.generator.Emit(OpCodes.Br_S, loop_back_label) # 
             
             # step is positive - implement <= as NOT >
             self.generator.MarkLabel(positive_step_label)
@@ -429,7 +429,7 @@ class CilVisitor(Visitor):
             
             # loop back if not finished
             self.generator.MarkLabel(loop_back_label)
-            self.generator.Emit(OpCodes.Brtrue, for_to_step.block.label) # TODO: Rethink this line
+            self.generator.Emit(OpCodes.Brtrue, loop_body_label)
         
         # Attach the closure to the for_to_step object for later use
         for_to_step.generateNext = correspondingNext
