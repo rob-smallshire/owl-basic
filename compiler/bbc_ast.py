@@ -10,6 +10,10 @@ from cfg_vertex import *
 class AstStatement(AstNode, CfgVertex):
     formal_type = TypeOption(VoidType)
     actual_type = formal_type
+    start_line = IntegerOption()
+    end_line = IntegerOption()
+    start_pos = IntegerOption()
+    end_pos = IntegerOption()
         
 class Program(AstNode):
     #formal_type = TypeOption(None)

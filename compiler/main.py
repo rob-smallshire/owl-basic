@@ -140,7 +140,7 @@ def parse(data, lexer, parser, options):
     if options.verbose:
         sys.stderr.write("Parsing...")
     
-    parse_tree = parser.parse(data, lexer=lexer)
+    parse_tree = parser.parse(data, lexer=lexer, tracking=True)
     if options.verbose:
         sys.stderr.write("done\n")
     

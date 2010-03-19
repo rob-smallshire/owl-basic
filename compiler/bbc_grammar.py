@@ -67,6 +67,13 @@ def p_statement(p):
     '''statement : stmt_body
                  | empty'''
     p[0] = p[1]
+    if p is not None and p[0] is not None:
+        print "Assigning line numbers"
+        p[0].startLine = p.linespan(1)[0]
+        p[0].endLine   = p.linespan(1)[1]
+        p[0].startPos  = p.lexspan(1)[0]
+        p[0].endPos    = p.lexspan(1)[1]
+        print p[0].startLine, p[0].endLine, p[0].startPos, p[0].endPos
 
 #=============================================================================#
 # STATEMENTS
