@@ -304,13 +304,10 @@ namespace OwlRuntime
                 NewLine();
             }
             ++count;
+            os.WriteC(c);
             if (c == 0x0d)
             {
-                NewLine();
-            }
-            else
-            {
-                os.WriteC(c);
+                count = 0;
             }
         }
 
