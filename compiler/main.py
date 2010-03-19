@@ -347,7 +347,7 @@ def compile(filename, options):
     if options.use_clr:
         from codegen.clr.generate import AssemblyGenerator
         ag = AssemblyGenerator(line_mapper)
-        exe_filename = ag.generateAssembly(output_name, stv.globalSymbols, dv, ordered_basic_blocks)
+        exe_filename = ag.generateAssembly(filename, output_name, stv.globalSymbols, dv, ordered_basic_blocks)
         
         if options.create_il:
             # Create debuggable CIL files by disassebling and reassembling the

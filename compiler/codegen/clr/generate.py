@@ -8,6 +8,10 @@ from System.Threading import Thread
 from System.Reflection import *
 from System.Reflection.Emit import *
 
+# Debug builds
+from System.Diagnostics.SymbolStore import *
+from System.Diagnostics import *
+
 from visitor import Visitor
 from singleton import Singleton
 
@@ -17,6 +21,7 @@ from cil_visitor import CilVisitor, CodeGenerationError
 from symbol_tables import hasSymbolTableLookup, StaticSymbolTable
 from emitters import *
 import cts
+from cts import typeof
 from algorithms import representative
 from flow.traversal import depthFirstSearch
 
@@ -57,8 +62,9 @@ class AssemblyGenerator(object):
         '''
         return self.owl_to_clr_method_names[owl_name]
                    
-    def generateAssembly(self, name, global_symbols, data_visitor, ordered_basic_blocks):
+    def generateAssembly(self, source_file, name, global_symbols, data_visitor, ordered_basic_blocks):
         """
+        :param source_file: The BASIC source file - for debugging information
         :param name: The name given to the assembly to be generated.
         :param ordered_basic_blocks: A mapping type where keys are the entry point name
                                      and values are a sequence of BasicBlocks for that method/program.
@@ -71,14 +77,19 @@ class AssemblyGenerator(object):
         #  - create a method
         # Mark the entry point to the assembly
         
-        
         # We build the assembly in the current AppDomain
         domain = Thread.GetDomain()
         assembly_name = AssemblyName(name)
         assembly_builder = domain.DefineDynamicAssembly(assembly_name, AssemblyBuilderAccess.RunAndSave)
         
-        module_builder = assembly_builder.DefineDynamicModule(name + ".exe")
-        owl_module = clr.GetClrType(OwlRuntime.OwlModule)
+        self.makeAssemblyDebuggable(assembly_builder)
+        
+        module_builder = assembly_builder.DefineDynamicModule(name + ".exe", True) # pass True to track debug info
+        owl_module = typeof(OwlRuntime.OwlModule)
+        
+        # Set the source file that we want to associate with this module
+        doc = module_builder.DefineDocument(source_file, System.Guid.Empty, System.Guid.Empty, System.Guid.Empty)
+        
         type_builder = module_builder.DefineType(name,
                                                  TypeAttributes.Class | TypeAttributes.Public,
                                                  object().GetType())
@@ -138,6 +149,17 @@ class AssemblyGenerator(object):
         assembly_builder.Save(name)
         return name
     
+    def makeAssemblyDebuggable(self, assembly_builder):
+        '''
+        Make the assembly debuggable by adding specific attributes.
+        '''
+        # http://blogs.msdn.com/rmbyers/archive/2005/06/26/432922.aspx
+        da_type = typeof(DebuggableAttribute)
+        da_ctor = da_type.GetConstructor(System.Array[System.Type]([typeof(DebuggableAttribute.DebuggingModes)]))
+        da_builder = CustomAttributeBuilder(da_ctor, System.Array[System.Object]([DebuggableAttribute.DebuggingModes.DisableOptimizations | 
+            DebuggableAttribute.DebuggingModes.Default]))
+        assembly_builder.SetCustomAttribute(da_builder)
+    
     def createAndAttachFieldEmitters(self, field_info, symbol):
         '''
         Generate a two methods for generating CIL to load and store the value of the global variable (field)
@@ -177,7 +199,7 @@ class AssemblyGenerator(object):
                                                       FieldAttributes.Private | FieldAttributes.Static)
         self.data_line_number_map_field = type_builder.DefineField('dataLineNumbers', cts.int_int_dictionary_type,
                                                       FieldAttributes.Private | FieldAttributes.Static)
-        self.data_index_field = type_builder.DefineField('dataIndex', clr.GetClrType(System.Int32),
+        self.data_index_field = type_builder.DefineField('dataIndex', typeof(System.Int32),
                                                                 FieldAttributes.Private | FieldAttributes.Static)
         
         type_constructor_builder = type_builder.DefineTypeInitializer()
@@ -199,9 +221,9 @@ class AssemblyGenerator(object):
         
         # Initialise the data index field -
         # this needs to be initialized with a Dictionary
-        #generic_dictionary_type = clr.GetClrType(System.Collections.Generic.Dictionary)
+        #generic_dictionary_type = typeof(System.Collections.Generic.Dictionary)
         #int_int_dictionary_type = generic_dictionary_type.MakeGenericType(
-        #                       System.Array[System.Type]((clr.GetClrType(System.Int32), clr.GetClrType(System.Int32))))
+        #                       System.Array[System.Type]((typeof(System.Int32), typeof(System.Int32))))
     
         int_int_dictionary_ctor_info = cts.int_int_dictionary_type.GetConstructor(System.Type.EmptyTypes) # Get the default constructor
         generator.Emit(OpCodes.Newobj, int_int_dictionary_ctor_info)
@@ -417,7 +439,7 @@ class AssemblyGenerator(object):
         # Generate the code for blocks and statements in sequence
         for basic_block in basic_blocks:
             for statement in basic_block.statements:
-                cv.checkMark(statement)
+                cv.checkMark(statement) # TODO: Could push this out a level to be per block
                 cv.visit(statement)
                 assert statement.block.is_label_marked
             self.transferControlToNextBlock(cv.generator, basic_block)

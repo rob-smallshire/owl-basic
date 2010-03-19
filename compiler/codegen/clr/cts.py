@@ -23,12 +23,16 @@ int_int_dictionary_type = generic_dictionary_type.MakeGenericType(
 
 print
 
+def typeof(t):
+    'Simulate C# typeof operator'
+    return clr.GetClrType(t)
+
 def mapType(basic_type):
     '''
     Map an OWL BASIC type to its equivalent CTS type
     :param basic_type: A BASIC Type
     '''
-    return clr.GetClrType(type_map[basic_type])
+    return typeof(type_map[basic_type])
 
 def symbolType(symbol):
     '''
@@ -40,6 +44,6 @@ def symbolType(symbol):
     if t.isA(bbc_types.ArrayType):
         element_type = t._getElementType()
         ctsBasicType(element_type).MakeArrayType(symbol.rank)
-    return clr.GetClrType(type_map[t])
+    return typeof(type_map[t])
 
     
