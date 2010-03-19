@@ -157,14 +157,16 @@ class CilVisitor(Visitor):
         raise CodeGenerationError("Visiting unhandled statement %s" % statement)
     
     def visitData(self, data):
-        self.checkMark(data)
+        #self.checkMark(data)
+        pass
     
     def visitRem(self, rem):
-        self.checkMark(rem)
+        #self.checkMark(rem)
+        pass
     
     def visitAssignment(self, assignment):
         logging.debug("Visiting %s", assignment)
-        self.checkMark(assignment)
+        #self.checkMark(assignment)
         # The code for generating the rvalue may need to be interleaved
         # with the code for generating the lvalue, in cases where the
         # lvalue is an assignment to an array element or an indirection
@@ -252,7 +254,7 @@ class CilVisitor(Visitor):
     
     def visitVdu(self, vdu):
         logging.debug("Visiting %s", vdu)
-        self.checkMark(vdu)
+        #self.checkMark(vdu)
         assert hasattr(vdu.bytes, '__getitem__')
         assert hasattr(vdu.bytes, '__len__')
         if len(vdu.bytes) == 1:
@@ -273,21 +275,21 @@ class CilVisitor(Visitor):
     
     def visitCls(self, cls):
         logging.debug("Visiting %s", cls)
-        self.checkMark(cls)
+        #self.checkMark(cls)
         self.generator.Emit(OpCodes.Call, self.basicCommandMethod('Cls'))
     
     def visitDefineProcedure(self, defproc):
         logging.debug("Visiting %s", defproc)
-        self.checkMark(defproc)
+        #self.checkMark(defproc)
     
     def visitDefineFunction(self, deffn):
         logging.debug("Visiting %s", deffn)
-        self.checkMark(deffn)
+        #self.checkMark(deffn)
                   
     def visitCallProcedure(self, call_proc):
         logging.debug("Visiting %s", call_proc)
         logging.debug("name = %s", call_proc.name)
-        self.checkMark(call_proc)
+        #self.checkMark(call_proc)
         
         proc_method_info = self.lookupMethod(call_proc.name)
         
@@ -299,7 +301,7 @@ class CilVisitor(Visitor):
     def visitReturnFromProcedure(self, endproc):
         logging.debug("Visiting %s", endproc)
         # TODO: Must not be used from within an exception handler
-        self.checkMark(endproc)
+        #self.checkMark(endproc)
         self.generator.Emit(OpCodes.Ret)
     
     def visitUserFunc(self, user_func):
@@ -315,7 +317,7 @@ class CilVisitor(Visitor):
     
     def visitReturnFromFunction(self, func):
         logging.debug("Visiting %s", func)
-        self.checkMark(func)
+        #self.checkMark(func)
         # TODO: Must not be used from within an exception handler
         func.returnValue.accept(self)
         self.generator.Emit(OpCodes.Ret)
@@ -324,7 +326,7 @@ class CilVisitor(Visitor):
         # TODO: Can we RESTORE to lines which don't contain DATA?
         logging.debug("Visiting %s", restore)
         logging.debug("target_logical_line = %s", restore.targetLogicalLine)
-        self.checkMark(restore)
+        #self.checkMark(restore)
         # Lookup the data pointer value for this line number
         self.generator.Emit(OpCodes.Ldsfld, self.assembly_generator.data_line_number_map_field)         # Load the dictionary onto the stack
         restore.targetLogicalLine.accept(self) # Push the line number onto the stack
@@ -336,13 +338,13 @@ class CilVisitor(Visitor):
     
     def visitRepeat(self, repeat):
         logging.debug("Visiting %s", repeat)
-        self.checkMark(repeat)
+        #self.checkMark(repeat)
         repeat.label = self.generator.DefineLabel()
         self.generator.MarkLabel(repeat.label)
         
     def visitUntil(self, until):
         logging.debug("Visiting %s", until)
-        self.checkMark(until)
+        #self.checkMark(until)
         if len(until.loopBackEdges) != 0:
             assert len(until.loopBackEdges) == 1
             # Correlated NEXT
@@ -365,7 +367,7 @@ class CilVisitor(Visitor):
         #       code gen FOR i% = 0 TO 9
         
         logging.debug("Visiting %s", for_to_step)
-        self.checkMark(for_to_step)
+        #self.checkMark(for_to_step)
         
         # Load the initial counter value onto the stack
         for_to_step.first.accept(self)
@@ -436,7 +438,7 @@ class CilVisitor(Visitor):
     
     def visitNext(self, next):
         logging.debug("Visiting %s", next)
-        self.checkMark(next)
+        #self.checkMark(next)
         if  len(next.loopBackEdges) != 0:
             assert len(next.loopBackEdges) == 1
             # Correlated NEXT
@@ -537,7 +539,7 @@ class CilVisitor(Visitor):
         
     def visitPrint(self, print_stmt):
         logging.debug("Visiting %s", print_stmt)
-        self.checkMark(print_stmt)
+        #self.checkMark(print_stmt)
         # Convert each print item into a call to the runtime library
         logging.debug("print list = %s", str(print_stmt.printList))
         suppress_newline = False
@@ -560,7 +562,7 @@ class CilVisitor(Visitor):
     
     def visitInput(self, input):
         logging.debug("Visiting %s", input)
-        self.checkMark(input)
+        #self.checkMark(input)
         # Convert each input item int a call to the runtime library
         logging.debug("input list = %s", str(input.inputList))
         self.__query = True
@@ -673,17 +675,9 @@ class CilVisitor(Visitor):
         logging.debug("Visiting %s", get)
         self.generator.Emit(OpCodes.Call, self.basicCommandMethod('Get'))
               
-    def visitEnd(self, end):
+    def visitEnd(self, end):      
         logging.debug("Visiting %s", end)
-        self.checkMark(end)
-        # TODO throw an exception signalling END and modify the main method
-        # to catch this exception and exit gracefully
-        logging.critical("TODO: Throw an EndException")
-        # TODO: If we know we are in the Main method we could emit ret here
-        #self.generator.Emit(OpCodes.Ret)
-        
-        logging.debug("Visiting %s", end)
-        self.checkMark(end)
+        #self.checkMark(end)
         emitLdc_I4(self.generator, self.line_mapper.physicalToLogical(end.lineNum)) # Load logical line number onto the stack
         end_exception_ctor = clr.GetClrType(OwlRuntime.EndException).GetConstructor(System.Array[System.Type]([System.Int32]))
         assert end_exception_ctor
@@ -877,7 +871,7 @@ class CilVisitor(Visitor):
 
     def visitIf(self, if_stmt):
         logging.debug("Visiting %s", if_stmt)
-        self.checkMark(if_stmt)
+        #self.checkMark(if_stmt)
         if_stmt.condition.accept(self) # Condition on the stack
         assert if_stmt.trueClause is not None
         first_true_stmt = if_stmt.trueClause[0] 
@@ -918,7 +912,7 @@ class CilVisitor(Visitor):
     
     def visitOnGoto(self, ongoto):
         logging.debug("Visiting %s", ongoto)
-        self.checkMark(ongoto)
+        #self.checkMark(ongoto)
         # Build the jump table
         # TODO: There is some duplication here with the flowgraph visitor
         jump_table = []
@@ -937,11 +931,11 @@ class CilVisitor(Visitor):
             
     def visitLocal(self, local):
         logging.debug("Visiting %s", local)
-        self.checkMark(local)
+        #self.checkMark(local)
         
     def visitGoto(self, goto):
         logging.debug("Visiting %s", goto)
-        self.checkMark(goto)
+        #self.checkMark(goto)
         # No code needs to be generated for GOTO statements here, so the
         # routine which generates code for transfering control from the end
         # of a basic block with out-degree one will do it.
@@ -1038,7 +1032,7 @@ class CilVisitor(Visitor):
         
     def visitMode(self, mode):
         logging.debug("Visiting %s", mode)
-        self.checkMark(mode)
+        #self.checkMark(mode)
         assert mode.number is not None
         # TODO: Extended MODE syntax not yet supported
         mode.number.accept(self)
@@ -1047,7 +1041,7 @@ class CilVisitor(Visitor):
         
     def visitLongJump(self, long_jump):
         logging.debug("Visiting %s", long_jump)
-        self.checkMark(long_jump)
+        #self.checkMark(long_jump)
         long_jump.targetLogicalLine.accept(self) # Target line on the stack
         long_jump_exception_ctor = clr.GetClrType(OwlRuntime.LongJumpException).GetConstructor(System.Array[System.Type]([System.Int32]))
         assert long_jump_exception_ctor
@@ -1056,7 +1050,7 @@ class CilVisitor(Visitor):
     
     def visitRaise(self, raise_stmt):
         logging.debug("Visiting %s", raise_stmt)
-        self.checkMark(raise_stmt)
+        #self.checkMark(raise_stmt)
         emitLdc_I4(self.generator, self.line_mapper.physicalToLogical(raise_stmt.lineNum)) # Source line on the stack
         exception_type = getattr(OwlRuntime, raise_stmt.type)
         exception_ctor = clr.GetClrType(exception_type).GetConstructor(System.Array[System.Type]([System.Int32]))

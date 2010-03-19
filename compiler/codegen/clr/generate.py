@@ -417,6 +417,7 @@ class AssemblyGenerator(object):
         # Generate the code for blocks and statements in sequence
         for basic_block in basic_blocks:
             for statement in basic_block.statements:
+                cv.checkMark(statement)
                 cv.visit(statement)
                 assert statement.block.is_label_marked
             self.transferControlToNextBlock(cv.generator, basic_block)
