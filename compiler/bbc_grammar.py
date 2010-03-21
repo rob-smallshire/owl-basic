@@ -527,7 +527,6 @@ def p_if_single_stmt(p):
                       | IF expr clause ELSE clause
                       | IF expr THEN clause ELSE clause'''
 
-    #if p is not None:
     # Specialised debugging lexer positions set in here       
     if len(p) == 4:
         p[0] = If(condition = p[2], trueClause = p[3])
