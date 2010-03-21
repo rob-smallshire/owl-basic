@@ -76,8 +76,5 @@ class SeparationVisitor(Visitor):
             new_assignment.lineNum = read.lineNum
             
             statement_list.append(new_assignment)
-        
-        print read.parent
-        print read.parent_property
-        print getattr(read.parent, read.parent_property)  
+         
         getattr(read.parent, read.parent_property)[read.parent_index] = statement_list

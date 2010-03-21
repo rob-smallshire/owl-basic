@@ -253,8 +253,6 @@ def extractData(parse_tree, options):
     logging.debug("extracting DATA")
     dv = data_visitor.DataVisitor()
     parse_tree.accept(dv)
-    print dv.data
-    print dv.index
     return dv   
     
 def dumpXmlCfg(parse_tree, filename, options):
@@ -329,7 +327,7 @@ def compile(filename, options):
     
     parser = buildParser(options)
     parse_tree = parse(data, lexer, parser, options)
-    #setSourceDebugging(data, line_offsets, parse_tree)
+    setSourceDebugging(data, line_offsets, parse_tree)
     setParents(parse_tree, options)
     splitComplexNodes(parse_tree, options)
     simplifyAst(parse_tree, options)
