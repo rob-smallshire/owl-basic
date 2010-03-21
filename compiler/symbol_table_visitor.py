@@ -174,7 +174,7 @@ class SymbolTableVisitor(Visitor):
         #logging.debug("SymbolTableVisitor.visitInput")
         statement.symbolTable = self.checkPredecessorsAndRefer(statement)       
         assert statement.symbolTable is not None
-        for item in statement.inputList.items:
+        for item in statement.inputList:
             self.tryAddVariable(statement.symbolTable, item)
         self.followSuccessors(statement)
         
@@ -182,7 +182,7 @@ class SymbolTableVisitor(Visitor):
         #logging.debug("SymbolTableVisitor.visitInputFile")
         statement.symbolTable = self.checkPredecessorsAndRefer(statement)       
         assert statement.symbolTable is not None
-        for item in statement.inputList.items:
+        for item in statement.inputList:
             self.tryAddVariable(statement.symbolTable, item)
         self.followSuccessors(input)
         
