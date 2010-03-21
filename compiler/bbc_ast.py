@@ -10,10 +10,12 @@ from cfg_vertex import *
 class AstStatement(AstNode, CfgVertex):
     formal_type = TypeOption(VoidType)
     actual_type = formal_type
-    start_line = IntegerOption()
-    end_line = IntegerOption()
-    start_pos = IntegerOption()
-    end_pos = IntegerOption()
+    start_line = IntegerOption() # One-based line number for source level debugging
+    end_line = IntegerOption()   # One-based line number for source level debugging
+    start_pos = IntegerOption() # Zero-based file offset
+    end_pos = IntegerOption()   # Zero-based file offset
+    start_column = IntegerOption() # One based column number for source level debugging
+    end_column = IntegerOption() # One based column number for source level debugging
         
 class Program(AstNode):
     #formal_type = TypeOption(None)

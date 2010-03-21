@@ -44,7 +44,7 @@ class CorrelationVisitor(Visitor):
                 if len(v.outEdges) == 0 and len(self.loops) != 0:
                     # TODO: Improve this error message by printing an
                     # abstract stack trace
-                    errors.fatalError("In loops at terminal statement at line %d" % v.lineNum)
+                    errors.fatalError("In loops at terminal statement at line %s" % v.lineNum)
                 # If execution splits, take a copy of the current loop stack
                 # and store a reference to it on each of the target nodes of
                 # the out edges of the current node, so the state can be

@@ -88,7 +88,7 @@ class AssemblyGenerator(object):
         owl_module = typeof(OwlRuntime.OwlModule)
         
         # Set the source file that we want to associate with this module
-        doc = module_builder.DefineDocument(source_file, System.Guid.Empty, System.Guid.Empty, System.Guid.Empty)
+        self.doc = module_builder.DefineDocument(source_file, System.Guid.Empty, System.Guid.Empty, System.Guid.Empty)
         
         type_builder = module_builder.DefineType(name,
                                                  TypeAttributes.Class | TypeAttributes.Public,
@@ -440,6 +440,9 @@ class AssemblyGenerator(object):
         for basic_block in basic_blocks:
             for statement in basic_block.statements:
                 cv.checkMark(statement) # TODO: Could push this out a level to be per block
+                if statement.startLine and statement.startColumn and statement.endLine and statement.endColumn:
+                    cv.generator.MarkSequencePoint(self.doc, statement.startLine, statement.startColumn,
+                                                            statement.endLine,   statement.endColumn)
                 cv.visit(statement)
                 assert statement.block.is_label_marked
             self.transferControlToNextBlock(cv.generator, basic_block)

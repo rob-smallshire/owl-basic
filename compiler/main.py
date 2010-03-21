@@ -22,6 +22,7 @@ import bbc_lexer
 import bbc_grammar
 import bbc_ast
 import xml_visitor
+from source_debugging import SourceDebuggingVisitor
 import parent_visitor
 import separation_visitor
 import simplify_visitor
@@ -49,7 +50,8 @@ def tokenize(data, lexer):
     # Tokenize
     while 1:
         tok = lexer.token()
-        if not tok: break      # No more input        
+        if not tok: break      # No more input
+        print tok    
 
 def readFile(filename):
     logging.debug("readFile")
@@ -82,17 +84,17 @@ def indexLineNumbers(detokenHandle, options):
     logical_line = 0
     physical_to_logical_map = []
     line_bodies = []
+    line_offsets = [] # Offsets to the start of the line
     while True:
+        line_offsets.append(detokenHandle.tell())
         line = detokenHandle.readline()
         if not line:
             break
-        print line
         m = line_number_regex.match(line)
         if not m:
             raise CompileException("Missing line number at physical line %d (after logical line %d)" % (physical_line, logical_line))
         
         logical_line_string = m.group(1)
-        print "physical_line = %d, logical_line_string = '%s'" % (physical_line, logical_line_string)
         logical_line = int(logical_line_string)
         physical_to_logical_map.append(logical_line)
         line_bodies.append(m.group(2))
@@ -100,16 +102,13 @@ def indexLineNumbers(detokenHandle, options):
     
     data = '\n'.join(line_bodies)
     detokenHandle.close()
-    print "(physical, logical)"
-    print list(enumerate(physical_to_logical_map))
-    return data, physical_to_logical_map
+    return data, physical_to_logical_map, line_offsets
 
 def warnOnMissingNewline(data):
     logging.debug("warnOnMissingNewline")
     if not data.endswith('\n'):
         logging.warning("Missing newline at end of file")
-        data += '\n'
-    
+        data += '\n'  
     return data
 
 def buildLexer(options):
@@ -145,6 +144,12 @@ def parse(data, lexer, parser, options):
         sys.stderr.write("done\n")
     
     return parse_tree
+
+def setSourceDebugging(data, line_offsets, parse_tree):
+    logging.debug("Set source debugging")
+    # Read through the data and set character column information
+    sdv = SourceDebuggingVisitor(data, line_offsets)
+    parse_tree.accept(sdv)
 
 def setParents(parse_tree, options):
     logging.debug("setParents")
@@ -313,7 +318,7 @@ def compile(filename, options):
     
     data = readFile(filename)
     detokenHandle = detokenize(data, options)
-    data, physical_to_logical_map = indexLineNumbers(detokenHandle, options)
+    data, physical_to_logical_map, line_offsets = indexLineNumbers(detokenHandle, options)
     data = warnOnMissingNewline(data)
     lexer = buildLexer(options)
     
@@ -322,6 +327,7 @@ def compile(filename, options):
     
     parser = buildParser(options)
     parse_tree = parse(data, lexer, parser, options)
+    #setSourceDebugging(data, line_offsets, parse_tree)
     setParents(parse_tree, options)
     splitComplexNodes(parse_tree, options)
     simplifyAst(parse_tree, options)
@@ -330,9 +336,7 @@ def compile(filename, options):
     createForwardControlFlowGraph(parse_tree, line_mapper, options)
     entry_points = locateEntryPoints(parse_tree, line_mapper, options)  
     convertLongjumpsToExceptions(parse_tree, line_mapper, options)
-    print "Before subroutine conversion ", entry_points
     convertSubroutinesToProcedures(parse_tree, entry_points, line_mapper, options)
-    print "After subroutine conversion ", entry_points
     correlateLoops(entry_points, options)
     basic_blocks = identifyBasicBlocks(entry_points, options)
     ordered_basic_blocks = orderBasicBlocks(basic_blocks, options)
@@ -344,11 +348,14 @@ def compile(filename, options):
     dumpXmlBlocks(basic_blocks, filename + "_blocks.graphml", options)
 
     output_name = os.path.splitext(os.path.basename(filename))[0]
+    source_path = os.path.abspath(filename)
+    from urllib import pathname2url
+    source_url = 'file:' + pathname2url(source_path)
+    source_url = source_url.replace('C|', 'C:')
     if options.use_clr:
         from codegen.clr.generate import AssemblyGenerator
         ag = AssemblyGenerator(line_mapper)
-        exe_filename = ag.generateAssembly(filename, output_name, stv.globalSymbols, dv, ordered_basic_blocks)
-        
+        exe_filename = ag.generateAssembly(source_path, output_name, stv.globalSymbols, dv, ordered_basic_blocks)
         if options.create_il:
             # Create debuggable CIL files by disassebling and reassembling the
             # executable

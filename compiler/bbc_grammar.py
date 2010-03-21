@@ -68,12 +68,13 @@ def p_statement(p):
                  | empty'''
     p[0] = p[1]
     if p is not None and p[0] is not None:
-        print "Assigning line numbers"
-        p[0].startLine = p.linespan(1)[0]
-        p[0].endLine   = p.linespan(1)[1]
-        p[0].startPos  = p.lexspan(1)[0]
-        p[0].endPos    = p.lexspan(1)[1]
-        print p[0].startLine, p[0].endLine, p[0].startPos, p[0].endPos
+        # If it hasn't already been set by more specialised code
+        if p[0].startLine is None: 
+            print "Assigning line numbers"
+            p[0].startLine,  p[0].endLine = p.linespan(1)
+            # Note: endPos here will be *before* the last token - it can be refined later 
+            p[0].startPos,   p[0].endPos  = p.lexspan(1) 
+            print p[0].startLine, p[0].endLine, p[0].startPos, p[0].endPos
 
 #=============================================================================#
 # STATEMENTS
@@ -525,15 +526,29 @@ def p_if_single_stmt(p):
                       | IF expr THEN clause
                       | IF expr clause ELSE clause
                       | IF expr THEN clause ELSE clause'''
+
+    #if p is not None:
+    # Specialised debugging lexer positions set in here       
     if len(p) == 4:
         p[0] = If(condition = p[2], trueClause = p[3])
+        end_pos = p.lexpos(3)
     elif len(p) == 5:
         p[0] = If(condition = p[2], trueClause = p[4])
+        end_pos = p.lexpos(4)
     elif len(p) == 6:
         p[0] = If(condition = p[2], trueClause = p[3], falseClause = p[5])
+        end_pos = p.lexpos(3)
     elif len(p) == 7:
         p[0] = If(condition = p[2], trueClause = p[4], falseClause = p[6])
+        end_pos = p.lexpos(4)
+
+    print "Assigning IF line numbers"
     p[0].lineNum = p.lineno(1) - 1
+    p[0].startLine = p.lineno(1)
+    p[0].endLine = p.lineno(1)
+    p[0].startPos = p.lexpos(1)
+    assert end_pos is not None
+    p[0].endPos = end_pos
     
 # The clause is only used with IF statements and
 # possible ON statements when the result of an expression
