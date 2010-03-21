@@ -938,14 +938,15 @@ class CilVisitor(Visitor):
     def visitLocal(self, local):
         logging.debug("Visiting %s", local)
         #self.checkMark(local)
+        if self.__cil_debug:
+            self.generator.Emit(OpCodes.Nop)
         
     def visitGoto(self, goto):
         logging.debug("Visiting %s", goto)
         #self.checkMark(goto)
         # No code needs to be generated for GOTO statements here, so the
-        # routine which generates code for transfering control from the end
+        # routine which generates code for transferring control from the end
         # of a basic block with out-degree one will do it.
-        
         if self.__cil_debug:
             self.generator.Emit(OpCodes.Nop)
 
