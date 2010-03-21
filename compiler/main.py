@@ -51,7 +51,9 @@ def tokenize(data, lexer):
     while 1:
         tok = lexer.token()
         if not tok: break      # No more input
-        print tok    
+        print tok
+    # Running the lexer twice on the same input screws up the line numbers, so stop here.
+    sys.exit(0)  
 
 def readFile(filename):
     logging.debug("readFile")
