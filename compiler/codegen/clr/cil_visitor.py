@@ -75,6 +75,8 @@ class CilVisitor(Visitor):
         # Used for the local variable builder for the temporary queue used by INPUT
         self.__queue_builder = None
         
+        self.__cil_debug = True
+        
         # Get the type of OwnRuntime.BasicCommand so we can retrieve methods
         self.basic_commands_type = clr.GetClrType(OwlRuntime.BasicCommands)
         self.memory_map_type = clr.GetClrType(OwlRuntime.MemoryMap)
@@ -280,11 +282,13 @@ class CilVisitor(Visitor):
     
     def visitDefineProcedure(self, defproc):
         logging.debug("Visiting %s", defproc)
-        #self.checkMark(defproc)
-    
+        if self.__cil_debug:
+            self.generator.Emit(OpCodes.Nop)
+         
     def visitDefineFunction(self, deffn):
         logging.debug("Visiting %s", deffn)
-        #self.checkMark(deffn)
+        if self.__cil_debug:
+            self.generator.Emit(OpCodes.Nop)
                   
     def visitCallProcedure(self, call_proc):
         logging.debug("Visiting %s", call_proc)
@@ -341,6 +345,8 @@ class CilVisitor(Visitor):
         #self.checkMark(repeat)
         repeat.label = self.generator.DefineLabel()
         self.generator.MarkLabel(repeat.label)
+        if self.__cil_debug:
+            self.generator.Emit(OpCodes.Nop)
         
     def visitUntil(self, until):
         logging.debug("Visiting %s", until)
@@ -939,6 +945,9 @@ class CilVisitor(Visitor):
         # No code needs to be generated for GOTO statements here, so the
         # routine which generates code for transfering control from the end
         # of a basic block with out-degree one will do it.
+        
+        if self.__cil_debug:
+            self.generator.Emit(OpCodes.Nop)
 
     def visitAscFunc(self, asc):
         logging.debug("Visiting %s", asc)

@@ -426,6 +426,7 @@ class AssemblyGenerator(object):
                 symbol_table = node.symbolTable
                 for symbol in symbol_table.symbols.values():
                     local_builder = cv.generator.DeclareLocal(cts.symbolType(symbol))
+                    local_builder.SetLocalSymInfo(symbol.name) # Provide symbol name for debugger
                     self.createAndAttachLocalEmitters(local_builder, symbol)
         
         # TODO: Declare PRIVATE variables and attach load and store emitters to the symbols
