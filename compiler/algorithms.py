@@ -18,3 +18,12 @@ def representative(s):
 	:returns: A representative value from s
 	'''
 	return iter(s).next()
+
+def all_indices(string, sub, listindex=[], offset=0):
+    # call as l = allindices(string, sub)
+    # http://code.activestate.com/recipes/499314-find-all-indices-of-a-substring-in-a-given-string/
+    i = string.find(sub, offset)
+    while i >= 0:
+        listindex.append(i)
+        i = string.find(sub, i + 1)
+    return listindex

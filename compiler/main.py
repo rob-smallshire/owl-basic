@@ -42,6 +42,7 @@ from line_mapper import LineMapper
 import symbol_table_visitor
 from symbol_tables import SymbolTable
 import correlation_visitor
+from algorithms import all_indices
 
 def tokenize(data, lexer):
     # Give the lexer some input
@@ -81,14 +82,15 @@ def indexLineNumbers(detokenHandle, options):
     if options.verbose:
         sys.stderr.write("Mapping physical to logical line numbers... ")
     
-    line_number_regex = re.compile(r'\s*(\d+)\s*(.*)') # TODO: Factor this out of here and decoder
+    line_number_regex = re.compile(r'(\s*\d+\s*)(.*)') # TODO: Factor this out of here and decoder
     physical_line = 0
     logical_line = 0
     physical_to_logical_map = []
     line_bodies = []
-    line_offsets = [] # Offsets to the start of the line
+    line_number_prefixes = []
+    #line_offsets = [] # Offsets to the start of the line
     while True:
-        line_offsets.append(detokenHandle.tell())
+        #line_offsets.append(detokenHandle.tell())
         line = detokenHandle.readline()
         if not line:
             break
@@ -98,13 +100,22 @@ def indexLineNumbers(detokenHandle, options):
         
         logical_line_string = m.group(1)
         logical_line = int(logical_line_string)
+        line_number_prefix_length = len(logical_line_string)
+        line_number_prefixes.append(line_number_prefix_length)
         physical_to_logical_map.append(logical_line)
         line_bodies.append(m.group(2))
         physical_line += 1
     
     data = '\n'.join(line_bodies)
     detokenHandle.close()
-    return data, physical_to_logical_map, line_offsets
+    cr_indices = all_indices(data, '\n')
+    line_indices = [index + 1 for index in cr_indices]
+    line_offsets = [0]
+    line_offsets.extend(line_indices)
+    for i, offset in enumerate(line_offsets):
+        print "%d ==> %s" % (i, data[offset:offset + 5])
+    print data
+    return data, physical_to_logical_map, line_offsets , line_number_prefixes
 
 def warnOnMissingNewline(data):
     logging.debug("warnOnMissingNewline")
@@ -147,10 +158,10 @@ def parse(data, lexer, parser, options):
     
     return parse_tree
 
-def setSourceDebugging(data, line_offsets, parse_tree):
+def setSourceDebugging(data, line_offsets, line_number_prefixes, parse_tree):
     logging.debug("Set source debugging")
     # Read through the data and set character column information
-    sdv = SourceDebuggingVisitor(data, line_offsets)
+    sdv = SourceDebuggingVisitor(data, line_offsets, line_number_prefixes)
     parse_tree.accept(sdv)
 
 def setParents(parse_tree, options):
@@ -318,7 +329,7 @@ def compile(filename, options):
     
     data = readFile(filename)
     detokenHandle = detokenize(data, options)
-    data, physical_to_logical_map, line_offsets = indexLineNumbers(detokenHandle, options)
+    data, physical_to_logical_map, line_offsets, line_number_prefixes = indexLineNumbers(detokenHandle, options)
     data = warnOnMissingNewline(data)
     lexer = buildLexer(options)
     
@@ -327,7 +338,7 @@ def compile(filename, options):
     
     parser = buildParser(options)
     parse_tree = parse(data, lexer, parser, options)
-    setSourceDebugging(data, line_offsets, parse_tree)
+    setSourceDebugging(data, line_offsets, line_number_prefixes, parse_tree)
     setParents(parse_tree, options)
     splitComplexNodes(parse_tree, options)
     simplifyAst(parse_tree, options)
