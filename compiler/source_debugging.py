@@ -22,7 +22,7 @@ class SourceDebuggingVisitor(Visitor):
         self.__line_offsets = line_offsets
         self.__line_number_prefixes = line_number_prefixes
         self.__previous_statement = None
-        self.__separator_regex = re.compile(r'[\n:]') 
+        self.__separator_regex = re.compile(r'\s*([\n:]|ELSE)')
 
     def visitAstNode(self, node):
         node.forEachChild(self.visit)
@@ -44,12 +44,13 @@ class SourceDebuggingVisitor(Visitor):
         # If statements, don't need adjusting, so we unset self.__previous_statement
         self.__previous_statement = None
         # We must visit the children of IF statements
-        print "visiting trueClause"
-        self.visit(statement.trueClause)
-        
-        self.__previous_statement = None
-        print "visiting falseClause"
-        self.visit(statement.falseClause)
+        if statement.trueClause is not None:
+            print "visiting trueClause"
+            self.visit(statement.trueClause)
+
+        if statement.falseClause is not None:
+            print "visiting falseClause"
+            self.visit(statement.falseClause)
         
         # Set up the columns for this IF statement itself
         self.setStartAndEndColumns(statement)
@@ -66,27 +67,34 @@ class SourceDebuggingVisitor(Visitor):
                           for the end of the previous statement.
         '''
         if self.__previous_statement is not None:
-            # TODO: This needs to be smarter for compound IF statements - we need to separately visit
-            # IF statements to ensure the children are visited and in the grammar we should only include
-            # upto and including the THEN token as the marked part of the source.
-            # Define a half-open range [search_start_pos, search_end_pos) within which we expect
-            # to locate a statement boundary.
-            search_start_pos = self.__previous_statement.endPos
-            search_end_pos = statement.startPos
-            assert search_start_pos is not None
-            assert search_end_pos is not None
-            if search_start_pos < search_end_pos - 1:
-                # TODO: Some possible issue here with line end markers (because of normalised line endings), ignoring the contents of REMs, DATA and LiteralStrings
-                #       and line continuation
-                # Search for new-lines or COLONs within the search string
-                m = self.__separator_regex.search(self.__data, search_start_pos, search_end_pos)
-                if m is not None:
-                    self.__previous_statement.endPos = m.start()
-                else:
-                    print "Error: Could not locate statement separator in >>>%s<<<" % self.__data[search_start_pos:search_end_pos]
-            print ">>>%s<<<" % self.__data[self.__previous_statement.startPos:self.__previous_statement.endPos]
+            self.adjustEndPos(self.__previous_statement, statement.startPos)
             self.setStartAndEndColumns(self.__previous_statement)
 
+    def adjustEndPos(self, statement, limit_pos):
+        '''
+        Adjust the endPos attribute of statement forwards by searching from its existing
+        location forwards up to limit_pos for a statement separator (colon or newline)
+        '''
+        # Define a half-open range [search_start_pos, search_end_pos) within which we expect
+        # to locate a statement boundary.
+        print statement
+        print statement.startPos
+        print statement.endPos
+        search_start_pos = statement.endPos
+        search_end_pos = limit_pos
+        assert search_start_pos is not None
+        assert search_end_pos is not None
+        if search_start_pos < search_end_pos - 1:
+            # TODO: Some possible issue here with line end markers (because of normalised line endings), ignoring the contents of REMs, DATA and LiteralStrings
+            #       and line continuation
+            # Search for new-lines or COLONs within the search string
+            m = self.__separator_regex.search(self.__data, search_start_pos, search_end_pos)
+            if m is not None:
+                statement.endPos = m.start()
+            else:
+                print "Error: Could not locate statement separator in >>>%s<<<" % self.__data[search_start_pos:search_end_pos]
+        print ">>>%s<<<" % self.__data[statement.startPos:statement.endPos]
+    
     def setStartAndEndColumns(self, statement):
         '''
         Sets the start and end columns on statement from start and end lexing positions.

@@ -560,7 +560,13 @@ def p_clause(p):
 def p_implicit_goto(p):
     '''implicit_goto : factor'''
     stmt_list = StatementList()
-    stmt_list.append(Goto(targetLogicalLine = p[1]))
+    goto = Goto(targetLogicalLine = p[1])
+    goto.lineNum = p.lineno(1) - 1
+    goto.startLine = p.lineno(1)
+    goto.endLine = p.lineno(1)
+    goto.startPos = p.lexpos(1)
+    goto.endPos = p.lexpos(1)
+    stmt_list.append(goto)
     p[0] = stmt_list
         
 def p_if_multi_stmt(p):
