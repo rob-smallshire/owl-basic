@@ -418,7 +418,7 @@ class AssemblyGenerator(object):
         logging.debug("entry_point_node = %s", entry_point_node)
 
         # Create the visitor which holds the code generator 
-        cv = CilVisitor(self, method_builder, self.line_mapper)
+        cv = CilVisitor(self, method_builder, self.line_mapper, self.doc)
         
         # Declare LOCAL variables and attach load and store emitters to the symbols
         for node in depthFirstSearch(entry_point_node):
@@ -440,10 +440,12 @@ class AssemblyGenerator(object):
         # Generate the code for blocks and statements in sequence
         for basic_block in basic_blocks:
             for statement in basic_block.statements:
-                cv.checkMark(statement) # TODO: Could push this out a level to be per block
                 if statement.startLine and statement.startColumn and statement.endLine and statement.endColumn:
+                    print "MarkSequencePoint(%s, %d, %d, %d, %d)" % (self.doc, statement.startLine, statement.startColumn,
+                                                            statement.endLine,   statement.endColumn)
                     cv.generator.MarkSequencePoint(self.doc, statement.startLine, statement.startColumn,
                                                             statement.endLine,   statement.endColumn)
+                cv.checkMark(statement) # TODO: Could push this out a level to be per block
                 cv.visit(statement)
                 assert statement.block.is_label_marked
             self.transferControlToNextBlock(cv.generator, basic_block)

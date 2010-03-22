@@ -55,15 +55,17 @@ class CilVisitor(Visitor):
     '''
 
 
-    def __init__(self, assembly_generator, method_builder, line_mapper):
+    def __init__(self, assembly_generator, method_builder, line_mapper, doc):
         '''
         Create a new CilVisitor for generating a CIL method.
         :param type_builder A System.Reflection.Emit.TypeBuilder
         :param entry_point_node The entry point CFG node of a method
+        :param doc: The ISymbolDocumentWriter for debugging information
         '''
         self.assembly_generator = assembly_generator
         self.method_builder = method_builder
         self.line_mapper = line_mapper
+        self.doc = doc
 
         # Pending rvalue - used using generation of assignment statements
         # A callable used to defer generation of code to get the right stack sequence
@@ -88,7 +90,7 @@ class CilVisitor(Visitor):
         self.object_queue_type = generic_queue_type.MakeGenericType(
                            System.Array[System.Type]([clr.GetClrType(System.Object)]))
         self.generator = self.method_builder.GetILGenerator()
-        self.generator.Emit(OpCodes.Nop) # Every method needs at least one OpCode
+        #self.generator.Emit(OpCodes.Nop) # Every method needs at least one OpCode
 
     def symbolFromVariable(self, variable):
         name = variable.identifier
