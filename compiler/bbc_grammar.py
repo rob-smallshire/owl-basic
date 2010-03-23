@@ -288,9 +288,18 @@ def p_def_fn_stmt(p):
     
     if len(p) == 4:
         p[0] = DefineFunction(name = p[2], followingStatement = p[3])
+        end_pos = p.lexpos(2)
     elif len(p) == 7:
         p[0] = DefineFunction(name = p[2], formalParameters = p[4], followingStatement = p[6])
+        end_pos = p.lexpos(5)
+        
+    print "Assigning DEF PROC line numbers"
     p[0].lineNum = p.lineno(1) - 1
+    p[0].startLine = p.lineno(1)
+    p[0].endLine = p.lineno(1)
+    p[0].startPos = p.lexpos(1)
+    assert end_pos is not None
+    p[0].endPos = end_pos
     
 def p_end_fn_stmt(p):
     '''end_fn_stmt : EQ expr %prec UEQUAL'''
@@ -302,9 +311,18 @@ def p_def_proc_stmt(p):
                      | DEF PROC_ID LPAREN formal_arg_list RPAREN statement'''
     if len(p) == 4:
         p[0] = DefineProcedure(name = p[2], followingStatement = p[3])
+        end_pos = p.lexpos(2)
     elif len(p) == 7:
         p[0] = DefineProcedure(name = p[2], formalParameters = p[4], followingStatement = p[6])
+        end_pos = p.lexpos(5)
+    
+    print "Assigning DEF PROC line numbers"
     p[0].lineNum = p.lineno(1) - 1
+    p[0].startLine = p.lineno(1)
+    p[0].endLine = p.lineno(1)
+    p[0].startPos = p.lexpos(1)
+    assert end_pos is not None
+    p[0].endPos = end_pos
     
 def p_endproc_stmt(p):
     '''endproc_stmt : ENDPROC'''
