@@ -19,6 +19,7 @@ import errors
 from emitters import *
 from symbol_tables import hasSymbolTableLookup
 from algorithms import representative
+from typing.type_system import (OwlType, NumericOwlType, ObjectOwlType, StringOwlType, ByteArrayOwlType)
 
 # Load the OWL Runtime library so we may both call and reference
 # methods within it
@@ -217,29 +218,29 @@ class CilVisitor(Visitor):
         # TODO: Use multimethods in here : http://www.artima.com/weblogs/viewpost.jsp?thread=101605
         # 
         # Convert - Int32 can be exactly converted to Double
-        if cast.sourceType is IntegerType:
-            if cast.targetType is FloatType:
+        if cast.sourceType == IntegerOwlType():
+            if cast.targetType == FloatOwlType():
                 self.generator.Emit(OpCodes.Conv_R8)
                 return
-            if cast.targetType is ByteType:
+            if cast.targetType == ByteOwlType():
                 # TODO: Are BBC BASIC bytes signed, or unsigned?
                 # Should we truncate the value here to 0-255 ?
                 return
-        elif cast.sourceType is ByteType:
-            if cast.targetType is FloatType:
+        elif cast.sourceType == ByteOwlType():
+            if cast.targetType == FloatOwlType():
                 self.generator.Emit(OpCodes.Conv_R8)
                 return
-            if cast.targetType is IntegerType:
+            if cast.targetType == IntegerOwlType():
                 # TODO: Is this correct?
                 pass
-        elif cast.sourceType is FloatType:
-            if cast.targetType is IntegerType:
+        elif cast.sourceType == FloatOwlType():
+            if cast.targetType == IntegerOwlType():
                 self.generator.Emit(OpCodes.Conv_Ovf_I4)
                 return
-            if cast.targetType is PtrType:
+            if cast.targetType == AddressOwlType():
                 self.generator.Emit(OpCodes.Conv_Ovf_I)
                 return
-            if cast.targetType is ByteType:
+            if cast.targetType == ByteOwlType():
                 # TODO: Are BBC BASIC bytes signed, or unsigned?
                 self.generator.Emit(OpCodes.Conv_Ovf_I4)
                 return
@@ -478,7 +479,7 @@ class CilVisitor(Visitor):
 
         # DEBUG
         #self.generator.Emit(OpCodes.Dup)
-        #print_method = self.basic_commands_type.GetMethod("Print", System.Array[System.Type]([cts.mapType(StringType)]))
+        #print_method = self.basic_commands_type.GetMethod("Print", System.Array[System.Type]([cts.mapType(StringOwlType())]))
         #self.generator.Emit(OpCodes.Call, print_method)
         #self.generator.Emit(OpCodes.Call, self.basicCommandMethod('NewLine'))
         # END DEBUG
@@ -486,11 +487,11 @@ class CilVisitor(Visitor):
         # TODO: Convert to the required type
         system_convert_type = clr.GetClrType(System.Convert)
         
-        if read_func.actualType is ByteType:
+        if read_func.actualType == ByteOwlType():
             conversion_method = system_convert_type.GetMethod("ToByte", System.Array[System.Type]([clr.GetClrType(str)]))
-        elif read_func.actualType is IntegerType:
+        elif read_func.actualType == IntegerOwlType():
             conversion_method = system_convert_type.GetMethod("ToInt32", System.Array[System.Type]([clr.GetClrType(str)]))
-        elif read_func.actualType is FloatType:
+        elif read_func.actualType == FloatOwlType():
             conversion_method = system_convert_type.GetMethod("ToDouble", System.Array[System.Type]([clr.GetClrType(str)]))
         else:
             conversion_method = None
@@ -510,7 +511,7 @@ class CilVisitor(Visitor):
             # Pop the byte on top of the stack and write to the location
             logging.debug("Dyadic byte indirection l-value")
             # Are we writing to a block or directly into memory?
-            if dyadic.base.formalType is PtrType:
+            if dyadic.base.formalType == AddressOwlType():
                 # Writing directly into address space
                 # Push the array representing our faked address space onto the stack
                 memory_getter = self.memory_map_type.GetMethod("get_Memory")
@@ -525,7 +526,7 @@ class CilVisitor(Visitor):
                 
                 self.generator.Emit(OpCodes.Stelem_I1) # Store into the array
                 
-            elif dyadic.base.formalType is ByteArrayType:
+            elif dyadic.base.formalType == ByteArrayOwlType(): # TODO: Check for rank == 1
                 # Writing into a byte array
                 # TODO: get the array onto the stack
                 logging.critical("TODO: Dyadic byte indirection array l-value")
@@ -535,7 +536,7 @@ class CilVisitor(Visitor):
             # Read from the location and push onto the stack
             logging.debug("Dyadic byte indirection r-value")
             # Are we reading from a block or directly from memory?
-            if dyadic.base.formalType is PtrType:
+            if dyadic.base.formalType == AddressOwlType():
                 # Reading directly from address space
                 # Push the array representing our faked address space onto the stack
                 memory_getter = self.memory_map_type.GetMethod("get_Memory")
@@ -626,7 +627,7 @@ class CilVisitor(Visitor):
                             if cts_type.IsValueType:
                                 self.generator.Emit(OpCodes.Unbox, cts_type)
                             else:
-                                self.generator.Emit(OpCodes.Castclass, cts.mapType(StringType))
+                                self.generator.Emit(OpCodes.Castclass, cts.mapType(StringOwlType()))
                         self.__pending_rvalue = generateRValue
                         variable.accept(self)
                         assert self.__pending_rvalue is None
@@ -762,16 +763,16 @@ class CilVisitor(Visitor):
         operator.lhs.accept(self) # Lhs on the stack
         operator.rhs.accept(self) # Rhs on the stack
         
-        if binaryTypeMatch(operator, NumericType, NumericType):
+        if binaryTypeMatch(operator, NumericOwlType(), NumericOwlType()):
             self.generator.Emit(OpCodes.Ceq)
             self.convertClrToOwlBool()
-        elif binaryTypeMatch(operator, StringType, StringType):
-            string_equals_method = self.string_type.GetMethod("Equals", System.Array[System.Type]([cts.mapType(StringType),
-                                                                                                   cts.mapType(StringType)]))
+        elif binaryTypeMatch(operator, StringOwlType(), StringOwlType()):
+            string_equals_method = self.string_type.GetMethod("Equals", System.Array[System.Type]([cts.mapType(StringOwlType()),
+                                                                                                   cts.mapType(StringOwlType())]))
             self.generator.Emit(OpCodes.Call, string_equals_method) 
             self.convertClrToOwlBool()
-        elif binaryTypeMatch(operator, ObjectType, Type) or \
-             binaryTypeMatch(operator, Type, ObjectType):
+        elif binaryTypeMatch(operator, ObjectOwlType(), OwlType()) or \
+             binaryTypeMatch(operator, OwlType(), ObjectOwlType()):
             equal_method = self.basic_commands_type.GetMethod("Equal",
                                                               System.Array[System.Type]([cts.mapType(operator.lhs.actualType),
                                                                                          cts.mapType(operator.rhs.actualType)]))
@@ -782,18 +783,18 @@ class CilVisitor(Visitor):
         operator.lhs.accept(self) # Lhs on the stack
         operator.rhs.accept(self) # Rhs on the stack
         
-        if binaryTypeMatch(operator, NumericType, NumericType):
+        if binaryTypeMatch(operator, NumericOwlType(), NumericOwlType()):
             self.generator.Emit(OpCodes.Ceq)
             emitLdc_I4(self.generator, 1) # 0 ==> -1, 1 ==> 0
             self.generator.Emit(OpCodes.Sub)
-        elif binaryTypeMatch(operator, StringType, StringType):
-            string_equals_method = self.string_type.GetMethod("Equals", System.Array[System.Type]([cts.mapType(StringType),
-                                                                                                    cts.mapType(StringType)]))
+        elif binaryTypeMatch(operator, StringOwlType(), StringOwlType()):
+            string_equals_method = self.string_type.GetMethod("Equals", System.Array[System.Type]([cts.mapType(StringOwlType()),
+                                                                                                    cts.mapType(StringOwlType())]))
             self.generator.Emit(OpCodes.Call, string_equals_method)
             emitLdc_I4(self.generator, 1) # 0 ==> -1, 1 ==> 0
             self.generator.Emit(OpCodes.Sub)
-        elif binaryTypeMatch(operator, ObjectType, Type) or \
-             binaryTypeMatch(operator, Type, ObjectType):
+        elif binaryTypeMatch(operator, ObjectOwlType(), OwlType()) or \
+             binaryTypeMatch(operator, OwlType(), ObjectOwlType()):
             equal_method = self.basic_commands_type.GetMethod("NotEqual",
                                                               System.Array[System.Type]([cts.mapType(operator.lhs.actualType),
                                                                                          cts.mapType(operator.rhs.actualType)]))
@@ -804,33 +805,33 @@ class CilVisitor(Visitor):
         operator.lhs.accept(self) # Lhs on the stack
         operator.rhs.accept(self) # Rhs on the stack
         
-        if binaryTypeMatch(operator, NumericType, NumericType):
+        if binaryTypeMatch(operator, NumericOwlType(), NumericOwlType()):
             self.generator.Emit(OpCodes.Clt)
             self.convertClrToOwlBool()
-        elif binaryTypeMatch(operator, StringType, StringType):
-            string_equals_method = self.string_type.GetMethod("Compare", System.Array[System.Type]([cts.mapType(StringType),
-                                                                                                   cts.mapType(StringType)]))
+        elif binaryTypeMatch(operator, StringOwlType(), StringOwlType()):
+            string_equals_method = self.string_type.GetMethod("Compare", System.Array[System.Type]([cts.mapType(StringOwlType()),
+                                                                                                   cts.mapType(StringOwlType())]))
             self.generator.Emit(OpCodes.Call, string_equals_method)
             # Convert -1 => -1, 0 => 0, +1 => 0
             emitLdc_I4(self.generator, -1)
             self.generator.Emit(OpCodes.Ceq)
             self.convertClrToOwlBool()
-        elif binaryTypeMatch(operator, ObjectType, Type) or \
-             binaryTypeMatch(operator, Type, ObjectType):
+        elif binaryTypeMatch(operator, ObjectOwlType(), OwlType()) or \
+             binaryTypeMatch(operator, OwlType(), ObjectOwlType()):
             logging.critical("Unsupported less-than operand types")
 
     def visitLessThanEqual(self, operator):
         logging.debug("Visiting %s", operator)
         operator.lhs.accept(self) # Lhs on the stack
         operator.rhs.accept(self) # Rhs on the stack
-        if binaryTypeMatch(operator, NumericType, NumericType):
+        if binaryTypeMatch(operator, NumericOwlType(), NumericOwlType()):
             self.generator.Emit(OpCodes.Cgt)
             emitLdc_I4(self.generator, 0)
             self.generator.Emit(OpCodes.Ceq)
             self.convertClrToOwlBool()
-        elif binaryTypeMatch(operator, StringType, StringType):
-            string_equals_method = self.string_type.GetMethod("Compare", System.Array[System.Type]([cts.mapType(StringType),
-                                                                                                   cts.mapType(StringType)]))
+        elif binaryTypeMatch(operator, StringOwlType(), StringOwlType()):
+            string_equals_method = self.string_type.GetMethod("Compare", System.Array[System.Type]([cts.mapType(StringOwlType()),
+                                                                                                   cts.mapType(StringOwlType())]))
             self.generator.Emit(OpCodes.Call, string_equals_method)
             # Convert -1 => -1, 0 => -1, +1 => 0
             emitLdc_I4(self.generator, 1)
@@ -838,8 +839,8 @@ class CilVisitor(Visitor):
             emitLdc_I4(self.generator, 1)
             self.generator.Emit(OpCodes.Sub)
             
-        elif binaryTypeMatch(operator, ObjectType, Type) or \
-             binaryTypeMatch(operator, Type, ObjectType):
+        elif binaryTypeMatch(operator, ObjectOwlType(), OwlType()) or \
+             binaryTypeMatch(operator, OwlType(), ObjectOwlType()):
             logging.critical("Unsupported less-than operand types")
 
     def visitGreaterThan(self, operator):
@@ -847,19 +848,19 @@ class CilVisitor(Visitor):
         operator.lhs.accept(self) # Lhs on the stack
         operator.rhs.accept(self) # Rhs on the stack
         
-        if binaryTypeMatch(operator, NumericType, NumericType):
+        if binaryTypeMatch(operator, NumericOwlType(), NumericOwlType()):
             self.generator.Emit(OpCodes.Cgt)
             self.convertClrToOwlBool()
-        elif binaryTypeMatch(operator, StringType, StringType):
-            string_equals_method = self.string_type.GetMethod("Compare", System.Array[System.Type]([cts.mapType(StringType),
-                                                                                                   cts.mapType(StringType)]))
+        elif binaryTypeMatch(operator, StringOwlType(), StringOwlType()):
+            string_equals_method = self.string_type.GetMethod("Compare", System.Array[System.Type]([cts.mapType(StringOwlType()),
+                                                                                                   cts.mapType(StringOwlType())]))
             self.generator.Emit(OpCodes.Call, string_equals_method)
             # Convert -1 => 0, 0 => 0, +1 => -1
             emitLdc_I4(self.generator, +1)
             self.generator.Emit(OpCodes.Ceq)
             self.convertClrToOwlBool()
-        elif binaryTypeMatch(operator, ObjectType, Type) or \
-             binaryTypeMatch(operator, Type, ObjectType):
+        elif binaryTypeMatch(operator, ObjectOwlType(), OwlType()) or \
+             binaryTypeMatch(operator, OwlType(), ObjectOwlType()):
             logging.critical("Unsupported greater-than operand types")
 
     def visitGreaterThanEqual(self, operator):
@@ -867,14 +868,14 @@ class CilVisitor(Visitor):
         operator.lhs.accept(self) # Lhs on the stack
         operator.rhs.accept(self) # Rhs on the stack
         
-        if binaryTypeMatch(operator, NumericType, NumericType):
+        if binaryTypeMatch(operator, NumericOwlType(), NumericOwlType()):
             self.generator.Emit(OpCodes.Clt)
             emitLdc_I4(self.generator, 0)
             self.generator.Emit(OpCodes.Ceq)
             self.convertClrToOwlBool()
-        elif binaryTypeMatch(operator, StringType, StringType):
-            string_equals_method = self.string_type.GetMethod("Compare", System.Array[System.Type]([cts.mapType(StringType),
-                                                                                                   cts.mapType(StringType)]))
+        elif binaryTypeMatch(operator, StringOwlType(), StringOwlType()):
+            string_equals_method = self.string_type.GetMethod("Compare", System.Array[System.Type]([cts.mapType(StringOwlType()),
+                                                                                                   cts.mapType(StringOwlType())]))
             self.generator.Emit(OpCodes.Call, string_equals_method)
             # Convert -1 => 0, 0 => -1, +1 => -1
             emitLdc_I4(self.generator, -1)
@@ -882,8 +883,8 @@ class CilVisitor(Visitor):
             emitLdc_I4(self.generator, 1)
             self.generator.Emit(OpCodes.Sub)
             
-        elif binaryTypeMatch(operator, ObjectType, Type) or \
-             binaryTypeMatch(operator, Type, ObjectType):
+        elif binaryTypeMatch(operator, ObjectOwlType(), OwlType()) or \
+             binaryTypeMatch(operator, OwlType(), ObjectOwlType()):
             logging.critical("Unsupported greater-than operand types")
 
     def visitIf(self, if_stmt):
@@ -1023,7 +1024,7 @@ class CilVisitor(Visitor):
         logging.debug("Visiting %s", concat)
         concat.lhs.accept(self)
         concat.rhs.accept(self)
-        string_concat_method = getMethod(self.string_type, "Concat", StringType, StringType)
+        string_concat_method = getMethod(self.string_type, "Concat", StringOwlType(), StringOwlType())
         self.generator.Emit(OpCodes.Call, string_concat_method)
         
     def visitLeftStrFunc(self, left_str):
@@ -1031,9 +1032,9 @@ class CilVisitor(Visitor):
         left_str.source.accept(self)  # String the the stack
         if left_str.length is not None:
             left_str.length.accept(self)  # Length on the stack
-            method = self.basicCommandOverloadedMethod("LeftStr", StringType, IntegerType)
+            method = self.basicCommandOverloadedMethod("LeftStr", StringOwlType(), IntegerOwlType())
         else:
-            method = self.basicCommandOverloadedMethod("LeftStr", StringType)
+            method = self.basicCommandOverloadedMethod("LeftStr", StringOwlType())
         self.generator.Emit(OpCodes.Call, method)
                     
     def visitMidStrFunc(self, mid_str):
@@ -1042,9 +1043,9 @@ class CilVisitor(Visitor):
         mid_str.position.accept(self) # 1-based index on stack
         if mid_str.length is not None:
             mid_str.length.accept(self) # length on the stack
-            method = self.basicCommandOverloadedMethod("MidStr", StringType, IntegerType, IntegerType)
+            method = self.basicCommandOverloadedMethod("MidStr", StringOwlType(), IntegerOwlType(), IntegerOwlType())
         else:
-            method = self.basicCommandOverloadedMethod("MidStr", StringType, IntegerType)
+            method = self.basicCommandOverloadedMethod("MidStr", StringOwlType(), IntegerOwlType())
         self.generator.Emit(OpCodes.Call, method)
 
     def visitRightStrFunc(self, right_str):
@@ -1052,9 +1053,9 @@ class CilVisitor(Visitor):
         right_str.source.accept(self) # String on the stack        
         if right_str.length is not None:
             right_str.length.accept(self)
-            method = self.basicCommandOverloadedMethod("RightStr", StringType, IntegerType)
+            method = self.basicCommandOverloadedMethod("RightStr", StringOwlType(), IntegerOwlType())
         else:
-            method = self.basicCommandOverloadedMethod("RightStr", StringType)
+            method = self.basicCommandOverloadedMethod("RightStr", StringOwlType())
         self.generator.Emit(OpCodes.Call, method)
         
     def visitPosFunc(self, pos):

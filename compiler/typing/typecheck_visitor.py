@@ -3,9 +3,10 @@
 from visitor import Visitor
 from errors import *
 from utility import underscoresToCamelCase
-from bbc_types import *
 from bbc_ast import Cast, Concatenate
 from ast_utils import elideNode
+from typing.type_system import (NumericOwlType, ObjectOwlType, IntegerOwlType, FloatOwlType,
+                                ByteOwlType, PendingOwlType, StringOwlType)
 import sigil
 
 class TypecheckVisitor(Visitor):
@@ -88,7 +89,7 @@ class TypecheckVisitor(Visitor):
         self.visit(plus.rhs)
         
         # If this is a string concatenation, convert the node and re-visit
-        if plus.lhs.actualType == StringType and plus.rhs.actualType == StringType:
+        if plus.lhs.actualType == StringOwlType() and plus.rhs.actualType == StringOwlType():
             # TODO: Create a function in ast_utils to replace a node
             concat = Concatenate(lhs = plus.lhs, rhs = plus.rhs)
             concat.lhs.parent = concat
@@ -113,7 +114,7 @@ class TypecheckVisitor(Visitor):
             self.typeMismatch(operator, message)
         
         self.promoteNumericOperands(operator)
-        operator.actualType = IntegerType
+        operator.actualType = IntegerOwlType()
                         
     def visitArray(self, array):
         # Decode the variable name sigil into the actual type
@@ -152,8 +153,8 @@ class TypecheckVisitor(Visitor):
         
         for target in ongoto.targetLogicalLines:
             self.visit(target)
-            if target.actualType.isConvertibleTo(IntegerType):
-                self.insertCast(target, target.actualType, IntegerType)
+            if target.actualType.isConvertibleTo(IntegerOwlType()):
+                self.insertCast(target, target.actualType, IntegerOwlType())
             else:
                 self.typeMismatch(ongoto, "Target expressions must be convertible to Integer")
             
@@ -171,15 +172,16 @@ class TypecheckVisitor(Visitor):
         if not self.checkSignature(operator):
             return
         # TODO: Pull this out into a function
-        if operator.lhs.actualType is not IntegerType:
-            self.insertCast(operator.lhs, source=operator.lhs.actualType, target=IntegerType)
-        if operator.rhs.actualType is not IntegerType:
-            self.insertCast(operator.rhs, source=operator.rhs.actualType, target=IntegerType)
+        if operator.lhs.actualType != IntegerOwlType():
+            self.insertCast(operator.lhs, source=operator.lhs.actualType, target=IntegerOwlType())
+        if operator.rhs.actualType != IntegerOwlType():
+            self.insertCast(operator.rhs, source=operator.rhs.actualType, target=IntegerOwlType())
     
     def visitDyadicIndirection(self, dyadic):
         self.visit(dyadic.base)
         self.visit(dyadic.offset)
         if not self.checkSignature(dyadic):
+            # TODO: Error?
             return
         self.insertNumericCasts(dyadic)
         
@@ -187,9 +189,10 @@ class TypecheckVisitor(Visitor):
     def visitUnaryNumericFunc(self, func):
         self.visit(func.factor)
         if not self.checkSignature(func):
+            # TODO: Error?
             return
-        if func.factor.actualType is IntegerType:
-            self.insertCast(func.factor, source=func.factor.actualType, target=FloatType)
+        if func.factor.actualType == IntegerOwlType():
+            self.insertCast(func.factor, source=func.factor.actualType, target=FloatOwlType())
             
     def visitAbsFunc(self, abs):
         '''
@@ -198,31 +201,35 @@ class TypecheckVisitor(Visitor):
         '''
         self.visit(abs.factor)
         if not self.checkSignature(abs):
+            # TODO: Error?
             return
         abs.actualType = abs.factor.actualType
             
     def visitIntFunc(self, func):
         self.visit(func.factor)
         if not self.checkSignature(func):
+            # TODO: Error?
             return
-        if func.factor.actualType is IntegerType:
+        if func.factor.actualType == IntegerOwlType():
             elideNode(func)
     
     def visitNot(self, operator):
         self.visit(operator.factor)
         if not self.checkSignature(operator):
+            # TODO: Error?
             return
-        if operator.factor.actualType is not IntegerType:
-            self.insertCast(operator.factor, source = operator.factor.actualType, target=IntegerType)
+        if operator.factor.actualType != IntegerOwlType():
+            self.insertCast(operator.factor, source = operator.factor.actualType, target=IntegerOwlType())
     
     def visitInstr(self, instr):
         self.visit(instr.source)
         self.visit(instr.subString)
         self.visit(instr.startPosition)
         if not self.checkSignature(instr):
+            # TODO: Error?
             return
-        if instr.startPosition is not None and instr.startPosition.actualType is not IntegerType:
-            self.insertCast(instr.startPosition, source = instr.startPosition.actualType, target = IntegerType)
+        if instr.startPosition is not None and instr.startPosition.actualType != IntegerOwlType():
+            self.insertCast(instr.startPosition, source = instr.startPosition.actualType, target = IntegerOwlType())
     
     def visitUserFunc(self, func):
         # TODO Add to a list of user defined functions to be typechecked
@@ -269,7 +276,7 @@ class TypecheckVisitor(Visitor):
                 if actual.actualType.isConvertibleTo(formal.argument.actualType):
                     self.insertCast(actual, source=actual.actualType, target=formal.argument.actualType)
                 else:
-                    message = "Cannot pass actual parameter number %d of type %s to formal parameter type of %s" % (actual.actualType.__doc__, formal.argument.actualType.__doc__)
+                    message = "Cannot pass actual parameter number %d of type %s to formal parameter type of %s" % (n, actual.actualType.__doc__, formal.argument.actualType.__doc__)
                     self.typeMismatch(call, message)
                 n += 1 
         else:
@@ -285,10 +292,10 @@ class TypecheckVisitor(Visitor):
         def opTypes(lhs_type, rhs_type):
             return operator.lhs.actualType.isA(lhs_type) and operator.rhs.actualType.isA(rhs_type)
 
-        if   opTypes(ObjectType,  NumericType) : operator.actualType = FloatType
-        elif opTypes(NumericType, ObjectType)  : operator.actualType = FloatType
-        elif opTypes(IntegerType, FloatType)   : operator.actualType = FloatType
-        elif opTypes(FloatType,   IntegerType) : operator.actualType = FloatType
+        if   opTypes(ObjectOwlType(),  NumericOwlType()) : operator.actualType = FloatOwlType()
+        elif opTypes(NumericOwlType(), ObjectOwlType())  : operator.actualType = FloatOwlType()
+        elif opTypes(IntegerOwlType(), FloatOwlType())   : operator.actualType = FloatOwlType()
+        elif opTypes(FloatOwlType(),   IntegerOwlType()) : operator.actualType = FloatOwlType()
         elif operator.lhs.actualType == operator.rhs.actualType:
             operator.actualType = operator.lhs.actualType
         else:
@@ -309,14 +316,14 @@ class TypecheckVisitor(Visitor):
         def opTypes(lhs_type, rhs_type):
             return operator.lhs.actualType.isA(lhs_type) and operator.rhs.actualType.isA(rhs_type)
         
-        if opTypes(IntegerType, FloatType):
-            self.insertCast(operator.lhs, source=IntegerType, target=FloatType)
-        elif opTypes(ByteType, FloatType):
-            self.insertCast(operator.lhs, source=ByteType, target=FloatType)
-        elif opTypes(FloatType, IntegerType):
-            self.insertCast(operator.rhs, source=IntegerType, target=FloatType)
-        elif opTypes(FloatType, ByteType):
-            self.insertCast(operator.rhs, source=ByteType, target=FloatType)
+        if opTypes(IntegerOwlType(), FloatOwlType()):
+            self.insertCast(operator.lhs, source=IntegerOwlType(), target=FloatOwlType())
+        elif opTypes(ByteOwlType(), FloatOwlType()):
+            self.insertCast(operator.lhs, source=ByteOwlType(), target=FloatOwlType())
+        elif opTypes(FloatOwlType(), IntegerOwlType()):
+            self.insertCast(operator.rhs, source=IntegerOwlType(), target=FloatOwlType())
+        elif opTypes(FloatOwlType(), ByteOwlType()):
+            self.insertCast(operator.rhs, source=ByteOwlType(), target=FloatOwlType())
     
     def insertNumericCasts(self, node):
         """
@@ -328,7 +335,7 @@ class TypecheckVisitor(Visitor):
                 if isinstance(child, list):
                     formal_type = node.child_infos[name][0].formalType
                     if formal_type is not None:
-                        if formal_type.isA(NumericType):
+                        if formal_type.isA(NumericOwlType()):
                             for subchild in child:
                                 self.insertCast(subchild, source=subchild.actualType, target=formal_type)
                         else:
@@ -336,7 +343,7 @@ class TypecheckVisitor(Visitor):
                 else:
                     formal_type = node.child_infos[name].formalType
                     if formal_type is not None:
-                        if formal_type.isA(NumericType):
+                        if formal_type.isA(NumericOwlType()):
                             self.insertCast(child, source=child.actualType, target=formal_type)
                         else:
                             sys.stderr.write("Compiler construction: Missing formal type information on %s, %s\n" % (node, name))
@@ -347,7 +354,7 @@ class TypecheckVisitor(Visitor):
         if source is target:
             return
         
-        if source.isA(PendingType):
+        if source.isA(PendingOwlType()):
             logging.debug("Ignoring request to insert cast from PendingType")
             return
                
@@ -356,7 +363,7 @@ class TypecheckVisitor(Visitor):
             logging.debug("%s implicitly converted to %s" % (source, target))
             return
         
-        if source.isA(NumericType) and target.isA(NumericType):
+        if source.isA(NumericOwlType()) and target.isA(NumericOwlType()):
             if target.bitsIntegerPrecision() < source.bitsIntegerPrecision():
                 message = "of %s to %s, possible loss of data" % (source.__doc__, target.__doc__)
                 self.castWarning(child, message)
@@ -406,9 +413,12 @@ class TypecheckVisitor(Visitor):
         Checks that child_node of node is of formal_type. 
         """
         if child_node is not None:
+            print child_node
             actual_type = child_node.actualType
             if formal_type is not None: # None types do not need to be checked
+                print formal_type
                 if actual_type is not None:
+                    print actual_type
                     if not actual_type.isConvertibleTo(formal_type):
                         message = "%s of %s is incompatible with supplied parameter of type %s" % (info.description, node.description, actual_type.__doc__)
                         self.typeMismatch(node, message)
@@ -439,11 +449,11 @@ class TypecheckVisitor(Visitor):
         internal(message)
             
     def typeMismatch(self, node, message):
-        message = "Type mismatch: %s at line %d" % (message, node.lineNum)
+        message = "Type mismatch: %s at line %s" % (message, node.lineNum)
         error(message)
         
     def castWarning(self, node, message):
-        message = "Implicit conversion %s at line %d" % (message, node.lineNum)
+        message = "Implicit conversion %s at line %s" % (message, node.lineNum)
         warning(message)
         
         

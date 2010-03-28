@@ -5,15 +5,16 @@ Functions for dealing with the .NET Common Type System
 import clr
 import System
 
-import bbc_types
+from typing.type_system import (VoidOwlType, IntegerOwlType, FloatOwlType, StringOwlType,
+                                ByteOwlType, ObjectOwlType)
 
 # A basic mapping of OWL BASIC types to CTS types
-type_map = { bbc_types.VoidType    : System.Void,
-             bbc_types.IntegerType : System.Int32,
-             bbc_types.FloatType   : System.Double,
-             bbc_types.StringType  : System.String,
-             bbc_types.ByteType    : System.Byte,
-             bbc_types.ObjectType  : System.Object }
+type_map = { VoidOwlType()    : System.Void,
+             IntegerOwlType() : System.Int32,
+             FloatOwlType()   : System.Double,
+             StringOwlType()  : System.String,
+             ByteOwlType()    : System.Byte,
+             ObjectOwlType()  : System.Object }
 
 # Some useful .NET types
 string_array_type = clr.GetClrType(System.String).MakeArrayType()
@@ -41,9 +42,9 @@ def symbolType(symbol):
     :returns: A System.Type
     '''
     t = symbol.type
-    if t.isA(bbc_types.ArrayType):
+    if t.isArray():
         # TODO: Rank of array is important here
-        element_type = typeof(type_map[t.element_type])
+        element_type = typeof(type_map[t.elementType()])
         return element_type.MakeArrayType()
     return typeof(type_map[t])
 

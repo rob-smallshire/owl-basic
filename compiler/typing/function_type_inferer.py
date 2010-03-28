@@ -3,9 +3,9 @@ import operator
 from algorithms import all_equal
 from bbc_ast import ReturnFromFunction
 import errors
-from bbc_types import *
 from algorithms import representative
 from flow.traversal import depthFirstSearch
+from typing.type_system import PendingOwlType, ObjectOwlType, FloatOwlType
 
 def inferTypeOfFunction(entry_point):
     '''
@@ -34,17 +34,17 @@ def inferTypeOfFunction(entry_point):
     # If there is only one return type, set the type of the function, and exit
     if len(return_types) == 0:
         errors.warning("%s never returns at line %s" % (entry_point.name, entry_point.lineNum))
-    elif PendingType in return_types:
-         return_type = PendingType
+    elif PendingOwlType() in return_types:
+         return_type = PendingOwlType()
     elif len(return_types) == 1:
         return_type = representative(return_types)
-    elif reduce(operator.and_, [type.isA(NumericType) for type in return_types]):
-        # TODO: Modify all function returns to cast to FloatType, if necessary
-        return_type = FloatType
+    elif reduce(operator.and_, [type.isA(NumericOwlType()) for type in return_types]):
+        # TODO: Modify all function returns to cast to FloatOwlType, if necessary
+        return_type = FloatOwlType()
     else:
-        # TODO: Modify all function returns to box to ObjectType, if necessary
-        # TODO: Modify all function calls to unbox from ObjectType, to what?
-        return_type =  ObjectType
+        # TODO: Modify all function returns to box to ObjectOwlType, if necessary
+        # TODO: Modify all function calls to unbox from ObjectOwlType, to what?
+        return_type =  ObjectOwlType()
     entry_point.returnType = return_type
     return return_type
             

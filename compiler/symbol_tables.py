@@ -1,7 +1,7 @@
 import logging
 
 from singleton import Singleton
-from bbc_types import *
+from typing.type_system import IntegerOwlType, AddressOwlType, StringOwlType
 
 # Symbol table
 
@@ -121,7 +121,7 @@ class StaticSymbolTable(SymbolTable, Singleton):
         super(StaticSymbolTable, self).__init__("static symbol table", protection=SymbolTable.readonly, parent=None)
         # Add IntegerTypes for A% to Z% into the symbol table
         names = [chr(x) + '%' for x in range(65, 91)]
-        symbol_infos = [(name, SymbolInfo(name, IntegerType, SymbolInfo.modifier_static)) for name in names]
+        symbol_infos = [(name, SymbolInfo(name, IntegerOwlType(), SymbolInfo.modifier_static)) for name in names]
         self._symbols.update(symbol_infos)
          
 class SystemSymbolTable(SymbolTable, Singleton):
@@ -132,29 +132,29 @@ class SystemSymbolTable(SymbolTable, Singleton):
     def __init__(self):
         super(SystemSymbolTable, self).__init__("system symbol table", protection=SymbolTable.readonly, parent=StaticSymbolTable.getInstance())
         # Add the built-in symbols
-        self._symbols['@%'] = SymbolInfo('@%', IntegerType, SymbolInfo.modifier_system)
-        self._symbols['@hwnd%'] = SymbolInfo('@hwnd%', PtrType, SymbolInfo.modifier_system)
-        self._symbols['@memhdc%'] = SymbolInfo('@memhdc%', PtrType, SymbolInfo.modifier_system)
-        self._symbols['@prthdc%'] = SymbolInfo('@prthdc%', PtrType, SymbolInfo.modifier_system)
-        self._symbols['@hcsr%'] = SymbolInfo('@hcsr%', IntegerType, SymbolInfo.modifier_system)
-        self._symbols['@hpal%'] = SymbolInfo('@hpal%', IntegerType, SymbolInfo.modifier_system)
-        self._symbols['@msg%'] = SymbolInfo('@msg%', IntegerType, SymbolInfo.modifier_system)
-        self._symbols['@wparam%'] = SymbolInfo('@wparam%', IntegerType, SymbolInfo.modifier_system)
-        self._symbols['@lparam%'] = SymbolInfo('@lparam%', IntegerType, SymbolInfo.modifier_system)
-        self._symbols['@midi%'] = SymbolInfo('@midi%', IntegerType, SymbolInfo.modifier_system)
-        self._symbols['@ispal%'] = SymbolInfo('@ispal%', IntegerType, SymbolInfo.modifier_system)
-        self._symbols['@hfile%'] = SymbolInfo('@hfile%', IntegerType, SymbolInfo.modifier_system)
-        self._symbols['@vdu%'] = SymbolInfo('@vdu%', IntegerType, SymbolInfo.modifier_system)
-        self._symbols['@cmd$'] = SymbolInfo('@cmd$', StringType, SymbolInfo.modifier_system)
-        self._symbols['@dir$'] = SymbolInfo('@dir$', StringType, SymbolInfo.modifier_system)
-        self._symbols['@hmdi%'] = SymbolInfo('@hmdi%', IntegerType, SymbolInfo.modifier_system)
-        self._symbols['@flags%'] = SymbolInfo('@flags%', IntegerType, SymbolInfo.modifier_system)
-        self._symbols['@lib$'] = SymbolInfo('@lib$', StringType, SymbolInfo.modifier_system)
-        self._symbols['@ox%'] = SymbolInfo('@ox%', IntegerType, SymbolInfo.modifier_system)
-        self._symbols['@oy%'] = SymbolInfo('@oy%', IntegerType, SymbolInfo.modifier_system)
-        self._symbols['@tmp$'] = SymbolInfo('@tmp$', StringType, SymbolInfo.modifier_system)
-        self._symbols['@usr$'] = SymbolInfo('@usr$', StringType, SymbolInfo.modifier_system)
-        self._symbols['@vdu{}'] = SymbolInfo('@vdu{}', IntegerType, SymbolInfo.modifier_system)
+        self._symbols['@%'] = SymbolInfo('@%', IntegerOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@hwnd%'] = SymbolInfo('@hwnd%', AddressOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@memhdc%'] = SymbolInfo('@memhdc%', AddressOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@prthdc%'] = SymbolInfo('@prthdc%', AddressOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@hcsr%'] = SymbolInfo('@hcsr%', IntegerOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@hpal%'] = SymbolInfo('@hpal%', IntegerOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@msg%'] = SymbolInfo('@msg%', IntegerOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@wparam%'] = SymbolInfo('@wparam%', IntegerOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@lparam%'] = SymbolInfo('@lparam%', IntegerOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@midi%'] = SymbolInfo('@midi%', IntegerOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@ispal%'] = SymbolInfo('@ispal%', IntegerOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@hfile%'] = SymbolInfo('@hfile%', IntegerOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@vdu%'] = SymbolInfo('@vdu%', IntegerOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@cmd$'] = SymbolInfo('@cmd$', StringOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@dir$'] = SymbolInfo('@dir$', StringOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@hmdi%'] = SymbolInfo('@hmdi%', IntegerOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@flags%'] = SymbolInfo('@flags%', IntegerOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@lib$'] = SymbolInfo('@lib$', StringOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@ox%'] = SymbolInfo('@ox%', IntegerOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@oy%'] = SymbolInfo('@oy%', IntegerOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@tmp$'] = SymbolInfo('@tmp$', StringOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@usr$'] = SymbolInfo('@usr$', StringOwlType(), SymbolInfo.modifier_system)
+        self._symbols['@vdu{}'] = SymbolInfo('@vdu{}', IntegerOwlType(), SymbolInfo.modifier_system)
 
 class ScopedSymbolTable(SymbolTable):
     """

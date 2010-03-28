@@ -33,7 +33,7 @@ from flow import convertLongjumpsToExceptions
 from flow import convertSubroutinesToProcedures
 from flow import identifyBasicBlocks
 from flow import orderBasicBlocks
-from typing import typecheck
+from typing.typecheck import typecheck
 import data_visitor
 import gml_visitor
 from xml_blocks import dumpXmlBlocks

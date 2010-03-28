@@ -7,11 +7,11 @@ Created on 5 Jan 2010
 import logging
 
 from bbc_ast import DefineFunction
-from bbc_types import PendingType
 
 from typecheck_visitor import TypecheckVisitor
 from function_type_inferer import inferTypeOfFunction
 from set_function_type_visitor import SetFunctionTypeVisitor
+from typing.type_system import PendingOwlType
 
 
 def typecheck(parse_tree, entry_points, options):
@@ -40,7 +40,7 @@ def inferUserFunctionTypes(parse_tree, entry_points, options):
     for entry_point in entry_points.values():
         if isinstance(entry_point, DefineFunction):
             function_type = inferTypeOfFunction(entry_point)
-            if function_type is not PendingType:
+            if function_type != PendingOwlType():
                 setFunctionType(parse_tree, entry_point.name, function_type)
             else:
                 pending = True

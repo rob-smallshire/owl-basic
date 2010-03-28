@@ -3,8 +3,7 @@ import sys
 
 from utility import underscoresToCamelCase, hasprop
 from node import Node
-from options import *
-from bbc_types import *
+from options import Option, TypeOption, IntegerOption
 from visitor import Visitable
         
 class AstMeta(type):

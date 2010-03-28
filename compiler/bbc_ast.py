@@ -3,12 +3,17 @@
 import logging
 import re
 
-from ast_meta import *
-from bbc_types import *
-from cfg_vertex import *
+from ast_meta import AstNode, Node
+from options import (TypeOption, IntegerOption, StringOption, BoolOption,
+                     FloatOption)
+from cfg_vertex import CfgVertex
+from typing.type_system import (VoidOwlType, IntegerOwlType, ChannelOwlType,
+                                ScalarOwlType, NumericOwlType, StringOwlType,
+                                FloatOwlType, AddressOwlType, ByteOwlType,
+                                PendingOwlType, ArrayOwlType)
     
 class AstStatement(AstNode, CfgVertex):
-    formal_type = TypeOption(VoidType)
+    formal_type = TypeOption(VoidOwlType())
     actual_type = formal_type
     start_line = IntegerOption() # One-based line number for source level debugging
     end_line = IntegerOption()   # One-based line number for source level debugging
@@ -38,10 +43,10 @@ class MarkerStatement(AstStatement):
     following_statement = Node()
         
 class Beats(AstStatement):
-    counter = Node(formalType=IntegerType)
+    counter = Node(formalType=IntegerOwlType())
     
 class Channel(AstStatement):
-    channel = Node(formalType=IntegerType)
+    channel = Node(formalType=IntegerOwlType())
 
 class Dim(AstStatement):
     items = Node()
@@ -59,7 +64,7 @@ class AllocateArray(AstStatement):
     
 class AllocateBlock(AstStatement):
     identifier = Node()
-    size       = Node(formalType=IntegerType)
+    size       = Node(formalType=IntegerOwlType())
 
 class Assignment(AstStatement):
     l_value = Node()
@@ -74,8 +79,8 @@ class Decrement(AstStatement):
     r_value = Node()
 
 class Bput(AstStatement):
-    channel = Node(formalType=ChannelType)
-    data    = Node(formalType=IntegerType)
+    channel = Node(formalType=ChannelOwlType())
+    data    = Node(formalType=IntegerOwlType())
     # TODO: Whether newline is True or False depends on
     #       the type of data.  If data is a number,
     #       we default to False, if data is a string we
@@ -83,13 +88,13 @@ class Bput(AstStatement):
     newline = BoolOption(False)
 
 class Call(AstStatement):
-    address = Node()    # TODO: PtrType?
+    address = Node()    # TODO: AddressOwlType()?
     parameters = Node() # TODO: Needs handling in grammar
     
 class Circle(AstStatement):
-    x_coord = Node(formalType=IntegerType)
-    y_coord = Node(formalType=IntegerType)
-    radius  = Node(formalType=IntegerType)
+    x_coord = Node(formalType=IntegerOwlType())
+    y_coord = Node(formalType=IntegerOwlType())
+    radius  = Node(formalType=IntegerOwlType())
     fill    = BoolOption(False)
 
 class Cls(AstStatement):
@@ -99,18 +104,18 @@ class Clg(AstStatement):
     pass
 
 class Colour(AstStatement):
-    colour = Node(formalType=IntegerType)
-    tint   = Node(formalType=IntegerType)
+    colour = Node(formalType=IntegerOwlType())
+    tint   = Node(formalType=IntegerOwlType())
 
 class Palette(AstStatement):
-    physical_colour = Node(formalType=IntegerType)
-    logical_colour  = Node(formalType=IntegerType)
-    red             = Node(formalType=IntegerType)
-    green           = Node(formalType=IntegerType)
-    blue            = Node(formalType=IntegerType)
+    physical_colour = Node(formalType=IntegerOwlType())
+    logical_colour  = Node(formalType=IntegerOwlType())
+    red             = Node(formalType=IntegerOwlType())
+    green           = Node(formalType=IntegerOwlType())
+    blue            = Node(formalType=IntegerOwlType())
 
 class Case(AstStatement):
-    condition    = Node(ScalarType)
+    condition    = Node(ScalarOwlType())
     when_clauses = Node()
     
 class WhenClauseList(AstNode):
@@ -127,7 +132,7 @@ class OtherwiseClause(AstNode):
     statements = Node()
 
 class Close(AstStatement):
-    channel = Node(formalType=ChannelType)
+    channel = Node(formalType=ChannelOwlType())
 
 class Data(AstStatement):
     data = StringOption()
@@ -144,7 +149,7 @@ class DefineFunction(DefinitionStatement):
     return_type = TypeOption(None) # Used to store the return type
 
 class ReturnFromFunction(AstStatement):
-    return_value = Node(formalType=ScalarType) # TODO: Can functions return arrays 
+    return_value = Node(formalType=ScalarOwlType()) # TODO: Can functions return arrays 
 
 class DefineProcedure(DefinitionStatement):
     "DEF PROC"
@@ -155,74 +160,74 @@ class ReturnFromProcedure(AstStatement):
 
 class ForToStep(AstStatement):
     identifier = Node()
-    first      = Node(formalType=NumericType)
-    last       = Node(formalType=NumericType)
-    step       = Node(formalType=NumericType)
+    first      = Node(formalType=NumericOwlType())
+    last       = Node(formalType=NumericOwlType())
+    step       = Node(formalType=NumericOwlType())
 
 class Next(AstStatement):
     identifiers = Node()
 
 class Draw(AstStatement):
     "DRAW"
-    x_coord = Node(formalType=IntegerType, description="The x co-ordinate")
-    y_coord = Node(formalType=IntegerType, description="The y co-ordinate")
+    x_coord = Node(formalType=IntegerOwlType(), description="The x co-ordinate")
+    y_coord = Node(formalType=IntegerOwlType(), description="The y co-ordinate")
     relative = BoolOption(False)
 
 class Ellipse(AstStatement):
-    x_coord    = Node(formalType=IntegerType)
-    y_coord    = Node(formalType=IntegerType)
-    semi_major = Node(formalType=IntegerType)
-    semi_minor = Node(formalType=IntegerType)
-    radians    = Node(formalType=IntegerType)
+    x_coord    = Node(formalType=IntegerOwlType())
+    y_coord    = Node(formalType=IntegerOwlType())
+    semi_major = Node(formalType=IntegerOwlType())
+    semi_minor = Node(formalType=IntegerOwlType())
+    radians    = Node(formalType=IntegerOwlType())
     fill       = BoolOption(False)
 
 class GenerateError(AstStatement):
-    number      = Node(formalType=IntegerType)
-    description = Node(formalType=StringType)
+    number      = Node(formalType=IntegerOwlType())
+    description = Node(formalType=StringOwlType())
     
 class ReturnError(AstStatement):
-    number      = Node(formalType=IntegerType)
-    description = Node(formalType=StringType)      
+    number      = Node(formalType=IntegerOwlType())
+    description = Node(formalType=StringOwlType())      
 
 class End(AstStatement):
     pass
 
 class Envelope(AstStatement):
-    n                 = Node(formalType=IntegerType)
-    t                 = Node(formalType=IntegerType)
-    pitch1            = Node(formalType=IntegerType)
-    pitch2            = Node(formalType=IntegerType)
-    pitch3            = Node(formalType=IntegerType)
-    num_steps_1       = Node(formalType=IntegerType)
-    num_steps_2       = Node(formalType=IntegerType)
-    num_steps_3       = Node(formalType=IntegerType)
-    amplitude_attack  = Node(formalType=IntegerType)
-    amplitude_decay   = Node(formalType=IntegerType)
-    amplitude_sustain = Node(formalType=IntegerType)
-    amplitude_release = Node(formalType=IntegerType)
-    target_attack     = Node(formalType=IntegerType)
-    target_decay      = Node(formalType=IntegerType)
+    n                 = Node(formalType=IntegerOwlType())
+    t                 = Node(formalType=IntegerOwlType())
+    pitch1            = Node(formalType=IntegerOwlType())
+    pitch2            = Node(formalType=IntegerOwlType())
+    pitch3            = Node(formalType=IntegerOwlType())
+    num_steps_1       = Node(formalType=IntegerOwlType())
+    num_steps_2       = Node(formalType=IntegerOwlType())
+    num_steps_3       = Node(formalType=IntegerOwlType())
+    amplitude_attack  = Node(formalType=IntegerOwlType())
+    amplitude_decay   = Node(formalType=IntegerOwlType())
+    amplitude_sustain = Node(formalType=IntegerOwlType())
+    amplitude_release = Node(formalType=IntegerOwlType())
+    target_attack     = Node(formalType=IntegerOwlType())
+    target_decay      = Node(formalType=IntegerOwlType())
 
 class Fill(AstStatement):
-    x_coord = Node(formalType=IntegerType)
-    y_coord = Node(formalType=IntegerType)
+    x_coord = Node(formalType=IntegerOwlType())
+    y_coord = Node(formalType=IntegerOwlType())
     relative = BoolOption(False)
 
 class Gcol(AstStatement):
-    mode           = Node(formalType=IntegerType)
-    logical_colour = Node(formalType=IntegerType)
-    tint           = Node(formalType=IntegerType)
+    mode           = Node(formalType=IntegerOwlType())
+    logical_colour = Node(formalType=IntegerOwlType())
+    tint           = Node(formalType=IntegerOwlType())
 
 class Goto(AstStatement):
-    target_logical_line = Node(formalType=IntegerType)
+    target_logical_line = Node(formalType=IntegerOwlType())
 
 class OnGoto(AstStatement):
-    switch = Node(formalType=IntegerType)
+    switch = Node(formalType=IntegerOwlType())
     target_logical_lines = Node()
     out_of_range_clause = Node()
 
 class Gosub(AstStatement):
-    target_logical_line = Node(formalType=IntegerType)
+    target_logical_line = Node(formalType=IntegerOwlType())
 
 class Return(AstStatement):
     pass
@@ -233,7 +238,7 @@ class Input(AstStatement):
     input_line = BoolOption(False)
 
 class InputFile(AstStatement):
-    channel = Node(formalType=ChannelType)
+    channel = Node(formalType=ChannelOwlType())
     items = Node()
 
 class InputList(AstNode):
@@ -249,72 +254,72 @@ class InputManipulator(AstNode):
     manipulator = StringOption()
 
 class Install(AstStatement):
-    filename = Node(formalType=StringType)
+    filename = Node(formalType=StringOwlType())
 
 class If(AstStatement):
-    condition = Node(formalType=IntegerType)
+    condition = Node(formalType=IntegerOwlType())
     true_clause = Node()
     false_clause = Node()
 
 class LoadLibrary(AstStatement):
-    filename = Node(formalType=StringType)
+    filename = Node(formalType=StringOwlType())
 
 class Local(AstStatement):
     variables = Node()
 
 class Mandel(AstStatement):
     "MANDEL"
-    i_coord = Node(formalType=FloatType, description="The i coordinate")
-    j_coord = Node(formalType=FloatType, description="The j coordinate")
+    i_coord = Node(formalType=FloatOwlType(), description="The i coordinate")
+    j_coord = Node(formalType=FloatOwlType(), description="The j coordinate")
 
 class Move(AstStatement):
     "MOVE"
-    x_coord = Node(formalType=IntegerType, description="The x coordinate")
-    y_coord = Node(formalType=IntegerType, description="The y coordinate")
+    x_coord = Node(formalType=IntegerOwlType(), description="The x coordinate")
+    y_coord = Node(formalType=IntegerOwlType(), description="The y coordinate")
     relative = BoolOption(False)
 
 class Mode(AstStatement):
     "MODE"
-    number         = Node(formalType=IntegerType)
-    width          = Node(formalType=IntegerType)
-    height         = Node(formalType=IntegerType)
-    bits_per_pixel = Node(formalType=IntegerType)
-    frame_rate     = Node(formalType=IntegerType) 
+    number         = Node(formalType=IntegerOwlType())
+    width          = Node(formalType=IntegerOwlType())
+    height         = Node(formalType=IntegerOwlType())
+    bits_per_pixel = Node(formalType=IntegerOwlType())
+    frame_rate     = Node(formalType=IntegerOwlType()) 
 
 class Mouse(AstStatement):
     "MOUSE"
-    x_coord = Node(formalType=IntegerType)
-    y_coord = Node(formalType=IntegerType)
-    buttons = Node(formalType=IntegerType)
-    time    = Node(formalType=IntegerType)
+    x_coord = Node(formalType=IntegerOwlType())
+    y_coord = Node(formalType=IntegerOwlType())
+    buttons = Node(formalType=IntegerOwlType())
+    time    = Node(formalType=IntegerOwlType())
 
 class MouseStep(AstStatement):
     "MOUSE STEP"
-    x_coeff = Node(formalType=NumericType)
-    y_coeff = Node(formalType=NumericType)
+    x_coeff = Node(formalType=NumericOwlType())
+    y_coeff = Node(formalType=NumericOwlType())
 
 class MouseColour(AstStatement):
-    logicalColour = Node(formalType=IntegerType)
-    red = Node(formalType=IntegerType)
-    green = Node(formalType=IntegerType)
-    blue = Node(formalType=IntegerType)
+    logicalColour = Node(formalType=IntegerOwlType())
+    red = Node(formalType=IntegerOwlType())
+    green = Node(formalType=IntegerOwlType())
+    blue = Node(formalType=IntegerOwlType())
 
 class MousePosition(AstStatement):
     "MOUSE TO"
-    x_coord     = Node(formalType=IntegerType)
-    y_coord     = Node(formalType=IntegerType)
+    x_coord     = Node(formalType=IntegerOwlType())
+    y_coord     = Node(formalType=IntegerOwlType())
     moveMouse   = BoolOption(True)
     movePointer = BoolOption(True)
 
 class MousePointer(AstStatement):
-    shape       = Node(formalType=IntegerType)
+    shape       = Node(formalType=IntegerOwlType())
     
 class MouseRectangleOn(AstStatement):
     "MOUSE RECTANGLE"
-    left   = Node(formalType=IntegerType)
-    bottom = Node(formalType=IntegerType)
-    right  = Node(formalType=IntegerType)
-    top    = Node(formalType=IntegerType)
+    left   = Node(formalType=IntegerOwlType())
+    bottom = Node(formalType=IntegerOwlType())
+    right  = Node(formalType=IntegerOwlType())
+    top    = Node(formalType=IntegerOwlType())
     
 class MouseRectangleOff(AstStatement):
     pass
@@ -329,23 +334,23 @@ class Off(AstStatement):
 
 class Origin(AstStatement):
     "ORIGIN"
-    x_coord = Node(formalType=IntegerType)
-    y_coord = Node(formalType=IntegerType)
+    x_coord = Node(formalType=IntegerOwlType())
+    y_coord = Node(formalType=IntegerOwlType())
 
 class Oscli(AstStatement):
     "OSCLI"
-    command = Node(formalType=StringType)
+    command = Node(formalType=StringOwlType())
 
 class Plot(AstStatement):
     "PLOT"
-    mode    = Node(formalType=IntegerType)
-    x_coord = Node(formalType=IntegerType)
-    y_coord = Node(formalType=IntegerType)
+    mode    = Node(formalType=IntegerOwlType())
+    x_coord = Node(formalType=IntegerOwlType())
+    y_coord = Node(formalType=IntegerOwlType())
     relative = BoolOption(False)
 
 class Point(AstStatement):
-    x_coord = Node(formalType=IntegerType)
-    y_coord = Node(formalType=IntegerType)
+    x_coord = Node(formalType=IntegerOwlType())
+    y_coord = Node(formalType=IntegerOwlType())
     relative = BoolOption(False)
     
 class Print(AstStatement):
@@ -367,7 +372,7 @@ class FormatManipulator(PrintManipulator):
     manipulator = StringOption()
 
 class PrintFile(AstStatement):
-    channel = Node(formalType=ChannelType)
+    channel = Node(formalType=ChannelOwlType())
     items = Node()
 
 class CallProcedure(AstStatement):
@@ -380,22 +385,22 @@ class Private(AstStatement):
 
 class Quit(AstStatement):
     "QUIT"
-    code = Node(formalType=IntegerType)
+    code = Node(formalType=IntegerOwlType())
 
 class Rectangle(AstStatement):
-    x_coord = Node(formalType=IntegerType)
-    y_coord = Node(formalType=IntegerType)
-    width   = Node(formalType=IntegerType)
-    height  = Node(formalType=IntegerType) # None ==> square
+    x_coord = Node(formalType=IntegerOwlType())
+    y_coord = Node(formalType=IntegerOwlType())
+    width   = Node(formalType=IntegerOwlType())
+    height  = Node(formalType=IntegerOwlType()) # None ==> square
     fill    = BoolOption(False)
 
 class RectangleBlit(AstStatement):
-    x_coord_source = Node(formalType=IntegerType)
-    y_coord_source = Node(formalType=IntegerType)
-    width          = Node(formalType=IntegerType)
-    height         = Node(formalType=IntegerType) # None ==> square
-    x_coord_target = Node(formalType=IntegerType)
-    y_coord_target = Node(formalType=IntegerType)
+    x_coord_source = Node(formalType=IntegerOwlType())
+    y_coord_source = Node(formalType=IntegerOwlType())
+    width          = Node(formalType=IntegerOwlType())
+    height         = Node(formalType=IntegerOwlType()) # None ==> square
+    x_coord_target = Node(formalType=IntegerOwlType())
+    y_coord_target = Node(formalType=IntegerOwlType())
 
 class CopyRectangle(RectangleBlit):
     pass
@@ -420,14 +425,14 @@ class Repeat(MarkerStatement):
 
 class Restore(AstStatement):
     "RESTORE"
-    target_logical_line = Node(formalType=IntegerType)
+    target_logical_line = Node(formalType=IntegerOwlType())
 
 class Sound(AstStatement):
     "SOUND"
-    channel   = Node(formalType=IntegerType)
-    amplitude = Node(formalType=IntegerType)
-    pitch     = Node(formalType=IntegerType)
-    duration  = Node(formalType=IntegerType)
+    channel   = Node(formalType=IntegerOwlType())
+    amplitude = Node(formalType=IntegerOwlType())
+    pitch     = Node(formalType=IntegerOwlType())
+    duration  = Node(formalType=IntegerOwlType())
     
 class Mute(AstStatement):
     mute = BoolOption(False)
@@ -440,8 +445,8 @@ class Stop(AstStatement):
     pass
 
 class Stereo(AstStatement):
-    channel =  Node(formalType=IntegerType)
-    position = Node(formalType=IntegerType)
+    channel =  Node(formalType=IntegerOwlType())
+    position = Node(formalType=IntegerOwlType())
 
 class Sys(AstStatement):
     routine          = Node()
@@ -453,21 +458,21 @@ class Tab(PrintManipulator):
     pass
 
 class TabH(Tab):
-    x_coord = Node(formalType=IntegerType)
+    x_coord = Node(formalType=IntegerOwlType())
 
 class TabXY(Tab):
-    x_coord = Node(formalType=IntegerType)
-    y_coord = Node(formalType=IntegerType)
+    x_coord = Node(formalType=IntegerOwlType())
+    y_coord = Node(formalType=IntegerOwlType())
 
 class Tempo(AstStatement):
-    rate = Node(formalType=IntegerType)
+    rate = Node(formalType=IntegerOwlType())
 
 class Tint(AstStatement):
-    option = Node(formalType=IntegerType)
-    tint   = Node(formalType=IntegerType)
+    option = Node(formalType=IntegerOwlType())
+    tint   = Node(formalType=IntegerOwlType())
 
 class Spc(PrintManipulator):
-    spaces = Node(formalType=IntegerType)
+    spaces = Node(formalType=IntegerOwlType())
 
 class VariableList(AstNode):
     variables = [Node()]
@@ -510,20 +515,20 @@ class VduList(AstNode):
         self.items.append(item)
 
 class VduItem(AstNode):
-    item = Node(formalType=IntegerType)
+    item = Node(formalType=IntegerOwlType())
     length = IntegerOption(default=1)
     
 class While(AstStatement):
-    condition = Node(formalType=IntegerType)
+    condition = Node(formalType=IntegerOwlType())
 
 class Endwhile(AstStatement):
     pass
 
 class Width(AstStatement):
-    line_width = Node(formalType=IntegerType)
+    line_width = Node(formalType=IntegerOwlType())
 
 class Wait(AstStatement):
-    centiseconds = Node(formalType=IntegerType)
+    centiseconds = Node(formalType=IntegerOwlType())
 
 class ExpressionList(AstNode):
     expressions = [Node()]
@@ -550,7 +555,7 @@ class FormalReferenceArgument(AstNode):
     argument = Node()
 
 class UnaryNumericOperator(AstNode):
-    factor = Node(formalType=NumericType)
+    factor = Node(formalType=NumericOwlType())
     
 class UnaryPlus(UnaryNumericOperator):
     pass
@@ -559,49 +564,49 @@ class UnaryMinus(UnaryNumericOperator):
     pass
 
 class UnaryIndirection(Value):
-    expression = Node(formalType=PtrType)
+    expression = Node(formalType=AddressOwlType())
 
 class UnaryByteIndirection(UnaryIndirection):
-    formal_type = TypeOption(ByteType)
+    formal_type = TypeOption(ByteOwlType())
     actual_type = formal_type
     
 class UnaryIntegerIndirection(UnaryIndirection):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
 
 class UnaryStringIndirection(UnaryIndirection):
-    formal_type = TypeOption(StringType)
+    formal_type = TypeOption(StringOwlType())
     actual_type = formal_type
 
 class UnaryFloatIndirection(UnaryIndirection):
-    formal_type = TypeOption(FloatType)
+    formal_type = TypeOption(FloatOwlType())
     actual_type = formal_type
 
 class DyadicIndirection(Value):
-    base   = Node(formalType=PtrType)
-    offset = Node(formalType=IntegerType)
+    base   = Node(formalType=AddressOwlType())
+    offset = Node(formalType=IntegerOwlType())
 
 class DyadicByteIndirection(DyadicIndirection):
-    formal_type = TypeOption(ByteType)
+    formal_type = TypeOption(ByteOwlType())
     actual_type = formal_type
 
 class DyadicIntegerIndirection(DyadicIndirection):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
     
 class Not(AstNode):
     "NOT"
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
-    factor = Node(formalType=IntegerType)
+    factor = Node(formalType=IntegerOwlType())
 
 class BinaryOperator(AstNode):
     lhs = Node()
     rhs = Node()
 
 class BinaryNumericOperator(BinaryOperator):
-    lhs = Node(formalType=NumericType)
-    rhs = Node(formalType=NumericType)
+    lhs = Node(formalType=NumericOwlType())
+    rhs = Node(formalType=NumericOwlType())
 
 class Plus(BinaryNumericOperator):
     "+"
@@ -627,10 +632,10 @@ class MatrixMultiply(BinaryOperator):
     pass
 
 class BinaryIntegerOperator(BinaryOperator):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
-    lhs = Node(formalType=IntegerType)
-    rhs = Node(formalType=IntegerType)
+    lhs = Node(formalType=IntegerOwlType())
+    rhs = Node(formalType=IntegerOwlType())
 
 class IntegerDivide(BinaryIntegerOperator):
     pass
@@ -639,7 +644,7 @@ class IntegerModulus(BinaryIntegerOperator):
     pass
 
 class RelationalOperator(BinaryOperator):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
 
 class Equal(RelationalOperator):
@@ -692,60 +697,60 @@ class Eor(BinaryIntegerOperator):
 
 class AbsFunc(AstNode):
     "ABS"
-    formal_type = TypeOption(NumericType)
-    factor = Node(formalType=NumericType)
+    formal_type = TypeOption(NumericOwlType())
+    factor = Node(formalType=NumericOwlType())
 
 class EndValue(Value):
     "END"
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     expression = Node()
 
 class ExtValue(Value):
     "EXT"
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     channel = Node()
 
 class HimemValue(Value):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
 
 class LomemValue(Value):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
 
 class PageValue(Value):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     pass
 
 class TimeValue(Value):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     pass
 
 class TimeStrValue(Value):
-    formal_type = TypeOption(StringType)
+    formal_type = TypeOption(StringOwlType())
     pass
 
 class PtrValue(Value):
-    channel = Node(formalType=ChannelType)
+    channel = Node(formalType=ChannelOwlType())
 
 class MidStrLValue(Value):
-    target = Node(nodeType=Variable, formalType=StringType) # TODO: This needs to constrained by the type checker to be a Variable : nodeType=Variable ?
-    position = Node(formalType=IntegerType)
-    length = Node(formalType=IntegerType)
+    target = Node(nodeType=Variable, formalType=StringOwlType()) # TODO: This needs to constrained by the type checker to be a Variable : nodeType=Variable ?
+    position = Node(formalType=IntegerOwlType())
+    length = Node(formalType=IntegerOwlType())
     
 class RightStrLValue(Value):
-    target = Node(nodeType=Variable, formalType=StringType) # TODO: This needs to constrained by the type checker to be a Variable : nodeType=Variable ?
-    length = Node(formalType=IntegerType)
+    target = Node(nodeType=Variable, formalType=StringOwlType()) # TODO: This needs to constrained by the type checker to be a Variable : nodeType=Variable ?
+    length = Node(formalType=IntegerOwlType())
 
 class LeftStrLValue(Value):
-    target = Node(nodeType=Variable, formalType=StringType)
-    length = Node(formalType=IntegerType)
+    target = Node(nodeType=Variable, formalType=StringOwlType())
+    length = Node(formalType=IntegerOwlType())
 
 class UnaryNumericFunc(AstNode):
-    formal_type = TypeOption(FloatType)
+    formal_type = TypeOption(FloatOwlType())
     actual_type = formal_type
-    factor = Node(formalType=NumericType, description="The parameter")    
+    factor = Node(formalType=NumericOwlType(), description="The parameter")    
 
 class UserFunc(AstNode):
-    formal_type = TypeOption(PendingType)
+    formal_type = TypeOption(PendingOwlType())
     actual_type = formal_type
     name = StringOption()
     actual_parameters = Node()
@@ -755,15 +760,15 @@ class AcsFunc(UnaryNumericFunc):
 
 class AdvalFunc(AstNode):
     "ADVAL"
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
-    factor = Node(formalType=IntegerType)
+    factor = Node(formalType=IntegerOwlType())
 
 class AscFunc(AstNode):
     "ASC"
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
-    factor = Node(formalType=StringType)
+    factor = Node(formalType=StringOwlType())
     
 class AsnFunc(UnaryNumericFunc):
     "ASN"
@@ -772,116 +777,116 @@ class AtnFunc(UnaryNumericFunc):
     "ATN"
 
 class BeatFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
 
 class BeatsFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
 
 class BgetFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
     channel = Node()
 
 class ChrStrFunc(AstNode):
-    formal_type = TypeOption(StringType)
+    formal_type = TypeOption(StringOwlType())
     actual_type = formal_type
-    factor = Node(formalType=IntegerType)
+    factor = Node(formalType=IntegerOwlType())
 
 class CosFunc(UnaryNumericFunc):
     "COS"
 
 class CountFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
 
 class DegFunc(UnaryNumericFunc):
     "DEG"
 
 class DimensionsFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
     array = Node(nodeType=Variable, formalType=Array)
 
 class DimensionSizeFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
     array = Node(nodeType=Variable, formalType=Array)
-    dimension = Node(formalType=IntegerType)
+    dimension = Node(formalType=IntegerOwlType())
 
 class EofFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
-    channel = Node(formalType=ChannelType)
+    channel = Node(formalType=ChannelOwlType())
 
 class ErlFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
 
 class ErrFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
 
 class EvalFunc(AstNode):
     "EVAL"
-    formal_type = TypeOption(ScalarType)
+    formal_type = TypeOption(ScalarOwlType())
     actual_type = formal_type
-    factor = Node(formalType=StringType)
+    factor = Node(formalType=StringOwlType())
     
 class ExpFunc(UnaryNumericFunc):
     "EXP"
 
 class FalseFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
 
 class GetFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
 
 class GetStrFunc(AstNode):
-    formal_type = TypeOption(StringType)
+    formal_type = TypeOption(StringOwlType())
     actual_type = formal_type
 
 class GetStrFileFunc(AstNode):
-    formal_type = TypeOption(StringType)
-    channel = Node(formalType=ChannelType)
+    formal_type = TypeOption(StringOwlType())
+    channel = Node(formalType=ChannelOwlType())
 
 class InkeyFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
-    factor = Node(formalType=IntegerType)
+    factor = Node(formalType=IntegerOwlType())
 
 class InkeyStrFunc(AstNode):
-    formal_type = TypeOption(StringType)
+    formal_type = TypeOption(StringOwlType())
     actual_type = formal_type
-    factor = Node(formalType=IntegerType)
+    factor = Node(formalType=IntegerOwlType())
 
 class InstrFunc(AstNode):
     "INSTR"
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
-    source         = Node(formalType=StringType)
-    sub_string     = Node(formalType=StringType)
-    start_position = Node(formalType=IntegerType)
+    source         = Node(formalType=StringOwlType())
+    sub_string     = Node(formalType=StringOwlType())
+    start_position = Node(formalType=IntegerOwlType())
 
 class IntFunc(AstNode):
     "INT"
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
-    factor = Node(formalType=FloatType)
+    factor = Node(formalType=FloatOwlType())
 
 class LeftStrFunc(AstNode):
-    formal_type = TypeOption(StringType)
+    formal_type = TypeOption(StringOwlType())
     actual_type = formal_type
     source = Node()
-    length = Node(formalType=IntegerType)
+    length = Node(formalType=IntegerOwlType())
 
 class LenFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
-    factor = Node(formalType=StringType)
+    factor = Node(formalType=StringOwlType())
 
 class LnFunc(UnaryNumericFunc):
     "LN"
@@ -890,43 +895,43 @@ class LogFunc(UnaryNumericFunc):
     "LOG"
 
 class MidStrFunc(AstNode):
-    formal_type = TypeOption(StringType)
+    formal_type = TypeOption(StringOwlType())
     actual_type = formal_type
-    source   = Node(formalType=StringType)
-    position = Node(formalType=IntegerType)
-    length   = Node(formalType=IntegerType)
+    source   = Node(formalType=StringOwlType())
+    position = Node(formalType=IntegerOwlType())
+    length   = Node(formalType=IntegerOwlType())
     
 class ModeFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
 
 class OpeninFunc(AstNode):
-    formal_type = TypeOption(ChannelType)
-    filename = Node(formalType=StringType)
+    formal_type = TypeOption(ChannelOwlType())
+    filename = Node(formalType=StringOwlType())
 
 class OpenoutFunc(AstNode):
-    formal_type = TypeOption(ChannelType)
-    filename = Node(formalType=StringType)
+    formal_type = TypeOption(ChannelOwlType())
+    filename = Node(formalType=StringOwlType())
 
 class OpenupFunc(AstNode):
-    formal_type = TypeOption(ChannelType)
-    filename = Node(formalType=StringType)
+    formal_type = TypeOption(ChannelOwlType())
+    filename = Node(formalType=StringOwlType())
 
 class PosFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
 
 class PiFunc(AstNode):
-    formal_type = TypeOption(FloatType)
+    formal_type = TypeOption(FloatOwlType())
     actual_type = formal_type
 
 class PointFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
-    x_coord = Node(formalType=IntegerType)
-    y_coord = Node(formalType=IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
+    x_coord = Node(formalType=IntegerOwlType())
+    y_coord = Node(formalType=IntegerOwlType())
 
 class QuitFunc(AstNode):
     "QUIT"
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
     
 class RadFunc(UnaryNumericFunc):
@@ -934,101 +939,101 @@ class RadFunc(UnaryNumericFunc):
 
 class ReadFunc(AstNode):
     "READ"
-    formal_type = TypeOption(ScalarType)
+    formal_type = TypeOption(ScalarOwlType())
     actual_type = formal_type
 
 class RightStrFunc(AstNode):
-    formal_type = TypeOption(StringType)
+    formal_type = TypeOption(StringOwlType())
     actual_type = formal_type
-    source = Node(formalType=StringType)
-    length = Node(formalType=IntegerType)
+    source = Node(formalType=StringOwlType())
+    length = Node(formalType=IntegerOwlType())
 
 class RndFunc(AstNode):
     "RND"
     # A minor change from BBC BASIC. In BBC BASIC RND(x) can return
     # either a float or integer.  In OWL BASIC we always return a
     # 64-bit float.
-    formal_type = TypeOption(FloatType) 
+    formal_type = TypeOption(FloatOwlType()) 
     actual_type = formal_type
-    option = Node(formalType=IntegerType)
+    option = Node(formalType=IntegerOwlType())
 
 class SinFunc(UnaryNumericFunc):
     "SIN"
 
 class SgnFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
-    factor = Node(formalType=NumericType)
+    factor = Node(formalType=NumericOwlType())
 
 class SqrFunc(UnaryNumericFunc):
     "SQR"
 
 class StrStringFunc(AstNode):
-    formal_type = TypeOption(StringType)
+    formal_type = TypeOption(StringOwlType())
     actual_type = formal_type
     base   = IntegerOption(10)
-    factor = Node(formalType=NumericType)
+    factor = Node(formalType=NumericOwlType())
 
 class Sum(AstNode):
-    formal_type = TypeOption(IntegerType)
-    array = Node(formalType=ArrayType)
+    formal_type = TypeOption(IntegerOwlType())
+    array = Node(formalType=ArrayOwlType())
 
 class SumLenFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
-    array = Node(formalType=ArrayType)
+    formal_type = TypeOption(IntegerOwlType())
+    array = Node(formalType=ArrayOwlType())
 
 class TanFunc(UnaryNumericFunc):
     "TAN"
 
 class TempoFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
 
 class TintFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
-    xCoord = Node(formalType=IntegerType)
-    yCoord = Node(formalType=IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
+    xCoord = Node(formalType=IntegerOwlType())
+    yCoord = Node(formalType=IntegerOwlType())
     
 class TopFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
 
 class TrueFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
 
 class ValFunc(AstNode):
-    formal_type = TypeOption(NumericType)
-    factor = Node(formalType=StringType)
+    formal_type = TypeOption(NumericOwlType())
+    factor = Node(formalType=StringOwlType())
 
 class VposFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
 
 class WidthFunc(AstNode):
-    formal_type = TypeOption(IntegerType)
+    formal_type = TypeOption(IntegerOwlType())
 
 class Line(AstStatement):
-    x1_coord = Node(formalType=IntegerType)
-    y1_coord = Node(formalType=IntegerType)
-    x2_coord = Node(formalType=IntegerType)
-    y2_coord = Node(formalType=IntegerType)
+    x1_coord = Node(formalType=IntegerOwlType())
+    y1_coord = Node(formalType=IntegerOwlType())
+    x2_coord = Node(formalType=IntegerOwlType())
+    y2_coord = Node(formalType=IntegerOwlType())
 
 class LiteralString(AstNode):
-    actual_type = TypeOption(StringType)
+    actual_type = TypeOption(StringOwlType())
     value = StringOption()
 
 class LiteralInteger(AstNode):
-    actual_type = TypeOption(IntegerType)
+    actual_type = TypeOption(IntegerOwlType())
     value = IntegerOption()
 
 class LiteralFloat(AstNode):
-    actual_type = TypeOption(FloatType)
+    actual_type = TypeOption(FloatOwlType())
     value = FloatOption()
 
 # Implicit AST nodes
 class Concatenate(AstNode):
-    formal_type = TypeOption(StringType)
+    formal_type = TypeOption(StringOwlType())
     actual_type = formal_type
-    lhs = Node(formalType=StringType)
-    rhs = Node(formalType=StringType)
+    lhs = Node(formalType=StringOwlType())
+    rhs = Node(formalType=StringOwlType())
 
 class Cast(AstNode):
     "Implicit Conversion"
@@ -1043,5 +1048,5 @@ class Raise(AstStatement):
     
 class LongJump(AstStatement):
     "Long jump"
-    target_logical_line = Node(formalType=IntegerType)
+    target_logical_line = Node(formalType=IntegerOwlType())
 

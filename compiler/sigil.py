@@ -1,4 +1,6 @@
-from bbc_types import *
+from typing.type_system import (StringOwlType, IntegerOwlType, ByteOwlType, ObjectOwlType,
+                                StringArrayOwlType, IntegerArrayOwlType, ByteArrayOwlType,
+                                ObjectArrayOwlType, FloatArrayOwlType, FloatOwlType)
 
 def identifierToType(identifier):
     """
@@ -6,23 +8,23 @@ def identifierToType(identifier):
     """
     sigil = identifier[-1]
     if sigil == '$':
-        return StringType
+        return StringOwlType()
     elif sigil == '%':
-        return IntegerType
+        return IntegerOwlType()
     elif sigil == '&':
-        return ByteType
+        return ByteOwlType()
     elif sigil == '~':
-        return ObjectType
+        return ObjectOwlType()
     elif sigil == '(':
         sigil = identifier[-2:-1]
         if sigil == '$':
-            return StringArrayType
+            return StringArrayOwlType()
         elif sigil == '%':
-            return IntegerArrayType
+            return IntegerArrayOwlType()
         elif sigil == '&':
-            return ByteArrayType
+            return ByteArrayOwlType()
         elif sigil == '~':
-            return ReferenceArrayType
+            return ObjectArrayOwlType()
         else:
-            return FloatArrayType
-    return FloatType 
+            return FloatArrayOwlType()
+    return FloatOwlType() 
