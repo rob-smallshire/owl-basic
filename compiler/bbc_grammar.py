@@ -70,11 +70,11 @@ def p_statement(p):
     if p is not None and p[0] is not None:
         # If it hasn't already been set by more specialised code
         if p[0].startLine is None: 
-            print "Assigning line numbers"
+            #print "Assigning line numbers"
             p[0].startLine,  p[0].endLine = p.linespan(1)
             # Note: endPos here will be *before* the last token - it can be refined later 
             p[0].startPos,   p[0].endPos  = p.lexspan(1) 
-            print p[0].startLine, p[0].endLine, p[0].startPos, p[0].endPos
+            #print p[0].startLine, p[0].endLine, p[0].startPos, p[0].endPos
 
 #=============================================================================#
 # STATEMENTS
@@ -293,7 +293,7 @@ def p_def_fn_stmt(p):
         p[0] = DefineFunction(name = p[2], formalParameters = p[4], followingStatement = p[6])
         end_pos = p.lexpos(5)
         
-    print "Assigning DEF PROC line numbers"
+    #print "Assigning DEF PROC line numbers"
     p[0].lineNum = p.lineno(1) - 1
     p[0].startLine = p.lineno(1)
     p[0].endLine = p.lineno(1)
@@ -316,7 +316,7 @@ def p_def_proc_stmt(p):
         p[0] = DefineProcedure(name = p[2], formalParameters = p[4], followingStatement = p[6])
         end_pos = p.lexpos(5)
     
-    print "Assigning DEF PROC line numbers"
+    #print "Assigning DEF PROC line numbers"
     p[0].lineNum = p.lineno(1) - 1
     p[0].startLine = p.lineno(1)
     p[0].endLine = p.lineno(1)
@@ -333,7 +333,7 @@ def p_proc_stmt(p):
     '''proc_stmt : PROC_ID
                  | PROC_ID LPAREN actual_arg_list RPAREN'''
     if len(p) == 2:
-        p[0] = CallProcedure(name = p[1])
+        p[0] = CallProcedure(name = p[1], actualParameters = ActualArgList())
     elif len(p) == 5:
         p[0] = CallProcedure(name = p[1], actualParameters = p[3])
     p[0].lineNum = p.lineno(1) - 1
@@ -428,10 +428,10 @@ def p_gcol_stmt(p):
                  | GCOL expr TINT expr
                  | GCOL expr COMMA expr TINT expr'''
     if len(p) == 3:
-        p[0] = Gcol(logicalColour = p[2])
+        p[0] = Gcol(mode = LiteralInteger(value = 0), logicalColour = p[2])
     elif len(p) == 5:
         if p[3] == 'TINT':
-            p[0] = Gcol(logicalColour = p[2], tint = p[4])
+            p[0] = Gcol(mode = LiteralInteger(value = 0), logicalColour = p[2], tint = p[4])
         else:
             p[0] = Gcol(mode = p[2], logicalColour = p[4])
     elif len(p) == 7:
@@ -559,7 +559,7 @@ def p_if_single_stmt(p):
         p[0] = If(condition = p[2], trueClause = p[4], falseClause = p[6])
         end_pos = p.lexpos(4)
 
-    print "Assigning IF line numbers"
+    #print "Assigning IF line numbers"
     p[0].lineNum = p.lineno(1) - 1
     p[0].startLine = p.lineno(1)
     p[0].endLine = p.lineno(1)
@@ -634,12 +634,10 @@ def p_let_stmt(p):
     p[0] = p[1]
     
 def p_assignment(p):
-    '''assignment : LET variable EQ expr
+    '''assignment : LET lvalue EQ expr
                   | LET array EQ array_expr
-                  | LET indexer EQ expr
                   | lvalue EQ expr
-                  | array EQ array_expr
-                  | indexer EQ expr'''
+                  | array EQ array_expr'''
     if len(p) == 5:
         p[0] = Assignment(lValue = p[2], rValue = p[4])
         p[0].lineNum = p.lineno(1) - 1
@@ -648,12 +646,10 @@ def p_assignment(p):
         p[0].lineNum = p.lineno(2) - 1
     
 def p_increment(p):
-    '''increment : LET variable PLUS_ASSIGN expr
+    '''increment : LET lvalue PLUS_ASSIGN expr
                  | LET array PLUS_ASSIGN expr
-                 | LET indexer PLUS_ASSIGN expr
-                 | variable PLUS_ASSIGN expr
-                 | array PLUS_ASSIGN expr
-                 | indexer PLUS_ASSIGN expr'''
+                 | lvalue PLUS_ASSIGN expr
+                 | array PLUS_ASSIGN expr'''
     if len(p) == 5:
         p[0] = Increment(lValue = p[2], rValue = p[4])
         p[0].lineNum = p.lineno(1) - 1
@@ -662,12 +658,10 @@ def p_increment(p):
         p[0].lineNum = p.lineno(2) - 1
     
 def p_decrement(p):
-    '''decrement : LET variable MINUS_ASSIGN expr
+    '''decrement : LET lvalue MINUS_ASSIGN expr
                  | LET array MINUS_ASSIGN expr
-                 | LET indexer MINUS_ASSIGN expr
-                 | variable MINUS_ASSIGN expr
-                 | array MINUS_ASSIGN expr
-                 | indexer MINUS_ASSIGN expr'''
+                 | lvalue MINUS_ASSIGN expr
+                 | array MINUS_ASSIGN expr'''
     if len(p) == 5:
         p[0] = Decrement(lValue = p[2], rValue = p[4])
         p[0].lineNum = p.lineno(1) - 1
@@ -1482,8 +1476,12 @@ def p_expr_function(p):
     
 
 def p_user_func(p):
-    'user_func : FN_ID LPAREN actual_arg_list RPAREN %prec FUNCTION'
-    p[0] = UserFunc(name = p[1], actualParameters = p[3])
+    '''user_func : FN_ID
+                 | FN_ID LPAREN actual_arg_list RPAREN %prec FUNCTION'''
+    if len(p) == 2:
+        p[0] = UserFunc(name = p[1], actualParamers = ActualArgList())
+    else:
+        p[0] = UserFunc(name = p[1], actualParameters = p[3])
     p[0].lineNum = p.lineno(1) - 1
 
 def p_abs_func(p):

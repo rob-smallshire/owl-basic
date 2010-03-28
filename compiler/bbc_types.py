@@ -105,25 +105,22 @@ class BoxType(ScalarType):
 
 class ArrayType(Type):
     "Array"
-    _element_type = None
-            
-    # TODO: Can't call this property on a class!    
-    elementType = property(lambda cls: cls._getElementType)
+    pass
 
 class ByteArrayType(ArrayType):
     "Array[Byte]"
-    _element_type = ByteType
+    element_type = ByteType
 
 class IntegerArrayType(ArrayType):
     "Array[Integer]"
-    _element_type = IntegerType
+    element_type = IntegerType
 
 class FloatArrayType(ArrayType):
     "Array[Float]"
-    _element_type = FloatType
+    element_type = FloatType
 
 class StringArrayType(ArrayType):
     "Array[String]"
-    _element_type = StringType
+    element_type = StringType
 
    

@@ -39,5 +39,5 @@ class LineMapper(object):
         '''
         logical_line_number = integer_node.value
         statement = self.logicalStatement(logical_line_number)
-        print "logical_line_number = %d, statement = %s" % (logical_line_number, statement)
+        #print "logical_line_number = %d, statement = %s" % (logical_line_number, statement)
         return statement

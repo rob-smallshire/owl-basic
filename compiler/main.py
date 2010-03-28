@@ -112,9 +112,9 @@ def indexLineNumbers(detokenHandle, options):
     line_indices = [index + 1 for index in cr_indices]
     line_offsets = [0]
     line_offsets.extend(line_indices)
-    for i, offset in enumerate(line_offsets):
-        print "%d ==> %s" % (i, data[offset:offset + 5])
-    print data
+    #for i, offset in enumerate(line_offsets):
+    #    print "%d ==> %s" % (i, data[offset:offset + 5])
+    #print data
     return data, physical_to_logical_map, line_offsets , line_number_prefixes
 
 def warnOnMissingNewline(data):

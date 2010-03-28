@@ -1,2 +1,41 @@
-INSTALL expression
+INSTALL System
+INSTALL System.Collections.Generic
+
+a$ = "  This needs trimming   "
+b$ = FN Trim(a$)
+x$() = FN Split(b$)
+
+PROC Console.WindowSize(80, 25)
+PROC Console.WriteLine(x$(2))
+
+uri~ = NEW Uri("http://www.example.com/")
+scheme$ = FN Scheme(uri~)
+
+list~ = NEW List(32) OF Uri : REM Types are inferred at construction time
+
+dict~ = NEW Dictionary OF I%, A$ : REM Using prototypes for the type parameters
+PROCAdd(dict~, 42, "Forty two")
+PROCAdd(dict~, 34, "Thiry four")
+
+set~ = NEW Set OF Int64 : REM Using named type
+
+stack~ = NEW Stack OF set~ : REM Using prototype
+
+WHILE FN Count(stack~) < 100 
+    PROC Push(stack~, NEW Set OF Int64)
+ENDWHILE
+
+WHILE FN Count(stack~) > 0
+	s~ = FN Pop(stack~) : REM Type of s~ inferred from function return type
+	PROCConsole.WriteLine(STR$(s~))
+ENDWHILE
+
+
+
+
+
+
+
+
+
 

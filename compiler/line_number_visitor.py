@@ -18,7 +18,7 @@ class LineNumberVisitor(Visitor):
             line_num = statement.lineNum
             #print "line_num = %s" % line_num
             if not self.line_to_stmt.has_key(line_num):
-                print line_num, " ===> ", statement
+                #print line_num, " ===> ", statement
                 self.line_to_stmt[line_num] = statement
 
     def firstStatementOnLine(self, line_number):

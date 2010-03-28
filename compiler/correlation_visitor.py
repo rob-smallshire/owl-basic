@@ -102,6 +102,7 @@ class CorrelationVisitor(Visitor):
             if len(next_stmt.identifiers) == 0:
                  next_stmt.identifiers.append(for_stmt.identifier)
             id1 = for_stmt.identifier.identifier
+            print next_stmt.identifiers
             id2 = next_stmt.identifiers[0].identifier
             print "self.loops = ", self.loops
             print "id1 = ", id1

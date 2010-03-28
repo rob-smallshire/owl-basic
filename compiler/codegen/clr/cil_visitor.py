@@ -261,21 +261,25 @@ class CilVisitor(Visitor):
         #self.checkMark(vdu)
         assert hasattr(vdu.bytes, '__getitem__')
         assert hasattr(vdu.bytes, '__len__')
-        if len(vdu.bytes) == 1:
-            vdu_item = vdu.bytes[0]
-            vdu_item.item.accept(self)
-            if vdu_item.length == 1 or vdu_item.length == 9:
-                self.generator.Emit(OpCodes.Conv_I1)
-            elif vdu_item.length == 2:
-                self.generator.Emit(OpCodes.Conv_I2)
-            self.generator.Emit(OpCodes.Call, self.basicCommandMethod('Vdu'))
-            if vdu_item.length == 9:
-                self.generator.Emit(OpCodes.Call, self.basicCommandMethod('VduFlush'))    
-        else:
-            # VDU with multiple items, e.g. VDU 23, 232, 23, 12 ...
-            # TODO: Avoid multiple VDU calls
-            logging.internal("TODO: Unhandled multiple item VDU")
-            return None
+        
+        # TODO: For long lists of VDU items it may be cheaper to
+        # assemble an array of bytes and then make one call
+        for item in vdu.bytes:
+            item.accept(self)
+        
+    def visitVduItem(self, item):
+        item.item.accept(self) # Value on the stack
+        # Convert to a byte or short as appropriate
+        if item.length == 1 or item.length == 9:
+            self.generator.Emit(OpCodes.Conv_I1)
+            arg_type = System.Byte # TODO: Signed or unsigned?
+        elif item.length == 2:
+            self.generator.Emit(OpCodes.Conv_I2)
+            arg_type = System.Int16 # TODO: Signed or unsigned?
+        vdu_method = self.basic_commands_type.GetMethod('Vdu', System.Array[System.Type]([cts.typeof(arg_type)]))
+        self.generator.Emit(OpCodes.Call, vdu_method)
+        if item.length == 9:
+            self.generator.Emit(OpCodes.Call, self.basicCommandMethod('VduFlush'))
     
     def visitCls(self, cls):
         logging.debug("Visiting %s", cls)
@@ -686,11 +690,16 @@ class CilVisitor(Visitor):
     def visitEnd(self, end):      
         logging.debug("Visiting %s", end)
         #self.checkMark(end)
-        emitLdc_I4(self.generator, self.line_mapper.physicalToLogical(end.lineNum)) # Load logical line number onto the stack
-        end_exception_ctor = clr.GetClrType(OwlRuntime.EndException).GetConstructor(System.Array[System.Type]([System.Int32]))
-        assert end_exception_ctor
-        self.generator.Emit(OpCodes.Newobj, end_exception_ctor) # EndException on the stack
-        self.generator.Emit(OpCodes.Throw)
+        # If we are emitting code in Main, then just return,
+        # otherwise throw an EndException
+        if "MAIN" in end.entryPoints:
+            self.generator.Emit(OpCodes.Ret)
+        else:
+            emitLdc_I4(self.generator, self.line_mapper.physicalToLogical(end.lineNum)) # Load logical line number onto the stack
+            end_exception_ctor = clr.GetClrType(OwlRuntime.EndException).GetConstructor(System.Array[System.Type]([System.Int32]))
+            assert end_exception_ctor
+            self.generator.Emit(OpCodes.Newobj, end_exception_ctor) # EndException on the stack
+            self.generator.Emit(OpCodes.Throw)
     
     def visitUnaryMinus(self, unary_minus):
         logging.debug("Visiting %s", unary_minus)
@@ -951,7 +960,18 @@ class CilVisitor(Visitor):
         # of a basic block with out-degree one will do it.
         if self.__cil_debug:
             self.generator.Emit(OpCodes.Nop)
-
+            
+    def visitGcol(self, gcol):
+        logging.debug("Visiting %s", gcol)
+        gcol.mode.accept(self)
+        gcol.logicalColour.accept(self)
+        if gcol.tint is not None:
+            gcol.tint.accept(self)
+            gcol_method = self.basicCommandMethod("GcolTint")
+        else:
+            gcol_method = self.basicCommandMethod("Gcol")
+        self.generator.Emit(OpCodes.Call, gcol_method)
+            
     def visitAscFunc(self, asc):
         logging.debug("Visiting %s", asc)
         asc.factor.accept(self)

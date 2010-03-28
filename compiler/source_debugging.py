@@ -33,23 +33,23 @@ class SourceDebuggingVisitor(Visitor):
         probably innaccurate endPos of the *previous* statement to locate the end of
         the previous statement, and update its endPos value.
         '''
-        print statement
+        #print statement
         self.setPreviousStatementColumns(statement)
         self.__previous_statement = statement
         # There is no need to visit the children of most statements
     
     def visitIf(self, statement):
-        print statement
+        #print statement
         self.setPreviousStatementColumns(statement)
         # If statements, don't need adjusting, so we unset self.__previous_statement
         self.__previous_statement = None
         # We must visit the children of IF statements
         if statement.trueClause is not None:
-            print "visiting trueClause"
+            #print "visiting trueClause"
             self.visit(statement.trueClause)
 
         if statement.falseClause is not None:
-            print "visiting falseClause"
+            #print "visiting falseClause"
             self.visit(statement.falseClause)
         
         # Set up the columns for this IF statement itself
@@ -77,9 +77,9 @@ class SourceDebuggingVisitor(Visitor):
         '''
         # Define a half-open range [search_start_pos, search_end_pos) within which we expect
         # to locate a statement boundary.
-        print statement
-        print statement.startPos
-        print statement.endPos
+        #print statement
+        #print statement.startPos
+        #print statement.endPos
         search_start_pos = statement.endPos
         search_end_pos = limit_pos
         assert search_start_pos is not None
@@ -93,7 +93,7 @@ class SourceDebuggingVisitor(Visitor):
                 statement.endPos = m.start()
             else:
                 print "Error: Could not locate statement separator in >>>%s<<<" % self.__data[search_start_pos:search_end_pos]
-        print ">>>%s<<<" % self.__data[statement.startPos:statement.endPos]
+        #print ">>>%s<<<" % self.__data[statement.startPos:statement.endPos]
     
     def setStartAndEndColumns(self, statement):
         '''
@@ -109,16 +109,16 @@ class SourceDebuggingVisitor(Visitor):
         :returns: A one-based character column from the beginning of the line
         '''
         # TODO: Could make this faster by passing in a range on lines to check
-        print "pos =", pos
+        #print "pos =", pos
         index = bisect_right(self.__line_offsets, pos) - 1
-        print "index =", index
+        #print "index =", index
         line_start_pos = self.__line_offsets[index]
-        print "line_start_pos =", line_start_pos
+        #print "line_start_pos =", line_start_pos
         prefix_length = self.__line_number_prefixes[index]
-        print "prefix_length =", prefix_length
+        #print "prefix_length =", prefix_length
         column = pos - line_start_pos + prefix_length + 1 # One based
-        print "column =", column
-        print
+        #print "column =", column
+        #print
         return column
         
         

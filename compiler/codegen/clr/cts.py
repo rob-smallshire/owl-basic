@@ -42,8 +42,9 @@ def symbolType(symbol):
     '''
     t = symbol.type
     if t.isA(bbc_types.ArrayType):
-        element_type = t._getElementType()
-        ctsBasicType(element_type).MakeArrayType(symbol.rank)
+        # TODO: Rank of array is important here
+        element_type = typeof(type_map[t.element_type])
+        return element_type.MakeArrayType()
     return typeof(type_map[t])
 
     

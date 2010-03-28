@@ -80,11 +80,23 @@ namespace OwlRuntime
             channels.Remove(channel);
         }
 
+        public static void Gcol(int mode, int logicalColour)
+        {
+            vdu.Enqueue((byte) 18, (byte) mode, (byte) logicalColour);
+        }
+
+        public static void GcolTint(int mode, int logicalColour, int tint)
+        {
+            Gcol(mode, logicalColour);
+            int type = logicalColour < 128 ? 2 : 3;
+            vdu.Enqueue((byte) 23, (byte) 17, (byte) type, (byte) tint, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0);
+        }
+
         public static void Print(int channel, params object[] items)
         {
             if (channels.ContainsKey(channel))
             {
-                throw new NoSuchChannelException("Cannot use BPUT with this channel", channel);
+                throw new NoSuchChannelException("Cannot use PRINT# with this channel", channel);
             }
             FileStream stream = channels[channel];
             foreach (object item in items)
@@ -108,7 +120,7 @@ namespace OwlRuntime
         {
             if (channels.ContainsKey(channel))
             {
-                throw new NoSuchChannelException("Cannot use BPUT with this channel", channel);
+                throw new NoSuchChannelException("Cannot use EXT# with this channel", channel);
             }
             FileStream stream = channels[channel];
             return stream.Length;
@@ -324,6 +336,11 @@ namespace OwlRuntime
         public static void Vdu(byte b)
         {
             vdu.Enqueue(b);
+        }
+
+        public static void Vdu(short s)
+        {
+            vdu.Enqueue(s);
         }
 
         public static void VduFlush()

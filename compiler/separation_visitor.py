@@ -26,7 +26,7 @@ class SeparationVisitor(Visitor):
         statement_list.parent_index = next.parent_index
         statement_list.statements = []
         
-        for identifier in next.identifiers.variables:            
+        for identifier in next.identifiers.variables:           
             new_next = Next()
             new_next.parent = statement_list
             new_next.parent_property = 'statements'
@@ -39,7 +39,7 @@ class SeparationVisitor(Visitor):
             variable_list.parent_property = 'identifiers'
             new_next.identifiers = variable_list
             
-            variable_list.variables = [identifier]
+            variable_list.variables = [identifier] if identifier is not None else []
             
         getattr(next.parent, next.parent_property)[next.parent_index] = statement_list
     
