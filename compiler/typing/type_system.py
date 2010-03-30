@@ -62,6 +62,12 @@ class OwlType(Visitable):
     
     def isDefined(self):
         return False
+    
+    def __str__(self):
+        return self.__doc__
+    
+    def __repr__(self):
+        return self.__doc__
 
 class PendingOwlType(OwlType):
     "Pending"
@@ -186,6 +192,12 @@ class ArrayOwlType(ObjectOwlType):
     
     def isDefined(self):
         return self.element_type is not None and self.rank is not None
+        
+    def __repr__(self):
+        rank_desc = ""
+        if rank is not None:
+            rank_desc = ";" + str(self.arrayRank())
+        return "Array[" + str(self.elementType()) + rank_desc + "]" 
         
 class ByteArrayOwlType(ArrayOwlType):
     "Array[Byte]"
