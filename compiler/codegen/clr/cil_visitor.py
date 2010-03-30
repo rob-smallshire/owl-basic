@@ -87,6 +87,7 @@ class CilVisitor(Visitor):
         self.math_type = clr.GetClrType(System.Math)
         self.console_type = clr.GetClrType(System.Console)
         self.type_type = clr.GetClrType(System.Type)
+        self.array_type = clr.GetClrType(System.Array)
         generic_queue_type = clr.GetClrType(System.Collections.Generic.Queue)
         self.object_queue_type = generic_queue_type.MakeGenericType(
                            System.Array[System.Type]([clr.GetClrType(System.Object)]))
@@ -168,6 +169,56 @@ class CilVisitor(Visitor):
     def visitRem(self, rem):
         #self.checkMark(rem)
         pass
+    
+    def visitAllocateArray(self, allocator):
+        logging.debug("Visiting %s", allocator)
+        print allocator.dimensions
+        assert len(allocator.dimensions) > 0
+        num_dims = len(allocator.dimensions)
+        symbol_node = findNode(allocator, hasSymbolTableLookup)
+        symbol = symbol_node.symbolTable.lookup(allocator.identifier)
+        assert symbol is not None
+        assert symbol.storeEmitter is not None
+        assert symbol.loadEmitter is not None
+        assert symbol.type.isArray()
+        element_type = symbol.type.elementType()
+        assert element_type is not None
+        if num_dims == 1:
+            allocator.dimensions[0].accept(self)
+            self.generator.Emit(OpCodes.Newarr, cts.mapType(element_type))
+        elif num_dims == 2:
+            self.generator.Emit(OpCodes.Ldtoken, cts.mapType(element_type)) # Type token on the stack
+            allocator.dimensions[0].accept(self)
+            allocator.dimensions[1].accept(self)  
+            create_instance = self.array_type.GetMethod("CreateInstance",
+                                                        System.Array[System.Type]([cts.typeof(System.Type),
+                                                                                   cts.typeof(System.Int32),
+                                                                                   cts.typeof(System.Int32)]))
+            self.generator.Emit(OpCodes.Call, create_instance)
+        elif num_dims == 3:
+            self.generator.Emit(OpCodes.Ldtoken, cts.mapType(element_type)) # Type token on the stack
+            allocator.dimensions[0].accept(self)
+            allocator.dimensions[1].accept(self)
+            allocator.dimensions[2].accept(self)
+            create_instance = self.array_type.GetMethod("CreateInstance",
+                                                        System.Array[System.Type]([cts.typeof(System.Type),
+                                                                                   cts.typeof(System.Int32),
+                                                                                   cts.typeof(System.Int32),
+                                                                                   cts.typeof(System.Int32)]))
+            self.generator.Emit(OpCodes.Call, create_instance)
+        else:
+            self.generator.Emit(OpCodes.Ldtoken, cts.mapType(element_type)) # Type token on the stack
+            emitLdc_I4(self.generator, num_dims) # Number of dimensions on the stack
+            self.generator.Emit(OpCodes.Newarr, typeof(System.Int32)) # Array to hold dimension sizes
+            for index, dimension in allocator.dimensions:
+                self.generator.Emit(OpCodes.Dup) # Dimensions array on the stack
+                emitLdc_I4(self.generator, index) # Index into dimensions array on the stack
+                dimension.accept(self) # Dimension size on the stack
+                generator.Emit(OpCodes.Stelem_Ref)    # Assign to array element
+            create_instance = self.array_type.GetMethod("CreateInstance",
+                                                        System.Array[System.Type]([cts.typeof(System.Type),
+                                                                                   cts.typeof(System.Array[System.Int32])]))
+        symbol.storeEmitter(self.generator)    
     
     def visitAssignment(self, assignment):
         logging.debug("Visiting %s", assignment)

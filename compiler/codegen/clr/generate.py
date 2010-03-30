@@ -35,6 +35,8 @@ def ctsIdentifier(symbol):
     A mapping from BASIC names with sigils to .NET compliant name
     using Systems Hungarian notation
     """
+    # TODO - we can probably do away with this method
+    #        if we can write the OwlModule class in OWL BASIC or CIL directly.
     name = symbol.name
     if name.endswith('$'):
         return 's' + symbol.name[:-1]
@@ -97,13 +99,21 @@ class AssemblyGenerator(object):
         # Add accessors for the inherited static variables
         static_symbols = StaticSymbolTable.getInstance()
         for symbol in static_symbols.symbols.values():
-            field_info = owl_module.GetField(ctsIdentifier(symbol))
+            # TODO: If we can fix the names in OwlModule we can use the raw names
+            identifier = ctsIdentifier(symbol)
+            print identifier
+            field_info = owl_module.GetField(identifier)
+            assert field_info is not None
             self.createAndAttachFieldEmitters(field_info, symbol)
             
         # Add global variables and their accessors to the class
         for symbol in global_symbols.symbols.values():
-            field_builder = type_builder.DefineField(ctsIdentifier(symbol), cts.symbolType(symbol),
+            #identifier = ctsIdentifier(symbol)
+            identifier = symbol.name
+            field_builder = type_builder.DefineField(identifier, cts.symbolType(symbol),
                                                      FieldAttributes.Private | FieldAttributes.Static)
+            print identifier
+            assert field_builder is not None
             self.createAndAttachFieldEmitters(field_builder, symbol) 
         
         if len(data_visitor.data) > 0:
@@ -167,12 +177,15 @@ class AssemblyGenerator(object):
         :param field_info: The FieldInfo metadata
         :param symbol: The symbol to which fieldStoreEmitter and fieldLoadEmitter methods will be attached
         ''' 
+        assert field_info is not None
+        
         def fieldLoadEmitter(generator, field_info=field_info):
             '''
             A closure which emits CIL into the supplied generator to load a field
             :param generator: A CIL generator
             :param field_info: The FieldInfo metadata
             '''
+            print "field_info = ", field_info
             generator.Emit(OpCodes.Ldsfld, field_info)
             
         def fieldStoreEmitter(generator, field_info=field_info):
