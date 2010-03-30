@@ -46,9 +46,9 @@ class XmlVisitor(Visitor):
                 # TODO: Next if is temporary
                 if not isinstance(node.parent.child_infos[name], list):
                     if node.parent.child_infos[name].nodeType is not None:
-                        self.childAttribute("node_type", node.parent.child_infos[name].nodeType)
+                        self.childAttribute("node_type", str(node.parent.child_infos[name].nodeType))
                     if node.parent.child_infos[name].formalType is not None:
-                        self.childAttribute("formal_type", node.parent.child_infos[name].formalType)
+                        self.childAttribute("formal_type", str(node.parent.child_infos[name].formalType))
             self.visit(node)
         self.writer.WriteEndElement()
     
