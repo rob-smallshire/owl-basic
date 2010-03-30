@@ -11,14 +11,32 @@ class SeparationVisitor(Visitor):
     
     def visitAstNode(self, node):
         node.forEachChild(self.visit)
-    
-    # TODO: Put DIM Statements in here
+                                          
+    def visitDim(self, dim):
+        """
+        Split DIM i%(1), j%(2), k% 3 statements into separate AllocateArray and AllocateBlock
+        statement nodes.
+        """
+        #self.visit(next.identifiers)
+        statement_list = StatementList()
+        statement_list.parent = dim.parent
+        statement_list.parent_property = dim.parent_property
+        statement_list.parent_index = dim.parent_index
+        statement_list.statements = []
         
+        for allocator in dim.items.items:           
+            allocator.parent = statement_list
+            allocator.parent_property = 'statements'
+            allocator.parent_index = len(statement_list.statements)
+            allocator.lineNum = dim.lineNum
+            statement_list.append(allocator)
+            
+        getattr(dim.parent, dim.parent_property)[dim.parent_index] = statement_list
+    
     def visitNext(self, next):
         """
         Split NEXT i%, j%, k% statements into NEXT i% : NEXT j% : NEXT k%
         """
-        #print next
         self.visit(next.identifiers)
         statement_list = StatementList()
         statement_list.parent = next.parent

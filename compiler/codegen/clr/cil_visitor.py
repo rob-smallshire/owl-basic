@@ -732,6 +732,22 @@ class CilVisitor(Visitor):
         multiply.rhs.accept(self)
         self.generator.Emit(OpCodes.Mul)
     
+    def visitDivide(self, divide):
+        logging.debug("Visiting %s", divide)
+        # TODO: Deal with unknown types (e.g. Object)
+        # TODO: Factor out for BinaryNumericOperators
+        divide.lhs.accept(self)
+        divide.rhs.accept(self)
+        self.generator.Emit(OpCodes.Div)
+    
+    def visitPower(self, power):
+        logging.debug("Visiting %s", power)
+        # TODO: Deal with unknown types (e.g. Object)
+        # TODO: Factor out for BinaryNumericOperators
+        power.lhs.accept(self)
+        power.rhs.accept(self)
+        self.generator.Emit(OpCodes.Call, self.basicCommandMethod('Pow'))
+    
     def visitAnd(self, op):
         # TODO: Deal with unknown types (e.g. Object)
         logging.debug("Visiting %s", op)
@@ -993,10 +1009,13 @@ class CilVisitor(Visitor):
         
     def visitRndFunc(self, rnd):
         logging.debug("Visiting %s", rnd)
-        rnd.option.accept(self)
-        rnd_method = self.basicCommandMethod("Rnd")
-        self.generator.Emit(OpCodes.Call, rnd_method)
-        
+        if rnd.option is None:
+            # Return a four-byte random signed integer between -2147483648 and +2147483647
+            self.generator.Emit(OpCodes.Call, self.basicCommandOverloadedMethod("Rnd"))
+        else:
+            rnd.option.accept(self)
+            self.generator.Emit(OpCodes.Call, self.basicCommandOverloadedMethod("Rnd", IntegerOwlType()))
+                      
     def visitInstrFunc(self, instr):
         logging.debug("Visiting %s", instr)
         instr.source.accept(self)
@@ -1019,6 +1038,18 @@ class CilVisitor(Visitor):
         sgn.factor.accept(self)
         sgn_method = getMethod(self.math_type, "Sign", sgn.factor.actualType)
         self.generator.Emit(OpCodes.Call, sgn_method)
+        
+    def visitSqrFunc(self, sqr):
+        logging.debug("Visiting %s", sqr)
+        sqr.factor.accept(self)
+        sqr_method = self.basicCommandMethod("Sqr")
+        self.generator.Emit(OpCodes.Call, sqr_method)
+    
+    def visitTrueFunc(self, true):
+        emitLdc_I4(self.generator, -1)
+        
+    def visitFalseFunc(self, false):
+        emitLdc_I4(self.generator, 0)
         
     def visitConcatenate(self, concat):
         logging.debug("Visiting %s", concat)
@@ -1071,6 +1102,23 @@ class CilVisitor(Visitor):
         mode.number.accept(self)
         mode_method = self.basicCommandMethod("Mode")
         self.generator.Emit(OpCodes.Call, mode_method)
+    
+    def visitPlot(self, plot):
+        if plot.relative:
+            assert plot.mode is None
+            # PLOT BY x, y is equivalent to PLOT 65, x, y - BB4W only
+            emitLdc_I4(self.generator, 65)
+        elif plot.mode is None:
+            assert plot.relative is None
+            # PLOT x,y is equivalent to PLOT 69, x, y
+            emitLdc_I4(self.generator, 69)   
+        else:
+            assert plot.mode is not None
+            plot.mode.accept(self)
+        plot.xCoord.accept(self)
+        plot.yCoord.accept(self)    
+        plot_method = self.basicCommandMethod("Plot")
+        self.generator.Emit(OpCodes.Call, plot_method)
         
     def visitLongJump(self, long_jump):
         logging.debug("Visiting %s", long_jump)

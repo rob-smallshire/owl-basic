@@ -16,6 +16,8 @@ namespace OwlRuntime
         private static readonly PrintManager printManager;
         private const int owlTrue = -1;
         private const int owlFalse = 0;
+        private static Random random = new Random();
+        private static double lastRnd1Value;
 
         static BasicCommands()
         {
@@ -315,22 +317,31 @@ namespace OwlRuntime
             return code;
         }
 
+        public static int Rnd()
+        {
+            return random.Next(Int32.MinValue, Int32.MaxValue);
+        }
+
         public static double Rnd(int n)
         {
             if (n < 0)
             {
                 // Re-seed RNG with n
+                random = new Random(n);
+                return random.Next();
             }
-            else if (n == 0)
+            if (n == 0)
             {
                 // Return the same as the previous Rnd(1) call
+                return lastRnd1Value;
             }
-            else if (n == 1)
+            if (n == 1)
             {
                 // Return double between 0.0 and 1.0
+                lastRnd1Value = random.NextDouble();
+                return lastRnd1Value;
             }
-            // TODO: Return an integer between [1, n]
-            return n;
+            return random.Next(1, n + 1);
         }
 
         public static void Vdu(byte b)
@@ -358,6 +369,14 @@ namespace OwlRuntime
         {
             vdu.Enqueue(22);
             vdu.Enqueue((byte) m);
+        }
+
+        public static void Plot(int mode, int xCoord, int yCoord)
+        {
+            vdu.Enqueue(25);
+            vdu.Enqueue((byte) mode);
+            vdu.Enqueue((short) xCoord);
+            vdu.Enqueue((short) yCoord);
         }
 
         public static int Himem { get; set; }
@@ -970,6 +989,29 @@ namespace OwlRuntime
         {
             return vdu.TextCursorX;
         }
+
+        public static double Sqr(double factor)
+        {
+            if (factor < 0.0)
+            {
+                throw new NegativeRootException("Square root of negative number " + factor);
+            }
+            return Math.Sqrt(factor);
+        }
+
+        public static double Pow(double x, double y)
+        {
+            double result = Math.Pow(x, y);
+            if (Double.IsNaN(result))
+            {
+                throw new LogRangeException("Cannot raise " + x + " to power " + y);
+            }
+            if (Double.IsInfinity(result))
+            {
+                throw new DivisionByZeroException("Cannot raise " + x + " to power " + y);
+            }
+            return result;
+        }
     }
 
     public class OwlRuntimeException : Exception
@@ -995,6 +1037,30 @@ namespace OwlRuntime
             base("Longjump to line " + targetLogicalLine)
         {
             TargetLogicalLine = targetLogicalLine;
+        }
+    }
+
+    public class NegativeRootException :OwlRuntimeException
+    {
+        public NegativeRootException(string message) :
+            base("Negative root: " + message)
+        {
+        }
+    }
+
+    public class LogRangeException :OwlRuntimeException
+    {
+        public LogRangeException(string message) :
+            base("Log range: " + message)
+        {
+        }
+    }
+
+    public class DivisionByZeroException :OwlRuntimeException
+    {
+        public DivisionByZeroException(string message) :
+            base("Division by zero: " + message)
+        {
         }
     }
 

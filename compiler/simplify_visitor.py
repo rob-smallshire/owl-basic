@@ -113,25 +113,6 @@ class SimplificationVisitor(Visitor):
                 
         self.visit(ongoto.switch)
         self.visit(ongoto.targetLogicalLines)
-                                    
-    def visitDim(self, dim):
-        """
-        Convert DIM statements and their lists of arrays/blocks into
-        individual AllocateArray and AllocateBlock statements
-        """
-        # TODO: Move to SeparationVisitor
-        items = dim.items.items
-        # Locate this DIM in its parent statement list
-        dim_index = dim.parent.statements.index(dim)
-        dim.parent.statements.remove(dim)
-        items.reverse()
-        for item in items:
-            dim.parent.statements.insert(dim_index, item)
-            item.parent = dim.parent
-            item.parent_property = dim.parent_property
-            item.parent_index = dim_index
-            item.lineNum = dim.lineNum
-            self.visit(item)
             
     def visitCase(self, case):
         "Remove the WhenClauseList level from the AST"
