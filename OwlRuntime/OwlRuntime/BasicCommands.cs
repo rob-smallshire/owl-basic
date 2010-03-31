@@ -1113,6 +1113,17 @@ namespace OwlRuntime
     }
 
     /// <summary>
+    /// To be thrown by redimensioned arrays.
+    /// </summary>
+    public class BadDimException :OwlRuntimeException
+    {
+        public BadDimException(int logicalLineNumber) :
+            base("Bad DIM at line " + logicalLineNumber)
+        {
+        }
+    }
+
+    /// <summary>
     /// To be thrown by STOP statements. Caught by exception handlers
     /// in the Main program.
     /// </summary>

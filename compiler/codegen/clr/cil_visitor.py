@@ -80,6 +80,9 @@ class CilVisitor(Visitor):
         
         self.__cil_debug = True
         
+        # Do we allow arrays to be re-DIMed; BBC BASIC does not
+        self.__allow_redimension = False 
+        
         # Get the type of OwnRuntime.BasicCommand so we can retrieve methods
         self.basic_commands_type = clr.GetClrType(OwlRuntime.BasicCommands)
         self.memory_map_type = clr.GetClrType(OwlRuntime.MemoryMap)
@@ -174,7 +177,6 @@ class CilVisitor(Visitor):
         logging.debug("Visiting %s", allocator)
         print allocator.dimensions
         assert len(allocator.dimensions) > 0
-        num_dims = len(allocator.dimensions)
         symbol_node = findNode(allocator, hasSymbolTableLookup)
         symbol = symbol_node.symbolTable.lookup(allocator.identifier)
         assert symbol is not None
@@ -183,6 +185,22 @@ class CilVisitor(Visitor):
         assert symbol.type.isArray()
         element_type = symbol.type.elementType()
         assert element_type is not None
+        
+        # Check that the array hasn't already been allocated. We could
+        # control this through a compiler option.
+        if not self.__allow_redimension:
+            symbol.loadEmitter(self.generator) # Push the array reference on to the stack
+            begin_allocation = self.generator.DefineLabel()
+            self.generator.Emit(OpCodes.Brfalse_S, begin_allocation)
+            emitLdc_I4(self.generator, self.line_mapper.physicalToLogical(allocator.lineNum)) # Load logical line number onto the stack
+            bad_dim_exception_ctor = clr.GetClrType(OwlRuntime.BadDimException).GetConstructor(System.Array[System.Type]([System.Int32]))
+            assert bad_dim_exception_ctor
+            self.generator.Emit(OpCodes.Newobj, bad_dim_exception_ctor) # BadDimException on the stack
+            self.generator.Emit(OpCodes.Throw)
+            self.generator.MarkLabel(begin_allocation)
+        
+        num_dims = len(allocator.dimensions)
+        assert num_dims > 0
         if num_dims == 1:
             allocator.dimensions[0].accept(self)
             self.generator.Emit(OpCodes.Newarr, cts.mapType(element_type))
