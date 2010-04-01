@@ -191,7 +191,7 @@ class CilVisitor(Visitor):
         if not self.__allow_redimension:
             symbol.loadEmitter(self.generator) # Push the array reference on to the stack
             begin_allocation = self.generator.DefineLabel()
-            self.generator.Emit(OpCodes.Brfalse_S, begin_allocation)
+            self.generator.Emit(OpCodes.Brfalse, begin_allocation) # TODO: Short branch # TODO: Short branch
             emitLdc_I4(self.generator, self.line_mapper.physicalToLogical(allocator.lineNum)) # Load logical line number onto the stack
             bad_dim_exception_ctor = clr.GetClrType(OwlRuntime.BadDimException).GetConstructor(System.Array[System.Type]([System.Int32]))
             assert bad_dim_exception_ctor
@@ -204,38 +204,13 @@ class CilVisitor(Visitor):
         if num_dims == 1:
             allocator.dimensions[0].accept(self)
             self.generator.Emit(OpCodes.Newarr, cts.mapType(element_type))
-        elif num_dims == 2:
-            self.generator.Emit(OpCodes.Ldtoken, cts.mapType(element_type)) # Type token on the stack
-            allocator.dimensions[0].accept(self)
-            allocator.dimensions[1].accept(self)  
-            create_instance = self.array_type.GetMethod("CreateInstance",
-                                                        System.Array[System.Type]([cts.typeof(System.Type),
-                                                                                   cts.typeof(System.Int32),
-                                                                                   cts.typeof(System.Int32)]))
-            self.generator.Emit(OpCodes.Call, create_instance)
-        elif num_dims == 3:
-            self.generator.Emit(OpCodes.Ldtoken, cts.mapType(element_type)) # Type token on the stack
-            allocator.dimensions[0].accept(self)
-            allocator.dimensions[1].accept(self)
-            allocator.dimensions[2].accept(self)
-            create_instance = self.array_type.GetMethod("CreateInstance",
-                                                        System.Array[System.Type]([cts.typeof(System.Type),
-                                                                                   cts.typeof(System.Int32),
-                                                                                   cts.typeof(System.Int32),
-                                                                                   cts.typeof(System.Int32)]))
-            self.generator.Emit(OpCodes.Call, create_instance)
         else:
-            self.generator.Emit(OpCodes.Ldtoken, cts.mapType(element_type)) # Type token on the stack
-            emitLdc_I4(self.generator, num_dims) # Number of dimensions on the stack
-            self.generator.Emit(OpCodes.Newarr, typeof(System.Int32)) # Array to hold dimension sizes
-            for index, dimension in allocator.dimensions:
-                self.generator.Emit(OpCodes.Dup) # Dimensions array on the stack
-                emitLdc_I4(self.generator, index) # Index into dimensions array on the stack
-                dimension.accept(self) # Dimension size on the stack
-                generator.Emit(OpCodes.Stelem_Ref)    # Assign to array element
-            create_instance = self.array_type.GetMethod("CreateInstance",
-                                                        System.Array[System.Type]([cts.typeof(System.Type),
-                                                                                   cts.typeof(System.Array[System.Int32])]))
+            ctor_args = []     
+            for dimension in allocator.dimensions:
+                dimension.accept(self)
+                ctor_args.append(cts.typeof(System.Int32))    
+            ctor = cts.symbolType(symbol).GetConstructor(System.Array[System.Type](ctor_args))
+            self.generator.Emit(OpCodes.Newobj, ctor)
         symbol.storeEmitter(self.generator)    
     
     def visitAssignment(self, assignment):
@@ -273,7 +248,42 @@ class CilVisitor(Visitor):
             symbol.storeEmitter(self.generator)
         else:
             symbol.loadEmitter(self.generator)
-                            
+    
+    def visitIndexer(self, indexer):
+        logging.debug("Visiting %s", indexer)
+        symbol = self.symbolFromVariable(indexer)
+        logging.debug(repr(indexer))
+        
+        num_dims = len(indexer.indices)
+        assert num_dims > 0
+        if num_dims == 1:
+            # If this is an l-value take the rvalue from the top of the stack, and assign it,
+            # otherwise read from that value    
+            if indexer.isLValue:
+                assert self.__pending_rvalue is not None
+                symbol.loadEmitter(self.generator)    # Push array reference on the stack
+                indexer.indices[0].accept(self)       # Push array index on the stack
+                self.generatePendingRValue()          # Push the element value on the stack
+                emitStelem_T(self.generator, cts.mapType(symbol.type.elementType())) # Store element   
+            else:
+                symbol.loadEmitter(self.generator)    # Push array reference on the stack
+                indexer.indices[0].accept(self)       # Push array index on the stack
+                emitLdelem_T(self.generator, cts.mapType(symbol.type.elementType())) # Load element
+        else:
+            # If this is an l-value take the rvalue from the top of the stack, and assign it,
+            # otherwise read from that value    
+            if indexer.isLValue:
+                symbol.loadEmitter(self.generator) # Push array reference on the stack
+                for index in indexer.indices:
+                    index.accept(self)             # Push array index on the stack
+                self.generatePendingRValue()       # Push the element value on the stack
+                self.generator.Emit(OpCodes.Call, cts.symbolType(symbol).GetMethod("Set"))
+            else:
+                symbol.loadEmitter(self.generator) # Push array reference on the stack
+                for index in indexer.indices:
+                    index.accept(self)             # Push array index on the stack
+                self.generator.Emit(OpCodes.Call, cts.symbolType(symbol).GetMethod("Get"))
+                                            
     def visitLiteralString(self, literal_string):
         logging.debug("Visiting %s", literal_string)
         logging.debug("value = %s", literal_string.value)
@@ -295,6 +305,9 @@ class CilVisitor(Visitor):
                 # TODO: Are BBC BASIC bytes signed, or unsigned?
                 # Should we truncate the value here to 0-255 ?
                 return
+            if cast.targetType == ObjectOwlType():
+                self.generator.Emit(OpCodes.Box, cts.mapType(IntegerOwlType()))
+                return
         elif cast.sourceType == ByteOwlType():
             if cast.targetType == FloatOwlType():
                 self.generator.Emit(OpCodes.Conv_R8)
@@ -302,6 +315,9 @@ class CilVisitor(Visitor):
             if cast.targetType == IntegerOwlType():
                 # TODO: Is this correct?
                 pass
+            if cast.targetType == ObjectOwlType():
+                self.generator.Emit(OpCodes.Box, cts.mapType(IntegerOwlType()))
+                return
         elif cast.sourceType == FloatOwlType():
             if cast.targetType == IntegerOwlType():
                 self.generator.Emit(OpCodes.Conv_Ovf_I4)
@@ -312,6 +328,16 @@ class CilVisitor(Visitor):
             if cast.targetType == ByteOwlType():
                 # TODO: Are BBC BASIC bytes signed, or unsigned?
                 self.generator.Emit(OpCodes.Conv_Ovf_I4)
+                return
+            if cast.targetType == ObjectOwlType():
+                self.generator.Emit(OpCodes.Box, cts.mapType(IntegerOwlType()))
+                return
+        elif cast.sourceType == ObjectOwlType():
+            if cast.targetType == StringOwlType():
+                self.generator.Emit(OpCodes.Castclass, cts.mapType(StringOwlType()))
+                return
+            else:
+                self.generator.Emit(OpCodes.Unbox, cts.mapType(cast.targetType))
                 return
             
         errors.internal("Unsupported cast from %s to %s" % (cast.sourceType, cast.targetType))
@@ -433,7 +459,7 @@ class CilVisitor(Visitor):
             repeat = representative(until.loopBackEdges)
             logging.debug("UNTIL correlates with %s", repeat)
             until.condition.accept(self)            # Push the condition onto the stack
-            self.generator.Emit(OpCodes.Brfalse_S, repeat.label)  # Branch if false
+            self.generator.Emit(OpCodes.Brfalse, repeat.label)  # Branch if false # TODO: Short branch?
         else:
             # Non-correlated UNTIL
             errors.internal("TODO: Non-correlated UNTIL")
@@ -491,7 +517,7 @@ class CilVisitor(Visitor):
             emitLdc_T(self.generator, 0, counter_type)           # Push zero on the stack
             
             positive_step_label = self.generator.DefineLabel()   
-            self.generator.Emit(OpCodes.Bgt_S, positive_step_label)      # if step > 0 jump to positive_step_label
+            self.generator.Emit(OpCodes.Bgt, positive_step_label)      # if step > 0 jump to positive_step_label # TODO: Short branch?
             
             loop_back_label = self.generator.DefineLabel()
             
@@ -501,7 +527,7 @@ class CilVisitor(Visitor):
             self.generator.Emit(OpCodes.Clt)                        # Compare less-than
             emitLdc_I4(self.generator, 0)                           # Load 0
             self.generator.Emit(OpCodes.Ceq)                        # Compare equal
-            self.generator.Emit(OpCodes.Br_S, loop_back_label) # 
+            self.generator.Emit(OpCodes.Br, loop_back_label) # TODO: Short branch? 
             
             # step is positive - implement <= as NOT >
             self.generator.MarkLabel(positive_step_label)
@@ -1215,6 +1241,9 @@ class CilVisitor(Visitor):
         self.generator.Emit(OpCodes.Call, floor_method)
         self.generator.Emit(OpCodes.Conv_Ovf_I4)
         
-    
+    def visitEvalFunc(self, eval_func):
+        logging.debug("Visiting %s", eval_func)
+        eval_func.factor.accept(self) # String to be EVALed on the stack
+        self.generator.Emit(OpCodes.Call, self.basicCommandMethod("Eval"))
         
                                                                                 

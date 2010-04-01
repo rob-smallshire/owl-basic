@@ -51,7 +51,30 @@ class AssemblyGenerator(object):
         self.owl_to_clr_method_names = {} # A map of OWL basic names to CLR names
         self.clr_to_owl_method_names = {} # A map of CLR names to OWL basic names
         self.method_builders = {}         # A map of CLR names to MethodBuilders
-    
+
+    def createAndAttachGlobalEmitters(self, global_symbols, type_builder):
+        
+        # Add global variables and their accessors to the class
+        for symbol in global_symbols.symbols.values():
+        #identifier = ctsIdentifier(symbol)
+            identifier = symbol.name
+            field_builder = type_builder.DefineField(identifier, cts.symbolType(symbol), FieldAttributes.Private | FieldAttributes.Static)
+            print identifier
+            assert field_builder is not None
+            self.createAndAttachFieldEmitters(field_builder, symbol)
+
+
+    def createAndAttachStaticEmitters(self, owl_module):
+        # Add accessors for the inherited static variables
+        static_symbols = StaticSymbolTable.getInstance()
+        for symbol in static_symbols.symbols.values():
+        # TODO: If we can fix the names in OwlModule we can use the raw names
+            identifier = ctsIdentifier(symbol)
+            print identifier
+            field_info = owl_module.GetField(identifier)
+            assert field_info is not None
+            self.createAndAttachFieldEmitters(field_info, symbol)
+            
     def lookupMethod(self, clr_name):
         '''
         Lookup a MethodBuilder using is CLR name
@@ -96,25 +119,8 @@ class AssemblyGenerator(object):
                                                  TypeAttributes.Class | TypeAttributes.Public,
                                                  object().GetType())
         
-        # Add accessors for the inherited static variables
-        static_symbols = StaticSymbolTable.getInstance()
-        for symbol in static_symbols.symbols.values():
-            # TODO: If we can fix the names in OwlModule we can use the raw names
-            identifier = ctsIdentifier(symbol)
-            print identifier
-            field_info = owl_module.GetField(identifier)
-            assert field_info is not None
-            self.createAndAttachFieldEmitters(field_info, symbol)
-            
-        # Add global variables and their accessors to the class
-        for symbol in global_symbols.symbols.values():
-            #identifier = ctsIdentifier(symbol)
-            identifier = symbol.name
-            field_builder = type_builder.DefineField(identifier, cts.symbolType(symbol),
-                                                     FieldAttributes.Private | FieldAttributes.Static)
-            print identifier
-            assert field_builder is not None
-            self.createAndAttachFieldEmitters(field_builder, symbol) 
+        self.createAndAttachStaticEmitters(owl_module)
+        self.createAndAttachGlobalEmitters(global_symbols, type_builder) 
         
         if len(data_visitor.data) > 0:
             self.generateStaticDataInitialization(data_visitor, type_builder)

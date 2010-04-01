@@ -6,6 +6,8 @@ import clr
 import System
 from System.Reflection.Emit import *
 
+from cts import typeof
+
 def emitLdarg(generator, index):
     assert 0 <= index <= 65535
     if index == 0:
@@ -17,7 +19,7 @@ def emitLdarg(generator, index):
     elif index == 3:
         generator.Emit(OpCodes.Ldarg_3)
     elif 3 < index <= 255:
-        generator.Emit.Overloads[OpCode, System.Byte](OpCodes.LdArg_S, System.Byte(index))
+        generator.Emit.Overloads[OpCode, System.Byte](OpCodes.Ldarg_S, System.Byte(index))
     else:
         generator.Emit(OpCodes.LdArg, index)
 
@@ -66,3 +68,27 @@ def emitStarg(generator, index):
     else:
         generator.Emit(OpCodes.Starg, index)
 
+def emitLdelem_T(generator, type):
+    if type == System.Int32:
+        generator.Emit(OpCodes.Ldelem_I4)
+    elif type == System.Double:
+        generator.Emit(OpCodes.Ldelem_R4)
+    elif type == System.String:
+        generator.Emit(OpCodes.Ldelem, typeof(System.String))
+    elif type == System.Object:
+        generator.Emit(OpCodes.Ldelem_Ref)
+    else:
+        generator.Emit(OpCodes.Ldelem, typeof(type))
+    
+def emitStelem_T(generator, type):
+    if type == System.Int32:
+        generator.Emit(OpCodes.Stelem_I4)
+    elif type == System.Double:
+        generator.Emit(OpCodes.Stelem_R4)
+    elif type == System.String:
+        generator.Emit(OpCodes.Stelem, typeof(System.String))
+    elif type == System.Object:
+        generator.Emit(OpCodes.Stelem_Ref)
+    else:
+        generator.Emit(OpCodes.Stelem, typeof(type))
+    

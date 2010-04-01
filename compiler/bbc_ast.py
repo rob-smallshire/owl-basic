@@ -10,7 +10,7 @@ from cfg_vertex import CfgVertex
 from typing.type_system import (VoidOwlType, IntegerOwlType, ChannelOwlType,
                                 ScalarOwlType, NumericOwlType, StringOwlType,
                                 FloatOwlType, AddressOwlType, ByteOwlType,
-                                PendingOwlType, ArrayOwlType)
+                                PendingOwlType, ArrayOwlType, ObjectOwlType)
     
 class AstStatement(AstNode, CfgVertex):
     formal_type = TypeOption(VoidOwlType())
@@ -830,7 +830,7 @@ class ErrFunc(AstNode):
 
 class EvalFunc(AstNode):
     "EVAL"
-    formal_type = TypeOption(ScalarOwlType())
+    formal_type = TypeOption(ObjectOwlType())
     actual_type = formal_type
     factor = Node(formalType=StringOwlType())
     

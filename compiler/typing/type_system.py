@@ -96,11 +96,11 @@ class ObjectOwlType(ScalarOwlType):
     
     def isConvertibleTo(self, other):
         assert not isinstance(other, type)
-        return type(other) is type(self)
+        return True
     
     def isAssignableFrom(self, other):
         assert not isinstance(other, type)
-        return isinstance(other, type(self))
+        return True
     
     def isDefined(self):
         return True

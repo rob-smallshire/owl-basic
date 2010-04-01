@@ -44,8 +44,9 @@ def symbolType(symbol):
     t = symbol.type
     if t.isArray():
         # TODO: Rank of array is important here
+        assert symbol.rank > 0
         element_type = typeof(type_map[t.elementType()])
-        return element_type.MakeArrayType()
+        return element_type.MakeArrayType(symbol.rank)
     return typeof(type_map[t])
 
     

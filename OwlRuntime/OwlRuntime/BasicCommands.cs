@@ -172,7 +172,7 @@ namespace OwlRuntime
             return stream.Position;
         }
 
-        public static object Eval(string expression)
+        public static object Eval(string expr)
         {
             throw new NotImplementedException();
         }
