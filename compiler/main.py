@@ -304,6 +304,7 @@ def main(argv=None):
         parser.add_option("-c", "--debug-no-clr", action='store_false', dest='use_clr', default=(sys.platform == 'cli'))
         parser.add_option("-v", "--verbose", action='store_true', dest='verbose', default=False)
         parser.add_option("-i", "--il", action='store_true', dest='create_il', default=False)
+        parser.add_option("-p", "--peverify", action='store_true', dest='peverify', default=False)
 
         (options, args) = parser.parse_args()
         if len(args) != 1:
@@ -367,6 +368,11 @@ def compile(filename, options):
         from codegen.clr.generate import AssemblyGenerator
         ag = AssemblyGenerator(line_mapper)
         exe_filename = ag.generateAssembly(source_path, output_name, stv.globalSymbols, dv, ordered_basic_blocks)
+        if options.peverify:
+            # Run PEVerify on the resulting exeictable
+            logging.debug("Verifying")
+            peverify_exe = r'C:\Program Files\Microsoft SDKs\Windows\v6.0A\Bin\PEVerify.exe'
+            process(peverify_exe, exe_filename)
         if options.create_il:
             # Create debuggable CIL files by disassebling and reassembling the
             # executable

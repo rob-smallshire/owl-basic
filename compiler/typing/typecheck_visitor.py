@@ -101,7 +101,7 @@ class TypecheckVisitor(Visitor):
         
         self.determineNumericResultType(plus)
         self.promoteNumericOperands(plus)
-        
+            
     def visitRelationalOperator(self, operator):
         '''
         Visit = <> < > <= >=
@@ -130,6 +130,9 @@ class TypecheckVisitor(Visitor):
         # Decode the variable name sigil into the actual type
         # The sigils are one of [$%&~]
         indexer.actualType = sigil.identifierToType(indexer.identifier[:-1])
+        for index in indexer.indices:
+            self.visit(index)
+            self.checkAndInsertRValueCast(index, IntegerOwlType())
     
     def visitIf(self, iff):
         # TODO: Does this do anything that visitAstNode doesn't do?
@@ -230,12 +233,7 @@ class TypecheckVisitor(Visitor):
             return
         if instr.startPosition is not None and instr.startPosition.actualType != IntegerOwlType():
             self.insertCast(instr.startPosition, source = instr.startPosition.actualType, target = IntegerOwlType())
-    
-    def visitUserFunc(self, func):
-        # TODO Add to a list of user defined functions to be typechecked
-        for parameter in func.actualParameters:
-            self.visit(parameter)
-    
+        
     def visitReadFunc(self, read_func):
         # Infer the type of ReadFunc in x = ReadFunc from the type of x
         # This depends on the type of the lValue of the assignment having been

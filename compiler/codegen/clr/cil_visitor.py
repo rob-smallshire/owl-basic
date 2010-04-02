@@ -56,7 +56,7 @@ class CilVisitor(Visitor):
     '''
 
 
-    def __init__(self, assembly_generator, method_builder, line_mapper, doc):
+    def __init__(self, assembly_generator, type_builder, method_builder, line_mapper, doc):
         '''
         Create a new CilVisitor for generating a CIL method.
         :param type_builder A System.Reflection.Emit.TypeBuilder
@@ -64,6 +64,7 @@ class CilVisitor(Visitor):
         :param doc: The ISymbolDocumentWriter for debugging information
         '''
         self.assembly_generator = assembly_generator
+        self.type_builder = type_builder
         self.method_builder = method_builder
         self.line_mapper = line_mapper
         self.doc = doc
@@ -338,6 +339,7 @@ class CilVisitor(Visitor):
                 return
             else:
                 self.generator.Emit(OpCodes.Unbox, cts.mapType(cast.targetType))
+                self.generator.Emit(OpCodes.Ldobj, cts.mapType(cast.targetType))
                 return
             
         errors.internal("Unsupported cast from %s to %s" % (cast.sourceType, cast.targetType))
@@ -841,7 +843,11 @@ class CilVisitor(Visitor):
         # TODO: Factor out for BinaryNumericOperators
         power.lhs.accept(self)
         power.rhs.accept(self)
-        self.generator.Emit(OpCodes.Call, self.basicCommandMethod('Pow'))
+        if binaryTypeMatch(power, IntegerOwlType(), IntegerOwlType()):
+            power_method = self.basicCommandOverloadedMethod('Pow', IntegerOwlType(), IntegerOwlType())
+        else:
+            power_method = self.basicCommandOverloadedMethod('Pow', FloatOwlType(), FloatOwlType())
+        self.generator.Emit(OpCodes.Call, power_method)
     
     def visitAnd(self, op):
         # TODO: Deal with unknown types (e.g. Object)
@@ -1244,6 +1250,9 @@ class CilVisitor(Visitor):
     def visitEvalFunc(self, eval_func):
         logging.debug("Visiting %s", eval_func)
         eval_func.factor.accept(self) # String to be EVALed on the stack
+        self.generator.Emit(OpCodes.Ldtoken, self.type_builder) # Push the type of the module we are compiling on the stack
+        get_type_from_handle_method = self.type_type.GetMethod("GetTypeFromHandle", System.Array[System.Type]([clr.GetClrType(System.RuntimeTypeHandle)]))
+        self.generator.Emit(OpCodes.Call, get_type_from_handle_method) # Type on the stack
         self.generator.Emit(OpCodes.Call, self.basicCommandMethod("Eval"))
         
                                                                                 

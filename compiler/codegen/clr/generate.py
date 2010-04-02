@@ -149,7 +149,7 @@ class AssemblyGenerator(object):
         stop_on_error = False    
         for basic_blocks in ordered_basic_blocks.values():
             try:
-                self.generateMethodBody(basic_blocks)
+                self.generateMethodBody(type_builder, basic_blocks)
             except CodeGenerationError, e:
                 logging.critical("STOPPING %s\n\n\n", e)
                 if stop_on_error:
@@ -420,7 +420,7 @@ class AssemblyGenerator(object):
             types = [cts.mapType(param.argument.actualType) for param in formal_parameters]
         return System.Array[System.Type](types)
     
-    def generateMethodBody(self, basic_blocks):
+    def generateMethodBody(self, type_builder, basic_blocks):
         # The first statement of the first basic block is the entry point
         entry_point_node = basic_blocks[0].entryPoint
         try:
@@ -437,7 +437,7 @@ class AssemblyGenerator(object):
         logging.debug("entry_point_node = %s", entry_point_node)
 
         # Create the visitor which holds the code generator 
-        cv = CilVisitor(self, method_builder, self.line_mapper, self.doc)
+        cv = CilVisitor(self, type_builder, method_builder, self.line_mapper, self.doc)
         
         # Declare LOCAL variables and attach load and store emitters to the symbols
         for node in depthFirstSearch(entry_point_node):
@@ -460,8 +460,6 @@ class AssemblyGenerator(object):
         for basic_block in basic_blocks:
             for statement in basic_block.statements:
                 if statement.startLine and statement.startColumn and statement.endLine and statement.endColumn:
-                    print "MarkSequencePoint(%s, %d, %d, %d, %d)" % (self.doc, statement.startLine, statement.startColumn,
-                                                            statement.endLine,   statement.endColumn)
                     cv.generator.MarkSequencePoint(self.doc, statement.startLine, statement.startColumn,
                                                             statement.endLine,   statement.endColumn)
                 cv.checkMark(statement) # TODO: Could push this out a level to be per block

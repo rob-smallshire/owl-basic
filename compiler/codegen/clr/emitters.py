@@ -72,7 +72,7 @@ def emitLdelem_T(generator, type):
     if type == System.Int32:
         generator.Emit(OpCodes.Ldelem_I4)
     elif type == System.Double:
-        generator.Emit(OpCodes.Ldelem_R4)
+        generator.Emit(OpCodes.Ldelem_R8)
     elif type == System.String:
         generator.Emit(OpCodes.Ldelem, typeof(System.String))
     elif type == System.Object:
@@ -84,7 +84,7 @@ def emitStelem_T(generator, type):
     if type == System.Int32:
         generator.Emit(OpCodes.Stelem_I4)
     elif type == System.Double:
-        generator.Emit(OpCodes.Stelem_R4)
+        generator.Emit(OpCodes.Stelem_R8)
     elif type == System.String:
         generator.Emit(OpCodes.Stelem, typeof(System.String))
     elif type == System.Object:

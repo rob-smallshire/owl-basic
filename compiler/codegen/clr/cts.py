@@ -46,6 +46,10 @@ def symbolType(symbol):
         # TODO: Rank of array is important here
         assert symbol.rank > 0
         element_type = typeof(type_map[t.elementType()])
+        # See http://marcgravell.blogspot.com/2010/03/when-is-int-not-int.html
+        # for why MakeArrayType() is different to MakeArrayType(1)
+        if symbol.rank == 1:
+            return element_type.MakeArrayType()
         return element_type.MakeArrayType(symbol.rank)
     return typeof(type_map[t])
 

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using OwlRuntime.platform.riscos;
 
@@ -172,9 +173,27 @@ namespace OwlRuntime
             return stream.Position;
         }
 
-        public static object Eval(string expr)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="expr">The expression to be evaluated</param>
+        /// <param name="module">The Type of the module holding the EVAL statement</param>
+        /// <returns></returns>
+        public static object Eval(string expr, Type module)
         {
-            throw new NotImplementedException();
+            // Assume this is a very simple function call
+            if (expr.StartsWith("FN"))
+            {
+                string name = expr.Substring(2);
+                MethodInfo method = module.GetMethod(name);
+                if (method == null)
+                {
+                    throw new NoSuchFnProcException(name); 
+                }
+                return method.Invoke(null, null);
+            }
+            // TODO: Syntax error
+            return null;
         }
 
         public static int Inkey(int factor)
@@ -317,7 +336,7 @@ namespace OwlRuntime
             return code;
         }
 
-        public static int Rnd()
+        public static double Rnd()
         {
             return random.Next(Int32.MinValue, Int32.MaxValue);
         }
@@ -999,6 +1018,25 @@ namespace OwlRuntime
             return Math.Sqrt(factor);
         }
 
+        public static int Pow(int x, int y)
+        {
+            if (y < 0)
+            {
+                return (int) Pow((double) x, (double) y);
+            }
+            int result = 1;
+            while (y != 0)
+            {
+                if ((y & 1) != 0)
+                {
+                    result *= x;
+                }
+                y >>= 1;
+                x *= x;
+            }
+            return result;
+        }
+
         public static double Pow(double x, double y)
         {
             double result = Math.Pow(x, y);
@@ -1120,6 +1158,17 @@ namespace OwlRuntime
         public BadDimException(int logicalLineNumber) :
             base("Bad DIM at line " + logicalLineNumber)
         {
+        }
+    }
+
+    public class NoSuchFnProcException :OwlRuntimeException
+    {
+        private string name;
+
+        public NoSuchFnProcException(string name) :
+            base("No such FN/PROC : " + name)
+        {
+            this.name = name;
         }
     }
 
