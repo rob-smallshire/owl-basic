@@ -1050,3 +1050,5 @@ class LongJump(AstStatement):
     "Long jump"
     target_logical_line = Node(formalType=IntegerOwlType())
 
+class StarCommand(AstStatement):
+    command = StringOption()

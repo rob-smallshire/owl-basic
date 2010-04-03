@@ -199,7 +199,7 @@ tokens = (
     'EXIT',
     'NOT',
     'MANDEL',
-    'COMMENT'
+    'COMMENT',
 )
 
 def t_COMMENT(t):
@@ -286,6 +286,10 @@ def t_RIGHT_STR_LPAREN(t):
 
 def t_STRING_STR_LPAREN(t):
     r'STRING\$\('
+    return t
+
+def t_LIBRARY(t):
+    r'LIBRARY'
     return t
 
 # Six letter keywords
@@ -502,10 +506,6 @@ def t_GOTO(t):
 
 def t_LINE(t):
     r'LINE'
-    return t
-
-def t_LIBRARY(t):
-    r'LIBRARY'
     return t
 
 def t_MODE(t):
@@ -874,8 +874,6 @@ t_RBRAC = r'\]'
 t_CARET = r'\^'
 t_TILDE = r'~'
 t_DOT = r'\.'
-
-
 
 t_ignore  = ' \t'
 

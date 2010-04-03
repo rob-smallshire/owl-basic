@@ -278,7 +278,7 @@ class TypecheckVisitor(Visitor):
                     self.typeMismatch(call, message)
                 n += 1 
         else:
-            error("Did not find entry point for %s" % callable.name)
+            error("Did not find entry point for %s" % call.name)
         
         # Check each formal parameter against an actual parameter
         pass

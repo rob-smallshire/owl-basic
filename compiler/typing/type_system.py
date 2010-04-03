@@ -73,7 +73,7 @@ class PendingOwlType(OwlType):
     "Pending"
     __metaclass__ = OwlTypeSingleton
     
-    def isAssignableFrom(self, other_type):
+    def isAssignableFrom(self, other):
         # TODO: Is this correct?
         assert not isinstance(other, type)
         return True

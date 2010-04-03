@@ -90,7 +90,8 @@ def p_statement(p):
 # their own line
 def p_lone_stmt_body(p):
     '''lone_stmt_body : case_stmt'''
-    p[0] = p[1]
+    p[0] = StatementList()
+    p[0].append(p[1])
     
 # Statements which can appear alone,
 # or in compound statements on one line
@@ -1957,6 +1958,10 @@ def p_literal_float(p):
     'literal_float : LITERAL_FLOAT'
     p[0] = LiteralFloat(value = p[1])
     p[0].lineNum = p.lineno(1) - 1
+
+#=============================================================================#
+# STAR COMMANDS
+
 
 #=============================================================================#
 # EMPTY PRODUCTION
