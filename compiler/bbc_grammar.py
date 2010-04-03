@@ -89,9 +89,15 @@ def p_statement(p):
 # Statements which must appear alone on
 # their own line
 def p_lone_stmt_body(p):
-    '''lone_stmt_body : case_stmt'''
+    '''lone_stmt_body : case_stmt
+                      | star_command'''
     p[0] = StatementList()
     p[0].append(p[1])
+
+def p_star_command(p):
+    '''star_command : STAR_FX
+                    | STAR_CAT'''
+    p[0] = StarCommand(command = p[1])
     
 # Statements which can appear alone,
 # or in compound statements on one line

@@ -200,6 +200,8 @@ tokens = (
     'NOT',
     'MANDEL',
     'COMMENT',
+    'STAR_FX',
+    'STAR_CAT'
 )
 
 def t_COMMENT(t):
@@ -210,6 +212,14 @@ def t_COMMENT(t):
     #       to a REMed line and use the DATA within it
     m = re.match(r'REM([^\n]*)', t.value)
     t.value = m.group(1)
+    return t
+
+def t_STAR_FX(t):
+    r'\*+\s*FX[^\n]*'
+    return t
+
+def t_STAR_CAT(t):
+    r'\*+\s*CAT[^\n]*'
     return t
 
 # Define a rule so we can split lines with a trailing backslash and leading backslash
