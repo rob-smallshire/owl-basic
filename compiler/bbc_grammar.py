@@ -169,7 +169,8 @@ def p_stmt_body(p):
                  | while_stmt
                  | width_stmt
                  | wait_stmt
-                 | endwhile_stmt'''
+                 | endwhile_stmt
+                 | run_stmt'''
     p[0] = p[1]
         
 def p_bput_stmt(p):
@@ -1097,6 +1098,11 @@ def p_wait_stmt(p):
     elif len(p) == 3:
         #WAIT expr
         p[0] = Wait(centiseconds = p[2])
+    p[0].lineNum = p.lineno(1) - 1
+
+def p_run_stmt(p):
+    '''run_stmt : RUN'''
+    p[0] = Run()
     p[0].lineNum = p.lineno(1) - 1
     
 #=============================================================================#

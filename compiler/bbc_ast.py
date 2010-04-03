@@ -427,6 +427,10 @@ class Restore(AstStatement):
     "RESTORE"
     target_logical_line = Node(formalType=IntegerOwlType())
 
+class Run(AstStatement):
+    "RUN"
+    pass
+
 class Sound(AstStatement):
     "SOUND"
     channel   = Node(formalType=IntegerOwlType())
