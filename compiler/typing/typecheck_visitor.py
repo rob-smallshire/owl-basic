@@ -1,5 +1,7 @@
 # A visitor for performing type-checking over the Abstract Syntax Tree
 
+import logging
+
 from visitor import Visitor
 from errors import *
 from utility import underscoresToCamelCase
@@ -8,6 +10,8 @@ from ast_utils import elideNode
 from typing.type_system import (NumericOwlType, ObjectOwlType, IntegerOwlType, FloatOwlType,
                                 ByteOwlType, PendingOwlType, StringOwlType)
 import sigil
+
+logger = logging.getLogger('typing.typecheck_visitor')
 
 class TypecheckVisitor(Visitor):
     """
@@ -55,6 +59,7 @@ class TypecheckVisitor(Visitor):
                 message = "List is only assignable to an array"
                 self.typeMismatch(assignment, message)
         else:
+            logger.debug(assignment.lValue)
             self.checkAndInsertRValueCast(assignment.rValue, assignment.lValue.actualType)
         
     def visitForToStep(self, for_stmt):
@@ -247,6 +252,7 @@ class TypecheckVisitor(Visitor):
             # TODO: Check argument types against Procedure
             # TODO: This needs different code for internal and external linkage
             self.checkActualParameters(user_func)
+        user_func.actualType = PendingOwlType()
     
     def visitCallProcedure(self, proc):
         if proc.actualParameters:
@@ -284,7 +290,12 @@ class TypecheckVisitor(Visitor):
         pass
     
     def determineNumericResultType(self, operator):    
+        if operator.lhs.actualType == PendingOwlType() or operator.rhs.actualType == PendingOwlType():
+            operator.actualType = PendingOwlType()
+            return
+        
         if not self.checkSignature(operator):
+            # TODO: Error?
             return
         
         def opTypes(lhs_type, rhs_type):
@@ -411,17 +422,18 @@ class TypecheckVisitor(Visitor):
         Checks that child_node of node is of formal_type. 
         """
         if child_node is not None:
-            print child_node
+            logger.debug("child_node = %s" % child_node)
             actual_type = child_node.actualType
+            logger.debug("formal_type = %s" % formal_type)
+            logger.debug("actual_type = %s" % actual_type)
             if formal_type is not None: # None types do not need to be checked
-                print formal_type
                 if actual_type is not None:
-                    print actual_type
                     if not actual_type.isConvertibleTo(formal_type):
-                        message = "%s of %s is incompatible with supplied parameter of type %s" % (info.description, node.description, actual_type.__doc__)
+                        message = "%s of %s is incompatible with supplied parameter of type %s at line %s" % (info.description, node.description, actual_type.__doc__, node.lineNum)
                         self.typeMismatch(node, message)
                         return False
                 else:
+                    
                     message = "%s of %s has no type information" % (info.description, node.description)
                     self.typeError(node, message)
                     return False
@@ -434,7 +446,8 @@ class TypecheckVisitor(Visitor):
         :param r_value: The r_value Node which is to be type checked. 
         :param target_type: The type to which the r_value should be converted.
         '''
-        if r_value is not None:
+        assert target_type is not None
+        if r_value is not None: # TODO Could this be an assert?
             if r_value.actualType.isConvertibleTo(target_type):
                 if r_value.actualType is not target_type:
                     self.insertCast(r_value, r_value.actualType, target_type)

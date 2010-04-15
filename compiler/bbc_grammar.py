@@ -6,6 +6,17 @@ import ply.yacc as yacc
 from bbc_lexer import tokens
 from bbc_ast import *
 
+
+def setDebuggingPositions(p):
+    if p is not None and p[0] is not None:
+        # If it hasn't already been set by more specialised code
+        if p[0].startLine is None:
+            #print "Assigning line numbers"
+            p[0].startLine, p[0].endLine = p.linespan(1)
+            # Note: endPos here will be *before* the last token - it can be refined later
+            p[0].startPos, p[0].endPos = p.lexspan(1)
+        #print p[0].startLine, p[0].endLine, p[0].startPos, p[0].endPos
+
 logger = logging.getLogger('bbc_grammar')
 
 # Precedence table for the above operators
@@ -67,14 +78,7 @@ def p_statement(p):
     '''statement : stmt_body
                  | empty'''
     p[0] = p[1]
-    if p is not None and p[0] is not None:
-        # If it hasn't already been set by more specialised code
-        if p[0].startLine is None: 
-            #print "Assigning line numbers"
-            p[0].startLine,  p[0].endLine = p.linespan(1)
-            # Note: endPos here will be *before* the last token - it can be refined later 
-            p[0].startPos,   p[0].endPos  = p.lexspan(1) 
-            #print p[0].startLine, p[0].endLine, p[0].startPos, p[0].endPos
+    setDebuggingPositions(p)
 
 #=============================================================================#
 # STATEMENTS
@@ -98,6 +102,8 @@ def p_star_command(p):
     '''star_command : STAR_FX
                     | STAR_CAT'''
     p[0] = StarCommand(command = p[1])
+    p[0].lineNum = p.lineno(1) - 1
+    setDebuggingPositions(p)
     
 # Statements which can appear alone,
 # or in compound statements on one line
@@ -200,6 +206,7 @@ def p_case_stmt(p):
     '''case_stmt : CASE expr OF stmt_terminator when_clause_list ENDCASE'''
     p[0] = Case(condition = p[2], whenClauses = p[5])
     p[0].lineNum = p.lineno(1) - 1
+    setDebuggingPositions(p)
 
 def p_when_clause_list(p):
     '''when_clause_list : when_clause

@@ -707,33 +707,39 @@ class AbsFunc(AstNode):
 class EndValue(Value):
     "END"
     formal_type = TypeOption(IntegerOwlType())
+    actual_type = formal_type
     expression = Node()
 
 class ExtValue(Value):
     "EXT"
     formal_type = TypeOption(IntegerOwlType())
+    actual_type = formal_type
     channel = Node()
 
 class HimemValue(Value):
-    formal_type = TypeOption(IntegerOwlType())
+    formal_type = TypeOption(IntegerOwlType()) # TODO: AddressOwlType ?
+    actual_type = formal_type
 
 class LomemValue(Value):
-    formal_type = TypeOption(IntegerOwlType())
+    formal_type = TypeOption(IntegerOwlType()) # TODO: AddressOwlType ?
+    actual_type = formal_type
 
 class PageValue(Value):
-    formal_type = TypeOption(IntegerOwlType())
-    pass
+    formal_type = TypeOption(IntegerOwlType()) # TODO: AddressOwlType ?
+    actual_type = formal_type
 
 class TimeValue(Value):
-    formal_type = TypeOption(IntegerOwlType())
-    pass
+    formal_type = TypeOption(IntegerOwlType()) 
+    actual_type = formal_type
 
 class TimeStrValue(Value):
     formal_type = TypeOption(StringOwlType())
-    pass
+    actual_type = formal_type
 
 class PtrValue(Value):
     channel = Node(formalType=ChannelOwlType())
+    formal_type = TypeOption(IntegerOwlType())
+    actual_type = formal_type
 
 class MidStrLValue(Value):
     target = Node(nodeType=Variable, formalType=StringOwlType()) # TODO: This needs to constrained by the type checker to be a Variable : nodeType=Variable ?
@@ -991,28 +997,34 @@ class TanFunc(UnaryNumericFunc):
 
 class TempoFunc(AstNode):
     formal_type = TypeOption(IntegerOwlType())
+    actual_type = formal_type
 
 class TintFunc(AstNode):
     formal_type = TypeOption(IntegerOwlType())
+    actual_type = formal_type
     xCoord = Node(formalType=IntegerOwlType())
     yCoord = Node(formalType=IntegerOwlType())
     
 class TopFunc(AstNode):
-    formal_type = TypeOption(IntegerOwlType())
+    formal_type = TypeOption(IntegerOwlType()) # TODO: AddressOwlType?
+    actual_type = formal_type
 
 class TrueFunc(AstNode):
     formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
 
 class ValFunc(AstNode):
-    formal_type = TypeOption(NumericOwlType())
+    formal_type = TypeOption(FloatOwlType())
+    actual_type = formal_type
     factor = Node(formalType=StringOwlType())
 
 class VposFunc(AstNode):
     formal_type = TypeOption(IntegerOwlType())
+    actual_type = formal_type
 
 class WidthFunc(AstNode):
     formal_type = TypeOption(IntegerOwlType())
+    actual_type = formal_type
 
 class Line(AstStatement):
     x1_coord = Node(formalType=IntegerOwlType())
