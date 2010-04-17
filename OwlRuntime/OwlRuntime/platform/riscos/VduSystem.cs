@@ -176,7 +176,13 @@ namespace OwlRuntime.platform.riscos
                     textCursorX = value;
                 } else {
                     textCursorX = CursorDefaultX();
-                    textCursorY += textCursor.MovementYEOL;   
+                    if ((TextCursorY >= TextWindowTopRow) && (TextCursorY <= TextWindowBottomRow))
+                    {
+                        textCursorY += textCursor.MovementYEOL;
+                    } else {
+                        // scroll
+                        textCursorY += textCursor.MovementYEOL;
+                    }
                 }    
             }
         }
@@ -189,8 +195,38 @@ namespace OwlRuntime.platform.riscos
                 {
                     textCursorY = value;
                 } else {
-                    textCursorY = CursorDefaultY();
-                    textCursorX += textCursor.MovementXEOL;   
+                    // ???? we may need to extract these into functions. I have an idea there are some VDU commands for scrolling the current text window.
+                    if (textCursor.MovementYEOL != 0)
+                    {
+                        if (PlotTextAtGraphics)
+                        {
+                            // TODO scrolling text window in graphics modes
+
+                            // from memory i dont think the scrolling neeeds to work when plotting at graphics cursor
+                        } else {
+                            if (value > TextWindowBottomRow)
+                            {
+                                // scroll up (ie cursor off bottom of screen)
+                                Console.MoveBufferArea(
+                                    TextWindowLeftCol, TextWindowTopRow + 1,
+                                    TextWindowRightCol - (TextWindowLeftCol - 1), ((TextWindowBottomRow + 1) - TextWindowTopRow) - 1,
+                                    TextWindowLeftCol, TextWindowTopRow);
+                            }
+                            else
+                            {
+                                // scroll down (ie cursor off top of screen)
+                                Console.MoveBufferArea(
+                                    TextWindowLeftCol, TextWindowTopRow,
+                                    TextWindowRightCol - (TextWindowLeftCol - 1), ((TextWindowBottomRow + 1) - TextWindowTopRow) -1,
+                                    TextWindowLeftCol, TextWindowTopRow+1);
+                            }
+                        }
+                        // set the text cursor to the extent that it passed
+                        textCursorY = (value > TextWindowBottomRow) ? TextWindowBottomRow : TextWindowTopRow;
+                    } else {
+                        textCursorY = CursorDefaultY();
+                        textCursorX += textCursor.MovementXEOL;
+                    }
                 }
             }
         }
@@ -805,26 +841,26 @@ namespace OwlRuntime.platform.riscos
 
         private void Backspace()
         {
-            textCursorX -= textCursor.MovementX;
-            textCursorY -= textCursor.MovementY;
+            TextCursorX -= textCursor.MovementX;
+            TextCursorY -= textCursor.MovementY;
         }
 
         private void HorizontalTab()
         {
-            textCursorX += textCursor.MovementX;
-            textCursorY += textCursor.MovementY;
+            TextCursorX += textCursor.MovementX;
+            TextCursorY += textCursor.MovementY;
         }
 
         private void LineFeed()
         {
-            textCursorX += textCursor.MovementXEOL;
-            textCursorY += textCursor.MovementYEOL;
+            TextCursorX += textCursor.MovementXEOL;
+            TextCursorY += textCursor.MovementYEOL;
         }
 
         private void VerticalTab()
         {
-            textCursorX -= textCursor.MovementXEOL;
-            textCursorY -= textCursor.MovementYEOL;
+            TextCursorX -= textCursor.MovementXEOL;
+            TextCursorY -= textCursor.MovementYEOL;
         }
 
         private void ClearTextWindow()
