@@ -43,24 +43,66 @@ namespace OwlRuntime.platform.riscos
 
         public override void ScrollTextArea(int left, int bottom, int right, int top, Direction direction, ScrollMovement movement)
         {
-            bool h = ((int) direction | 2) != 0; // hi bit
-            bool l = ((int) direction | 1) != 0; // low bit
+            int leftSourceOffset = 0;
+            int topSourceOffset = 0;
+            int widthOffset = 0;
+            int heightOffset = 0;
+            int leftTargetOffset = 0;
+            int topTargetOffset = 0;
 
-            int leftSource = h && !l  ? 1 : 0;
-            int topSource  = !h && !l ? 1 : 0;
-            int width      = !h       ? 1 : 0;
-            int height     = h        ? 1 : 0;
-            int leftTarget = h && l   ? 1 : 0;
-            int topTarget  = !h && l  ? 1 : 0;
+            switch (direction)
+            {                         
+                case Direction.Up:    
+                    {
+                        leftSourceOffset = 0;
+                        topSourceOffset  = 1; 
+                        widthOffset      = 1;
+                        heightOffset     = 0;
+                        leftTargetOffset = 0;
+                        topTargetOffset  = 0;
+                        break;
+                    }
+                case Direction.Down:
+                    {
+                        leftSourceOffset = 0;
+                        topSourceOffset  = 0;
+                        widthOffset      = 1; 
+                        heightOffset     = 0;
+                        leftTargetOffset = 0;
+                        topTargetOffset  = 1;
+                        break;
+                    }
+                case Direction.Left:
+                    {
+                        leftSourceOffset = 1;
+                        topSourceOffset  = 0; 
+                        widthOffset      = 0;
+                        heightOffset     = 1;
+                        leftTargetOffset = 0;
+                        topTargetOffset  = 0;
+                        break;
+                    }
+                case Direction.Right:
+                    {
+                        leftSourceOffset = 0;
+                        topSourceOffset  = 0;
+                        widthOffset      = 0;
+                        heightOffset     = 1;
+                        leftTargetOffset = 1;
+                        topTargetOffset  = 0;
+                        break;
+                    }
+            }
+            int leftSourceBuffer = left + leftSourceOffset;
+            int topSourceBuffer = top + topSourceOffset;
+            int widthBuffer = right - left + widthOffset;
+            int heightBuffer = bottom - top + heightOffset;
+            int leftTargetBuffer = left + leftTargetOffset;
+            int topTargetBuffer = top + topTargetOffset;
 
-            int leftSourceBuffer = left + leftSource;
-            int topSourceBuffer  = top + topSource;
-            int widthBuffer      = right - left + width;
-            int heightBuffer     = bottom - top + height;
-            int leftTargetBuffer = left + leftTarget;
-            int topTargetBuffer  = top + topTarget;
-
-            Console.MoveBufferArea(leftSourceBuffer, topSourceBuffer, widthBuffer, heightBuffer, leftTargetBuffer, topTargetBuffer);
+            Console.MoveBufferArea(leftSourceBuffer, topSourceBuffer,
+                widthBuffer, heightBuffer,
+                leftTargetBuffer, topTargetBuffer);
         }
     }
 }
