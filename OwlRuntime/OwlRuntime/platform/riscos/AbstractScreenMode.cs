@@ -344,5 +344,6 @@ namespace OwlRuntime.platform.riscos
 
         public abstract void PrintCharAtGraphics(char c);
         public abstract void PrintCharAtText(char c);
+        public abstract void ScrollTextArea(int left, int bottom, int right, int top, Direction direction, ScrollMovement movement);
     }
 }

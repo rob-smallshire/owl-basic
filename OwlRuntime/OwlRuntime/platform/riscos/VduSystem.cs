@@ -8,8 +8,23 @@ using System.Drawing;
 
 namespace OwlRuntime.platform.riscos
 {
+    public enum Direction
+    {
+        Right = 0,
+        Left = 1,
+        Down = 2,
+        Up = 3
+    }
+
+    public enum ScrollMovement
+    {
+        Cell = 0,      // Scroll by one character cell
+        CellOrByte = 1 // Scroll by one character cell vertically or one byte horizontally
+    }
+
     public class VduSystem : IDisposable
     {
+
         #region Official VDU Variables
 
         // TODO: Rename variable with longer more readable names. Leave the original names in the comments.
@@ -128,7 +143,7 @@ namespace OwlRuntime.platform.riscos
         [VduVariable(257)]
         private int WindowHeight; // WindowHeight - Rows that will fit in the text window without scrolling it
         #endregion
-
+        
         #region unofficial VDU variables
         private int textCursorX;
         private int textCursorY;
@@ -171,7 +186,7 @@ namespace OwlRuntime.platform.riscos
             get { return textCursorX; }
             set
             {
-                if ((value >= TextWindowLeftCol) && (value <= TextWindowRightCol))
+                if (IsWithinTextWindowX(value))
                 {
                     textCursorX = value;
                 } else {
@@ -191,39 +206,24 @@ namespace OwlRuntime.platform.riscos
         {
             get { return textCursorY; }
             set {
-                if ((value >= TextWindowTopRow) && (value <= TextWindowBottomRow))
+                if (IsWithinTextWindowY(value))
                 {
                     textCursorY = value;
-                } else {
-                    // ???? we may need to extract these into functions. I have an idea there are some VDU commands for scrolling the current text window.
+                }
+                else
+                {
                     if (textCursor.MovementYEOL != 0)
                     {
-                        if (PlotTextAtGraphics)
+                        if (!PlotTextAtGraphics)
                         {
-                            // TODO scrolling text window in graphics modes
-
-                            // from memory i dont think the scrolling neeeds to work when plotting at graphics cursor
-                        } else {
-                            if (value > TextWindowBottomRow)
-                            {
-                                // scroll up (ie cursor off bottom of screen)
-                                Console.MoveBufferArea(
-                                    TextWindowLeftCol, TextWindowTopRow + 1,
-                                    TextWindowRightCol - (TextWindowLeftCol - 1), ((TextWindowBottomRow + 1) - TextWindowTopRow) - 1,
-                                    TextWindowLeftCol, TextWindowTopRow);
-                            }
-                            else
-                            {
-                                // scroll down (ie cursor off top of screen)
-                                Console.MoveBufferArea(
-                                    TextWindowLeftCol, TextWindowTopRow,
-                                    TextWindowRightCol - (TextWindowLeftCol - 1), ((TextWindowBottomRow + 1) - TextWindowTopRow) -1,
-                                    TextWindowLeftCol, TextWindowTopRow+1);
-                            }
+                            byte direction = (byte) (value > TextWindowBottomRow ? Direction.Up : Direction.Down);
+                            ScrollTextWindow(0, direction, 0);
                         }
                         // set the text cursor to the extent that it passed
                         textCursorY = (value > TextWindowBottomRow) ? TextWindowBottomRow : TextWindowTopRow;
-                    } else {
+                    }
+                    else
+                    {
                         textCursorY = CursorDefaultY();
                         textCursorX += textCursor.MovementXEOL;
                     }
@@ -744,8 +744,17 @@ namespace OwlRuntime.platform.riscos
 
         private bool IsWithinTextWindow(int cursorX, int cursorY)
         {
-            return ((cursorX <= TextWindowRightCol) && (cursorX >= (TextWindowLeftCol)) &&
-                    (cursorY <= TextWindowBottomRow) && (cursorY >= (TextWindowTopRow)));
+            return IsWithinTextWindowX(cursorX) && IsWithinTextWindowY(cursorY);
+        }
+
+        private bool IsWithinTextWindowX(int cursorX)
+        {
+            return (cursorX <= TextWindowRightCol) && (cursorX >= (TextWindowLeftCol));
+        }
+
+        private bool IsWithinTextWindowY(int cursorY)
+        {
+            return (cursorY <= TextWindowBottomRow) && (cursorY >= (TextWindowTopRow));
         }
 
         private bool IsWithinDisplayArea(int cursorX, int cursorY)
@@ -1221,18 +1230,58 @@ namespace OwlRuntime.platform.riscos
         /// Allows the current text window or whole screen to be scrolled directly in any 
         /// direction without moving the cursor. The extent, direction and movement determine the 
         /// area to be scrolled, the direction of scrolling and the amount of scrolling
+        /// VDU 23,7
+        /// PRM v3 1-604
         /// </summary>
-        /// <param name="extent">Text window or screen. 0 - scroll the current text window. 1 - scroll the entire screen</param>
-        /// <param name="direction">Direction to scroll</param>
-        /// <param name="movement">How much movement. 0 - scroll by one character cell. 1 - scroll by one character cell vertically or one byte horizontally</param>
+        /// <param name="extent">Text window or screen.
+        ///   0 - scroll the current text window.
+        ///   1 - scroll the entire screen</param>
+        /// <param name="direction">Direction to scroll.
+        ///   0 - scroll right 
+        ///   1 - scroll left 
+        ///   2 - scroll down 
+        ///   3 - scroll up 
+        ///   4 - scroll in positive x direction (as set by VDU 23,16)
+        ///   5 - scroll in negative x direction (as set by VDU 23,16)
+        ///   6 - scroll in positive y direction (as set by VDU 23,16)
+        ///   7 - scroll in negative y direction (as set by VDU 23,16)</param>
+        /// <param name="movement">How much movement.
+        ///   0 - scroll by one character cell.
+        ///   1 - scroll by one character cell vertically or one byte horizontally</param>
         private void ScrollTextWindow(byte extent, byte direction, byte movement)
         {
-            throw new NotImplementedException();
+            int left;
+            int bottom;
+            int right;
+            int top;
+            if (extent == 1)
+            {
+                // Scroll whole screen
+                left = 0;
+                bottom = screenMode.TextHeight - 1;
+                right = screenMode.TextWidth - 1;
+                top    = 0;
+            }
+            else
+            {
+                // Scroll text window
+                left = TextWindowLeftCol;
+                bottom = TextWindowBottomRow;
+                right  = TextWindowRightCol;
+                top = TextWindowTopRow;
+            }
+
+            // TODO: Convert direction to scrollDirection properly
+            Direction scrollDirection = (Direction) direction;
+
+            ScrollMovement scrollMovement = (ScrollMovement) movement;
+
+            screenMode.ScrollTextArea(left, bottom, right, top, scrollDirection, scrollMovement);
         }
 
         private void SetPrintDirection(byte x, byte y)
         {
-            // prm v3-1-594 this needs some thinking about how to impliment.
+            // prm v3 1-594 this needs some thinking about how to impliment.
             // May need to impliment windows and scrolling first.
             
             // also risc os 2 and 3 prm's say two params

@@ -550,5 +550,10 @@ namespace OwlRuntime.platform.riscos
             // check if new line needed and EOLaction variable
             NeedsRepaint = true;
         }
+
+        public override void ScrollTextArea(int left, int bottom, int right, int top, Direction direction, ScrollMovement movement)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
