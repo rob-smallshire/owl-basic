@@ -1050,6 +1050,42 @@ namespace OwlRuntime
             }
             return result;
         }
+
+        /// <summary>
+        /// Implementation of the MANDEL statement.
+        /// MANDEL x,y: sets C% to the Mandelbrot colour of x,y limit D%
+        /// </summary>
+        /// <param name="x">The real co-ordinate</param>
+        /// <param name="y">The imaginary co-ordinate</param>
+        public static void Mandel(double cReal, double cImag)
+        {
+            // This code needs to be equivalent to the Python code
+            // def mandel(c): # c is complex
+            //     z = 0
+            //     for h in range(1, 21):
+            //             z = z**2 + c
+            //             if abs(z) > 2:
+            //                     break
+            //     return h
+            double zReal = 0.0;
+            double zImag = 0.0;
+            int d = OwlModule.iD;
+            int h = 1;
+            for (; h <= d ; ++h)
+            {
+                // z = z^2 + c
+                double zRealNext = zReal * zReal - zImag * zImag + cReal;
+                double zImagNext = zImag * zReal + zReal * zImag + cImag;
+                double magnitude2 = zReal * zReal + zImag * zImag;
+                if (magnitude2 > 4.0)
+                {
+                    break;
+                }
+                zReal = zRealNext;
+                zImag = zImagNext;
+            }
+            OwlModule.iC = h;
+        }
     }
 
     public class OwlRuntimeException : Exception
