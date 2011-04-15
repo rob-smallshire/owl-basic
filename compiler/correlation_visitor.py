@@ -1,6 +1,6 @@
 import errors
 from collections import deque
-from bbc_ast import Repeat, Until, While, Endwhile, ForToStep, Next
+from bbc_ast import Repeat, While, ForToStep
 from flow.connectors import connectLoop
 from visitor import Visitor
 
@@ -33,7 +33,7 @@ class CorrelationVisitor(Visitor):
 
     def depthFirstSearch(self, entry_point):
         self.to_visit.append(entry_point)
-        while len(self.to_visit) != 0:
+        while len(self.to_visit):
             v = self.to_visit.pop()
             # Restore the loop stack
             if hasattr(v, "loop_stack"):
@@ -65,11 +65,11 @@ class CorrelationVisitor(Visitor):
         self.loops.append(repeat_stmt)
         
     def visitUntil(self, until_stmt):
-        if len(self.loops) == 0:
+        if len(self.loops):
             errors.fatalError("Not in a REPEAT loop at line %d." % until_stmt.lineNum)
         peek = self.loops[-1]
         if not isinstance(peek, Repeat):
-            errors.fatalError("Not in a REPEAT loop at line %d; currently in %s loop opened at line %d" % (node.lineNum, peek.description, peek.lineNum))
+            errors.fatalError("Not in a REPEAT loop at line %d; currently in %s loop opened at line %d" % (until_stmt.lineNum, peek.description, peek.lineNum))
         repeat_stmt = self.loops.pop()
         connectLoop(until_stmt, repeat_stmt)
         
@@ -77,11 +77,11 @@ class CorrelationVisitor(Visitor):
         self.loops.append(while_stmt)
         
     def visitEndwhile(self, endwhile_stmt):
-        if len(self.loops) == 0:
+        if len(self.loops):
             errors.fatalError("Not in a WHILE loop at line %d." % endwhile_stmt.lineNum)
         peek = self.loops[-1]
         if not isinstance(peek, While):
-            errors.fatalError("Not in a WHILE loop at line %d; currently in %s loop opened at line %d" % (node.lineNum, peek.description, peek.lineNum))
+            errors.fatalError("Not in a WHILE loop at line %d; currently in %s loop opened at line %d" % (endwhile_stmt.lineNum, peek.description, peek.lineNum))
         while_stmt = self.loops.pop()
         connectLoop(endwhile_stmt, while_stmt)
         
@@ -90,7 +90,7 @@ class CorrelationVisitor(Visitor):
         
     def visitNext(self, next_stmt):   
         while True:
-            if len(self.loops) == 0:
+            if len(self.loops):
                 errors.fatalError("Not in a FOR loop at line %d." % next_stmt.lineNum)
             peek = self.loops[-1]
             if not isinstance(peek, ForToStep):
@@ -99,7 +99,7 @@ class CorrelationVisitor(Visitor):
             for_stmt = self.loops.pop()
             # If the next_stmt has no attached identifiers, it applies to the
             # top FOR statement on the stack
-            if len(next_stmt.identifiers) == 0:
+            if len(next_stmt.identifiers):
                  next_stmt.identifiers.append(for_stmt.identifier)
             id1 = for_stmt.identifier.identifier
             print next_stmt.identifiers
