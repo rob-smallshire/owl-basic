@@ -42,6 +42,9 @@ def findFollowingStatement(statement):
     if statement.parent is None:
         return None
 
+    if statement.parent_index is None:
+        return None
+    
     parent_list = getattr(statement.parent, statement.parent_property)
     
     if isinstance(parent_list, list):

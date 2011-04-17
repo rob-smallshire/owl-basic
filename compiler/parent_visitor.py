@@ -1,4 +1,4 @@
-from functools import partial
+import logging
 
 from utility import underscoresToCamelCase
 from visitor import Visitor
@@ -34,6 +34,7 @@ class ParentVisitor(Visitor):
             #if hasattr(node, "parent"):
             #    assert node.parent is parent
             #print "node = %s" % node
+            logging.debug("setParent(%s, %s, %s, %s)", parent, node, name, index)
             node.parent = parent
             node.parent_property = underscoresToCamelCase(name) # The property through which the parent can be accessed.
             node.parent_index = index
