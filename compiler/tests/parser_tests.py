@@ -1,7 +1,7 @@
 import unittest
 import xml.etree.ElementTree as ET
 
-from bbc_ast import *
+from syntax.ast import *
 
 
 class SyntaxTest(unittest.TestCase):
