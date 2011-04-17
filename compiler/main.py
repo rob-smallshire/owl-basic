@@ -13,12 +13,8 @@ import atexit
 import StringIO
 from optparse import OptionParser
 
-import ply.lex as lex
-import ply.yacc as yacc
-
 from decoder import decode
-import syntax.lexer
-import syntax.grammar
+import syntax.parser
 import xml_visitor
 from source_debugging import SourceDebuggingVisitor
 import parent_visitor
@@ -40,18 +36,6 @@ import symbol_table_visitor
 from symbol_tables import SymbolTable
 import correlation_visitor
 from algorithms import all_indices
-
-def tokenize(data, lexer):
-    # Give the lexer some input
-    lexer.input(data)
-
-    # Tokenize
-    while 1:
-        tok = lexer.token()
-        if not tok: break      # No more input
-        print tok
-    # Running the lexer twice on the same input screws up the line numbers, so stop here.
-    sys.exit(0)  
 
 def readFile(filename):
     logging.debug("readFile")
@@ -120,40 +104,6 @@ def warnOnMissingNewline(data):
         logging.warning("Missing newline at end of file")
         data += '\n'  
     return data
-
-def buildLexer(options):
-    logging.debug("buildLexer")
-    if options.verbose:
-        sys.stderr.write("Building lexer...")
-    # Build the lexer and parser
-    
-    lexer = lex.lex(syntax.lexer)
-    if options.verbose:
-        sys.stderr.write("done\n")
-    
-    return lexer
-
-def buildParser(options):
-    logging.debug("buildParser")
-    if options.verbose:
-        sys.stderr.write("Building parser... ")
-    
-    basic_parser = yacc.yacc(module=syntax.grammar, picklefile="parsetab.pickle", debug=1)
-    if options.verbose:
-        sys.stderr.write("done\n")
-    
-    return basic_parser
-
-def parse(data, lexer, parser, options):
-    logging.debug("parse")
-    if options.verbose:
-        sys.stderr.write("Parsing...")
-    
-    parse_tree = parser.parse(data, lexer=lexer, tracking=True)
-    if options.verbose:
-        sys.stderr.write("done\n")
-    
-    return parse_tree
 
 def setSourceDebugging(data, line_offsets, line_number_prefixes, parse_tree):
     logging.debug("Set source debugging")
@@ -328,13 +278,8 @@ def compile(filename, options):
     detokenHandle = detokenize(data, options)
     data, physical_to_logical_map, line_offsets, line_number_prefixes = indexLineNumbers(detokenHandle, options)
     data = warnOnMissingNewline(data)
-    lexer = buildLexer(options)
-    
-    if options.debug_lex:
-        tokenize(data, lexer)
-    
-    parser = buildParser(options)
-    parse_tree = parse(data, lexer, parser, options)
+
+    parse_tree = syntax.parser.parse(data, options)
     setSourceDebugging(data, line_offsets, line_number_prefixes, parse_tree)
     setParents(parse_tree, options)
     splitComplexNodes(parse_tree, options)
