@@ -1,7 +1,7 @@
 import sys
 import logging
 
-import bbc_ast
+import syntax.ast
 import ast_utils
 import errors
 import flow_analysis
@@ -37,7 +37,7 @@ def guardExecutableDefinitions(entry_points):
     logging.debug("Checking for direct execution of function or procedure bodies...")
     
     for entry_point in entry_points.values():
-        if isinstance(entry_point, bbc_ast.DefinitionStatement):
+        if isinstance(entry_point, syntax.ast.DefinitionStatement):
             if len(entry_point.inEdges) != 0:
                 
                 reachable_predecessors = (len(predecessor.entryPoints) > 0 for predecessor in entry_point.inEdges)
@@ -47,7 +47,7 @@ def guardExecutableDefinitions(entry_points):
                     # TODO: Could also have an option to allow procedures to be directly executable
                     # which may involve inserting a call to the procedure at this point ... probably
                     # more appropriate for GOSUBroutines.
-                    raise_stmt = bbc_ast.Raise(type="ExecutedDefinitionException")
+                    raise_stmt = syntax.ast.Raise(type="ExecutedDefinitionException")
                     raise_stmt.lineNum = entry_point.lineNum
                     ast_utils.insertStatementBefore(entry_point, raise_stmt)
                     raise_stmt.clearOutEdges()

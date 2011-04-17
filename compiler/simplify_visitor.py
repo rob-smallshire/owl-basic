@@ -5,7 +5,7 @@ from visitor import Visitor
 from node import *
 from options import *
 from ast_utils import elideNode, insertStatementAfter
-from bbc_ast import StatementList, Next
+from syntax.ast import StatementList, Next
 
 logger = logging.getLogger('simplify_visitor')
 

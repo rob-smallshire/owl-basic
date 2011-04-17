@@ -12,7 +12,7 @@ from System.Reflection import *
 from System.Reflection.Emit import *
 
 from visitor import Visitor
-from bbc_ast import *
+from syntax.ast import *
 from ast_utils import findNode
 import cts
 import errors

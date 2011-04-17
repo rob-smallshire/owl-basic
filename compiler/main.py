@@ -16,11 +16,9 @@ from optparse import OptionParser
 import ply.lex as lex
 import ply.yacc as yacc
 
-import errors
 from decoder import decode
-import bbc_lexer
-import bbc_grammar
-import bbc_ast
+import syntax.lexer
+import syntax.grammar
 import xml_visitor
 from source_debugging import SourceDebuggingVisitor
 import parent_visitor
@@ -37,7 +35,6 @@ from typing.typecheck import typecheck
 import data_visitor
 import gml_visitor
 from xml_blocks import dumpXmlBlocks
-import ast_utils
 from line_mapper import LineMapper
 import symbol_table_visitor
 from symbol_tables import SymbolTable
@@ -130,7 +127,7 @@ def buildLexer(options):
         sys.stderr.write("Building lexer...")
     # Build the lexer and parser
     
-    lexer = lex.lex(bbc_lexer)
+    lexer = lex.lex(syntax.lexer)
     if options.verbose:
         sys.stderr.write("done\n")
     
@@ -141,11 +138,11 @@ def buildParser(options):
     if options.verbose:
         sys.stderr.write("Building parser... ")
     
-    parser = yacc.yacc(module=bbc_grammar, picklefile="parsetab.pickle", debug=1)
+    basic_parser = yacc.yacc(module=syntax.grammar, picklefile="parsetab.pickle", debug=1)
     if options.verbose:
         sys.stderr.write("done\n")
     
-    return parser
+    return basic_parser
 
 def parse(data, lexer, parser, options):
     logging.debug("parse")
@@ -211,12 +208,11 @@ def dumpXmlAst(parse_tree, output_filename, options):
 def correlateLoops(entry_points, options):
     logging.debug("correlateLoops")
     if options.verbose:
-        sys.stderr.write("Convert subroutines to procedures")
-    
+        sys.stderr.write("Correlate opening and closing loop constructs")
+
     for entry_point in entry_points.values():
         # Depth first search from this entry point through the CFG
         # maintaining a stack of loops as we go. Mark nodes that we
-        visited = set()
         cv = correlation_visitor.CorrelationVisitor()
         cv.start(entry_point)
         

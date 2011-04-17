@@ -1,3 +1,4 @@
+import logging
 import errors
 from utility import camelCaseToUnderscores
 
@@ -36,13 +37,15 @@ def elideNode(node, liftFormalTypes=False):
     
 def findFollowingStatement(statement):
     """
-    Given a statement, locates the following statement
+    Given a statement, locates the following statement or None
     """
     if statement.parent is None:
         return None
+
     parent_list = getattr(statement.parent, statement.parent_property)
     
     if isinstance(parent_list, list):
+        logging.debug("statement.parent_index = %s", statement.parent_index)
         if statement.parent_index < (len(parent_list) - 1):
             return parent_list[statement.parent_index + 1]
     

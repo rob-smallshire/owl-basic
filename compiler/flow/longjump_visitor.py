@@ -3,7 +3,7 @@
 from visitor import Visitor
 import errors
 from utility import underscoresToCamelCase
-from bbc_ast import Goto, LongJump
+from syntax.ast import Goto, LongJump
 from ast_utils import elideNode
 import flow_analysis
 

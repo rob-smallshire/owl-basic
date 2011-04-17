@@ -1,7 +1,7 @@
 # A visitor implementation that creates an XML representation of the control flow graph
 
 from visitor import Visitor
-from bbc_ast import If, OnGoto
+from syntax.ast import If, OnGoto
 
 class GmlVisitor(Visitor):
     """

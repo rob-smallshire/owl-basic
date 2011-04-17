@@ -1,7 +1,7 @@
 # A visitor implementation that creates an XML representation of the abstract syntax tree
 
 from visitor import Visitor
-from bbc_ast import StatementList, Assignment, Next, VariableList, Read, ReadFunc, WritableList
+from syntax.ast import StatementList, Assignment, Next, VariableList, Read, ReadFunc, WritableList
 from ast_utils import replaceStatement, insertStatementBefore, removeStatement
     
 class SeparationVisitor(Visitor):

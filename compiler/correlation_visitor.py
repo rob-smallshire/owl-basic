@@ -1,6 +1,7 @@
+import logging
 import errors
 from collections import deque
-from bbc_ast import Repeat, While, ForToStep
+from syntax.ast import Repeat, While, ForToStep
 from flow.connectors import connectLoop
 from visitor import Visitor
 
@@ -65,7 +66,7 @@ class CorrelationVisitor(Visitor):
         self.loops.append(repeat_stmt)
         
     def visitUntil(self, until_stmt):
-        if len(self.loops):
+        if len(self.loops) == 0:
             errors.fatalError("Not in a REPEAT loop at line %d." % until_stmt.lineNum)
         peek = self.loops[-1]
         if not isinstance(peek, Repeat):
@@ -77,7 +78,7 @@ class CorrelationVisitor(Visitor):
         self.loops.append(while_stmt)
         
     def visitEndwhile(self, endwhile_stmt):
-        if len(self.loops):
+        if len(self.loops) == 0:
             errors.fatalError("Not in a WHILE loop at line %d." % endwhile_stmt.lineNum)
         peek = self.loops[-1]
         if not isinstance(peek, While):
@@ -88,9 +89,11 @@ class CorrelationVisitor(Visitor):
     def visitForToStep(self, for_stmt):
         self.loops.append(for_stmt)
         
-    def visitNext(self, next_stmt):   
+    def visitNext(self, next_stmt):
+        logging.debug("NEXT statement = %s", next_stmt)
+        logging.debug("NEXT identifiers = %s", next_stmt.identifiers[0].identifier)
         while True:
-            if len(self.loops):
+            if len(self.loops) == 0:
                 errors.fatalError("Not in a FOR loop at line %d." % next_stmt.lineNum)
             peek = self.loops[-1]
             if not isinstance(peek, ForToStep):

@@ -1,6 +1,6 @@
 # Functions for analysing the CFG graph
 
-import bbc_ast
+import syntax.ast
 
 
 def tagNode(tag, node):
@@ -17,10 +17,10 @@ def tagSuccessors(entry_point, line_mapper):
                         to convert line numbers.
     """
     tag = None
-    if isinstance(entry_point, bbc_ast.DefineProcedure):
+    if isinstance(entry_point, syntax.ast.DefineProcedure):
         # TODO: There is a bug here, whereby SUBXYZ can get relabelled PROCSUBXYZ
         tag = "PROC" + entry_point.name
-    elif isinstance(entry_point, bbc_ast.DefineFunction):
+    elif isinstance(entry_point, syntax.ast.DefineFunction):
         tag = "FN" + entry_point.name
     elif len(entry_point.comeFromGosubEdges) != 0:
         logical_line_number = line_mapper.physicalToLogical(entry_point.lineNum)

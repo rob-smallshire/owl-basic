@@ -34,8 +34,8 @@ class ConvertAssignmentVisitor(Visitor):
         replaceStatement(self.assignment, array_assignment)
         # Replace the statement
     
-    def visitIndexer
-        'Convert to SetElement'
+#    TODO def visitIndexer
+#        'Convert to SetElement'
     
     def visitEndLValue(self, end):
         'Convert to SetEnd'

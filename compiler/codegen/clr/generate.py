@@ -15,7 +15,7 @@ from System.Diagnostics import *
 from visitor import Visitor
 from singleton import Singleton
 
-from bbc_ast import DefinitionStatement, DefineProcedure, DefineFunction, Local
+from syntax.ast import DefinitionStatement, DefineProcedure, DefineFunction, Local
 from ast_utils import findNode
 from cil_visitor import CilVisitor, CodeGenerationError
 from symbol_tables import hasSymbolTableLookup, StaticSymbolTable

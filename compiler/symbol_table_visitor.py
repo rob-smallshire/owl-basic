@@ -6,7 +6,7 @@ from functools import partial
 from visitor import Visitor
 from errors import *
 from symbol_tables import *
-from bbc_ast import FormalArgument, FormalReferenceArgument, Variable, AstStatement
+from syntax.ast import FormalArgument, FormalReferenceArgument, Variable, AstStatement
 from ast_utils import findNode
 import sigil
 

@@ -1,7 +1,7 @@
 import operator
 
 from algorithms import all_equal
-from bbc_ast import ReturnFromFunction
+from syntax.ast import ReturnFromFunction
 import errors
 from algorithms import representative
 from flow.traversal import depthFirstSearch

@@ -6,7 +6,7 @@ Created on 5 Jan 2010
 
 import logging
 
-from bbc_ast import DefineFunction
+from syntax.ast import DefineFunction
 
 from typecheck_visitor import TypecheckVisitor
 from function_type_inferer import inferTypeOfFunction

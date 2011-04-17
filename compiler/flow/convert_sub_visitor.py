@@ -1,6 +1,6 @@
 from visitor import Visitor
 from ast_utils import replaceStatement
-from bbc_ast import LiteralInteger, CallProcedure, ReturnFromProcedure
+from syntax.ast import LiteralInteger, CallProcedure, ReturnFromProcedure
 import errors
 
 class ConvertSubVisitor(Visitor):

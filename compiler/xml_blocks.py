@@ -1,6 +1,6 @@
 from itertools import chain
 
-from bbc_ast import If, OnGoto
+from syntax.ast import If, OnGoto
 from flow.traversal import depthFirstSearch
 
 def dumpXmlBlocks(basic_blocks, filename, options):

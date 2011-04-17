@@ -4,7 +4,7 @@ Convert subroutines with named PROCedures
 
 import logging
 
-from bbc_ast import DefineProcedure
+from syntax.ast import DefineProcedure
 from ast_utils import insertStatementBefore
 from convert_sub_visitor import ConvertSubVisitor
 from flow_analysis import tagSuccessors, deTagSuccessors

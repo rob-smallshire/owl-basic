@@ -3,8 +3,8 @@ import logging
 import ply.yacc as yacc
 
 # Get the token map from the lexer.  This is required.
-from bbc_lexer import tokens
-from bbc_ast import *
+from .lexer import tokens
+from .ast import *
 
 
 def setDebuggingPositions(p):

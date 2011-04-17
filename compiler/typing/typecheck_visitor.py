@@ -5,7 +5,7 @@ import logging
 from visitor import Visitor
 from errors import *
 from utility import underscoresToCamelCase
-from bbc_ast import Cast, Concatenate
+from syntax.ast import Cast, Concatenate
 from ast_utils import elideNode
 from typing.type_system import (NumericOwlType, ObjectOwlType, IntegerOwlType, FloatOwlType,
                                 ByteOwlType, PendingOwlType, StringOwlType)
