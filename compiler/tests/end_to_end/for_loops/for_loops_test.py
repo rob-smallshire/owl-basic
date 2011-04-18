@@ -1,6 +1,7 @@
-__author__ = 'rjs'
-
+import sys
 import unittest
+
+import process
 
 class ForLoopTestCase(unittest.TestCase):
 
@@ -18,11 +19,14 @@ class ForLoopTestCase(unittest.TestCase):
         Raises:
             CompileError: If compilation failed.
         '''
-
-        pass
+        code, out, err = process.execute(sys.executable, r'C:\Users\rjs\Documents\dev\PycharmProjects\owl_basic\compiler\main.py', source)
+        print code
+        print out
+        print err
+        return "unknown.exe", out, err
 
     def execute(self, exe_path):
-        '''Execute the provided executation and capture console output.
+        '''Execute the provided executable and capture console output.
 
         Args:
             exe_path: The path to the executable.
@@ -41,18 +45,19 @@ class ForLoopTestCase(unittest.TestCase):
         Args:
             source: The path to the source file to be compiled.
         '''
-        exe, log = self.compile(source)
+        exe, out, err = self.compile(source)
         actual_console = self.execute(exe)
         self.assertEqual(actual_console, expected_console)
 
     def test_for_loop_01(self):
-        self.check_compile('for_loop_01.owl', 'for_loop_01.txt')
+        self.check_compile(r'C:\Users\rjs\Documents\dev\PycharmProjects\owl_basic\compiler\tests\end_to_end\for_loops\for_loop_01.owl',
+                           r'C:\Users\rjs\Documents\dev\PycharmProjects\owl_basic\compiler\tests\end_to_end\for_loops\for_loop_01.txt')
         
-    def test_for_loop_02(self):
-        self.check_compile('for_loop_02.owl', 'for_loop_02.txt')
+    #def test_for_loop_02(self):
+    #    self.check_compile('for_loop_02.owl', 'for_loop_02.txt')
 
-    def test_for_loop_03(self):
-        self.check_compile('for_loop_03.owl', 'for_loop_03.txt')
+    #def test_for_loop_03(self):
+    #    self.check_compile('for_loop_03.owl', 'for_loop_03.txt')
 
 
 

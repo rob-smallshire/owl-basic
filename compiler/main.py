@@ -36,6 +36,7 @@ import symbol_table_visitor
 from symbol_tables import SymbolTable
 import correlation_visitor
 from algorithms import all_indices
+import process
 
 def readFile(filename):
     logging.debug("readFile")
@@ -313,7 +314,7 @@ def compile(filename, options):
             # Run PEVerify on the resulting exeictable
             logging.debug("Verifying")
             peverify_exe = r'C:\Program Files\Microsoft SDKs\Windows\v6.0A\Bin\PEVerify.exe'
-            process(peverify_exe, exe_filename)
+            process.execute(peverify_exe, exe_filename)
         if options.create_il:
             # Create debuggable CIL files by disassebling and reassembling the
             # executable
@@ -322,7 +323,7 @@ def compile(filename, options):
             logging.debug("Disassembling to CIL")
             ildasm_exe = r'C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\NETFX 4.0 Tools\x64\ildasm.exe'
             il_filename = exe_filename[:-3] + 'il'
-            process(ildasm_exe, '/OUT=%s' % il_filename, exe_filename)
+            process.execute(ildasm_exe, '/OUT=%s' % il_filename, exe_filename)
             
             logging.debug("Reassembling with CIL debug info")
             ilasm_exe = r'C:\Windows\Microsoft.NET\Framework\v2.0.50727\ilasm.exe'
@@ -362,19 +363,6 @@ def compile(filename, options):
     # TODO: Replace Goto -> ReturnFromProcedure with ReturnFromProcedure
     #elimiateCommonSubexpressions(parse_tree    opti
 
-def process(name, *args):
-    '''
-    Execute an external process, and wait for it to complete
-    '''
-    from System.Diagnostics import Process
-    p = Process()
-    p.StartInfo.FileName = name
-    p.StartInfo.Arguments = ' '.join(args)
-    p.StartInfo.CreateNoWindow = True
-    p.Start()
-    p.WaitForExit()
-    p.Close()
-    
 def printProfile():
     import clr
     for p in sorted(clr.GetProfilerData(), key=lambda p: p.ExclusiveTime):

@@ -275,9 +275,19 @@ namespace OwlRuntime
         /// </summary>
         public void CompleteField()
         {
-            if (fieldWidth != 0)
+            if (fieldWidth == 0)
             {
-                Spc(count % fieldWidth);
+                return;
+            }
+
+            if (count == 0)
+            {
+                return;
+            }
+
+            if (fieldWidth != 0 && count != 0)
+            {
+                Spc(fieldWidth - count % fieldWidth);
             }
         }
 
@@ -318,7 +328,10 @@ namespace OwlRuntime
                             : "X" + precision;
 
             string s = i.ToString(format);
-            Spc(fieldWidth - s.Length);
+            if (numberJustification == Justification.Right)
+            {
+                Spc(fieldWidth - s.Length);
+            }
             Print(s);
         }
 
@@ -332,7 +345,10 @@ namespace OwlRuntime
             {
                 string format = FormatChar + precision.ToString();
                 string s = d.ToString(format);
-                Spc(fieldWidth - s.Length);
+                if (numberJustification == Justification.Right)
+                {
+                    Spc(fieldWidth - s.Length);
+                }
                 Print(s);
             }
         }
