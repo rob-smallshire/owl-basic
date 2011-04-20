@@ -13,6 +13,7 @@ from System.Reflection.Emit import *
 # Debug builds
 from System.Diagnostics.SymbolStore import *
 from System.Diagnostics import *
+import shutil
 
 from visitor import Visitor
 from singleton import Singleton
@@ -30,7 +31,9 @@ from flow.traversal import depthFirstSearch
 # Load the OWL Runtime library so we may both call and reference
 # methods within it. For this to work, the compiler/codegen/clr directory must
 # contain a copy of the OwlRuntime.dll.
-owl_runtime_path = os.path.join(os.path.dirname(__file__), 'OwlRuntime.dll')
+owl_runtime_filename = 'OwlRuntime.dll'
+owl_runtime_path = os.path.join(os.path.dirname(__file__),
+                                owl_runtime_filename)
 try:
     clr.AddReferenceToFileAndPath(owl_runtime_path)
 except IOError as e:
@@ -40,6 +43,10 @@ except IOError as e:
     sys.exit(1)
 
 import OwlRuntime
+
+def installRuntimeLibrary(dir_path):
+    logging.debug("Installing OWL Runtime Library to %s", dir_path)
+    shutil.copyfile(owl_runtime_path, os.path.join(dir_path, owl_runtime_filename))
 
 def ctsIdentifier(symbol):
     """
@@ -55,6 +62,7 @@ def ctsIdentifier(symbol):
         return 'i' + symbol.name[:-1]
     # TODO: May need additions to deal with arrays
     return 'f' + symbol.name
+
 
 class AssemblyGenerator(object):
     def __init__(self, line_mapper):
@@ -174,6 +182,10 @@ class AssemblyGenerator(object):
         name += ".exe"    
         logging.debug("Creating %s", name)
         assembly_builder.Save(name)
+
+        directory = os.path.dirname(os.path.abspath(name))
+        installRuntimeLibrary(directory)
+
         return name
     
     def makeAssemblyDebuggable(self, assembly_builder):
