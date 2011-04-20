@@ -549,9 +549,9 @@ def p_return_stmt(p):
     p[0].lineNum = p.lineno(1) - 1
     
 def p_if_stmt(p):
-    '''if_stmt : if_single_stmt'''
-    #'''if_stmt : if_single_stmt
-    #           | if_multi_stmt'''
+    #'''if_stmt : if_single_stmt'''
+    '''if_stmt : if_single_stmt
+               | if_multi_stmt'''
     p[0] = p[1]
     
 def p_if_single_stmt(p):
@@ -611,7 +611,7 @@ def p_if_multi_stmt(p):
         p[0] = If(condition = p[2], trueClause = p[4], falseClause = p[6])
     p[0].lineNum = p.lineno(1) - 1
     
-# The syntax ruls for FOR..NEXT loops are not implemented by the
+# The syntax rules for FOR..NEXT loops are not implemented by the
 # grammar owing to the fact that NEXT is treated as a statement,
 # rather than as a loop terminator.  A later analysis of the parse
 # tree will attempt to match each NEXT with its corresponding FOR
