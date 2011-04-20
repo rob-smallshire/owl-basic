@@ -303,15 +303,13 @@ def compile(filename, options):
 
     output_name = os.path.splitext(os.path.basename(filename))[0]
     source_path = os.path.abspath(filename)
-    from urllib import pathname2url
-    source_url = 'file:' + pathname2url(source_path)
-    source_url = source_url.replace('C|', 'C:')
+
     if options.use_clr:
         from codegen.clr.generate import AssemblyGenerator
         ag = AssemblyGenerator(line_mapper)
         exe_filename = ag.generateAssembly(source_path, output_name, stv.globalSymbols, dv, ordered_basic_blocks)
         if options.peverify:
-            # Run PEVerify on the resulting exeictable
+            # Run PEVerify on the resulting executable
             logging.debug("Verifying")
             peverify_exe = r'C:\Program Files\Microsoft SDKs\Windows\v6.0A\Bin\PEVerify.exe'
             process.execute(peverify_exe, exe_filename)
