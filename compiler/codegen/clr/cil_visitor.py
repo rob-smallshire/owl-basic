@@ -1254,5 +1254,10 @@ class CilVisitor(Visitor):
         get_type_from_handle_method = self.type_type.GetMethod("GetTypeFromHandle", System.Array[System.Type]([clr.GetClrType(System.RuntimeTypeHandle)]))
         self.generator.Emit(OpCodes.Call, get_type_from_handle_method) # Type on the stack
         self.generator.Emit(OpCodes.Call, self.basicCommandMethod("Eval"))
+
+    def visitTimeValue(self, time_value):
+        logging.debug("Visiting %s", time_value)
+        get_time_method = self.basicCommandMethod("get_Time")
+        self.generator.Emit(OpCodes.Call, get_time_method)
         
                                                                                 
