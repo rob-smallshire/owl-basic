@@ -91,7 +91,7 @@ class CorrelationVisitor(Visitor):
         
     def visitNext(self, next_stmt):
         logging.debug("NEXT statement = %s", next_stmt)
-        logging.debug("NEXT identifiers = %s", next_stmt.identifiers[0].identifier)
+        #logging.debug("NEXT identifiers = %s", next_stmt.identifiers[0].identifier)
         while True:
             if len(self.loops) == 0:
                 errors.fatalError("Not in a FOR loop at line %d." % next_stmt.lineNum)
@@ -102,7 +102,7 @@ class CorrelationVisitor(Visitor):
             for_stmt = self.loops.pop()
             # If the next_stmt has no attached identifiers, it applies to the
             # top FOR statement on the stack
-            if len(next_stmt.identifiers):
+            if len(next_stmt.identifiers) == 0:
                  next_stmt.identifiers.append(for_stmt.identifier)
             id1 = for_stmt.identifier.identifier
             print next_stmt.identifiers
