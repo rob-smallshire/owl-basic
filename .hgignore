@@ -18,6 +18,9 @@ docs/build/*
 # Jython
 *$py.class
 
+# Non-redistributable examples
+examples/nodist/*
+
 # Ignore Visual Studio 2008 files
 *.obj
 *.exe
