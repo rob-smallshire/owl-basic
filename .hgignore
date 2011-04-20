@@ -21,6 +21,10 @@ docs/build/*
 # Non-redistributable examples
 examples/nodist/*
 
+# Ignore PLY generated tables
+parser.out
+parsetab.pickle
+
 # Ignore Visual Studio 2008 files
 *.obj
 *.exe
