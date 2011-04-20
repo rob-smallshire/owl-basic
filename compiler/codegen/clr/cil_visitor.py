@@ -3,7 +3,8 @@ Created on 10 Aug 2009
 
 @author: rjs
 '''
-
+import os
+import sys
 import logging
 
 import clr
@@ -21,9 +22,21 @@ from symbol_tables import hasSymbolTableLookup
 from algorithms import representative
 from typing.type_system import (OwlType, NumericOwlType, ObjectOwlType, StringOwlType, ByteArrayOwlType)
 
+# TODO: This block to import OwlRuntime exists in multiple locations
 # Load the OWL Runtime library so we may both call and reference
-# methods within it
-clr.AddReferenceToFileAndPath(r'C:\Users\rjs\Documents\dev\p4smallshire\sandbox\bbc_sharp_basic\OwlRuntime\OwlRuntime\bin\Debug\OwlRuntime.dll')
+# methods within it. For this to work, the compiler/codegen/clr directory must
+# contain a copy of the OwlRuntime.dll.
+owl_runtime_filename = 'OwlRuntime.dll'
+owl_runtime_path = os.path.join(os.path.dirname(__file__),
+                                owl_runtime_filename)
+try:
+    clr.AddReferenceToFileAndPath(owl_runtime_path)
+except IOError as e:
+    logging.critical(e)
+    logging.critical("A copy of the Owl Runtime Library (OwlRuntime.dll) must "
+                     "be present in the compiler/codegen/clr directory")
+    sys.exit(1)
+
 import OwlRuntime
 
 class CodeGenerationError(Exception):

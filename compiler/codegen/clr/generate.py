@@ -28,6 +28,7 @@ from cts import typeof
 from algorithms import representative
 from flow.traversal import depthFirstSearch
 
+# TODO: This block to import OwlRuntime exists in multiple locations
 # Load the OWL Runtime library so we may both call and reference
 # methods within it. For this to work, the compiler/codegen/clr directory must
 # contain a copy of the OwlRuntime.dll.
