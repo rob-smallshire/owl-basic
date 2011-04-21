@@ -1207,7 +1207,12 @@ class CilVisitor(Visitor):
         logging.debug("Visiting %s", pos)
         pos_method = self.basicCommandMethod("Pos")
         self.generator.Emit(OpCodes.Call, pos_method)
-        
+
+    def visitVposFunc(self, vpos):
+        logging.debug("Visiting %s", vpos)
+        vpos_method = self.basicCommandMethod("VPos")
+        self.generator.Emit(OpCodes.Call, vpos_method)
+
     def visitMode(self, mode):
         logging.debug("Visiting %s", mode)
         #self.checkMark(mode)
@@ -1272,5 +1277,10 @@ class CilVisitor(Visitor):
         logging.debug("Visiting %s", time_value)
         get_time_method = self.basicCommandMethod("get_Time")
         self.generator.Emit(OpCodes.Call, get_time_method)
+
+    def visitTimeStrValue(self, time_str_value):
+        logging.debug("Visiting %s", time_str_value)
+        get_datetime_method = self.basicCommandMethod("get_CurrentDateTime")
+        self.generator.Emit(OpCodes.Call, get_datetime_method)
         
                                                                                 
