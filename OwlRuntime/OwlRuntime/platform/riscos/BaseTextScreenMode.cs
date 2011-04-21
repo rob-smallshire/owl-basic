@@ -10,6 +10,13 @@ namespace OwlRuntime.platform.riscos
         protected BaseTextScreenMode(VduSystem vdu, int textWidth, int textHeight, byte bitsPerPixel) :
             base(vdu, textWidth, textHeight, 1280, 1024, bitsPerPixel)
         {
+        }
+
+        /// <summary>
+        /// Set the Console Window and Buffer size to the screen mode size.
+        /// </summary>
+        protected void SetConsoleSize()
+        {
             Console.SetWindowSize(TextWidth, TextHeight);
             Console.SetBufferSize(TextWidth, TextHeight);
         }

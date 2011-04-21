@@ -78,6 +78,7 @@ namespace OwlRuntime.platform.riscos
                 case 44: return new PalettedGraphicsScreenMode(vdu, 1, 80, 25, 640, 200, 1280, 800);
                 case 45: return new PalettedGraphicsScreenMode(vdu, 2, 80, 25, 640, 200, 1280, 800);
                 case 46: return new PalettedGraphicsScreenMode(vdu, 4, 80, 25, 640, 200, 1280, 800);
+                case 47: return new RawConsoleScreenMode(vdu);
                 default: throw new NoSuchScreenModeException(number);
             }
         }
@@ -345,5 +346,24 @@ namespace OwlRuntime.platform.riscos
         public abstract void PrintCharAtGraphics(char c);
         public abstract void PrintCharAtText(char c);
         public abstract void ScrollTextArea(int left, int bottom, int right, int top, Direction direction, ScrollMovement movement);
+
+        public virtual void NewLine()
+        {
+            // This default implementation calls back to the VDU system
+            vdu.Enqueue((byte) 10);
+            vdu.Enqueue((byte) 13);
+        }
+
+        public virtual void Write(char c)
+        {
+            // This default implemenatation calls back to the VDU system
+            vdu.Enqueue(c);   
+        }
+
+        public virtual void Write(string s)
+        {
+            // This default implementation calls back to the VDU system
+            vdu.Enqueue(s);
+        }
     }
 }

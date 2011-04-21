@@ -1,0 +1,4 @@
+MODE 7
+PRINT TIME$
+K = GET
+

@@ -163,13 +163,17 @@ namespace OwlRuntime.platform.riscos
         private readonly Queue<byte> queue = new Queue<byte>();
         private int requiredBytes;
         private Action nextCommand;
+        private const byte rawConsoleMode = 47; // The MODE number for RawConsoleScreenMode
 
         public VduSystem()
         {
-            screenMode = AbstractScreenMode.CreateScreenMode(this, 7);
             textCursor = new TextCursor();
             acornFont = new AcornFont();
             ExpectVduCommand();
+
+            // Initialise the default mode
+            Enqueue(22);
+            Enqueue(rawConsoleMode);
         }
 
         #region getters and setters for VDU variables
@@ -729,13 +733,8 @@ namespace OwlRuntime.platform.riscos
         /// <summary>
         /// Reset the text window to the default for the supplied mode.
         /// </summary>
-        /// <param name="mode">
-        /// A screen mode from which to take the default text window size.
-        /// </param>
         public void ResetTextWindow()
         {
-            // The mode parameter is required since the screenMode data member
-            // may not be initialized at the time of the call to this method
             textWindowLeftCol = 0;
             textWindowBottomRow = screenMode.TextHeight - 1;
             textWindowRightCol = screenMode.TextWidth - 1;
@@ -1713,6 +1712,28 @@ namespace OwlRuntime.platform.riscos
             // TODO do the work
             ExpectVduCommand();
         }
+
+        #region Methods which delegate to screenMode
+        // These methods delegate to screenMode, which may in fact call this
+        // VduSystem back to perform the operation. This allows some screen modes
+        // to provide optimised implementations which bypass parts of the VduSystem
+
+        public void NewLine()
+        {
+            screenMode.NewLine();
+        }
+
+        public void Write(char c)
+        {
+            screenMode.Write(c);
+        }
+
+        public void Write(string s)
+        {
+            screenMode.Write(s);
+        }
+
+        #endregion
 
         private byte DequeueByte()
         {

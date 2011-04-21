@@ -317,15 +317,19 @@ def compile(filename, options):
             # Create debuggable CIL files by disassebling and reassembling the
             # executable
             # Run ILDASM on the produced file
-            # TODO: Should be able to determine this path using the information at http://bytes.com/topic/net/answers/106694-code-obtain-path-ildasm-exe
             logging.debug("Disassembling to CIL")
-            ildasm_exe = r'C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\NETFX 4.0 Tools\x64\ildasm.exe'
+
+            ildasm_exe = r"C:\Program Files\Microsoft SDKs\Windows\v6.0A\Bin\x64\ildasm.exe"
+            logging.debug("ILDAsm.exe  from %s", ildasm_exe)
             il_filename = exe_filename[:-3] + 'il'
             process.execute(ildasm_exe, '/OUT=%s' % il_filename, exe_filename)
             
             logging.debug("Reassembling with CIL debug info")
-            ilasm_exe = r'C:\Windows\Microsoft.NET\Framework\v2.0.50727\ilasm.exe'
-            process(ilasm_exe, '/EXE', '/DEBUG', il_filename)
+            clr.AddReference("Microsoft.Build.Utilities")
+            from Microsoft.Build.Utilities import ToolLocationHelper, TargetDotNetFrameworkVersion
+            ilasm_exe = ToolLocationHelper.GetPathToDotNetFrameworkFile("ILAsm.exe", TargetDotNetFrameworkVersion.VersionLatest)
+            logging.debug("ILAsm.exe  from %s", ilasm_exe)
+            process.execute(ilasm_exe, '/EXE', '/DEBUG', il_filename)
                                       
     # Structural analysis
 
@@ -360,6 +364,8 @@ def compile(filename, options):
         
     # TODO: Replace Goto -> ReturnFromProcedure with ReturnFromProcedure
     #elimiateCommonSubexpressions(parse_tree    opti
+
+
 
 def printProfile():
     import clr

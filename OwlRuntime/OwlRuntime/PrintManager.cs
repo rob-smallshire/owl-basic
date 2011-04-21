@@ -293,17 +293,24 @@ namespace OwlRuntime
 
         public void Spc(int padding)
         {
-            for (int i = 0; i < padding; ++i)
-            {
-                Print(' ');
-            }
+            Print(new string(' ', padding));
         }
 
         public void Print(string s)
         {
-            foreach (char c in s)
+            // If width is zero, and there are no newline (0x0d) characters in the string
+            // take an optimised path
+            if (width == 0 && !s.Contains("\r"))
             {
-                Print(c);
+                count += s.Length;
+                os.WriteS(s);
+            }
+            else
+            {
+                foreach (char c in s)
+                {
+                    Print(c);
+                }
             }
         }
 

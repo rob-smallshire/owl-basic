@@ -1,0 +1,6 @@
+K = GET
+PRINT "Hello, World!"
+x% = POS
+y% = VPOS
+PRINT x%, y%
+K = GET

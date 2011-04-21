@@ -17,6 +17,7 @@ namespace OwlRuntime.platform.riscos
         public PalettedTextScreenMode(VduSystem vdu, byte bitsPerPixel, int textWidth, int textHeight) :
             base(vdu, textWidth, textHeight, bitsPerPixel)
         {
+            SetConsoleSize();
             palette = new Palette(bitsPerPixel);
         }
 

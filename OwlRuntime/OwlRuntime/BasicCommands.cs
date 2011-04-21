@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Text;
+
 using OwlRuntime.platform.riscos;
 
 namespace OwlRuntime
@@ -17,14 +20,21 @@ namespace OwlRuntime
         private static readonly PrintManager printManager;
         private const int owlTrue = -1;
         private const int owlFalse = 0;
+        private const string acornDateTimeFormat = "ddd,dd MMM yyyy.HH:mm:ss";
+        private const string bb4WDateTimeFormat = "ddd.dd MMM yyyy,HH:mm:ss";
         private static Random random = new Random();
         private static double lastRnd1Value;
+        private static int time;
+        private static int ticksAtTime;
 
         static BasicCommands()
         {
             vdu = new VduSystem();
             os = new OS(vdu);
             printManager = new PrintManager(os, vdu);
+
+            ticksAtTime = Environment.TickCount;
+            time = ticksAtTime / 10;
         }
 
         public class NoSuchChannelException : ApplicationException
@@ -1009,6 +1019,11 @@ namespace OwlRuntime
             return vdu.TextCursorX;
         }
 
+        public static int VPos()
+        {
+            return vdu.TextCursorY;
+        }
+
         public static double Sqr(double factor)
         {
             if (factor < 0.0)
@@ -1085,6 +1100,49 @@ namespace OwlRuntime
                 zImag = zImagNext;
             }
             OwlModule.iC = h;
+        }
+
+        public static int Time
+        {
+            get
+            {
+                
+                int currentTicks = Environment.TickCount;
+                int elapsedTicks = currentTicks - ticksAtTime;
+                time += elapsedTicks / 10;
+                ticksAtTime = currentTicks;
+                return time;
+            }
+
+            set
+            {
+                time = value;
+                ticksAtTime = Environment.TickCount;
+            }
+        }
+
+        public static string CurrentDateTime
+        {
+            get
+            {
+                DateTime now = DateTime.Now;
+                string result = now.ToString(acornDateTimeFormat);
+                Debug.Assert(result.Length == 24);
+                return result;
+            }
+
+            set
+            {
+                DateTime now;
+                bool parsed = DateTime.TryParseExact(value, new[] {acornDateTimeFormat, bb4WDateTimeFormat},
+                                                     new CultureInfo("en-GB"), DateTimeStyles.None,
+                                                     out now);
+                if (parsed)
+                {
+                    Microsoft.VisualBasic.DateAndTime.TimeOfDay = now;        
+                }
+
+            }
         }
     }
 

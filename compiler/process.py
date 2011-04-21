@@ -1,5 +1,5 @@
 '''Tools for subprocesses in IronPython'''
-from future_builtins import map
+import logging
 
 __author__ = 'rjs'
 
@@ -16,6 +16,7 @@ def execute(name, *args):
         A 3-tuple containing an integer exit code and stdout and stderr as
         strings.
     '''
+    logging.debug("process.execute(%s)" % name)
     from System.Diagnostics import Process
     p = Process()
     p.StartInfo.FileName = name

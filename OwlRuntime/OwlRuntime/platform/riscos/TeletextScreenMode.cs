@@ -10,6 +10,7 @@ namespace OwlRuntime.platform.riscos
         public TeletextScreenMode(VduSystem vdu) :
             base(vdu, 40, 25, 4) // 4 bits per pixel in last argument for the colours in teletext (7+flashing)
         {
+            SetConsoleSize();
         }
 
         public override void Dispose()
