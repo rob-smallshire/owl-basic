@@ -1,6 +1,9 @@
 K = GET
 PRINT "Hello, World!"
-x% = POS
-y% = VPOS
-PRINT x%, y%
+FOR c% = 0 TO 15
+    COLOUR c%
+    x% = POS
+    y% = VPOS
+    PRINT x%, y%
+NEXT
 K = GET

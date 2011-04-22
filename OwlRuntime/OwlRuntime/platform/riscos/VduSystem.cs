@@ -608,11 +608,11 @@ namespace OwlRuntime.platform.riscos
                     break;
                 case 17:
                     requiredBytes = 1;
-                    nextCommand = SetTextColour;
+                    nextCommand = DoSetTextColour;
                     break;
                 case 18:
                     requiredBytes = 2;
-                    nextCommand = SetGraphicsColour;
+                    nextCommand = DoSetGraphicsColour;
                     break;
                 case 19:
                     requiredBytes = 5;
@@ -691,7 +691,7 @@ namespace OwlRuntime.platform.riscos
             ExpectVduCommand();
         }
 
-        private void SetGraphicsColour()
+        private void DoSetGraphicsColour()
         {
             // prm1-586
             // is equiv to GCOL k,c
@@ -1616,17 +1616,11 @@ namespace OwlRuntime.platform.riscos
             System.Media.SystemSounds.Beep.Play();
         }
 
-        private void SetTextColour()
-        {
-            requiredBytes = 1;
-            nextCommand = DoSetTextColour;
-        }
-
         private void DoSetTextColour()
         {
             // PRM 1-585
             byte colour = DequeueByte();
-            // todo do we need to impliment 6 bit colour for old style palette
+            // todo do we need to implement 6 bit colour for old style palette
             byte logicalColour = (byte) (colour % ((1 << ScreenMode.BitsPerPixel) -1));
 
             if ((colour & 0x80) == 0)

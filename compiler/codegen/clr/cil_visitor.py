@@ -1102,7 +1102,17 @@ class CilVisitor(Visitor):
         else:
             gcol_method = self.basicCommandMethod("Gcol")
         self.generator.Emit(OpCodes.Call, gcol_method)
-            
+
+    def visitColour(self, colour):
+        logging.debug("Visiting %s", colour)
+        colour.colour.accept(self)
+        if colour.tint is not None:
+            colour.tint.accept(self)
+            colour_method = self.basicCommandMethod("ColourTint")
+        else:
+            colour_method = self.basicCommandMethod("Colour")
+        self.generator.Emit(OpCodes.Call, colour_method)
+
     def visitAscFunc(self, asc):
         logging.debug("Visiting %s", asc)
         asc.factor.accept(self)

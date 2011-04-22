@@ -93,6 +93,11 @@ namespace OwlRuntime
             channels.Remove(channel);
         }
 
+        public static void Colour(int logicalColour)
+        {
+            vdu.Enqueue((byte) 17, (byte) logicalColour);  
+        }
+
         public static void Gcol(int mode, int logicalColour)
         {
             vdu.Enqueue((byte) 18, (byte) mode, (byte) logicalColour);
