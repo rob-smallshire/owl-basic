@@ -295,6 +295,7 @@ def compile(filename, options):
     basic_blocks = identifyBasicBlocks(entry_points, options)
     ordered_basic_blocks = orderBasicBlocks(basic_blocks, options)
     typecheck(parse_tree, entry_points, options)
+    # Array visitor - rewrite array expressions
     stv = buildSymbolTables(entry_points, options)
     
     dumpXmlAst(parse_tree, filename + "_ast.xml", options)

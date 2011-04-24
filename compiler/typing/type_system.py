@@ -38,7 +38,7 @@ class OwlType(Visitable):
         return None
     
     def isA(self, other):
-        assert not isinstance(other, type)
+        #assert not isinstance(other, type)
         return isinstance(self, type(other))
     
     def isConvertibleTo(self, other):

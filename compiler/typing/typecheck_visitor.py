@@ -7,8 +7,9 @@ from errors import *
 from utility import underscoresToCamelCase
 from syntax.ast import Cast, Concatenate
 from ast_utils import elideNode
-from typing.type_system import (NumericOwlType, ObjectOwlType, IntegerOwlType, FloatOwlType,
-                                ByteOwlType, PendingOwlType, StringOwlType)
+from typing.type_system import (NumericOwlType, ObjectOwlType, IntegerOwlType,
+                                FloatOwlType, ByteOwlType, PendingOwlType,
+                                StringOwlType, ArrayOwlType)
 import sigil
 
 logger = logging.getLogger('typing.typecheck_visitor')
@@ -52,7 +53,7 @@ class TypecheckVisitor(Visitor):
         self.visit(assignment.rValue)
         if isinstance(assignment.rValue, list):
             # Deal with L-values which are lists
-            if assignment.lValue.actualType.isA(ArrayType):
+            if assignment.lValue.actualType.isA(ArrayOwlType):
                 for item in assignment.rValue:
                     self.checkAndInsertRValueCast(item, assignment.lValue.actualType._getElementType())
             else:

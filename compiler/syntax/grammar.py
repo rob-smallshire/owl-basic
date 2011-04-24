@@ -649,17 +649,31 @@ def p_let_stmt(p):
     p[0] = p[1]
     
 def p_assignment(p):
-    '''assignment : LET lvalue EQ expr
-                  | LET array EQ array_expr
-                  | lvalue EQ expr
-                  | array EQ array_expr'''
+    '''assignment : scalar_assignment
+                  | array_assignment'''
+    p[0] = p[1]
+
+def p_scalar_assignment(p):
+    '''scalar_assignment : LET lvalue EQ expr
+                         | lvalue EQ expr'''
     if len(p) == 5:
-        p[0] = Assignment(lValue = p[2], rValue = p[4])
+        p[0] = ScalarAssignment(lValue = p[2], rValue = p[4])
         p[0].lineNum = p.lineno(1) - 1
     elif len(p) == 4:
-        p[0] = Assignment(lValue = p[1], rValue = p[3])
+        p[0] = ScalarAssignment(lValue = p[1], rValue = p[3])
         p[0].lineNum = p.lineno(2) - 1
-    
+
+def p_array_assignment(p):
+    '''array_assignment : LET array EQ array_expr
+                        | array EQ array_expr'''
+    if len(p) == 5:
+        p[0] = ArrayAssignment(lValue = p[2], rValue = p[4])
+        p[0].lineNum = p.lineno(1) - 1
+    elif len(p) == 4:
+        p[0] = ArrayAssignment(lValue = p[1], rValue = p[3])
+        p[0].lineNum = p.lineno(2) - 1
+
+
 def p_increment(p):
     '''increment : LET lvalue PLUS_ASSIGN expr
                  | LET array PLUS_ASSIGN expr

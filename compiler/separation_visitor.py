@@ -1,7 +1,7 @@
 # A visitor implementation that creates an XML representation of the abstract syntax tree
 
 from visitor import Visitor
-from syntax.ast import StatementList, Assignment, Next, VariableList, Read, ReadFunc, WritableList
+from syntax.ast import StatementList, ScalarAssignment, Next, VariableList, Read, ReadFunc, WritableList
 from ast_utils import replaceStatement, insertStatementBefore, removeStatement
     
 class SeparationVisitor(Visitor):
@@ -78,7 +78,7 @@ class SeparationVisitor(Visitor):
         
         for writable in read.writables.writables:
             read_func = ReadFunc()
-            new_assignment = Assignment(lValue=writable, rValue=read_func)
+            new_assignment = ScalarAssignment(lValue=writable, rValue=read_func)
             
             writable.parent = new_assignment
             writable.parent_property = 'lValue'

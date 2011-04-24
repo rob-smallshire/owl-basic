@@ -69,7 +69,13 @@ class AllocateBlock(AstStatement):
 class Assignment(AstStatement):
     l_value = Node()
     r_value = Node()
-    
+
+class ScalarAssignment(Assignment):
+    pass
+
+class ArrayAssignment(Assignment):
+    pass
+
 class Increment(AstStatement):
     l_value = Node()
     r_value = Node()

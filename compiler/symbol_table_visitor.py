@@ -156,7 +156,7 @@ class SymbolTableVisitor(Visitor):
         self.followSuccessors(statement)
     
     def visitVariable(self, variable):
-        logger.debug("SymbolTableVisitor.visitAssignment")
+        logger.debug("SymbolTableVisitor.visitVariable")
         statement_node = findNode(variable, lambda node: isinstance(node, AstStatement))
         symbol_table = statement_node.symbolTable
         self.tryAddVariable(symbol_table, variable)

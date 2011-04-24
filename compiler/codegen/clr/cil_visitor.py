@@ -227,7 +227,7 @@ class CilVisitor(Visitor):
             self.generator.Emit(OpCodes.Newobj, ctor)
         symbol.storeEmitter(self.generator)    
     
-    def visitAssignment(self, assignment):
+    def visitScalarAssignment(self, assignment):
         logging.debug("Visiting %s", assignment)
         #self.checkMark(assignment)
         # The code for generating the rvalue may need to be interleaved
