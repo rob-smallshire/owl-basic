@@ -958,6 +958,11 @@ class ReadFunc(AstNode):
     formal_type = TypeOption(ScalarOwlType())
     actual_type = formal_type
 
+class ReportStrFunc(AstNode):
+    "REPORT$"
+    formal_type = TypeOption(StringOwlType())
+    actual_type = formal_type
+
 class RightStrFunc(AstNode):
     formal_type = TypeOption(StringOwlType())
     actual_type = formal_type

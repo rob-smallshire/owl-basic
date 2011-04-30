@@ -667,7 +667,7 @@ def p_scalar_assignment(p):
     p[0].lineNum = p.lineno(2) - 1
 
 def p_array_assignment(p):
-    '''array_assignment : array EQ array_expr'''
+    '''array_assignment : array EQ expr_list'''
     p[0] = ArrayAssignment(lValue = p[1], rValue = p[3])
     p[0].lineNum = p.lineno(2) - 1
 
@@ -1129,8 +1129,7 @@ def p_actual_arg_list(p):
         p[0].lineNum = p.lineno(2) - 1
     
 def p_actual_arg(p):
-    '''actual_arg : expr
-                  | array'''
+    '''actual_arg : expr'''
     p[0] = p[1]
     
 def p_formal_arg_list(p):
@@ -1163,6 +1162,7 @@ def p_factor(p):
     '''factor : literal
               | variable
               | pseudovariable
+              | array
               | expr_group
               | expr_function
               | indexer
@@ -1226,6 +1226,7 @@ def p_expr(p):
             | expr DIVIDE expr
             | expr MOD expr
             | expr DIV expr
+            | expr DOT expr
             | expr CARET expr
             | expr EQ expr
             | expr NE expr
@@ -1255,6 +1256,8 @@ def p_expr(p):
             p[0] = IntegerDivide(lhs = p[1], rhs = p[3])
         elif p[2] == 'MOD':
             p[0] = IntegerModulus(lhs = p[1], rhs = p[3])
+        elif p[2] == '.':
+            p[0] = MatrixMultiply(lhs = p[1], rhs = p[3])
         elif p[2] == '^':
             p[0] = Power(lhs = p[1], rhs = p[3])
         elif p[2] == '=':
@@ -1429,7 +1432,6 @@ def p_time_str_value(p):
 '''    expr_function :
                      | report_str_func
                      | string_str_func
-                     | sum_func
                      | usr_func'''
 
 def p_expr_function(p):
@@ -1481,6 +1483,7 @@ def p_expr_function(p):
                      | sqr_func
                      | tan_func
                      | rad_func
+                     | report_str_func
                      | right_str_func
                      | rnd_func
                      | str_str_func
@@ -1741,6 +1744,11 @@ def p_rad_func(p):
     p[0] = RadFunc(factor = p[2])
     p[0].lineNum = p.lineno(1) - 1
 
+def p_report_str_func(p):
+    'report_str_func : REPORT_STR %prec FUNCTION'
+    p[0] = ReportStrFunc()
+    p[0].lineNum = p.lineno(1) - 1
+
 def p_right_str_func(p):
     '''right_str_func : RIGHT_STR_LPAREN expr RPAREN
                       | RIGHT_STR_LPAREN expr COMMA expr RPAREN'''
@@ -1794,11 +1802,13 @@ def p_str_str_hex_func(p):
     
 def p_sum_func(p):
     'sum_func : SUM array %prec FUNCTION'
+    # TODO: Accept factor and type check for array
     p[0] = Sum(array = p[2])
     p[0].lineNum = p.lineno(1) - 1
     
 def p_sumlen_func(p):
     'sumlen_func : SUMLEN array %prec FUNCTION'
+    # TODO: Accept factor and type check for array
     p[0] = SumLenFunc(array = p[2])
     p[0].lineNum = p.lineno(1) - 1
     
@@ -1915,46 +1925,7 @@ def p_indexer(p):
     'indexer : ARRAYID_LPAREN expr_list RPAREN'
     p[0] = Indexer(identifier = p[1], indices = p[2])
     p[0].lineNum = p.lineno(1) - 1
-    
-# TODO: Is PLUS array for unary plus allowed?
-def p_array_expr(p):
-    # TODO factor here should be factor COMMA expr_list
-    '''array_expr : array
-                  | factor
-                  | expr_list
-                  | MINUS array
-                  | array PLUS array
-                  | array MINUS array
-                  | array TIMES array
-                  | array DIVIDE array
-                  | array PLUS factor
-                  | factor PLUS array
-                  | array MINUS factor
-                  | factor MINUS array
-                  | array TIMES factor
-                  | factor TIMES array
-                  | array DIVIDE factor
-                  | factor DIVIDE array
-                  | array DOT array'''
-    if len(p) == 2:
-        p[0] = p[1]
-    elif len(p) == 3:
-        if p[1] == '-':
-            p[0] = ArrayUnaryMinus(expression = p[2])
-        p[0].lineNum = p.lineno(1) - 1
-    elif len(p) == 4:
-        if p[2] == '+':
-            p[0] = ArrayPlus(lhs = p[1], rhs = p[3])
-        elif p[2] == '-':
-            p[0] = ArrayMinus(lhs = p[1], rhs = p[3])
-        elif p[2] == '*':
-            p[0] = ArrayMultiply(lhs = p[1], rhs = p[3])
-        elif p[2] == '/':
-            p[0] = ArrayDivide(lhs = p[1], rhs = p[3])
-        elif p[2] == '.':
-            p[0] = MatrixMultiply(lhs = p[1], rhs = p[3])
-        p[0].lineNum = p.lineno(2) - 1
-    
+
 #=============================================================================#
 # LITERALS
 

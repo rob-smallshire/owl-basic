@@ -172,6 +172,7 @@ tokens = (
     'READ',
     'REPEAT',
     'REPORT',
+    'REPORT_STR',
     'RESTORE',
     'RETURN',
     'RUN',
@@ -284,6 +285,10 @@ def t_OPENOUT(t):
 
 def t_PRIVATE(t):
     r'PRIVATE'
+    return t
+
+def t_REPORT_STR(t):
+    r'REPORT\$'
     return t
 
 def t_RESTORE(t):
