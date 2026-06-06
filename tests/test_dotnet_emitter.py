@@ -233,6 +233,39 @@ def test_string_functions_compile_and_run(compile_and_run):
     ]
 
 
+def test_emit_il_lowers_input(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse_fixture("input_demo.bbctxt"))
+    assert "newarr [System.Runtime]System.Type" in il
+    assert "::Input(bool, class [System.Runtime]System.Type[])" in il
+    assert "Queue`1<object>::Dequeue()" in il
+    assert "castclass [System.Runtime]System.String" in il   # string var
+    assert "unbox.any int32" in il                           # integer var
+
+
+@requires_dotnet_toolchain
+def test_input_compiles_and_runs(compile_and_run):
+    # INPUT a$ (hello), INPUT n% (21->42), INPUT x%,y% (3,4 from one line ->7)
+    stdout = compile_and_run(
+        analyse_fixture("input_demo.bbctxt"), stdin="hello\n21\n3,4\n"
+    )
+    # Each INPUT prints a '?' prompt; check the echoed/computed values.
+    assert "got hello" in stdout      # string input
+    assert "42" in stdout             # n%=21 -> 42
+    assert stdout.rstrip().endswith("7")   # x%+y% = 3+4 from one line "3,4"
+
+
+@requires_dotnet_toolchain
+def test_input_reprompts_until_enough_values(compile_and_run):
+    # INPUT x%,y% is one read of two values; given one value per line it must
+    # re-prompt for the second (the runtime loops until it has both).
+    program = analyse_numbered_lines(
+        [(10, "INPUT x%, y%"), (20, "PRINT x% + y%"), (30, "END")], name="rp"
+    )
+    stdout = compile_and_run(program, stdin="3\n4\n")
+    assert stdout.count("?") == 2          # prompted twice
+    assert stdout.rstrip().endswith("7")
+
+
 def test_emit_il_lowers_data_read_restore(dotnet_backend):
     il = dotnet_backend.emit_il(analyse_fixture("data_read.bbctxt"))
     # DATA becomes a static string array, READ reads/parses it, RESTORE rewinds.

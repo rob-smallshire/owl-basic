@@ -43,11 +43,12 @@ def compile_and_run(dotnet_backend, tmp_path):
     returns the program's standard output.
     """
 
-    def run(program):
+    def run(program, stdin=None):
         dll_filepath = dotnet_backend.generate(program, tmp_path)
         shutil.copy(find_owlruntime_dll(), tmp_path)
         result = subprocess.run(
-            ["dotnet", str(dll_filepath)], capture_output=True, text=True
+            ["dotnet", str(dll_filepath)],
+            input=stdin, capture_output=True, text=True
         )
         assert result.returncode == 0, result.stderr
         return result.stdout

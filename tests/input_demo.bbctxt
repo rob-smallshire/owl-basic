@@ -1,0 +1,7 @@
+INPUT a$
+PRINT "got " a$
+INPUT n%
+PRINT n% * 2
+INPUT x%, y%
+PRINT x% + y%
+END
