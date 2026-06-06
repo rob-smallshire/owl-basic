@@ -1,103 +1,38 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Modernised to an SDK-style net10.0 library, retiring mono / .NET Framework.
+
+    The GDI+/WinForms graphics layer (Bitmap, Graphics, System.Windows.Forms) is
+    temporarily excluded pending a SkiaSharp/Avalonia port; the headless text
+    path (RawConsoleScreenMode and the text screen modes) runs cross-platform.
+    The Color/Point/Size primitives the kept code uses live in
+    System.Drawing.Primitives, which is part of the shared framework and is
+    cross-platform, so no GDI+ package reference is needed.
+  -->
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.21022</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{F53261E4-9FBC-4434-90D4-58A0242414BC}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>OwlRuntime</RootNamespace>
     <AssemblyName>OwlRuntime</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <SccProjectName>
-    </SccProjectName>
-    <SccLocalPath>
-    </SccLocalPath>
-    <SccAuxPath>
-    </SccAuxPath>
-    <SccProvider>
-    </SccProvider>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="Microsoft.VisualBasic" />
-    <Reference Include="System" />
-    <Reference Include="System.Core">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Xml.Linq">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Data.DataSetExtensions">
-      <RequiredTargetFramework>3.5</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
+    <!-- GDI+/WinForms graphics layer: excluded until the SkiaSharp/Avalonia port. -->
+    <Compile Remove="platform/riscos/AcornFont.cs" />
+    <Compile Remove="platform/riscos/BaseGraphicsScreenMode.cs" />
+    <Compile Remove="platform/riscos/PalettedGraphicsScreenMode.cs" />
+    <Compile Remove="platform/riscos/TrueGraphicsScreenMode.cs" />
+    <Compile Remove="platform/riscos/VduForm.cs" />
+    <EmbeddedResource Remove="platform/riscos/VduForm.resx" />
+
+    <!-- Legacy embedded NUnit tests: superseded by a separate modern test project. -->
+    <Compile Remove="BasicCommandsTest.cs" />
+    <Compile Remove="platform/riscos/VduSystemTest.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="BasicCommands.cs" />
-    <Compile Include="OwlModule.cs" />
-    <Compile Include="platform\MemoryMap.cs" />
-    <Compile Include="platform\riscos\AbstractScreenMode.cs" />
-    <Compile Include="platform\riscos\AcornFont.cs" />
-    <Compile Include="platform\riscos\BaseGraphicsScreenMode.cs" />
-    <Compile Include="platform\riscos\RawConsoleScreenMode.cs" />
-    <Compile Include="platform\riscos\OS.cs" />
-    <Compile Include="platform\riscos\Palette.cs" />
-    <Compile Include="platform\riscos\PalettedGraphicsScreenMode.cs" />
-    <Compile Include="platform\riscos\PalettedTextScreenMode.cs" />
-    <Compile Include="platform\riscos\SwiAttribute.cs" />
-    <Compile Include="platform\riscos\TeletextScreenMode.cs" />
-    <Compile Include="platform\riscos\BaseTextScreenMode.cs" />
-    <Compile Include="platform\riscos\TextCursor.cs" />
-    <Compile Include="platform\riscos\TrueGraphicsScreenMode.cs" />
-    <Compile Include="platform\riscos\VduForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="platform\riscos\VduSystem.cs" />
-    <Compile Include="platform\riscos\VduVariableAttribute.cs" />
-    <Compile Include="PrintManager.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="platform\riscos\Vdu.cd" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="platform\riscos\VduForm.resx">
-      <DependentUpon>VduForm.cs</DependentUpon>
-    </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="platform\acornmos\" />
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+
 </Project>

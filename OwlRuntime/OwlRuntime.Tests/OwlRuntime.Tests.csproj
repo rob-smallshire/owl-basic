@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Modern, cross-platform test project for the OwlRuntime runtime library.
+    Replaces the old NUnit 2.x test files that were embedded in the runtime
+    assembly. Runs anywhere via `dotnet test` (no mono, no WinForms): the
+    runtime's text path and pure functions are platform-neutral.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../OwlRuntime/OwlRuntime.csproj" />
+  </ItemGroup>
+
+</Project>

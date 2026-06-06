@@ -30,56 +30,25 @@ namespace OwlRuntime.platform.riscos
 
         public static AbstractScreenMode CreateScreenMode(VduSystem vdu, byte number)
         {
-            switch (number & 127) // after reading prm only bottom 7 bits are used for setting mode (top bit is for shadow modes) PRM 1-597
+            // after reading prm only bottom 7 bits are used for setting mode (top bit is for shadow modes) PRM 1-597
+            switch (number & 127)
             {
-                case 0: return new PalettedGraphicsScreenMode(vdu, 1, 80, 32, 640, 256, 1280, 1024);
-                case 1: return new PalettedGraphicsScreenMode(vdu, 2, 40, 32, 320, 256, 1280, 1024);
-                case 2: return new PalettedGraphicsScreenMode(vdu, 4, 20, 32, 160, 256, 1280, 1024);
+                // Text-only modes work headless and cross-platform.
                 case 3: return new PalettedTextScreenMode(vdu, 1, 80, 25); // 1280, 1000 checked by using mouse co-ords in this mode
-                case 4: return new PalettedGraphicsScreenMode(vdu, 1, 40, 32, 320, 256, 1280, 1024);
-                case 5: return new PalettedGraphicsScreenMode(vdu, 2, 20, 32, 160, 256, 1280, 1024);
                 case 6: return new PalettedTextScreenMode(vdu, 1, 40, 25); // 1280, 1000
                 case 7: return new TeletextScreenMode(vdu); // 1280, 1000
-                case 8: return new PalettedGraphicsScreenMode(vdu, 2, 80, 32, 640, 256, 1280, 1024);
-                case 9: return new PalettedGraphicsScreenMode(vdu, 4, 40, 32, 320, 256, 1280, 1024); 
-                case 10: return new PalettedGraphicsScreenMode(vdu, 8, 20, 32, 160, 256, 1280, 1024);
-                case 11: return new PalettedGraphicsScreenMode(vdu, 2, 80, 25, 640, 250, 1280, 1000);
-                case 12: return new PalettedGraphicsScreenMode(vdu, 4, 80, 32, 640, 256, 1280, 1024);
-                case 13: return new PalettedGraphicsScreenMode(vdu, 8, 40, 32, 320, 256, 1280, 1024);
-                case 14: return new PalettedGraphicsScreenMode(vdu, 4, 80, 25, 640, 250, 1280, 1024);
-                case 15: return new PalettedGraphicsScreenMode(vdu, 8, 80, 32, 640, 256, 1280, 1024);
-                case 16: return new PalettedGraphicsScreenMode(vdu, 4, 132, 32, 1056, 256, 2112, 1024);
-                case 17: return new PalettedGraphicsScreenMode(vdu, 4, 132, 25, 1056, 250, 2112, 1000);
-                case 18: return new PalettedGraphicsScreenMode(vdu, 1, 80, 64, 640, 512, 1280, 1024);
-                case 19: return new PalettedGraphicsScreenMode(vdu, 2, 80, 64, 640, 512, 1280, 1024);
-                case 20: return new PalettedGraphicsScreenMode(vdu, 4, 80, 64, 640, 512, 1280, 1024);
-                case 21: return new PalettedGraphicsScreenMode(vdu, 8, 80, 64, 640, 512, 1280, 1024);
-                case 22: return new PalettedGraphicsScreenMode(vdu, 4, 96, 36, 768, 288, 768, 576);
-                case 23: return new PalettedGraphicsScreenMode(vdu, 1, 144, 56, 1152, 896, 2304, 1792);
-                case 24: return new PalettedGraphicsScreenMode(vdu, 8, 132, 32, 1056, 256, 2112, 1024);
-                case 25: return new PalettedGraphicsScreenMode(vdu, 1, 80, 60,640, 480, 1280, 960);
-                case 26: return new PalettedGraphicsScreenMode(vdu, 2, 80, 60, 640, 480, 1280, 960);
-                case 27: return new PalettedGraphicsScreenMode(vdu, 4, 80, 60, 640, 480, 1280, 960);
-                case 28: return new PalettedGraphicsScreenMode(vdu, 8, 80, 60, 640, 480, 1280, 960);
-                case 29: return new PalettedGraphicsScreenMode(vdu, 1, 100, 75, 800, 600, 1600, 1200);
-                case 30: return new PalettedGraphicsScreenMode(vdu, 2, 100, 75, 800, 600, 1600, 1200);
-                case 31: return new PalettedGraphicsScreenMode(vdu, 4, 100, 75, 800, 600, 1600, 1200);
-                case 33: return new PalettedGraphicsScreenMode(vdu, 1, 96, 36, 768, 288, 1536, 1152);
-                case 34: return new PalettedGraphicsScreenMode(vdu, 2, 96, 36, 768, 288, 1536, 1152);
-                case 35: return new PalettedGraphicsScreenMode(vdu, 4, 96, 36, 768, 288, 1536, 1152);
-                case 36: return new PalettedGraphicsScreenMode(vdu, 8, 96, 36, 768, 288, 1536, 1152);
-                case 37: return new PalettedGraphicsScreenMode(vdu, 1, 112, 44, 896, 352, 1792, 1408);
-                case 38: return new PalettedGraphicsScreenMode(vdu, 2, 112, 44, 896, 352, 1792, 1408);
-                case 39: return new PalettedGraphicsScreenMode(vdu, 4, 112, 44, 896, 352, 1792, 1408);
-                case 40: return new PalettedGraphicsScreenMode(vdu, 8, 112, 44, 896, 352, 1792, 1408);
-                case 41: return new PalettedGraphicsScreenMode(vdu, 1, 80, 44, 640, 352, 1280, 1408);
-                case 42: return new PalettedGraphicsScreenMode(vdu, 2, 80, 44, 640, 352, 1280, 1408);
-                case 43: return new PalettedGraphicsScreenMode(vdu, 4, 80, 44, 640, 352, 1280, 1408);
-                case 44: return new PalettedGraphicsScreenMode(vdu, 1, 80, 25, 640, 200, 1280, 800);
-                case 45: return new PalettedGraphicsScreenMode(vdu, 2, 80, 25, 640, 200, 1280, 800);
-                case 46: return new PalettedGraphicsScreenMode(vdu, 4, 80, 25, 640, 200, 1280, 800);
                 case 47: return new RawConsoleScreenMode(vdu);
-                default: throw new NoSuchScreenModeException(number);
+
+                // Graphics modes (0-2, 4, 5, 8-46) are temporarily unavailable: the
+                // GDI+/WinForms graphics layer that implemented them is excluded
+                // from this build pending a SkiaSharp/Avalonia port. The full mode
+                // table is preserved in version control.
+                default:
+                    throw new NotSupportedException(
+                        "Screen mode " + number + " is not available in this build. " +
+                        "Graphics modes are temporarily disabled while the GDI+/WinForms " +
+                        "renderer is ported to SkiaSharp/Avalonia; use a text mode (3, 6, 7) " +
+                        "or the raw console mode (47).");
             }
         }
 

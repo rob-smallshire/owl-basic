@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using System.Windows.Forms;
 using System.Drawing;
 
 namespace OwlRuntime.platform.riscos
@@ -152,7 +151,8 @@ namespace OwlRuntime.platform.riscos
 
         #endregion
 
-        private AcornFont acornFont;
+        // AcornFont (user-defined character bitmaps for VDU 23) belongs to the
+        // GDI+ graphics layer that is excluded from this headless build.
 
         private byte modeNumber;
         private AbstractScreenMode screenMode;
@@ -168,7 +168,6 @@ namespace OwlRuntime.platform.riscos
         public VduSystem()
         {
             textCursor = new TextCursor();
-            acornFont = new AcornFont();
             ExpectVduCommand();
 
             // Initialise the default mode
@@ -313,11 +312,6 @@ namespace OwlRuntime.platform.riscos
             set { graphicsCharSpaceY = value; }
         }
 
-        public AcornFont AcornFont
-        {
-            get { return acornFont; }
-            set { acornFont = value; }
-        }
 
 
         public int LogicalGraphicsBackgroundColour
@@ -990,8 +984,8 @@ namespace OwlRuntime.platform.riscos
                 default:
                     if (miscCmd > 31)
                     {
-                        // needs testing
-                        acornFont.Define(miscCmd, bytes);
+                        // VDU 23 user-defined characters require the AcornFont
+                        // bitmap layer, which is excluded from this headless build.
                     }
                     else
                     {
@@ -1611,9 +1605,10 @@ namespace OwlRuntime.platform.riscos
 
         private static void Bell()
         {
-            // PRM 1-552 console.beep may not be good enough
-            // the tone can be altered
-            System.Media.SystemSounds.Beep.Play();
+            // VDU 7. Emit the ASCII BEL character; the host terminal decides how
+            // (or whether) to sound it. System.Media.SystemSounds is Windows-only
+            // on modern .NET, so it is not used here.
+            Console.Out.Write('\a');
         }
 
         private void DoSetTextColour()
