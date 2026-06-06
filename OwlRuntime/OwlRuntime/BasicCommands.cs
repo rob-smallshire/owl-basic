@@ -384,9 +384,15 @@ namespace OwlRuntime
         /// <returns>An integer Unicode value.</returns>
         public static int Get()
         {
+            // ReadKey needs an interactive console; when input is redirected
+            // (a pipe or file) fall back to a character read from the stream.
+            if (Console.IsInputRedirected)
+            {
+                int c = Console.Read();
+                return c < 0 ? 13 : c;   // EOF -> Return, so prompts don't hang
+            }
             ConsoleKeyInfo cki = Console.ReadKey(true);
-            int code = cki.KeyChar;
-            return code;
+            return cki.KeyChar;
         }
 
         public static double Rnd()
@@ -537,7 +543,7 @@ namespace OwlRuntime
                 {
                     printManager.Print('?');
                 }
-                string line = Console.ReadLine();
+                string line = Console.ReadLine() ?? "";   // EOF -> empty input, don't crash
                 foreach (string field in line.Split(','))
                 {
                     strings.Enqueue(field);
