@@ -22,22 +22,21 @@ def test_emit_il_lowers_print_and_arithmetic(dotnet_backend):
 
 def test_emit_il_lowers_scalar_integer_variables(dotnet_backend):
     il = dotnet_backend.emit_il(analyse_fixture("scalar_variables.bbctxt"))
-    # Two integer locals are declared and assigned, then read back.
-    assert ".locals init" in il
-    assert "int32 V_0" in il
-    assert "int32 V_1" in il
-    assert "stloc V_0" in il
-    assert "stloc V_1" in il
-    assert "ldloc V_0" in il
-    assert "ldloc V_1" in il
+    # A% and B% are global (BBC variables are global by default) -> static fields.
+    assert ".field static int32 i_A" in il
+    assert ".field static int32 i_B" in il
+    assert "stsfld int32 i_A" in il
+    assert "stsfld int32 i_B" in il
+    assert "ldsfld int32 i_A" in il
+    assert "ldsfld int32 i_B" in il
 
 
 def test_emit_il_lowers_string_and_float_variables(dotnet_backend):
     il = dotnet_backend.emit_il(analyse_fixture("string_float_variables.bbctxt"))
-    assert "string V_0" in il      # S$
-    assert "float64 V_1" in il     # N
-    assert "float64 V_2" in il     # C (real), assigned from an integer literal
-    assert "conv.r8" in il         # integer -> float cast for C = 6
+    assert ".field static string s_S" in il    # S$
+    assert ".field static float64 f_N" in il   # N
+    assert ".field static float64 f_C" in il   # C, assigned from an integer literal
+    assert "conv.r8" in il                     # integer -> float cast for C = 6
 
 
 def test_emit_il_lowers_if_with_relational_condition(dotnet_backend):
@@ -65,6 +64,16 @@ def test_emit_il_lowers_procedure_with_parameters(dotnet_backend):
     assert ".method static void PROCsquare(int32 A0) cil managed" in il
     assert "ldarg.0" in il
     assert "call void PROCsquare(int32)" in il
+
+
+def test_emit_il_makes_a_variable_used_across_procedures_global(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse_fixture("global_var.bbctxt"))
+    # score% is set in main and updated in PROCbonus, so it must be one shared
+    # static field, not a per-method local.
+    assert ".field static int32 i_score" in il
+    assert "ldsfld int32 i_score" in il
+    assert "stsfld int32 i_score" in il
+    assert "stloc" not in il   # nothing here is method-local
 
 
 @requires_dotnet_toolchain
@@ -122,3 +131,17 @@ def test_procedure_with_mixed_parameters_compiles_and_runs(compile_and_run):
     assert "Value: 42" in compile_and_run(
         analyse_fixture("procedure_params2.bbctxt")
     )
+
+
+@requires_dotnet_toolchain
+def test_global_variable_shared_across_procedure_compiles_and_runs(compile_and_run):
+    # score%=10 : PROCbonus (adds 5 to the global) : PRINT score% -> 15
+    # A per-method local would wrongly print 10.
+    assert "15" in compile_and_run(analyse_fixture("global_var.bbctxt"))
+
+
+@requires_dotnet_toolchain
+def test_local_variable_shadows_global_compiles_and_runs(compile_and_run):
+    # X%=100 : PROCchange (LOCAL X% : X%=7) : PRINT X% -> 100
+    # LOCAL must make PROCchange's X% a method local, leaving the global intact.
+    assert "100" in compile_and_run(analyse_fixture("local_var.bbctxt"))

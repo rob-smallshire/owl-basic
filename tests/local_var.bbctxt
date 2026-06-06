@@ -1,0 +1,8 @@
+X% = 100
+PROCchange
+PRINT X%
+END
+DEFPROCchange
+LOCAL X%
+X% = 7
+ENDPROC

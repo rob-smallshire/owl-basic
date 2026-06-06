@@ -20,6 +20,13 @@ from owl_basic.owltyping.type_system import (
     IntegerOwlType,
     StringOwlType,
 )
+from owl_basic.symbol_tables import SymbolInfo
+
+# Symbol modifiers that mean the variable is stored in a method (not globally).
+_METHOD_SCOPED_MODIFIERS = frozenset(
+    {SymbolInfo.modifier_arg, SymbolInfo.modifier_ref_arg,
+     SymbolInfo.modifier_local, SymbolInfo.modifier_private}
+)
 
 # A curated slice of the OwlRuntime "signature manifest": the textual CIL
 # signatures of the BasicCommands methods we call. This will be generated from
@@ -79,6 +86,18 @@ def _il_type(owl_type):
     return "int32"
 
 
+# Sigil -> a type-letter prefix, so a BBC identifier maps to a valid CIL name
+# (and X$, X% and X stay distinct). Mirrors the legacy ctsName scheme.
+_SIGIL_PREFIX = {"$": "s_", "%": "i_", "&": "b_", "~": "o_"}
+
+
+def _global_field_name(identifier):
+    """Map a global variable identifier to a CIL field name (e.g. ``score%`` -> ``i_score``)."""
+    prefix = _SIGIL_PREFIX.get(identifier[-1:], "f_")
+    stem = identifier[:-1] if identifier[-1:] in _SIGIL_PREFIX else identifier
+    return prefix + _NON_IDENT.sub("_", stem)
+
+
 _MAIN_ENTRY = "__owl__main"
 
 _NON_IDENT = re.compile(r"[^A-Za-z0-9_]")
@@ -97,11 +116,21 @@ def emit_program(program, assembly_name):
     """
     blocks_by_entry = program.ordered_basic_blocks or {}
     signatures = _collect_proc_signatures(blocks_by_entry)
+    # BBC BASIC variables are global unless they are formal parameters or made
+    # LOCAL/PRIVATE; globals are static fields shared by every method. The
+    # registry (field name -> CIL type) is populated as methods are lowered.
+    globals_registry = {}
     methods = [
-        _emit_method(entry_name, blocks, signatures)
+        _emit_method(entry_name, blocks, signatures, globals_registry)
         for entry_name, blocks in blocks_by_entry.items()
     ]
-    return _ASSEMBLY_TEMPLATE.format(name=assembly_name, methods="\n\n".join(methods))
+    fields = "".join(
+        ".field static %s %s\n" % (il_type, name)
+        for name, il_type in globals_registry.items()
+    )
+    return _ASSEMBLY_TEMPLATE.format(
+        name=assembly_name, fields=fields, methods="\n\n".join(methods)
+    )
 
 
 def _formal_arguments(define_procedure):
@@ -127,7 +156,7 @@ def _collect_proc_signatures(blocks_by_entry):
     return signatures
 
 
-def _emit_method(entry_name, blocks, signatures):
+def _emit_method(entry_name, blocks, signatures, globals_registry):
     """Render one routine's basic blocks as a complete CIL method."""
     is_main = entry_name == _MAIN_ENTRY
     if not is_main and not entry_name.startswith("PROC"):
@@ -143,7 +172,11 @@ def _emit_method(entry_name, blocks, signatures):
             formal_args[argument.identifier] = index
             parameters.append("%s A%d" % (_il_type(argument.actualType), index))
 
-    emitter = _MethodEmitter(formal_args=formal_args, proc_signatures=signatures)
+    emitter = _MethodEmitter(
+        formal_args=formal_args,
+        proc_signatures=signatures,
+        globals_registry=globals_registry,
+    )
     emitter.lower_blocks(blocks)
     emitter.finish()
     # Guarantee the method returns: add a trailing `ret` unless the last block
@@ -178,6 +211,7 @@ _ASSEMBLY_TEMPLATE = """\
 .assembly {name} {{ }}
 .module {name}.dll
 
+{fields}
 {methods}
 """
 
@@ -195,12 +229,15 @@ def _ldarg(index):
 
 
 class _MethodEmitter:
-    def __init__(self, formal_args=None, proc_signatures=None):
+    def __init__(self, formal_args=None, proc_signatures=None,
+                 globals_registry=None):
         self.lines = []
         self._local_slots = {}   # variable identifier -> local slot index
         self._local_types = []   # CIL type string, indexed by slot
         self._formal_args = formal_args or {}        # identifier -> arg index
         self._proc_signatures = proc_signatures or {}  # PROC name -> [il types]
+        self._globals = globals_registry if globals_registry is not None else {}
+        self._symbol_table = None  # the symbol table of the statement being lowered
 
     def emit(self, text):
         self.lines.append(text)
@@ -235,8 +272,30 @@ class _MethodEmitter:
         for index, block in enumerate(blocks):
             self.emit("%s:" % self._block_label(block))
             for statement in block.statements:
+                # Variable storage (arg / local / global) is resolved against
+                # the symbol table of the statement being lowered.
+                self._symbol_table = getattr(statement, "symbolTable", None)
                 self.lower_statement(statement)
             self._emit_fall_through(block, index)
+
+    def _variable_storage(self, variable):
+        """Classify a variable reference as ('arg'|'local'|'global', locus).
+
+        Formal parameters are method arguments; LOCAL/PRIVATE variables are
+        method locals; everything else is a program-wide global static field
+        (BBC BASIC variables are global by default).
+        """
+        identifier = variable.identifier
+        if identifier in self._formal_args:
+            return "arg", self._formal_args[identifier]
+        symbol = self._symbol_table.lookup(identifier) if self._symbol_table else None
+        modifier = getattr(symbol, "modifier", None)
+        if modifier in _METHOD_SCOPED_MODIFIERS:
+            return "local", self._local_slot(identifier, variable.actualType)
+        field = _global_field_name(identifier)
+        if field not in self._globals:
+            self._globals[field] = _il_type(variable.actualType)
+        return "global", field
 
     def _block_label(self, block):
         return "BB_%d" % self._block_index[id(block)]
@@ -281,11 +340,13 @@ class _MethodEmitter:
                 "Cannot lower assignment to %r l-value" % type(target).__name__
             )
         self.lower_expression(node.rValue)
-        if target.identifier in self._formal_args:
-            self.emit("starg %d" % self._formal_args[target.identifier])
+        kind, locus = self._variable_storage(target)
+        if kind == "arg":
+            self.emit("starg %d" % locus)
+        elif kind == "local":
+            self.emit("stloc V_%d" % locus)
         else:
-            slot = self._local_slot(target.identifier, target.actualType)
-            self.emit("stloc V_%d" % slot)
+            self.emit("stsfld %s %s" % (self._globals[locus], locus))
 
     def _stmt_If(self, node):
         # Flow analysis emptied the clauses into their own blocks; branch to them
@@ -320,6 +381,11 @@ class _MethodEmitter:
 
     def _stmt_DefineProcedure(self, node):
         # The method header is the definition; the marker emits no code.
+        pass
+
+    def _stmt_Local(self, node):
+        # LOCAL only declares which variables are method-scoped (the symbol
+        # table records that); each gets a local slot when it is referenced.
         pass
 
     def _stmt_CallProcedure(self, node):
@@ -383,11 +449,13 @@ class _MethodEmitter:
         self.emit("ldc.r8 %r" % float(node.value))
 
     def _expr_Variable(self, node):
-        if node.identifier in self._formal_args:
-            self.emit(_ldarg(self._formal_args[node.identifier]))
+        kind, locus = self._variable_storage(node)
+        if kind == "arg":
+            self.emit(_ldarg(locus))
+        elif kind == "local":
+            self.emit("ldloc V_%d" % locus)
         else:
-            slot = self._local_slot(node.identifier, node.actualType)
-            self.emit("ldloc V_%d" % slot)
+            self.emit("ldsfld %s %s" % (self._globals[locus], locus))
 
     def _expr_Cast(self, node):
         # Numeric coercions the type checker inserts (e.g. integer -> float for

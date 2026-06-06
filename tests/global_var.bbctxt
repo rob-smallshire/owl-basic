@@ -1,0 +1,7 @@
+score% = 10
+PROCbonus
+PRINT score%
+END
+DEFPROCbonus
+score% = score% + 5
+ENDPROC
