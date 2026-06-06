@@ -51,6 +51,13 @@ original ROM font. This affects only the .NET (CIL) backend's runtime library,
 not the compiler. It may be retained with this provenance noted, or replaced
 with a freely-licensed equivalent.
 
+## Hindley-Milner type inference — `src/owl_basic/owltyping/inference.py`
+
+Vendored verbatim from https://github.com/rob-smallshire/hindley-milner-python
+(MIT). The standalone Hindley-Milner core (the maintained successor to the older
+copy this project previously carried); the BBC BASIC type-inference bridge is
+being built on top of it. Kept unmodified for easy upstream re-sync.
+
 ## PLY (Python Lex-Yacc)
 
 Used as a normal dependency (not vendored). PLY is distributed under the BSD
