@@ -344,13 +344,36 @@ class _MethodEmitter:
         handler(node)
 
     def _stmt_Print(self, node):
-        for print_item in node.printList:
+        items = list(node.printList or [])
+        suppress_newline = False
+        for index, print_item in enumerate(items):
             item = print_item.item
-            self.lower_expression(item)
-            self.emit(self._print_call(item))
-        # PRINT terminates the line unless suppressed by a trailing separator
-        # (`;`/`,`), which this first slice does not yet model.
-        self.emit(_PRINT_NEWLINE)
+            if type(item).__name__ == "FormatManipulator":
+                last = index == len(items) - 1
+                self._emit_print_manipulator(item)
+                # A trailing ';' (or ',') suppresses PRINT's end-of-line newline.
+                if last and item.manipulator in (";", ","):
+                    suppress_newline = True
+            else:
+                self.lower_expression(item)
+                self.emit(self._print_call(item))
+        if not suppress_newline:
+            self.emit(_PRINT_NEWLINE)
+
+    def _emit_print_manipulator(self, node):
+        manipulator = node.manipulator
+        if manipulator == "'":
+            self.emit(_PRINT_NEWLINE)            # force a newline
+        elif manipulator == "~":
+            self.emit("call void {0}::HexFormat()".format(_RUNTIME))
+        elif manipulator == ",":
+            self.emit("call void {0}::CompleteField()".format(_RUNTIME))
+        elif manipulator == ";":
+            pass  # a separator; trailing ';' suppresses the newline (above)
+        else:
+            raise CodeGenerationError(
+                "PRINT manipulator %r not supported" % manipulator
+            )
 
     def _stmt_ScalarAssignment(self, node):
         target = node.lValue

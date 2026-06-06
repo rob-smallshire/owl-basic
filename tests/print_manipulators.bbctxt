@@ -1,0 +1,5 @@
+PRINT "A";"B"
+PRINT "C"'"D"
+PRINT "no newline";
+PRINT "joined"
+END

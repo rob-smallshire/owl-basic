@@ -84,6 +84,19 @@ def test_emit_il_lowers_byte_indirection(dotnet_backend):
     assert "ldelem.u1" in il   # reads (unsigned: 0..255)
 
 
+def test_emit_il_lowers_print_manipulators(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse_fixture("print_manipulators.bbctxt"))
+    # ' forces a NewLine; the runtime call is present for it.
+    assert "NewLine()" in il
+
+
+@requires_dotnet_toolchain
+def test_print_manipulators_compile_and_run(compile_and_run):
+    # "A";"B" -> AB ; "C"'"D" -> C/D ; "no newline"; (suppressed) ; "joined"
+    stdout = compile_and_run(analyse_fixture("print_manipulators.bbctxt"))
+    assert stdout == "AB\nC\nD\nno newlinejoined\n"
+
+
 def test_emit_il_lowers_repeat_until(dotnet_backend):
     il = dotnet_backend.emit_il(analyse_fixture("repeat_until.bbctxt"))
     # UNTIL branches back to the REPEAT block while the condition is false.
