@@ -157,7 +157,7 @@ def list_dirpaths(namespace):
         invoke_on_load=False,
         on_load_failure_callback=load_failure_callback,
     )
-    return {name: _extension_dirpath(ext) for name, ext in extensions.items()}
+    return {name: _extension_dirpath(ext) for name, ext in list(extensions.items())}
 
 
 def _extension_dirpath(ext: "stevedore.extension.Extension") -> Path:

@@ -5,7 +5,7 @@ def all_equal(vals):
     '''
     if vals:
         i = iter(vals)
-        first = i.next()
+        first = next(i)
         for item in i:
             if first != item:
                 return False
@@ -17,7 +17,7 @@ def representative(s):
 	:param s: A set
 	:returns: A representative value from s
 	'''
-	return iter(s).next()
+	return next(iter(s))
 
 def all_indices(string, sub, listindex=[], offset=0):
     # call as l = allindices(string, sub)

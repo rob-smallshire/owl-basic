@@ -27,7 +27,7 @@ def locateEntryPoints(parse_tree, line_mapper, options):
     entry_points = epv.entryPoints
     # Tag each statement with its predecessor entry point
     logging.debug("Tagging statements with entry point\n")
-    for entry_point in entry_points.values():
+    for entry_point in list(entry_points.values()):
         flow_analysis.tagSuccessors(entry_point, line_mapper)
         
     guardExecutableDefinitions(entry_points)
@@ -36,7 +36,7 @@ def locateEntryPoints(parse_tree, line_mapper, options):
 def guardExecutableDefinitions(entry_points):
     logging.debug("Checking for direct execution of function or procedure bodies...")
     
-    for entry_point in entry_points.values():
+    for entry_point in list(entry_points.values()):
         if isinstance(entry_point, ast.DefinitionStatement):
             if len(entry_point.inEdges) != 0:
                 

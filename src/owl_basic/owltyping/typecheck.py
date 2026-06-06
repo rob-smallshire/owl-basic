@@ -37,7 +37,7 @@ def inferUserFunctionTypes(parse_tree, entry_points, options):
     """
     logging.debug("Infer user function types")
     pending = False
-    for entry_point in entry_points.values():
+    for entry_point in list(entry_points.values()):
         if isinstance(entry_point, DefineFunction):
             function_type = inferTypeOfFunction(entry_point)
             if function_type != PendingOwlType():

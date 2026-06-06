@@ -119,7 +119,7 @@ class SymbolTableVisitor(Visitor):
                 symbol_info = SymbolInfo(name, type, SymbolInfo.modifier_local)
                 symbol_infos.append(symbol_info)
             assert len(local.entryPoints) == 1
-            procedure = iter(local.entryPoints).next()
+            procedure = next(iter(local.entryPoints))
             symbol_table = LocalSymbolTable(symbol_infos, procedure, self.checkPredecessorsAndRefer(local))
             assert symbol_table is not None  
             local.symbolTable = symbol_table
@@ -140,7 +140,7 @@ class SymbolTableVisitor(Visitor):
                 symbol_info = SymbolInfo(name, type, SymbolInfo.modifier_private)
                 symbol_infos.append(symbol_info)
             assert len(private.entryPoints) == 1
-            procedure = iter(private.entryPoints).next()
+            procedure = next(iter(private.entryPoints))
             symbol_table = PrivateSymbolTable(symbol_infos, procedure, self.checkPredecessorsAndRefer(private))
             assert symbol_table is not None  
             private.symbolTable = symbol_table

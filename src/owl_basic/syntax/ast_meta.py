@@ -48,12 +48,12 @@ class AstMeta(type):
         to provide access to each of the child members.
         """
         node_infos = {}           
-        for info_name, v in dict.items():
+        for info_name, v in list(dict.items()):
             if isinstance(v, Node):
                node_infos[info_name] = v
                 
         removal = []
-        for info_name in node_infos.keys():
+        for info_name in list(node_infos.keys()):
            property_name = underscoresToCamelCase(info_name)
            if info_name != property_name:
                removal.append(info_name)
@@ -77,12 +77,12 @@ class AstMeta(type):
         to provide access to each of the child members.
         """
         list_infos = {}
-        for info_name, v in dict.items():
+        for info_name, v in list(dict.items()):
             if isinstance(v, list) and isinstance(v[0], Node):
                list_infos[info_name] = v
                 
         removal = []
-        for info_name in list_infos.keys():
+        for info_name in list(list_infos.keys()):
            property_name = underscoresToCamelCase(info_name)
            if info_name != property_name:
                removal.append(info_name)
@@ -107,12 +107,12 @@ class AstMeta(type):
         """
         
         infos = {}
-        for info_name, v in dict.items():
+        for info_name, v in list(dict.items()):
             if isinstance(v, Option):
                infos[info_name] = v
                 
         removal = []
-        for info_name in infos.keys():
+        for info_name in list(infos.keys()):
            property_name = underscoresToCamelCase(info_name)
            if info_name != property_name:
                removal.append(info_name)
@@ -159,14 +159,14 @@ class AstNode(Visitable, metaclass=AstMeta):
         
         # Initialise children
         self._children = {}
-        for info_name, info in self.child_infos.items():
+        for info_name, info in list(self.child_infos.items()):
             if isinstance(info, Node):
                 self._children[info_name] = None
             elif isinstance(info, list):
                 self._children[info_name] = []
         
         self._options = {}
-        for info_name, option in self.option_infos.items():
+        for info_name, option in list(self.option_infos.items()):
             self._options[info_name] = option.value
         super(AstNode, self).__init__()
         
@@ -185,7 +185,7 @@ class AstNode(Visitable, metaclass=AstMeta):
     options = property(_getOptions)
     
     def forEachChild(self, f):
-        for child in self.children.values():
+        for child in list(self.children.values()):
             if isinstance(child, list):
                 for subchild in child:
                     f(subchild)
@@ -196,7 +196,7 @@ class AstNode(Visitable, metaclass=AstMeta):
         """Locate a child node within this AstNode. Returns a tuple containing
            (property_name, index) where index may be None for non-indexable properties. Returns None
            if the child is not found"""
-        for name, child in self.children.items():
+        for name, child in list(self.children.items()):
             if isinstance(child, list):
                 for index, subchild in enumerate(child):
                     if subchild is search_child:

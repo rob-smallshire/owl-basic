@@ -13,8 +13,8 @@ def elideNode(node, liftFormalTypes=False):
     assert len(node.child_infos) == 1
     #print node
     #print node.child_infos
-    if isinstance(node.child_infos.values()[0], list):
-        prop = node.child_infos.keys()[0] # TODO: Rename list_property
+    if isinstance(list(node.child_infos.values())[0], list):
+        prop = list(node.child_infos.keys())[0] # TODO: Rename list_property
         #print prop
         
         for item in getattr(node, prop):
@@ -23,7 +23,7 @@ def elideNode(node, liftFormalTypes=False):
                 item.parent_property = node.parent_property
                 # Note: item.parent_index remains unchanged
     else:
-        prop = node.child_infos.keys()[0]
+        prop = list(node.child_infos.keys())[0]
         assert not isinstance(prop, list)
         item = getattr(node, prop)
         if item is not None:

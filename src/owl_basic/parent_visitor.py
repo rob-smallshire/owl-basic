@@ -15,7 +15,7 @@ class ParentVisitor(Visitor):
         #node.forEachChild(partial(self._setParent, parent = node))
                 
         # TODO: Inlining the forEachChild function works, however...
-        for name, child in node.children.items():
+        for name, child in list(node.children.items()):
             if isinstance(child, list):
                 for index, subchild in enumerate(child):
                     self._setParent(node, subchild, name, index)

@@ -24,7 +24,7 @@ class LineMapper(object):
         return None
     
     def firstStatement(self):
-        statement_lines = sorted([line for line in self.line_to_stmt_map.keys() if line is not None])
+        statement_lines = sorted([line for line in list(self.line_to_stmt_map.keys()) if line is not None])
         #for s in statement_lines:
         #    print "%s : %s" % (s, lnv.line_to_stmt[s])
         first_statement_line = statement_lines[0]

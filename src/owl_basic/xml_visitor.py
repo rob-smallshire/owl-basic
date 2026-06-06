@@ -86,10 +86,10 @@ class XmlVisitor(Visitor):
 
     def visitAstNode(self, node):
         self.beginElement(node)
-        for name, value in node.options.items():
+        for name, value in list(node.options.items()):
             if value is not None:
                 self.childAttribute(name, value)
-        for name, child in node.children.items():
+        for name, child in list(node.children.items()):
             #print "child = %s" % child
             if isinstance(child, list):
                 #print "child!"

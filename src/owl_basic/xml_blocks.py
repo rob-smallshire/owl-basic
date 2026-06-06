@@ -14,11 +14,11 @@ def dumpXmlBlocks(basic_blocks, filename, options):
     
     print(basic_blocks)
     
-    for entry_block in basic_blocks.values():
+    for entry_block in list(basic_blocks.values()):
         for block in depthFirstSearch(entry_block):
             writeBlock(writer, block)
         
-    for entry_block in basic_blocks.values():
+    for entry_block in list(basic_blocks.values()):
         for block in depthFirstSearch(entry_block):    
             for statement in block.statements:
                 writeStatementEdges(writer, statement)   

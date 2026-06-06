@@ -17,7 +17,7 @@ def orderBasicBlocks(basic_blocks, options):
     :returns: A dictionary of lists of basic blocks in approximate topological order. Keys are entry_point names
     '''
     ordered_blocks = {}
-    for name, basic_block in basic_blocks.items():
+    for name, basic_block in list(basic_blocks.items()):
         logger.debug(name)
         order = approximateTopologicalOrder(basic_block)
         print("order = ", order)

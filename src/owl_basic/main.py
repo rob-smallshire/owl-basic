@@ -10,7 +10,7 @@ import sys
 import os   
 import re
 import atexit
-import StringIO
+import io
 from optparse import OptionParser
 
 from owl_basic.decoder import decode
@@ -51,12 +51,12 @@ def detokenize(data, options):
     if options.verbose:
         sys.stderr.write("Detokenizing...")
     
-    detokenized = StringIO.StringIO()
+    detokenized = io.StringIO()
     decode(data, detokenized)
     if options.verbose:
         sys.stderr.write("done\n")
     
-    detokenHandle = StringIO.StringIO(detokenized.getvalue())
+    detokenHandle = io.StringIO(detokenized.getvalue())
     return detokenHandle
 
 def indexLineNumbers(detokenHandle, options):
@@ -194,8 +194,7 @@ def buildSymbolTables(entry_points, options):
         print(parent_title)
         print("-" * width)
         
-        symbols = table.symbols.keys()
-        symbols.sort()
+        symbols = sorted(table.symbols.keys())
         for symbol in symbols:
             print("%-10s %-10s %s" % (symbol, table.symbols[symbol].type.__doc__, table.symbols[symbol].modifier))
         print("-" * width)

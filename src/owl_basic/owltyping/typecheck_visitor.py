@@ -340,7 +340,7 @@ class TypecheckVisitor(Visitor):
         Where an Integer value is being passed to a parameter of Numeric type,
         insert an Integer->Float cast operation.
         """
-        for name, child in node.children.items():
+        for name, child in list(node.children.items()):
             if child is not None:
                 if isinstance(child, list):
                     formal_type = node.child_infos[name][0].formalType
@@ -402,7 +402,7 @@ class TypecheckVisitor(Visitor):
         with ScalarType, but StringType is not compatible with NumericType.
         """
         result = True
-        for name, info in node.child_infos.items():
+        for name, info in list(node.child_infos.items()):
             if isinstance(info, list):
                 info = info[0]
                 formal_type = info.formalType

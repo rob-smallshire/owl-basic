@@ -75,7 +75,7 @@ class AssemblyGenerator(object):
     def createAndAttachGlobalEmitters(self, global_symbols, type_builder):
         
         # Add global variables and their accessors to the class
-        for symbol in global_symbols.symbols.values():
+        for symbol in list(global_symbols.symbols.values()):
         #identifier = ctsIdentifier(symbol)
             identifier = symbol.name
             field_builder = type_builder.DefineField(identifier, cts.symbolType(symbol), FieldAttributes.Private | FieldAttributes.Static)
@@ -87,7 +87,7 @@ class AssemblyGenerator(object):
     def createAndAttachStaticEmitters(self, owl_module):
         # Add accessors for the inherited static variables
         static_symbols = StaticSymbolTable.getInstance()
-        for symbol in static_symbols.symbols.values():
+        for symbol in list(static_symbols.symbols.values()):
         # TODO: If we can fix the names in OwlModule we can use the raw names
             identifier = ctsIdentifier(symbol)
             print(identifier)
@@ -149,7 +149,7 @@ class AssemblyGenerator(object):
         # TODO: This would be sooo much easier if the entry_point.name
         # property had been set useful, and PROC and FN retained in identifier names everywhere!
         # TODO: Should also wrap the main program in DEF PROCMain - safely!
-        for entry_name, basic_blocks in ordered_basic_blocks.items():
+        for entry_name, basic_blocks in list(ordered_basic_blocks.items()):
             entry_point = basic_blocks[0].entryPoint
             if isinstance(entry_point, DefinitionStatement):
                 self.createCtsMethodName(entry_point.name)   
@@ -162,12 +162,12 @@ class AssemblyGenerator(object):
         #    print owl_name, " ==> ", clr_name
             
         # Generate all the empty methods, so we can retrieve them from the type builder    
-        for basic_blocks in ordered_basic_blocks.values():
+        for basic_blocks in list(ordered_basic_blocks.values()):
             self.generateMethod(type_builder, basic_blocks)
                 
         # Generate the body of each method
         stop_on_error = False    
-        for basic_blocks in ordered_basic_blocks.values():
+        for basic_blocks in list(ordered_basic_blocks.values()):
             try:
                 self.generateMethodBody(type_builder, basic_blocks)
             except CodeGenerationError as e:
@@ -274,7 +274,7 @@ class AssemblyGenerator(object):
         
         add_method_info = cts.int_int_dictionary_type.GetMethod('Add')
         
-        for line_number, index in data_visitor.index.items():
+        for line_number, index in list(data_visitor.index.items()):
             generator.Emit(OpCodes.Ldloc, data_index_local)   # Load the dictionary onto the stack
             emitLdc_I4(generator, line_number)                # Load the line_number onto the stack
             emitLdc_I4(generator, index)                      # Load the index onto the stack
@@ -467,7 +467,7 @@ class AssemblyGenerator(object):
         for node in depthFirstSearch(entry_point_node):
             if isinstance(node, Local):
                 symbol_table = node.symbolTable
-                for symbol in symbol_table.symbols.values():
+                for symbol in list(symbol_table.symbols.values()):
                     local_builder = cv.generator.DeclareLocal(cts.symbolType(symbol))
                     local_builder.SetLocalSymInfo(symbol.name) # Provide symbol name for debugger
                     self.createAndAttachLocalEmitters(local_builder, symbol)

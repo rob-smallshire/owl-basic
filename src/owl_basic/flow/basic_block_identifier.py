@@ -33,7 +33,7 @@ def identifyBasicBlocks(entry_points, options):
     '''
     logger.info("Identifying basic blocks")
     print(entry_points)
-    return dict((k, coarsenControlFlowGraph(v)) for k, v in entry_points.items())
+    return dict((k, coarsenControlFlowGraph(v)) for k, v in list(entry_points.items()))
         
 def coarsenControlFlowGraph(entry_point):
     '''
