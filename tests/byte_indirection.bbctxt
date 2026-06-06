@@ -1,0 +1,6 @@
+ptr% = 0
+ptr%?10 = 65
+?20 = 66
+PRINT ptr%?10
+PRINT ptr%?20
+END

@@ -15,6 +15,7 @@ import re
 
 from owl_basic.exceptions import OwlBasicError
 from owl_basic.owltyping.type_system import (
+    AddressOwlType,
     ByteOwlType,
     FloatOwlType,
     IntegerOwlType,
@@ -35,6 +36,11 @@ _METHOD_SCOPED_MODIFIERS = frozenset(
 _RUNTIME = "[OwlRuntime]OwlRuntime.BasicCommands"
 
 _PRINT_NEWLINE = "call void {0}::NewLine()".format(_RUNTIME)
+
+# OwlRuntime models BBC BASIC's address space as a byte array for ? indirection.
+_MEMORY_ARRAY = "call uint8[] [OwlRuntime]OwlRuntime.MemoryMap::get_Memory()"
+
+_BYTE_INDIRECTIONS = frozenset({"UnaryByteIndirection", "DyadicByteIndirection"})
 
 # Map a textual CIL operator mnemonic onto each binary arithmetic AST node.
 _BINARY_OPS = {
@@ -334,10 +340,17 @@ class _MethodEmitter:
 
     def _stmt_ScalarAssignment(self, node):
         target = node.lValue
-        if type(target).__name__ != "Variable":
-            # Indirection / indexed / pseudo-variable l-values come later.
+        name = type(target).__name__
+        if name in _BYTE_INDIRECTIONS:
+            # ?addr = v / base?offset = v : write a byte into the address space.
+            self._push_memory_index(target)
+            self.lower_expression(node.rValue)
+            self.emit("stelem.i1")
+            return
+        if name != "Variable":
+            # Indexed / pseudo-variable l-values come later.
             raise CodeGenerationError(
-                "Cannot lower assignment to %r l-value" % type(target).__name__
+                "Cannot lower assignment to %r l-value" % name
             )
         self.lower_expression(node.rValue)
         kind, locus = self._variable_storage(target)
@@ -457,6 +470,27 @@ class _MethodEmitter:
         else:
             self.emit("ldsfld %s %s" % (self._globals[locus], locus))
 
+    def _push_memory_index(self, indirection):
+        """Push the OwlRuntime address-space byte array and the target index.
+
+        ``?addr`` indexes at ``addr``; ``base?offset`` at ``base + offset``.
+        """
+        self.emit(_MEMORY_ARRAY)
+        if type(indirection).__name__ == "UnaryByteIndirection":
+            self.lower_expression(indirection.expression)
+        else:  # DyadicByteIndirection
+            self.lower_expression(indirection.base)
+            self.lower_expression(indirection.offset)
+            self.emit("add")
+
+    def _expr_UnaryByteIndirection(self, node):
+        self._push_memory_index(node)
+        self.emit("ldelem.u1")   # unsigned: ?addr yields 0..255
+
+    def _expr_DyadicByteIndirection(self, node):
+        self._push_memory_index(node)
+        self.emit("ldelem.u1")
+
     def _expr_Cast(self, node):
         # Numeric coercions the type checker inserts (e.g. integer -> float for
         # mixed arithmetic, or assigning an integer to a real variable).
@@ -464,7 +498,8 @@ class _MethodEmitter:
         target = node.targetType
         if isinstance(target, FloatOwlType):
             self.emit("conv.r8")
-        elif isinstance(target, (IntegerOwlType, ByteOwlType)):
+        elif isinstance(target, (IntegerOwlType, ByteOwlType, AddressOwlType)):
+            # Addresses and bytes are int32-sized on the CIL stack.
             self.emit("conv.i4")
         else:
             raise CodeGenerationError(

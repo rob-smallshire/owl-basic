@@ -76,6 +76,14 @@ def test_emit_il_makes_a_variable_used_across_procedures_global(dotnet_backend):
     assert "stloc" not in il   # nothing here is method-local
 
 
+def test_emit_il_lowers_byte_indirection(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse_fixture("byte_indirection.bbctxt"))
+    # ? indirection goes through OwlRuntime's address-space byte array.
+    assert "call uint8[] [OwlRuntime]OwlRuntime.MemoryMap::get_Memory()" in il
+    assert "stelem.i1" in il   # writes
+    assert "ldelem.u1" in il   # reads (unsigned: 0..255)
+
+
 @requires_dotnet_toolchain
 def test_six_times_seven_compiles_and_runs(compile_and_run):
     # The computed value reaches stdout (BBC BASIC: PRINT "..." 6*7).
@@ -145,3 +153,11 @@ def test_local_variable_shadows_global_compiles_and_runs(compile_and_run):
     # X%=100 : PROCchange (LOCAL X% : X%=7) : PRINT X% -> 100
     # LOCAL must make PROCchange's X% a method local, leaving the global intact.
     assert "100" in compile_and_run(analyse_fixture("local_var.bbctxt"))
+
+
+@requires_dotnet_toolchain
+def test_byte_indirection_compiles_and_runs(compile_and_run):
+    # ptr%?10=65 (dyadic write), ?20=66 (unary write), read back via dyadic.
+    stdout = compile_and_run(analyse_fixture("byte_indirection.bbctxt"))
+    assert "65" in stdout
+    assert "66" in stdout
