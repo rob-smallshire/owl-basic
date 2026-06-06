@@ -15,12 +15,12 @@ from System.Reflection.Emit import *
 from visitor import Visitor
 from syntax.ast import *
 from ast_utils import findNode
-import cts
+from . import cts
 import errors
-from emitters import *
+from .emitters import *
 from symbol_tables import hasSymbolTableLookup
 from algorithms import representative
-from typing.type_system import (OwlType, NumericOwlType, ObjectOwlType, StringOwlType, ByteArrayOwlType)
+from owltyping.type_system import (OwlType, NumericOwlType, ObjectOwlType, StringOwlType, ByteArrayOwlType)
 
 # TODO: This block to import OwlRuntime exists in multiple locations
 # Load the OWL Runtime library so we may both call and reference
@@ -137,7 +137,7 @@ class CilVisitor(Visitor):
         '''
         Return a MethodInfo object for the named method of OwlRuntime.BasicCommands
         '''
-        print args
+        print(args)
         method = self.basic_commands_type.GetMethod(name)
         assert method, "Could not locate BasicCommands method %s" % name
         return method
@@ -146,7 +146,7 @@ class CilVisitor(Visitor):
         '''
         Return a MethodInfo object for the named method of OwlRuntime.BasicCommands
         '''
-        print args
+        print(args)
         method = self.basic_commands_type.GetMethod(name, System.Array[System.Type]([cts.mapType(arg) for arg in args]))
         assert method, "Could not locate BasicCommands method %s" % name
         return method
@@ -189,7 +189,7 @@ class CilVisitor(Visitor):
     
     def visitAllocateArray(self, allocator):
         logging.debug("Visiting %s", allocator)
-        print allocator.dimensions
+        print(allocator.dimensions)
         assert len(allocator.dimensions) > 0
         symbol_node = findNode(allocator, hasSymbolTableLookup)
         symbol = symbol_node.symbolTable.lookup(allocator.identifier)
@@ -691,11 +691,11 @@ class CilVisitor(Visitor):
         self.__query = True
         items = input.inputList
         if items is not None:
-            print items
+            print(items)
             while len(items) > 0:
                 item = items.pop(0).item
                 if not isinstance(item, Variable):
-                    print "Input Item = ", item
+                    print("Input Item = ", item)
                     item.accept(self)
                     if isinstance(item, LiteralString):
                         self.__query = False

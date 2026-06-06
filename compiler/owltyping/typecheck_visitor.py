@@ -7,12 +7,12 @@ from errors import *
 from utility import underscoresToCamelCase
 from syntax.ast import Cast, Concatenate
 from ast_utils import elideNode
-from typing.type_system import (NumericOwlType, ObjectOwlType, IntegerOwlType,
+from owltyping.type_system import (NumericOwlType, ObjectOwlType, IntegerOwlType,
                                 FloatOwlType, ByteOwlType, PendingOwlType,
                                 StringOwlType, ArrayOwlType)
 import sigil
 
-logger = logging.getLogger('typing.typecheck_visitor')
+logger = logging.getLogger('owltyping.typecheck_visitor')
 
 class TypecheckVisitor(Visitor):
     """

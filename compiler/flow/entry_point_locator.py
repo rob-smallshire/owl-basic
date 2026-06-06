@@ -4,9 +4,9 @@ import logging
 import syntax.ast
 import ast_utils
 import errors
-import flow_analysis
+from . import flow_analysis
 
-from entry_point_visitor import EntryPointVisitor
+from .entry_point_visitor import EntryPointVisitor
 
 
 def locateEntryPoints(parse_tree, line_mapper, options):

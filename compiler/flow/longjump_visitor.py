@@ -5,7 +5,7 @@ import errors
 from utility import underscoresToCamelCase
 from syntax.ast import Goto, LongJump
 from ast_utils import elideNode
-import flow_analysis
+from . import flow_analysis
 
 class LongjumpVisitor(Visitor):
     """

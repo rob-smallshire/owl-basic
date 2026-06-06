@@ -17,7 +17,7 @@ class LineNumberVisitor(Visitor):
         if statement.lineNum is not None:
             line_num = statement.lineNum
             #print "line_num = %s" % line_num
-            if not self.line_to_stmt.has_key(line_num):
+            if line_num not in self.line_to_stmt:
                 #print line_num, " ===> ", statement
                 self.line_to_stmt[line_num] = statement
 

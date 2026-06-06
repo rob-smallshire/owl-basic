@@ -902,7 +902,7 @@ def t_LITERAL_FLOAT(t):
     try:
         t.value = float(t.value)
     except ValueError:
-        print "Number %s is too large!" % t.value
+        print("Number %s is too large!" % t.value)
     return t
 
 def t_LITERAL_INTEGER(t):
@@ -910,7 +910,7 @@ def t_LITERAL_INTEGER(t):
     try:
         t.value = int(t.value)
     except ValueError:
-        print "Number %s is too large!" % t.value
+        print("Number %s is too large!" % t.value)
         t.value = 0
     return t
 
@@ -920,7 +920,7 @@ def t_LITERAL_HEX_INTEGER(t):
         t.value = int(t.value[1:], 16)
         t.type = 'LITERAL_INTEGER'
     except ValueError:
-        print "Number %s is too large!" % t.value
+        print("Number %s is too large!" % t.value)
         t.value = 0
     return t
 
@@ -930,13 +930,13 @@ def t_LITERAL_BINARY_INTEGER(t):
         t.value = int(t.value[1:], 2)
         t.type = 'LITERAL_INTEGER'
     except ValueError:
-        print "Number %s is too large!" % t.value
+        print("Number %s is too large!" % t.value)
         t.value = 0
     return t
 
 # Error handling rule
 def t_error(t):
-    print "Illegal character '%s'" % t.value[0]
+    print("Illegal character '%s'" % t.value[0])
     t.lexer.skip(1)
 
 

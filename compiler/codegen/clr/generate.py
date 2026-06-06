@@ -20,11 +20,11 @@ from singleton import Singleton
 
 from syntax.ast import DefinitionStatement, DefineProcedure, DefineFunction, Local
 from ast_utils import findNode
-from cil_visitor import CilVisitor, CodeGenerationError
+from .cil_visitor import CilVisitor, CodeGenerationError
 from symbol_tables import hasSymbolTableLookup, StaticSymbolTable
-from emitters import *
-import cts
-from cts import typeof
+from .emitters import *
+from . import cts
+from .cts import typeof
 from algorithms import representative
 from flow.traversal import depthFirstSearch
 
@@ -79,7 +79,7 @@ class AssemblyGenerator(object):
         #identifier = ctsIdentifier(symbol)
             identifier = symbol.name
             field_builder = type_builder.DefineField(identifier, cts.symbolType(symbol), FieldAttributes.Private | FieldAttributes.Static)
-            print identifier
+            print(identifier)
             assert field_builder is not None
             self.createAndAttachFieldEmitters(field_builder, symbol)
 
@@ -90,7 +90,7 @@ class AssemblyGenerator(object):
         for symbol in static_symbols.symbols.values():
         # TODO: If we can fix the names in OwlModule we can use the raw names
             identifier = ctsIdentifier(symbol)
-            print identifier
+            print(identifier)
             field_info = owl_module.GetField(identifier)
             assert field_info is not None
             self.createAndAttachFieldEmitters(field_info, symbol)
@@ -170,7 +170,7 @@ class AssemblyGenerator(object):
         for basic_blocks in ordered_basic_blocks.values():
             try:
                 self.generateMethodBody(type_builder, basic_blocks)
-            except CodeGenerationError, e:
+            except CodeGenerationError as e:
                 logging.critical("STOPPING %s\n\n\n", e)
                 if stop_on_error:
                     break
@@ -215,7 +215,7 @@ class AssemblyGenerator(object):
             :param generator: A CIL generator
             :param field_info: The FieldInfo metadata
             '''
-            print "field_info = ", field_info
+            print("field_info = ", field_info)
             generator.Emit(OpCodes.Ldsfld, field_info)
             
         def fieldStoreEmitter(generator, field_info=field_info):
@@ -437,7 +437,7 @@ class AssemblyGenerator(object):
         '''
         # TODO: Reference and out parameters not dealt with here!
         assert isinstance(statement, DefinitionStatement)
-        print statement.formalParameters
+        print(statement.formalParameters)
         types = ()
         if statement.formalParameters is not None:
             formal_parameters = statement.formalParameters.arguments
@@ -453,8 +453,8 @@ class AssemblyGenerator(object):
                 name = 'FNMain'
             clr_method_name = self.owl_to_clr_method_names[name]
         except KeyError:
-            print entry_point_node.name
-            print self.owl_to_clr_method_names
+            print(entry_point_node.name)
+            print(self.owl_to_clr_method_names)
             assert 0
         logging.debug("Creating CIL for %s", clr_method_name)
         method_builder = self.method_builders[clr_method_name]

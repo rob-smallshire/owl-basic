@@ -5,9 +5,9 @@ import logging
 logger = logging.getLogger('flow.basic_block_identifier')
 logger.setLevel(logging.WARNING)
 
-from connectors import connect
-from traversal import depthFirstSearch
-from basic_block import BasicBlock
+from .connectors import connect
+from .traversal import depthFirstSearch
+from .basic_block import BasicBlock
 
 def identifyBasicBlocks(entry_points, options):
     '''
@@ -32,7 +32,7 @@ def identifyBasicBlocks(entry_points, options):
                          the entry point names
     '''
     logger.info("Identifying basic blocks")
-    print entry_points
+    print(entry_points)
     return dict((k, coarsenControlFlowGraph(v)) for k, v in entry_points.items())
         
 def coarsenControlFlowGraph(entry_point):

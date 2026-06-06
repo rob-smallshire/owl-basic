@@ -1,4 +1,4 @@
-from typing.type_system import (StringOwlType, IntegerOwlType, ByteOwlType, ObjectOwlType,
+from owltyping.type_system import (StringOwlType, IntegerOwlType, ByteOwlType, ObjectOwlType,
                                 StringArrayOwlType, IntegerArrayOwlType, ByteArrayOwlType,
                                 ObjectArrayOwlType, FloatArrayOwlType, FloatOwlType)
 

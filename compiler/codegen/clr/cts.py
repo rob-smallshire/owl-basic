@@ -5,7 +5,7 @@ Functions for dealing with the .NET Common Type System
 import clr
 import System
 
-from typing.type_system import (VoidOwlType, IntegerOwlType, FloatOwlType, StringOwlType,
+from owltyping.type_system import (VoidOwlType, IntegerOwlType, FloatOwlType, StringOwlType,
                                 ByteOwlType, ObjectOwlType)
 
 # A basic mapping of OWL BASIC types to CTS types
@@ -22,7 +22,7 @@ generic_dictionary_type = clr.GetClrType(System.Collections.Generic.Dictionary)
 int_int_dictionary_type = generic_dictionary_type.MakeGenericType(
                            System.Array[System.Type]((clr.GetClrType(System.Int32), clr.GetClrType(System.Int32))))
 
-print
+print()
 
 def typeof(t):
     'Simulate C# typeof operator'

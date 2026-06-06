@@ -17,9 +17,8 @@ class OwlTypeSingleton(type):
  
         return cls.instance
 
-class OwlType(Visitable):
+class OwlType(Visitable, metaclass=OwlTypeSingleton):
     "OwlType"
-    __metaclass__ = OwlTypeSingleton
     
     def isArray(self):
         return False
@@ -69,29 +68,25 @@ class OwlType(Visitable):
     def __repr__(self):
         return self.__doc__
 
-class PendingOwlType(OwlType):
+class PendingOwlType(OwlType, metaclass=OwlTypeSingleton):
     "Pending"
-    __metaclass__ = OwlTypeSingleton
     
     def isAssignableFrom(self, other):
         # TODO: Is this correct?
         assert not isinstance(other, type)
         return True
 
-class VoidOwlType(OwlType):
+class VoidOwlType(OwlType, metaclass=OwlTypeSingleton):
     "Void"
-    __metaclass__ = OwlTypeSingleton
     
     def isDefined(self):
         return True
     
-class ScalarOwlType(OwlType):
+class ScalarOwlType(OwlType, metaclass=OwlTypeSingleton):
     "Scalar"
-    __metaclass__ = OwlTypeSingleton
     
-class ObjectOwlType(ScalarOwlType):
+class ObjectOwlType(ScalarOwlType, metaclass=OwlTypeSingleton):
     "Object"
-    __metaclass__ = OwlTypeSingleton
     # OWL BASIC only - object reference
     
     def isConvertibleTo(self, other):
@@ -105,9 +100,8 @@ class ObjectOwlType(ScalarOwlType):
     def isDefined(self):
         return True
 
-class NumericOwlType(ScalarOwlType):
+class NumericOwlType(ScalarOwlType, metaclass=OwlTypeSingleton):
     "Numeric"
-    __metaclass__ = OwlTypeSingleton
     
     def isConvertibleTo(self, other):
         assert not isinstance(other, type)
@@ -117,9 +111,8 @@ class NumericOwlType(ScalarOwlType):
         assert not isinstance(other, type)
         return isinstance(other, NumericOwlType) 
     
-class IntegerOwlType(NumericOwlType):
+class IntegerOwlType(NumericOwlType, metaclass=OwlTypeSingleton):
     "Integer"
-    __metaclass__ = OwlTypeSingleton
     
     def bitsIntegerPrecision(self):
         return 32
@@ -127,9 +120,8 @@ class IntegerOwlType(NumericOwlType):
     def isDefined(self):
         return True
     
-class AddressOwlType(NumericOwlType):
+class AddressOwlType(NumericOwlType, metaclass=OwlTypeSingleton):
     "Address"
-    __metaclass__ = OwlTypeSingleton
     
     def bitsIntegerPrecision(self):
         return 32 # What about this 32/64?
@@ -140,9 +132,8 @@ class AddressOwlType(NumericOwlType):
 class ChannelOwlType(IntegerOwlType):
     "Channel"
     
-class FloatOwlType(NumericOwlType):
+class FloatOwlType(NumericOwlType, metaclass=OwlTypeSingleton):
     "Float"
-    __metaclass__ = OwlTypeSingleton
     def bitsIntegerPrecision(self):
         "Representing a double precision float with 52 (+ 1 implied) bits in the mantissa."
         return 53
@@ -150,14 +141,12 @@ class FloatOwlType(NumericOwlType):
     def isDefined(self):
         return True
     
-class StringOwlType(ObjectOwlType):
+class StringOwlType(ObjectOwlType, metaclass=OwlTypeSingleton):
     "String"
-    __metaclass__ = OwlTypeSingleton
     # TODO: Assigning StringOwlType to ObjectOwlType should be possible
     
-class ByteOwlType(NumericOwlType):
+class ByteOwlType(NumericOwlType, metaclass=OwlTypeSingleton):
     "Byte"
-    __metaclass__ = OwlTypeSingleton
     
     def bitsIntegerPrecision(self):
         return 8

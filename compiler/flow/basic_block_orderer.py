@@ -6,7 +6,7 @@ Created on 9 Feb 2010
 import logging
 logger = logging.getLogger('flow.basic_block_orderer')
 
-from traversal import approximateTopologicalOrder
+from .traversal import approximateTopologicalOrder
 
 def orderBasicBlocks(basic_blocks, options):
     '''
@@ -20,7 +20,7 @@ def orderBasicBlocks(basic_blocks, options):
     for name, basic_block in basic_blocks.items():
         logger.debug(name)
         order = approximateTopologicalOrder(basic_block)
-        print "order = ", order
+        print("order = ", order)
         for i, block in enumerate(order):
             block.topological_order = i
         ordered_blocks[name] = order

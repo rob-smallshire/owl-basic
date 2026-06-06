@@ -4,7 +4,7 @@ Creation of the forward control flow graph
 
 import logging
 
-from flowgraph_visitor import FlowgraphForwardVisitor
+from .flowgraph_visitor import FlowgraphForwardVisitor
 
 logger = logging.getLogger('flow.flow_graph_creator')
 

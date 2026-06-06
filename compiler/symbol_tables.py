@@ -1,7 +1,7 @@
 import logging
 
 from singleton import Singleton
-from typing.type_system import IntegerOwlType, AddressOwlType, StringOwlType
+from owltyping.type_system import IntegerOwlType, AddressOwlType, StringOwlType
 
 # Symbol table
 
@@ -21,7 +21,7 @@ class SymbolInfo(object):
     """
     Stores information regarding a symbol
     """
-    (modifier_static, modifier_system, modifier_global, modifier_arg, modifier_ref_arg, modifier_local, modifier_private) = range(7)
+    (modifier_static, modifier_system, modifier_global, modifier_arg, modifier_ref_arg, modifier_local, modifier_private) = list(range(7))
     
     def __init__(self, name, type, modifier=None, table=None, rank=None):
         self.name     = name
@@ -37,7 +37,7 @@ class SymbolInfo(object):
     
 class SymbolTable(object):
     
-    protections = range(3)
+    protections = list(range(3))
     (readonly, writethrough, writable) = protections
     
     symbol_tables = set()
@@ -171,7 +171,7 @@ class FormalParameterSymbolTable(ScopedSymbolTable):
     """
     def __init__(self, symbol_infos, procedure, parent):
         super(FormalParameterSymbolTable, self).__init__("formal parameters for PROC/FN %s" % procedure, SymbolTable.writethrough, parent)
-        print "symbol_infos = %s" % symbol_infos
+        print("symbol_infos = %s" % symbol_infos)
         for symbol_info in symbol_infos:
             self._symbols[symbol_info.name] = symbol_info
 

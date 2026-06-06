@@ -4,8 +4,8 @@ import logging
 import ply.lex as lex
 import ply.yacc as yacc
 
-import grammar
-import lexer
+from . import grammar
+from . import lexer
 
 __author__ = 'rjs'
 
@@ -35,7 +35,7 @@ def tokenize(data, lexer):
     while 1:
         tok = lexer.token()
         if not tok: break      # No more input
-        print tok
+        print(tok)
     # Running the lexer twice on the same input screws up the line numbers, so stop here.
     sys.exit(0) 
 

@@ -8,10 +8,10 @@ import logging
 
 from syntax.ast import DefineFunction
 
-from typecheck_visitor import TypecheckVisitor
-from function_type_inferer import inferTypeOfFunction
-from set_function_type_visitor import SetFunctionTypeVisitor
-from typing.type_system import PendingOwlType
+from .typecheck_visitor import TypecheckVisitor
+from .function_type_inferer import inferTypeOfFunction
+from .set_function_type_visitor import SetFunctionTypeVisitor
+from owltyping.type_system import PendingOwlType
 
 
 def typecheck(parse_tree, entry_points, options):
@@ -55,6 +55,6 @@ def setFunctionType(parse_tree, function_name, function_type):
     '''
     assert function_name.startswith('FN')
     # TODO: Visit each function call and the the type of those that match
-    print "Setting type of %s to %s" % (function_name, function_type)
+    print("Setting type of %s to %s" % (function_name, function_type))
     sftv = SetFunctionTypeVisitor(function_name, function_type)
     parse_tree.accept(sftv)

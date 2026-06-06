@@ -92,7 +92,7 @@ class SourceDebuggingVisitor(Visitor):
             if m is not None:
                 statement.endPos = m.start()
             else:
-                print "Error: Could not locate statement separator in >>>%s<<<" % self.__data[search_start_pos:search_end_pos]
+                print("Error: Could not locate statement separator in >>>%s<<<" % self.__data[search_start_pos:search_end_pos])
         #print ">>>%s<<<" % self.__data[statement.startPos:statement.endPos]
     
     def setStartAndEndColumns(self, statement):

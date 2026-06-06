@@ -2,7 +2,7 @@ import logging
 
 from visitor import Visitor
 from ast_utils import findFollowingStatement
-from connectors import connect, connectToFollowing
+from .connectors import connect, connectToFollowing
 import errors
 
 logger = logging.getLogger('flow.flowgraph_visitor')

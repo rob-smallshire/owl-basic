@@ -12,7 +12,7 @@ def dumpXmlBlocks(basic_blocks, filename, options):
     writer.Formatting = Formatting.Indented
     writeHeader(writer)
     
-    print basic_blocks
+    print(basic_blocks)
     
     for entry_block in basic_blocks.values():
         for block in depthFirstSearch(entry_block):

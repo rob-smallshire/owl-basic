@@ -147,9 +147,7 @@ class AstMeta(type):
             
         return obj
             
-class AstNode(Visitable):
-    __metaclass__ = AstMeta
-    
+class AstNode(Visitable, metaclass=AstMeta):
     formal_type = TypeOption()
     actual_type = TypeOption()
     line_num = IntegerOption()

@@ -3,11 +3,11 @@
 import logging
 import re
 
-from ast_meta import AstNode, Node
+from .ast_meta import AstNode, Node
 from options import (TypeOption, IntegerOption, StringOption, BoolOption,
                      FloatOption)
 from cfg_vertex import CfgVertex
-from typing.type_system import (VoidOwlType, IntegerOwlType, ChannelOwlType,
+from owltyping.type_system import (VoidOwlType, IntegerOwlType, ChannelOwlType,
                                 ScalarOwlType, NumericOwlType, StringOwlType,
                                 FloatOwlType, AddressOwlType, ByteOwlType,
                                 PendingOwlType, ArrayOwlType, ObjectOwlType)
@@ -305,7 +305,7 @@ class MouseStep(AstStatement):
     y_coeff = Node(formalType=NumericOwlType())
 
 class MouseColour(AstStatement):
-    logicalColour = Node(formalType=IntegerOwlType())
+    logical_colour = Node(formalType=IntegerOwlType())
     red = Node(formalType=IntegerOwlType())
     green = Node(formalType=IntegerOwlType())
     blue = Node(formalType=IntegerOwlType())
@@ -314,8 +314,8 @@ class MousePosition(AstStatement):
     "MOUSE TO"
     x_coord     = Node(formalType=IntegerOwlType())
     y_coord     = Node(formalType=IntegerOwlType())
-    moveMouse   = BoolOption(True)
-    movePointer = BoolOption(True)
+    move_mouse   = BoolOption(True)
+    move_pointer = BoolOption(True)
 
 class MousePointer(AstStatement):
     shape       = Node(formalType=IntegerOwlType())
@@ -1013,8 +1013,8 @@ class TempoFunc(AstNode):
 class TintFunc(AstNode):
     formal_type = TypeOption(IntegerOwlType())
     actual_type = formal_type
-    xCoord = Node(formalType=IntegerOwlType())
-    yCoord = Node(formalType=IntegerOwlType())
+    x_coord = Node(formalType=IntegerOwlType())
+    y_coord = Node(formalType=IntegerOwlType())
     
 class TopFunc(AstNode):
     formal_type = TypeOption(IntegerOwlType()) # TODO: AddressOwlType?

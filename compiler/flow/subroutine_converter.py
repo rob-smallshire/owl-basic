@@ -6,8 +6,8 @@ import logging
 
 from syntax.ast import DefineProcedure
 from ast_utils import insertStatementBefore
-from convert_sub_visitor import ConvertSubVisitor
-from flow_analysis import tagSuccessors, deTagSuccessors
+from .convert_sub_visitor import ConvertSubVisitor
+from .flow_analysis import tagSuccessors, deTagSuccessors
 
 logger = logging.getLogger('flow.subroutine_converter')
 
@@ -17,7 +17,7 @@ def convertSubroutinesToProcedures(parse_tree, entry_points, line_mapper, option
     entry_points_to_add = {}
     for name, entry_point in entry_points.items():
         # TODO: This will only work with simple (i.e. single entry) subroutines
-        print "name = %s, entry_point = %s" % (name, entry_point)
+        print("name = %s, entry_point = %s" % (name, entry_point))
         subname = iter(entry_point.entryPoints).next()
         if subname.startswith('SUB'):
             procname = 'PROCSub' + subname[3:]

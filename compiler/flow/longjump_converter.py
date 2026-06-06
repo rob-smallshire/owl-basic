@@ -5,7 +5,7 @@ to exceptions with appropriate handlers.
 
 import logging
 
-from longjump_visitor import LongjumpVisitor
+from .longjump_visitor import LongjumpVisitor
 
 logger = logging.getLogger('flow.longjump_converter')
 

@@ -6,7 +6,7 @@ import clr
 import System
 from System.Reflection.Emit import *
 
-from cts import typeof
+from .cts import typeof
 
 def emitLdarg(generator, index):
     assert 0 <= index <= 65535

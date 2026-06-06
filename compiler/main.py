@@ -27,7 +27,7 @@ from flow import convertLongjumpsToExceptions
 from flow import convertSubroutinesToProcedures
 from flow import identifyBasicBlocks
 from flow import orderBasicBlocks
-from typing.typecheck import typecheck
+from owltyping.typecheck import typecheck
 import data_visitor
 import gml_visitor
 from xml_blocks import dumpXmlBlocks
@@ -189,17 +189,17 @@ def buildSymbolTables(entry_points, options):
         else:
             parent_title = "is the root symbol table"
         width = max(len(title), len(parent_title))
-        print "-" * width
-        print title
-        print parent_title
-        print "-" * width
+        print("-" * width)
+        print(title)
+        print(parent_title)
+        print("-" * width)
         
         symbols = table.symbols.keys()
         symbols.sort()
         for symbol in symbols:
-            print "%-10s %-10s %s" % (symbol, table.symbols[symbol].type.__doc__, table.symbols[symbol].modifier)
-        print "-" * width
-        print
+            print("%-10s %-10s %s" % (symbol, table.symbols[symbol].type.__doc__, table.symbols[symbol].modifier))
+        print("-" * width)
+        print()
     return stv
             
 def extractData(parse_tree, options):
@@ -257,11 +257,11 @@ def main(argv=None):
         if len(args) != 1:
             parser.error("No source file name supplied")
         compile(args[0], options)
-    except Usage, err:
+    except Usage as err:
         parser.err(err.msg)
         return 2
-    except CompileException, err:
-        print >>sys.stderr, err.msg
+    except CompileException as err:
+        print(err.msg, file=sys.stderr)
         return 1
  
 def compile(filename, options):   
@@ -371,7 +371,7 @@ def compile(filename, options):
 def printProfile():
     import clr
     for p in sorted(clr.GetProfilerData(), key=lambda p: p.ExclusiveTime):
-        print '%s\t%d\t%d\t%d' % (p.Name, p.InclusiveTime, p.ExclusiveTime, p.Calls)
+        print('%s\t%d\t%d\t%d' % (p.Name, p.InclusiveTime, p.ExclusiveTime, p.Calls))
 
 
 if __name__ == "__main__":

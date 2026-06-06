@@ -422,7 +422,7 @@ def p_error_stmt(p):
     
 def p_envelope_stmt(p):
     '''envelope_stmt : ENVELOPE expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr'''
-    p[0] = Envelope(n = p[2], t = p[4], picth1 = p[6], picth2 = p[8], pitch3 = p[10],
+    p[0] = Envelope(n = p[2], t = p[4], pitch1 = p[6], pitch2 = p[8], pitch3 = p[10],
                     numSteps1 = p[12], numSteps2 = p[14], numSteps3 = p[16],
                     amplitudeAttack = p[18], amplitudeDecay = p[20], amplitudeSustain = p[22],
                     amplitudeRelease = p[24], targetAttack = p[26], targetDecay = p[28] )
@@ -434,7 +434,7 @@ def p_fill_stmt(p):
     if len(p) == 5:
         p[0] = Fill(xCoord = p[2], yCoord = p[4])
     elif len(p) == 6:
-        p[0] = Fill(xCoord = p[3], yCoord = p[5], fill=True)
+        p[0] = Fill(xCoord = p[3], yCoord = p[5], relative=True)
     p[0].lineNum = p.lineno(1) - 1
     
 def p_gcol_stmt(p):
@@ -736,20 +736,20 @@ def p_mouse_stmt(p):
     if str(p[2]) == 'ON':
         if len(p) == 3:
             #MOUSE ON
-            p[0] = MousePointer(pointer = LiteralInteger(value = 0))
+            p[0] = MousePointer(shape =LiteralInteger(value = 0))
         elif len(p) == 4:
             #MOUSE ON expr
-            p[0] = MousePointer(pointer = p[3])
+            p[0] = MousePointer(shape =p[3])
     elif str(p[2]) == 'OFF':
         #MOUSE OFF
-        p[0] = MousePointer(pointer = None)
+        p[0] = MousePointer(shape =None)
     elif str(p[2]) == 'TO':
         #MOUSE TO
         p[0] = MousePosition(xCoord = p[3], yCoord = p[5])
     elif str(p[2]) == 'RECTANGLE':
         if len(p) == 10:
             #MOUSE RECTANGLE
-            p[0] = MouseRectangle(left = p[3], bottom = p[5], right = p[7], top = p[9])
+            p[0] = MouseRectangleOn(left = p[3], bottom = p[5], right = p[7], top = p[9])
         elif len(p) == 4:
             #MOUSE RECTANGLE OFF
             p[0] = MouseRectangleOff()
@@ -798,9 +798,9 @@ def p_plot_stmt(p):
                  | PLOT expr COMMA expr COMMA expr
                  | PLOT BY expr COMMA expr'''
     if len(p) == 5:
-        p[0] = Plot(mode = LiteralInteger(65), xCoord = p[2], yCoord = p[4])
+        p[0] = Plot(mode = LiteralInteger(value=65), xCoord = p[2], yCoord = p[4])
     elif len(p) == 6:
-        p[0] = Plot(mode = LiteralInteger(65), xCoord = p[3], yCoord = p[5], relative=True)
+        p[0] = Plot(mode = LiteralInteger(value=65), xCoord = p[3], yCoord = p[5], relative=True)
     elif len(p) == 7:
         p[0] = Plot(mode = p[4], xCoord = p[6], yCoord = p[2])
     p[0].lineNum = p.lineno(1) - 1
@@ -812,10 +812,10 @@ def p_point_stmt(p):
     if len(p) == 5:
         p[0] = Point(xCoord = p[2], yCoord = p[4])
     elif len(p) == 6:
-        if str(p[3]) == 'BY':
-            p[0] = Point(xCoord = p[4], yCoord = p[6], relative=True)
+        if str(p[2]) == 'BY':
+            p[0] = Point(xCoord = p[3], yCoord = p[5], relative=True)
         else:
-            p[0] = MousePosition(xCoord = p[4], yCoord = p[6], moveMouse=False, movePointer = True)
+            p[0] = MousePosition(xCoord = p[3], yCoord = p[5], moveMouse=False, movePointer = True)
     p[0].lineNum = p.lineno(1) - 1
     
 def p_print_stmt(p):
@@ -952,7 +952,7 @@ def p_sound_stmt(p):
     if len(p) == 9:
         p[0] = Sound(channel = p[2], amplitude = p[4], pitch = p[6], duration = p[8])
     elif len(p) == 3:
-        if str(p[3]) == 'OFF':
+        if str(p[2]) == 'OFF':
             p[0] = Mute(mute=True)
         else:
             p[0] = Mute(mute=False)
@@ -1503,7 +1503,7 @@ def p_user_func(p):
     '''user_func : FN_ID
                  | FN_ID LPAREN actual_arg_list RPAREN %prec FUNCTION'''
     if len(p) == 2:
-        p[0] = UserFunc(name = p[1], actualParamers = ActualArgList())
+        p[0] = UserFunc(name = p[1], actualParameters = ActualArgList())
     else:
         p[0] = UserFunc(name = p[1], actualParameters = p[3])
     p[0].lineNum = p.lineno(1) - 1
@@ -1966,4 +1966,7 @@ def p_empty(p):
 
 # Error rule for syntax errors
 def p_error(p):
-    logging.error("Syntax error %s at physical line %s", p, p.lineno)
+    if p is None:
+        logging.error("Syntax error at end of input (unexpected EOF)")
+    else:
+        logging.error("Syntax error at %r (physical line %s)", p.value, p.lineno)

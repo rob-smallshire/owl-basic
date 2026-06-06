@@ -56,7 +56,7 @@ class PlainTextDecoder(Decoder):
                 has_line_numbers = current_line_has_number
             else:
                 if current_line_has_number != has_line_numbers:
-                    raise Exception, "Inconsistent line numbering" 
+                    raise Exception("Inconsistent line numbering") 
             
             # Fake line numbers if they are missing
             if has_line_numbers == False:
@@ -107,7 +107,7 @@ class BbcBasicAcornDecoder(Decoder):
         lenLineEnd = len(self.lineEnd)
         while True:
             if len(self.data) < 2:
-                raise Exception, "Bad program"
+                raise Exception("Bad program")
             if self.data[1] == '\xff':
                 break
             #  {<cr> <linehi> <linelo> <len> <text>} <cr> <ff>
@@ -153,7 +153,7 @@ class BbcBasicAcornDecoder(Decoder):
                     return comTokens[tokenOrd-0x8e]
                 if ext == '\xc8':
                     return stmtTokens[tokenOrd-0x8e]
-                raise Exception, "Bad token"
+                raise Exception("Bad token")
             else: # Normal token, plus any extra characters
                 if token[0] == '\x8d': # line number following token
                     #decode the 24 bit line number
@@ -228,7 +228,7 @@ def fileType(data):
     '''
     if len(data) < 4:
         # TODO unsure how you want to return error
-        raise Exception, "Bad Program"
+        raise Exception("Bad Program")
     
     fileExt = data[-4:]
     
@@ -246,7 +246,7 @@ def fileType(data):
     elif fileExt[3] == '\x0a':
         return PlainTextLfDecoder(data)
     else:
-        raise Exception, "Unrecognised program format"
+        raise Exception("Unrecognised program format")
     
 tokens = [
     'OTHERWISE', # 7f
@@ -331,7 +331,7 @@ def decode(data, output):
 if __name__ == "__main__":
     optlist, args = getopt.getopt(sys.argv[1:], '')
     if len(args) != 2:
-        print "Usage: %s INPUT OUTPUT" % sys.argv[0]
+        print("Usage: %s INPUT OUTPUT" % sys.argv[0])
         sys.exit(1)
     entireFile = open(args[0], 'rb').read()
     output = open(args[1], 'w')

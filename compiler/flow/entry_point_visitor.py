@@ -41,7 +41,7 @@ class EntryPointVisitor(Visitor):
             gosub_target.entryPoint = "private"
             gosub_target.addComeFromGosubEdge(gosub)
         else:
-            print "Line not found"
+            print("Line not found")
             # TODO: Error!
             pass
         

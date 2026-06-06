@@ -5,7 +5,7 @@ from syntax.ast import ReturnFromFunction
 import errors
 from algorithms import representative
 from flow.traversal import depthFirstSearch
-from typing.type_system import PendingOwlType, ObjectOwlType, FloatOwlType
+from owltyping.type_system import PendingOwlType, ObjectOwlType, FloatOwlType
 
 def inferTypeOfFunction(entry_point):
     '''
@@ -22,14 +22,14 @@ def inferTypeOfFunction(entry_point):
               be inferred (possibly because other function types need inferring too)
               return PendingType.
     '''
-    print "DEF ", entry_point.name
+    print("DEF ", entry_point.name)
     return_types = set()
     for vertex in depthFirstSearch(entry_point):
         if isinstance(vertex, ReturnFromFunction):
             return_types.add(vertex.returnValue.actualType)
     
     for type in return_types:
-        print " =", type
+        print(" =", type)
     
     # If there is only one return type, set the type of the function, and exit
     if len(return_types) == 0:
