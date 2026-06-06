@@ -99,6 +99,23 @@ def test_print_manipulators_compile_and_run(compile_and_run):
     assert stdout == "AB\nC\nD\nno newlinejoined\n"
 
 
+def test_emit_il_lowers_simple_functions(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse_fixture("simple_functions.bbctxt"))
+    assert "System.Math::Abs(int32)" in il
+    assert "System.Math::Abs(float64)" in il
+    assert "System.Math::Sign(int32)" in il
+    assert "\n        not" in il          # NOT
+    assert "ldc.i4.m1" in il              # TRUE
+    assert "BasicCommands::Sqr(float64)" in il
+
+
+@requires_dotnet_toolchain
+def test_simple_functions_compile_and_run(compile_and_run):
+    # ABS(-5)=5, ABS(-2.5)=2.5, SGN(-3)=-1, NOT 0=-1, TRUE=-1, FALSE=0, SQR(9)=3
+    stdout = compile_and_run(analyse_fixture("simple_functions.bbctxt"))
+    assert stdout.split("\n") == ["5", "2.5", "-1", "-1", "-1", "0", "3", ""]
+
+
 def test_emit_il_lowers_string_functions(dotnet_backend):
     il = dotnet_backend.emit_il(analyse_fixture("string_functions.bbctxt"))
     assert "System.String::Concat(string, string)" in il

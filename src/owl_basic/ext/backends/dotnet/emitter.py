@@ -37,6 +37,8 @@ _RUNTIME = "[OwlRuntime]OwlRuntime.BasicCommands"
 
 _PRINT_NEWLINE = "call void {0}::NewLine()".format(_RUNTIME)
 
+_MATH = "[System.Runtime]System.Math"
+
 # OwlRuntime models BBC BASIC's address space as a byte array for ? indirection.
 _MEMORY_ARRAY = "call uint8[] [OwlRuntime]OwlRuntime.MemoryMap::get_Memory()"
 
@@ -746,6 +748,45 @@ class _MethodEmitter:
             )
         else:
             self.emit("call string {0}::MidStr(string, int32)".format(_RUNTIME))
+
+    # -- simple numeric / boolean functions ---------------------------------
+
+    def _expr_TrueFunc(self, node):
+        self.emit("ldc.i4.m1")    # BBC TRUE is -1
+
+    def _expr_FalseFunc(self, node):
+        self.emit("ldc.i4.0")
+
+    def _expr_Not(self, node):
+        self.lower_expression(node.factor)
+        self.emit("not")          # bitwise complement (BBC NOT)
+
+    def _expr_AbsFunc(self, node):
+        self.lower_expression(node.factor)
+        il = _il_type(node.factor.actualType)
+        self.emit("call %s %s::Abs(%s)" % (il, _MATH, il))
+
+    def _expr_SgnFunc(self, node):
+        self.lower_expression(node.factor)
+        self.emit("call int32 %s::Sign(%s)"
+                  % (_MATH, _il_type(node.factor.actualType)))
+
+    def _expr_SqrFunc(self, node):
+        self.lower_expression(node.factor)
+        self.emit("call float64 {0}::Sqr(float64)".format(_RUNTIME))
+
+    def _expr_RndFunc(self, node):
+        if node.option is not None:
+            self.lower_expression(node.option)
+            self.emit("call float64 {0}::Rnd(int32)".format(_RUNTIME))
+        else:
+            self.emit("call float64 {0}::Rnd()".format(_RUNTIME))
+
+    def _expr_PosFunc(self, node):
+        self.emit("call int32 {0}::Pos()".format(_RUNTIME))
+
+    def _expr_VposFunc(self, node):
+        self.emit("call int32 {0}::VPos()".format(_RUNTIME))
 
     def _expr_UnaryMinus(self, node):
         self.lower_expression(node.factor)
