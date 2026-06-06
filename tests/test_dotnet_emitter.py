@@ -331,6 +331,31 @@ def test_restore_to_line_compiles_and_runs(compile_and_run):
     assert compile_and_run(program).split() == ["11", "22", "33"]
 
 
+def test_emit_il_run_resets_globals(dotnet_backend):
+    program = analyse_numbered_lines(
+        [(10, "n% = 1"), (20, "RUN")], name="run"
+    )
+    il = dotnet_backend.emit_il(program)
+    # RUN clears variables via a generated __reset that zeroes the globals.
+    assert ".method static void __reset() cil managed" in il
+    assert "stsfld int32 i_n" in il          # n% zeroed in __reset
+    assert "call void __reset()" in il        # RUN calls it
+
+
+@requires_dotnet_toolchain
+def test_run_clears_variables_and_restarts(compile_and_run):
+    # n% is set to 42, then RUN restarts: on the next pass n% must read back as
+    # 0 (cleared), never 42. INPUT terminates the otherwise-endless restart.
+    lines = [
+        (10, "PRINT n%"), (20, "n% = 42"), (30, "INPUT cmd$"),
+        (40, 'IF cmd$ = "q" THEN END'), (50, "RUN"),
+    ]
+    program = analyse_numbered_lines(lines, name="rc")
+    stdout = compile_and_run(program, stdin="x\nq\n")
+    assert "42" not in stdout          # the variable was cleared by RUN
+    assert stdout.count("0") == 2      # n% read 0 on both passes
+
+
 @requires_dotnet_toolchain
 def test_on_goto_compiles_and_runs(compile_and_run):
     # ON X% GOTO 40,50,60 with X%=2 jumps to the second target (1-based).
