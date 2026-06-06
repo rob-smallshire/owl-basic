@@ -32,6 +32,14 @@ namespace OwlRuntime.platform.riscos
             Console.Out.Write(c);
         }
 
+        public override void NewLine()
+        {
+            // The base implementation enqueues VDU 10/13, which the VDU system
+            // turns into text-cursor movements that a raw stream cannot honour.
+            // Emit a newline directly instead.
+            Console.Out.Write('\n');
+        }
+
         public override void ScrollTextArea(int left, int bottom, int right, int top, Direction direction, ScrollMovement movement)
         {
             // Raw console: the host terminal manages its own scrolling.
