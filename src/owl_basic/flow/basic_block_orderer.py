@@ -20,7 +20,7 @@ def orderBasicBlocks(basic_blocks, options):
     for name, basic_block in list(basic_blocks.items()):
         logger.debug(name)
         order = approximateTopologicalOrder(basic_block)
-        print("order = ", order)
+        logging.debug("order = %s", order)
         for i, block in enumerate(order):
             block.topological_order = i
         ordered_blocks[name] = order

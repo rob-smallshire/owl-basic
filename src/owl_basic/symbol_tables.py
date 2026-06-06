@@ -171,7 +171,7 @@ class FormalParameterSymbolTable(ScopedSymbolTable):
     """
     def __init__(self, symbol_infos, procedure, parent):
         super(FormalParameterSymbolTable, self).__init__("formal parameters for PROC/FN %s" % procedure, SymbolTable.writethrough, parent)
-        print("symbol_infos = %s" % symbol_infos)
+        logging.debug("symbol_infos = %s", symbol_infos)
         for symbol_info in symbol_infos:
             self._symbols[symbol_info.name] = symbol_info
 

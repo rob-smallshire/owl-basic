@@ -105,11 +105,11 @@ class CorrelationVisitor(Visitor):
             if len(next_stmt.identifiers) == 0:
                  next_stmt.identifiers.append(for_stmt.identifier)
             id1 = for_stmt.identifier.identifier
-            print(next_stmt.identifiers)
+            logging.debug("next_stmt identifiers: %s", next_stmt.identifiers)
             id2 = next_stmt.identifiers[0].identifier
-            print("self.loops = ", self.loops)
-            print("id1 = ", id1)
-            print("id2 = ", id2)
+            logging.debug("self.loops = %s", self.loops)
+            logging.debug("id1 = %s", id1)
+            logging.debug("id2 = %s", id2)
             # TODO: Check that the symbols are equal, not just the names
             if for_stmt.identifier.identifier == next_stmt.identifiers[0].identifier:
                 connectLoop(next_stmt, for_stmt)

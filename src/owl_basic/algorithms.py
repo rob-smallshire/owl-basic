@@ -19,9 +19,13 @@ def representative(s):
 	'''
 	return next(iter(s))
 
-def all_indices(string, sub, listindex=[], offset=0):
-    # call as l = allindices(string, sub)
+def all_indices(string, sub, listindex=None, offset=0):
+    # call as l = all_indices(string, sub)
     # http://code.activestate.com/recipes/499314-find-all-indices-of-a-substring-in-a-given-string/
+    # listindex must default to None, not []: a mutable default argument is
+    # shared across calls and would accumulate indices from every invocation.
+    if listindex is None:
+        listindex = []
     i = string.find(sub, offset)
     while i >= 0:
         listindex.append(i)

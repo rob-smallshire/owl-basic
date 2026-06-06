@@ -17,7 +17,7 @@ def convertSubroutinesToProcedures(parse_tree, entry_points, line_mapper, option
     entry_points_to_add = {}
     for name, entry_point in list(entry_points.items()):
         # TODO: This will only work with simple (i.e. single entry) subroutines
-        print("name = %s, entry_point = %s" % (name, entry_point))
+        logging.debug("name = %s, entry_point = %s", name, entry_point)
         subname = next(iter(entry_point.entryPoints))
         if subname.startswith('SUB'):
             procname = 'PROCSub' + subname[3:]

@@ -148,7 +148,7 @@ class SymbolTableVisitor(Visitor):
     
     def visitAssignment(self, statement):
         logger.debug("SymbolTableVisitor.visitAssignment")
-        print(statement)
+        logging.debug("symbol-table statement: %s", statement)
         #assert statement.symbolTable is not None
         statement.symbolTable = self.checkPredecessorsAndRefer(statement)
         #self.tryAddVariable(statement.symbolTable, statement.lValue)

@@ -43,7 +43,7 @@ class SimplificationVisitor(Visitor):
     def visitStatementList(self, statement_list):
         "Flatten nested StatementLists and remove Statement nodes."
         if not hasattr(statement_list, "parent"):
-            print(statement_list.statements)
+            logging.debug("statements: %s", statement_list.statements)
             assert 0
         sslv = SimplifyStatementListVisitor()
         sslv.visit(statement_list)

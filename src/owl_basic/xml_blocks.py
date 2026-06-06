@@ -1,3 +1,4 @@
+import logging
 from itertools import chain
 
 from owl_basic.syntax.ast import If, OnGoto
@@ -12,7 +13,7 @@ def dumpXmlBlocks(basic_blocks, filename, options):
     writer.Formatting = Formatting.Indented
     writeHeader(writer)
     
-    print(basic_blocks)
+    logging.debug("basic blocks: %s", basic_blocks)
     
     for entry_block in list(basic_blocks.values()):
         for block in depthFirstSearch(entry_block):
