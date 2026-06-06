@@ -309,6 +309,17 @@ def test_data_read_restore_compiles_and_runs(compile_and_run):
 
 
 @requires_dotnet_toolchain
+def test_dynamic_restore_compiles_and_runs(compile_and_run):
+    # RESTORE ln% (a variable) rewinds via an inline jump table over DATA lines.
+    lines = [
+        (10, "DATA 11, 22"), (20, "DATA 33, 44"), (30, "ln% = 20"),
+        (40, "RESTORE ln%"), (50, "READ a%"), (60, "PRINT a%"), (70, "END"),
+    ]
+    program = analyse_numbered_lines(lines, name="dynr")
+    assert compile_and_run(program).strip() == "33"
+
+
+@requires_dotnet_toolchain
 def test_restore_to_line_compiles_and_runs(compile_and_run):
     # RESTORE 20 rewinds to the DATA on line 20, so READ c% gets 33.
     lines = [

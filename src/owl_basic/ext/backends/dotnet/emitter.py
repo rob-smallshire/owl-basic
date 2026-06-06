@@ -774,14 +774,39 @@ class _MethodEmitter:
         if target is None:
             index = 0                       # bare RESTORE: back to the first item
         elif type(target).__name__ == "LiteralInteger":
-            # RESTORE <line>: the first DATA item on or after that line. Resolved
-            # at compile time; a non-literal target would need a runtime map.
+            # RESTORE <line>: the first DATA item on or after that line, resolved
+            # at compile time.
             index = self._resolve_restore(int(target.value))
         else:
-            raise CodeGenerationError("RESTORE with a non-constant line")
+            self._emit_dynamic_restore(target)
+            return
         # The read index is pre-incremented, so point one before the target.
         self.emit("ldc.i4 %d" % (index - 1))
         self.emit("stsfld int32 %s" % _DATA_INDEX_FIELD)
+
+    def _emit_dynamic_restore(self, target):
+        # RESTORE <expr>: an inline jump table over the (compile-time-known) DATA
+        # lines, since the read index must be set from a runtime line number.
+        self.lower_expression(target)            # line number on the stack
+        end = self._new_label("ENDR")
+        cases = []
+        for line, item_index in sorted(self._data_index.items()):
+            label = self._new_label("SETR")
+            self.emit("dup")
+            self.emit("ldc.i4 %d" % line)
+            self.emit("beq %s" % label)
+            cases.append((label, item_index))
+        self.emit("pop")                         # no match: point past the end
+        self.emit("ldc.i4 %d" % (self._data_count - 1))
+        self.emit("stsfld int32 %s" % _DATA_INDEX_FIELD)
+        self.emit("br %s" % end)
+        for label, item_index in cases:
+            self.emit("%s:" % label)
+            self.emit("pop")
+            self.emit("ldc.i4 %d" % (item_index - 1))
+            self.emit("stsfld int32 %s" % _DATA_INDEX_FIELD)
+            self.emit("br %s" % end)
+        self.emit("%s:" % end)
 
     def _resolve_restore(self, line):
         if line in self._data_index:
