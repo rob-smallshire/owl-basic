@@ -114,6 +114,7 @@ class SimplificationVisitor(Visitor):
             if isinstance(ongoto.outOfRangeClause, StatementList):
                 sslv = SimplifyStatementListVisitor()
                 sslv.visit(ongoto.outOfRangeClause)
+                _localize_child_infos(ongoto)
                 ongoto.child_infos['out_of_range_clause'] = ongoto.outOfRangeClause.child_infos['statements']
                 ongoto.outOfRangeClause = sslv.accumulatedStatements
                 if len(ongoto.outOfRangeClause) == 0:
@@ -132,6 +133,7 @@ class SimplificationVisitor(Visitor):
             
     def visitCase(self, case):
         "Remove the WhenClauseList level from the AST"
+        _localize_child_infos(case)
         case.child_infos["when_clauses"] = case.whenClauses.child_infos["clauses"]
         case.whenClauses = case.whenClauses.clauses
         for clause in case.whenClauses:
