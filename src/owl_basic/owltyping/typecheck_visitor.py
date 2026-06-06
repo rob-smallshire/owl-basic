@@ -313,6 +313,13 @@ class TypecheckVisitor(Visitor):
         elif opTypes(NumericOwlType(), ObjectOwlType())  : operator.actualType = FloatOwlType()
         elif opTypes(IntegerOwlType(), FloatOwlType())   : operator.actualType = FloatOwlType()
         elif opTypes(FloatOwlType(),   IntegerOwlType()) : operator.actualType = FloatOwlType()
+        # A byte (e.g. from ? indirection) acts as an integer in arithmetic and
+        # promotes along byte < integer < float when mixed with a wider type.
+        elif opTypes(ByteOwlType(),    FloatOwlType())   : operator.actualType = FloatOwlType()
+        elif opTypes(FloatOwlType(),   ByteOwlType())    : operator.actualType = FloatOwlType()
+        elif opTypes(ByteOwlType(),    IntegerOwlType()) : operator.actualType = IntegerOwlType()
+        elif opTypes(IntegerOwlType(), ByteOwlType())    : operator.actualType = IntegerOwlType()
+        elif opTypes(ByteOwlType(),    ByteOwlType())    : operator.actualType = IntegerOwlType()
         elif operator.lhs.actualType == operator.rhs.actualType:
             operator.actualType = operator.lhs.actualType
         else:
@@ -329,10 +336,9 @@ class TypecheckVisitor(Visitor):
              Float op Int   => Float op Float
              Int op FLoat   => Float op Float
         '''
-        # TODO: Handle byte types - use the precision of the types to decide how to promote...
         def opTypes(lhs_type, rhs_type):
             return operator.lhs.actualType.isA(lhs_type) and operator.rhs.actualType.isA(rhs_type)
-        
+
         if opTypes(IntegerOwlType(), FloatOwlType()):
             self.insertCast(operator.lhs, source=IntegerOwlType(), target=FloatOwlType())
         elif opTypes(ByteOwlType(), FloatOwlType()):
@@ -341,6 +347,14 @@ class TypecheckVisitor(Visitor):
             self.insertCast(operator.rhs, source=IntegerOwlType(), target=FloatOwlType())
         elif opTypes(FloatOwlType(), ByteOwlType()):
             self.insertCast(operator.rhs, source=ByteOwlType(), target=FloatOwlType())
+        # A byte acts as an integer in arithmetic: widen it so the operands match.
+        elif opTypes(ByteOwlType(), IntegerOwlType()):
+            self.insertCast(operator.lhs, source=ByteOwlType(), target=IntegerOwlType())
+        elif opTypes(IntegerOwlType(), ByteOwlType()):
+            self.insertCast(operator.rhs, source=ByteOwlType(), target=IntegerOwlType())
+        elif opTypes(ByteOwlType(), ByteOwlType()):
+            self.insertCast(operator.lhs, source=ByteOwlType(), target=IntegerOwlType())
+            self.insertCast(operator.rhs, source=ByteOwlType(), target=IntegerOwlType())
     
     def insertNumericCasts(self, node):
         """
