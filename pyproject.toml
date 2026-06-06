@@ -27,8 +27,8 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/sixty-north/owl-basic"
-Issues = "https://github.com/sixty-north/owl-basic/issues"
+Repository = "https://github.com/rob-smallshire/owl-basic"
+Issues = "https://github.com/rob-smallshire/owl-basic/issues"
 
 [project.scripts]
 owl-basic = "owl_basic.main:main"
@@ -52,5 +52,23 @@ test = [
     "approvaltests>=14",
 ]
 dev = [
+    "bump-my-version>=0.28",
     { include-group = "test" },
+]
+
+[tool.bumpversion]
+# Single source of truth for the version is owl_basic.__version__, which
+# pyproject reads dynamically. `bump-my-version bump {patch,minor,major}`
+# rewrites it, commits, and tags v{new_version}; pushing that tag triggers
+# release.yml.
+current_version = "0.6.0"
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
+serialize = ["{major}.{minor}.{patch}"]
+commit = true
+tag = true
+message = "Bump version: {current_version} → {new_version}"
+tag_name = "v{new_version}"
+tag_message = "Bump version: {current_version} → {new_version}"
+files = [
+    { filename = "src/owl_basic/__init__.py" },
 ]

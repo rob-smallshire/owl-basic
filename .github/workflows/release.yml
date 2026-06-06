@@ -1,0 +1,52 @@
+name: Release
+
+# Triggered by the ``v*`` tag that ``bump-my-version`` creates. The full
+# test matrix (against the built wheel) runs as a gate; only when it is
+# green does the package get published to PyPI. Re-runnable via
+# workflow_dispatch if a transient publish failure needs another attempt.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    # Reuse the same wheel-based matrix as CI so a release exercises the
+    # exact test surface that push/PR did.
+    uses: ./.github/workflows/test.yml
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [test]
+    runs-on: ubuntu-latest
+    # The `pypi` GitHub deployment environment gates the publish: configure
+    # PyPI trusted publishing for this repo+environment, or set a PYPI_TOKEN
+    # secret on it, before a tag will actually publish. Until then the gate
+    # (tests) still runs and this job simply has nothing to authenticate with.
+    environment:
+      name: pypi
+      url: https://pypi.org/project/owl-basic/
+    permissions:
+      # Required for PyPI trusted publishing via OIDC; harmless with a token.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.14"
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Publish to PyPI
+        # Uses UV_PUBLISH_TOKEN if the secret is set; otherwise uv falls back
+        # to PyPI trusted publishing via the OIDC token minted by GitHub.
+        run: uv publish
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
