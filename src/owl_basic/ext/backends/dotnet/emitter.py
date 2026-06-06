@@ -176,7 +176,12 @@ def emit_program(program, assembly_name):
             logical = line_mapper.physicalToLogical(physical)
             if logical is not None:
                 data_index[logical] = item_index
-    prologue = _data_init_lines(data_items) if data_items else None
+    # Main initialises all globals to their BBC defaults (string globals to "",
+    # not CLR null) via __reset, then builds the DATA array. __reset runs once
+    # at the top (outside any longjump dispatch loop) and again on RUN.
+    prologue = ["call void __reset()"]
+    if data_items:
+        prologue += _data_init_lines(data_items)
     methods = [
         _emit_method(
             entry_name, blocks, signatures, globals_registry, data_index,
@@ -193,9 +198,9 @@ def emit_program(program, assembly_name):
     if data_items:
         fields += ".field static %s %s\n" % (_DATA_ARRAY_TYPE, _DATA_FIELD)
         fields += ".field static int32 %s\n" % _DATA_INDEX_FIELD
-    if _program_has_run(blocks_by_entry):
-        # Generated once all globals are known, so RUN can clear them.
-        methods.append(_emit_reset_method(globals_registry, bool(data_items)))
+    # __reset is always defined (Main calls it to initialise globals; RUN reuses
+    # it to clear them), generated once all globals are known.
+    methods.append(_emit_reset_method(globals_registry, bool(data_items)))
     return _ASSEMBLY_TEMPLATE.format(
         name=assembly_name, fields=fields, methods="\n\n".join(methods)
     )
@@ -212,15 +217,6 @@ def _formal_arguments(define_procedure):
 _DEFINITIONS = frozenset({"DefineProcedure", "DefineFunction"})
 
 _LONGJUMP_EXCEPTION = "[OwlRuntime]OwlRuntime.LongJumpException"
-
-
-def _program_has_run(blocks_by_entry):
-    return any(
-        type(statement).__name__ == "Run"
-        for blocks in blocks_by_entry.values()
-        for block in blocks
-        for statement in block.statements
-    )
 
 
 def _emit_reset_method(globals_registry, has_data):
