@@ -75,7 +75,40 @@ def analyse(source, name, source_filepath=None, options=None):
     data, physical_to_logical_map, line_offsets, line_number_prefixes = (
         _synthesize_line_numbers(source)
     )
+    return _run_pipeline(
+        data, physical_to_logical_map, line_offsets, line_number_prefixes,
+        name, source_filepath, options,
+    )
 
+
+def analyse_numbered_lines(numbered_lines, name, source_filepath=None, options=None):
+    """Analyse line-numbered BASIC source given as ``(line_number, text)`` pairs.
+
+    Real programs carry explicit line numbers (e.g. detokenised Sphinx, whose
+    detokeniser returns exactly these pairs) and GOTO/GOSUB reference them. The
+    bodies (without their leading numbers) are parsed, and the *real* line
+    numbers drive the physical->logical map so jump targets resolve.
+    """
+    options = options or _DefaultOptions()
+    numbered_lines = list(numbered_lines)
+    source = "\n".join(text for _, text in numbered_lines) + "\n"
+    data, synthesized, line_offsets, line_number_prefixes = _synthesize_line_numbers(source)
+    physical_to_logical_map = [number for number, _ in numbered_lines]
+    # _synthesize_line_numbers' split() yields a trailing empty body; pad the
+    # real map to the same length so the per-line arrays stay aligned.
+    while len(physical_to_logical_map) < len(synthesized):
+        physical_to_logical_map.append(
+            physical_to_logical_map[-1] + 1 if physical_to_logical_map else 1
+        )
+    return _run_pipeline(
+        data, physical_to_logical_map, line_offsets, line_number_prefixes,
+        name, source_filepath, options,
+    )
+
+
+def _run_pipeline(data, physical_to_logical_map, line_offsets, line_number_prefixes,
+                  name, source_filepath, options):
+    """Run the front-end pipeline and bundle the result as a :class:`Program`."""
     parse_tree = syntax_parser.parse(data, options)
     parse_tree.accept(SourceDebuggingVisitor(data, line_offsets, line_number_prefixes))
     parse_tree.accept(parent_visitor.ParentVisitor())
