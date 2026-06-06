@@ -1,0 +1,4 @@
+PRINT VAL("42")
+PRINT VAL("3.5x")
+PRINT VAL("abc")
+END

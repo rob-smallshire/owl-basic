@@ -773,6 +773,10 @@ class _MethodEmitter:
         self.lower_expression(node.factor)
         self.emit("call int32 {0}::Asc(string)".format(_RUNTIME))
 
+    def _expr_ValFunc(self, node):
+        self.lower_expression(node.factor)
+        self.emit("call float64 {0}::Val(string)".format(_RUNTIME))
+
     def _expr_ChrStrFunc(self, node):
         self.lower_expression(node.factor)
         self.emit("call string {0}::Chr(int32)".format(_RUNTIME))

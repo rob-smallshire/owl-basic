@@ -62,6 +62,44 @@ namespace OwlRuntime
             return new string((char) i, 1);
         }
 
+        public static double Val(string s)
+        {
+            // BBC VAL: the value of the leading numeric part of the string,
+            // or 0 if it does not begin with a number. Leading spaces are
+            // skipped; an optional sign, digits and a single decimal point
+            // are accepted.
+            int i = 0;
+            int n = s.Length;
+            while (i < n && s[i] == ' ')
+            {
+                i++;
+            }
+            int start = i;
+            if (i < n && (s[i] == '+' || s[i] == '-'))
+            {
+                i++;
+            }
+            while (i < n && char.IsDigit(s[i]))
+            {
+                i++;
+            }
+            if (i < n && s[i] == '.')
+            {
+                i++;
+                while (i < n && char.IsDigit(s[i]))
+                {
+                    i++;
+                }
+            }
+            string number = s.Substring(start, i - start);
+            double result;
+            if (double.TryParse(number, NumberStyles.Float, CultureInfo.InvariantCulture, out result))
+            {
+                return result;
+            }
+            return 0.0;
+        }
+
         public static void Bput(int channel, byte value)
         {
             if (channels.ContainsKey(channel))

@@ -90,10 +90,14 @@ def function_return_types(program):
 
 
 def find_owlruntime_dll():
-    """Locate a built net10 ``OwlRuntime.dll``, or ``None`` if absent."""
+    """Locate a built net10 ``OwlRuntime.dll`` (newest), or ``None`` if absent.
+
+    There may be both Debug and Release builds; pick the most recently built so
+    tests run against the latest runtime.
+    """
     pattern = os.path.join(
         _REPO_DIRPATH, "OwlRuntime", "OwlRuntime", "bin", "**", "net10.0",
         "OwlRuntime.dll",
     )
     matches = glob.glob(pattern, recursive=True)
-    return matches[0] if matches else None
+    return max(matches, key=os.path.getmtime) if matches else None

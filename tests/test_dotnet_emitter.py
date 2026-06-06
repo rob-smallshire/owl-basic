@@ -145,6 +145,18 @@ def test_simple_functions_compile_and_run(compile_and_run):
     assert stdout.split("\n") == ["5", "2.5", "-1", "-1", "-1", "0", "3", ""]
 
 
+def test_emit_il_lowers_val(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse_fixture("val_function.bbctxt"))
+    assert "BasicCommands::Val(string)" in il
+
+
+@requires_dotnet_toolchain
+def test_val_compiles_and_runs(compile_and_run):
+    # VAL("42")=42, VAL("3.5x")=3.5 (leading number), VAL("abc")=0
+    stdout = compile_and_run(analyse_fixture("val_function.bbctxt"))
+    assert stdout.split() == ["42", "3.5", "0"]
+
+
 def test_emit_il_lowers_string_functions(dotnet_backend):
     il = dotnet_backend.emit_il(analyse_fixture("string_functions.bbctxt"))
     assert "System.String::Concat(string, string)" in il
