@@ -90,6 +90,14 @@ def test_emit_il_lowers_repeat_until(dotnet_backend):
     assert "brfalse BB_" in il
 
 
+def test_emit_il_lowers_for_next(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse_fixture("for_next.bbctxt"))
+    # NEXT increments, checks the step's sign, and branches back to the body top.
+    assert "FOR_body_" in il
+    assert "bgt FOR_pos_" in il
+    assert "brtrue FOR_body_" in il
+
+
 @requires_dotnet_toolchain
 def test_six_times_seven_compiles_and_runs(compile_and_run):
     # The computed value reaches stdout (BBC BASIC: PRINT "..." 6*7).
@@ -174,3 +182,17 @@ def test_repeat_until_compiles_and_runs(compile_and_run):
     # n%=0 : REPEAT n%=n%+1 : PRINT n% : UNTIL n%>=3  -> 1, 2, 3
     stdout = compile_and_run(analyse_fixture("repeat_until.bbctxt"))
     assert stdout.split() == ["1", "2", "3"]
+
+
+@requires_dotnet_toolchain
+def test_for_next_ascending_compiles_and_runs(compile_and_run):
+    # FOR i% = 1 TO 3 : PRINT i% : NEXT  -> 1, 2, 3
+    stdout = compile_and_run(analyse_fixture("for_next.bbctxt"))
+    assert stdout.split() == ["1", "2", "3"]
+
+
+@requires_dotnet_toolchain
+def test_for_next_negative_step_compiles_and_runs(compile_and_run):
+    # FOR x = 10 TO 6 STEP -2 : PRINT x : NEXT  -> 10, 8, 6
+    stdout = compile_and_run(analyse_fixture("for_next_step.bbctxt"))
+    assert stdout.split() == ["10", "8", "6"]

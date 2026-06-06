@@ -242,6 +242,10 @@ def _sole_loop_back(node, what):
     return targets[0]
 
 
+def _load_zero(il_type):
+    return "ldc.r8 0.0" if il_type == "float64" else "ldc.i4.0"
+
+
 class _MethodEmitter:
     def __init__(self, formal_args=None, proc_signatures=None,
                  globals_registry=None):
@@ -252,6 +256,8 @@ class _MethodEmitter:
         self._proc_signatures = proc_signatures or {}  # PROC name -> [il types]
         self._globals = globals_registry if globals_registry is not None else {}
         self._symbol_table = None  # the symbol table of the statement being lowered
+        self._for_loops = {}       # id(ForToStep) -> loop state, shared with NEXT
+        self._label_seq = 0        # for unique intra-method labels
 
     def emit(self, text):
         self.lines.append(text)
@@ -361,13 +367,7 @@ class _MethodEmitter:
                 "Cannot lower assignment to %r l-value" % name
             )
         self.lower_expression(node.rValue)
-        kind, locus = self._variable_storage(target)
-        if kind == "arg":
-            self.emit("starg %d" % locus)
-        elif kind == "local":
-            self.emit("stloc V_%d" % locus)
-        else:
-            self.emit("stsfld %s %s" % (self._globals[locus], locus))
+        self._store_variable(target)
 
     def _stmt_If(self, node):
         # Flow analysis emptied the clauses into their own blocks; branch to them
@@ -408,6 +408,62 @@ class _MethodEmitter:
         # LOCAL only declares which variables are method-scoped (the symbol
         # table records that); each gets a local slot when it is referenced.
         pass
+
+    def _new_label(self, stem):
+        self._label_seq += 1
+        return "%s_%d" % (stem, self._label_seq)
+
+    def _stmt_ForToStep(self, node):
+        # counter = first; stash last and step in locals; mark the loop-body top.
+        # The continuation test lives in the correlated NEXT (BBC FOR is
+        # post-tested, so the body always runs at least once).
+        counter = node.identifier
+        counter_il = _il_type(counter.actualType)
+        self.lower_expression(node.first)
+        self._store_variable(counter)
+        last_slot = self._local_slot("__for_last_%d" % id(node), counter.actualType)
+        self.lower_expression(node.last)
+        self.emit("stloc V_%d" % last_slot)
+        step_slot = self._local_slot("__for_step_%d" % id(node), counter.actualType)
+        self.lower_expression(node.step)
+        self.emit("stloc V_%d" % step_slot)
+        body_label = self._new_label("FOR_body")
+        self.emit("%s:" % body_label)
+        self._for_loops[id(node)] = (body_label, counter, last_slot, step_slot, counter_il)
+
+    def _stmt_Next(self, node):
+        for_statement = _sole_loop_back(node, "NEXT")
+        body_label, counter, last_slot, step_slot, counter_il = self._for_loops[
+            id(for_statement)
+        ]
+        # counter += step
+        self._load_variable(counter)
+        self.emit("ldloc V_%d" % step_slot)
+        self.emit("add")
+        self._store_variable(counter)
+        # Continue while the counter has not passed `last`, in the step's
+        # direction: step > 0 -> while counter <= last, else while counter >= last.
+        positive = self._new_label("FOR_pos")
+        loop_back = self._new_label("FOR_back")
+        self.emit("ldloc V_%d" % step_slot)
+        self.emit(_load_zero(counter_il))
+        self.emit("bgt " + positive)
+        # negative step: NOT (counter < last)
+        self._load_variable(counter)
+        self.emit("ldloc V_%d" % last_slot)
+        self.emit("clt")
+        self.emit("ldc.i4.0")
+        self.emit("ceq")
+        self.emit("br " + loop_back)
+        self.emit("%s:" % positive)
+        # positive step: NOT (counter > last)
+        self._load_variable(counter)
+        self.emit("ldloc V_%d" % last_slot)
+        self.emit("cgt")
+        self.emit("ldc.i4.0")
+        self.emit("ceq")
+        self.emit("%s:" % loop_back)
+        self.emit("brtrue " + body_label)
 
     def _stmt_Repeat(self, node):
         # The loop top is just the start of this block; UNTIL branches back to
@@ -480,14 +536,26 @@ class _MethodEmitter:
     def _expr_LiteralFloat(self, node):
         self.emit("ldc.r8 %r" % float(node.value))
 
-    def _expr_Variable(self, node):
-        kind, locus = self._variable_storage(node)
+    def _load_variable(self, variable):
+        kind, locus = self._variable_storage(variable)
         if kind == "arg":
             self.emit(_ldarg(locus))
         elif kind == "local":
             self.emit("ldloc V_%d" % locus)
         else:
             self.emit("ldsfld %s %s" % (self._globals[locus], locus))
+
+    def _store_variable(self, variable):
+        kind, locus = self._variable_storage(variable)
+        if kind == "arg":
+            self.emit("starg %d" % locus)
+        elif kind == "local":
+            self.emit("stloc V_%d" % locus)
+        else:
+            self.emit("stsfld %s %s" % (self._globals[locus], locus))
+
+    def _expr_Variable(self, node):
+        self._load_variable(node)
 
     def _push_memory_index(self, indirection):
         """Push the OwlRuntime address-space byte array and the target index.
@@ -509,6 +577,13 @@ class _MethodEmitter:
     def _expr_DyadicByteIndirection(self, node):
         self._push_memory_index(node)
         self.emit("ldelem.u1")
+
+    def _expr_UnaryMinus(self, node):
+        self.lower_expression(node.factor)
+        self.emit("neg")
+
+    def _expr_UnaryPlus(self, node):
+        self.lower_expression(node.factor)
 
     def _expr_Cast(self, node):
         # Numeric coercions the type checker inserts (e.g. integer -> float for

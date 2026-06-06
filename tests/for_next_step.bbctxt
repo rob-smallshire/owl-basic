@@ -1,0 +1,4 @@
+FOR x = 10 TO 6 STEP -2
+PRINT x
+NEXT
+END
