@@ -42,6 +42,11 @@ _MEMORY_ARRAY = "call uint8[] [OwlRuntime]OwlRuntime.MemoryMap::get_Memory()"
 
 _BYTE_INDIRECTIONS = frozenset({"UnaryByteIndirection", "DyadicByteIndirection"})
 
+# DATA is compiled to a static string array read sequentially by READ.
+_DATA_FIELD = "__data"
+_DATA_ARRAY_TYPE = "string[]"
+_DATA_INDEX_FIELD = "__dataIndex"
+
 # Map a textual CIL operator mnemonic onto each binary arithmetic AST node.
 _BINARY_OPS = {
     "Plus": "add",
@@ -126,14 +131,25 @@ def emit_program(program, assembly_name):
     # LOCAL/PRIVATE; globals are static fields shared by every method. The
     # registry (field name -> CIL type) is populated as methods are lowered.
     globals_registry = {}
+    # DATA becomes a static string array; READ reads it sequentially. The array
+    # is built at the top of Main (before any PROC that might READ runs).
+    data = getattr(program, "data", None)
+    data_items = list(data.data) if data is not None and data.data else []
+    prologue = _data_init_lines(data_items) if data_items else None
     methods = [
-        _emit_method(entry_name, blocks, signatures, globals_registry)
+        _emit_method(
+            entry_name, blocks, signatures, globals_registry,
+            prologue if entry_name == _MAIN_ENTRY else None,
+        )
         for entry_name, blocks in blocks_by_entry.items()
     ]
     fields = "".join(
         ".field static %s %s\n" % (il_type, name)
         for name, il_type in globals_registry.items()
     )
+    if data_items:
+        fields += ".field static %s %s\n" % (_DATA_ARRAY_TYPE, _DATA_FIELD)
+        fields += ".field static int32 %s\n" % _DATA_INDEX_FIELD
     return _ASSEMBLY_TEMPLATE.format(
         name=assembly_name, fields=fields, methods="\n\n".join(methods)
     )
@@ -162,7 +178,7 @@ def _collect_proc_signatures(blocks_by_entry):
     return signatures
 
 
-def _emit_method(entry_name, blocks, signatures, globals_registry):
+def _emit_method(entry_name, blocks, signatures, globals_registry, prologue=None):
     """Render one routine's basic blocks as a complete CIL method."""
     is_main = entry_name == _MAIN_ENTRY
     if not is_main and not entry_name.startswith("PROC"):
@@ -185,6 +201,9 @@ def _emit_method(entry_name, blocks, signatures, globals_registry):
     )
     emitter.lower_blocks(blocks)
     emitter.finish()
+    if prologue:
+        # Runs before the first block (e.g. building the DATA array in Main).
+        emitter.lines = list(prologue) + emitter.lines
     # Guarantee the method returns: add a trailing `ret` unless the last block
     # already ends in one (END / ENDPROC), which avoids an unreachable duplicate.
     if not emitter.lines or emitter.lines[-1] != "ret":
@@ -244,6 +263,17 @@ def _sole_loop_back(node, what):
 
 def _load_zero(il_type):
     return "ldc.r8 0.0" if il_type == "float64" else "ldc.i4.0"
+
+
+def _data_init_lines(items):
+    """CIL that builds the static DATA string array and resets the read index."""
+    lines = ["ldc.i4 %d" % len(items), "newarr [System.Runtime]System.String"]
+    for index, item in enumerate(items):
+        lines += ["dup", "ldc.i4 %d" % index, "ldstr " + _il_string(item),
+                  "stelem.ref"]
+    lines += ["stsfld %s %s" % (_DATA_ARRAY_TYPE, _DATA_FIELD),
+              "ldc.i4.m1", "stsfld int32 %s" % _DATA_INDEX_FIELD]
+    return lines
 
 
 class _MethodEmitter:
@@ -488,6 +518,17 @@ class _MethodEmitter:
         self.emit("%s:" % loop_back)
         self.emit("brtrue " + body_label)
 
+    def _stmt_Data(self, node):
+        # DATA is compiled to a static array (built in Main); no inline code.
+        pass
+
+    def _stmt_Restore(self, node):
+        if node.targetLogicalLine is not None:
+            # RESTORE <line> needs the line->index map; bare RESTORE for now.
+            raise CodeGenerationError("RESTORE <line> not yet supported")
+        self.emit("ldc.i4.m1")   # next READ pre-increments to index 0
+        self.emit("stsfld int32 %s" % _DATA_INDEX_FIELD)
+
     def _stmt_Repeat(self, node):
         # The loop top is just the start of this block; UNTIL branches back to
         # its label. REPEAT itself emits no code.
@@ -600,6 +641,23 @@ class _MethodEmitter:
     def _expr_DyadicByteIndirection(self, node):
         self._push_memory_index(node)
         self.emit("ldelem.u1")
+
+    def _expr_ReadFunc(self, node):
+        # Read the next DATA item (a string) and convert it to the target type.
+        self.emit("ldsfld %s %s" % (_DATA_ARRAY_TYPE, _DATA_FIELD))
+        self.emit("ldsfld int32 %s" % _DATA_INDEX_FIELD)
+        self.emit("ldc.i4.1")
+        self.emit("add")
+        self.emit("dup")
+        self.emit("stsfld int32 %s" % _DATA_INDEX_FIELD)
+        self.emit("ldelem.ref")
+        target = node.actualType
+        if isinstance(target, StringOwlType):
+            return
+        if isinstance(target, FloatOwlType):
+            self.emit("call float64 [System.Runtime]System.Double::Parse(string)")
+        else:  # integer / byte
+            self.emit("call int32 [System.Runtime]System.Int32::Parse(string)")
 
     def _expr_UnaryMinus(self, node):
         self.lower_expression(node.factor)

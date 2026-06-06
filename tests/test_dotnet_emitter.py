@@ -97,6 +97,23 @@ def test_print_manipulators_compile_and_run(compile_and_run):
     assert stdout == "AB\nC\nD\nno newlinejoined\n"
 
 
+def test_emit_il_lowers_data_read_restore(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse_fixture("data_read.bbctxt"))
+    # DATA becomes a static string array, READ reads/parses it, RESTORE rewinds.
+    assert ".field static string[] __data" in il
+    assert "newarr [System.Runtime]System.String" in il
+    assert "ldelem.ref" in il
+    assert "System.Int32::Parse(string)" in il
+    assert "stsfld int32 __dataIndex" in il
+
+
+@requires_dotnet_toolchain
+def test_data_read_restore_compiles_and_runs(compile_and_run):
+    # DATA 10,20,hello : READ a% (10), c$ ("20") : RESTORE : READ d% (10)
+    stdout = compile_and_run(analyse_fixture("data_read.bbctxt"))
+    assert stdout.split() == ["10", "20", "10"]
+
+
 def test_emit_il_lowers_repeat_until(dotnet_backend):
     il = dotnet_backend.emit_il(analyse_fixture("repeat_until.bbctxt"))
     # UNTIL branches back to the REPEAT block while the condition is false.

@@ -1,0 +1,9 @@
+DATA 10, 20, hello
+READ a%
+READ c$
+PRINT a%
+PRINT c$
+RESTORE
+READ d%
+PRINT d%
+END
