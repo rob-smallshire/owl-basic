@@ -759,6 +759,12 @@ class _MethodEmitter:
             self._local_types.append(_QUEUE_OBJECT)
         return self._input_queue_slot
 
+    def _stmt_Mode(self, node):
+        if node.number is None:
+            raise CodeGenerationError("extended MODE syntax not yet supported")
+        self.lower_expression(node.number)
+        self.emit("call void %s::Mode(int32)" % _RUNTIME)
+
     def _stmt_Data(self, node):
         # DATA is compiled to a static array (built in Main); no inline code.
         pass

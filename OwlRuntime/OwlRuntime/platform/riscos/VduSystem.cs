@@ -1652,10 +1652,21 @@ namespace OwlRuntime.platform.riscos
         {
             //prm 1-594
             modeNumber = DequeueByte();
-            screenMode = AbstractScreenMode.CreateScreenMode(this, ModeNumber);
-            ResetTextWindow();
-            ResetGraphicsWindow();
-            ResetTextCursor();
+            try
+            {
+                screenMode = AbstractScreenMode.CreateScreenMode(this, ModeNumber);
+                ResetTextWindow();
+                ResetGraphicsWindow();
+                ResetTextCursor();
+            }
+            catch (PlatformNotSupportedException)
+            {
+                // Headless / non-Windows: the requested mode's screen operations
+                // are unavailable, so fall back to the raw console text mode and
+                // keep text output working regardless of the MODE requested.
+                modeNumber = rawConsoleMode;
+                screenMode = AbstractScreenMode.CreateScreenMode(this, rawConsoleMode);
+            }
             // TODO: Set default colours
             switch (ScreenMode.BitsPerPixel)
             {

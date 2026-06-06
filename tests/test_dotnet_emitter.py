@@ -184,6 +184,18 @@ def test_displaced_proc_body_goto_compiles_and_runs(compile_and_run):
     assert compile_and_run(program).split() == ["A", "B"]
 
 
+def test_emit_il_lowers_mode(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse_fixture("mode.bbctxt"))
+    assert "call void [OwlRuntime]OwlRuntime.BasicCommands::Mode(int32)" in il
+
+
+@requires_dotnet_toolchain
+def test_mode_compiles_and_runs(compile_and_run):
+    # MODE 7 then PRINT: the runtime falls back to the raw console headless,
+    # so text still appears.
+    assert "hi" in compile_and_run(analyse_fixture("mode.bbctxt"))
+
+
 @requires_dotnet_toolchain
 def test_lomem_compiles_and_runs(compile_and_run):
     # LOMEM is a pseudo-variable backed by an OwlRuntime property: write/read.
