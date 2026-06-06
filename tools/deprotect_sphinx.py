@@ -1,11 +1,20 @@
 """De-protect Acornsoft Sphinx Adventure's SPHINX2 BASIC program.
 
-Sphinx ships with one anti-listing line: logical line 173 is placed *last* in
-the file (out of monotonic order) and stuffed with control bytes and fake
-0x8D line-number tokens, which deliberately breaks LIST/RENUMBER and
-detokenisers. This tool rewrites that one line as a benign REM and restores
-logical line-number order, yielding a clean, listable/compilable copy we can
-drive the compiler against.
+Sphinx ships with anti-listing protection of two kinds:
+
+* Logical line 173 is placed *last* in the file (out of monotonic order) and
+  stuffed with control bytes and fake 0x8D line-number tokens, which
+  deliberately breaks LIST/RENUMBER and detokenisers.
+
+* A byte poke on line 363: the ``(`` (0x28) in ``PROCR(6)`` is overwritten with
+  the PROC token (0xF2). No source text tokenises to those bytes (typing
+  ``PROCRPROC6)`` yields a *name* "RPROC6", not a token), so it can only have
+  been poked directly; LIST then shows the garbage ``PROCRPROC6)``. A PROC token
+  immediately followed by a digit is never valid (procedure names cannot start
+  with a digit), which unambiguously marks the poke; we restore it to ``(``.
+
+This tool reverses both, restoring logical line-number order and yielding a
+clean, listable/compilable copy we can drive the compiler against.
 
 Extract the tokenised input from the disc image first, e.g.::
 
@@ -23,6 +32,9 @@ from owl_basic.bbc_basic.detokenizer import detokenize
 
 PROTECTED_LINE = 173
 _REM = 0xF4
+_PROC = 0xF2
+_OPEN_PAREN = 0x28
+_QUOTE = 0x22
 
 
 def split_records(data: bytes):
@@ -46,24 +58,44 @@ def build(records) -> bytes:
     return bytes(out)
 
 
-def deprotect(data: bytes):
-    """Return (deprotected_bytes, dropped_count).
+def _restore_paren_pokes(content: bytes):
+    """Restore ``(``-poked-to-PROC bytes in one line's content.
 
-    The anti-listing line is a *duplicate* line number placed out of monotonic
-    order at the end of the file (the genuine line of that number sits in its
-    proper place). Drop the out-of-order duplicate(s); keep everything else,
-    including the real line, untouched and already in order.
+    A PROC token (0xF2) immediately followed by a digit, outside a string
+    literal, is an overwritten ``(``; restore it. Returns (content, count).
+    """
+    out = bytearray(content)
+    in_string = False
+    count = 0
+    for i in range(len(out) - 1):
+        if out[i] == _QUOTE:
+            in_string = not in_string
+        elif not in_string and out[i] == _PROC and 0x30 <= out[i + 1] <= 0x39:
+            out[i] = _OPEN_PAREN
+            count += 1
+    return bytes(out), count
+
+
+def deprotect(data: bytes):
+    """Return (deprotected_bytes, dropped, poked).
+
+    Drops the out-of-order duplicate anti-listing line(s) (the genuine line of
+    that number sits in its proper place), and restores ``(``-poked-to-PROC
+    bytes. Everything else is kept untouched and already in order.
     """
     cleaned = []
     dropped = []
+    poked = 0
     highest = -1
     for number, content in split_records(data):
         if number <= highest:
             dropped.append(number)  # out-of-order duplicate: the anti-listing line
             continue
+        content, fixed = _restore_paren_pokes(content)
+        poked += fixed
         cleaned.append((number, content))
         highest = number
-    return build(cleaned), dropped
+    return build(cleaned), dropped, poked
 
 
 def main(argv=None):
@@ -71,10 +103,11 @@ def main(argv=None):
     if len(argv) != 3:
         raise SystemExit(__doc__)
     tokenised = Path(argv[0]).read_bytes()
-    deprotected, dropped = deprotect(tokenised)
+    deprotected, dropped, poked = deprotect(tokenised)
     Path(argv[1]).write_bytes(deprotected)
     Path(argv[2]).write_text(detokenize(deprotected), encoding="utf-8")
     print("dropped %d anti-listing line(s) %s" % (len(dropped), dropped))
+    print("restored %d ( -> PROC byte poke(s)" % poked)
     print("wrote %s (%d bytes) and %s" % (argv[1], len(deprotected), argv[2]))
 
 

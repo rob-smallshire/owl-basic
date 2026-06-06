@@ -898,11 +898,14 @@ def t_LITERAL_STRING(t):
     return t
 
 def t_LITERAL_FLOAT(t):
-    r'\d*\.\d+(E([+-]?\d+))?'
+    # Digits optional on both sides of the point, so '.5', '5.' and a lone '.'
+    # are all accepted; in BBC BASIC a bare '.' is the number 0 (e.g. the
+    # deliberate infinite loop REPEAT UNTIL .).
+    r'\d*\.\d*(E([+-]?\d+))?'
     try:
         t.value = float(t.value)
     except ValueError:
-        print("Number %s is too large!" % t.value)
+        t.value = 0.0   # a lone '.' (or '.E..') is zero
     return t
 
 def t_LITERAL_INTEGER(t):
