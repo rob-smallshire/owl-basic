@@ -603,12 +603,15 @@ def p_implicit_goto(p):
     p[0] = stmt_list
         
 def p_if_multi_stmt(p):
-    '''if_multi_stmt : IF expr THEN statement_list ENDIF
-                     | IF expr THEN statement_list ELSE statement_list ENDIF'''
-    if len(p) == 6:
-        p[0] = If(condition = p[2], trueClause = p[4])
-    elif len(p) == 8:
-        p[0] = If(condition = p[2], trueClause = p[4], falseClause = p[6])
+    # The multi-line IF (a BASIC V form) has THEN at end-of-line: the EOL
+    # (stmt_terminator) after THEN is what distinguishes it from the single-line
+    # `IF expr THEN clause`, where statements follow THEN on the same line.
+    '''if_multi_stmt : IF expr THEN stmt_terminator statement_list ENDIF
+                     | IF expr THEN stmt_terminator statement_list ELSE stmt_terminator statement_list ENDIF'''
+    if len(p) == 7:
+        p[0] = If(condition = p[2], trueClause = p[5])
+    elif len(p) == 10:
+        p[0] = If(condition = p[2], trueClause = p[5], falseClause = p[8])
     p[0].lineNum = p.lineno(1) - 1
     
 # The syntax rules for FOR..NEXT loops are not implemented by the

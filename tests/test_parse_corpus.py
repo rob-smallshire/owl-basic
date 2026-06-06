@@ -27,13 +27,9 @@ class _Options:
 # Known grammar-coverage gaps surfaced by the corpus (pre-existing, not Py2->3
 # regressions). Keyed by corpus id -> reason. These are xfail rather than deleted
 # so the gap stays visible and flips to a failure (xpass) the moment it's fixed.
-KNOWN_GAPS = {
-    "function_inference": "grammar: 'IF <cond> THEN =<expr>' (function return in "
-                          "single-branch IF, no ELSE) not accepted; tied to DEF FN "
-                          "type-inference work",
-    "if_then_else_test": "grammar: 'IF <cond> THEN =<expr>' (function return in "
-                         "single-branch IF, no ELSE) not accepted",
-}
+# (The IF <cond> THEN =<expr> gap that previously held back function_inference
+# and if_then_else_test is now fixed, so the whole corpus parses.)
+KNOWN_GAPS = {}
 
 
 @pytest.mark.parametrize("source_filepath", CORPUS, ids=CORPUS_IDS)
