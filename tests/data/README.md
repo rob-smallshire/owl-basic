@@ -21,3 +21,23 @@ compiler's torture-test. Place its Acorn DFS image here:
 The end-to-end test reads the SSD with `oaknut-disc`, extracts the tokenised
 BBC BASIC program, detokenises it with `owl_basic.decoder`, compiles it with the
 `dotnet` backend, and runs it on .NET — checking the introductory screen.
+
+### De-protected working copy
+
+Sphinx has one anti-listing/copy-protection line: logical line **173** is
+*duplicated* — the genuine line (the adventure's verb vocabulary `DATA`) sits in
+its proper place, and a corrupted copy full of control bytes and fake line-number
+tokens is placed last, out of order, to break `LIST`/`RENUMBER` and detokenisers.
+
+`tools/deprotect_sphinx.py` drops the out-of-order duplicate, keeping the genuine
+program, producing the committed derived artifacts:
+
+- `sphinx2-deprotected.bbc` — the de-protected tokenised program (376 lines,
+  monotonic, no duplicates).
+- `sphinx2.bas` — its detokenised source (regenerable from the `.bbc`).
+
+Reproduce with::
+
+    disc cat tests/data/SphinxAdventureFIN.ssd:$.SPHINX2 > sphinx2.tok
+    python tools/deprotect_sphinx.py sphinx2.tok \
+        tests/data/sphinx2-deprotected.bbc tests/data/sphinx2.bas
