@@ -143,6 +143,8 @@ def emit_program(program, assembly_name):
     """
     blocks_by_entry = program.ordered_basic_blocks or {}
     signatures = _collect_signatures(blocks_by_entry)
+    longjump_targets = _collect_longjump_targets(blocks_by_entry)
+    line_mapper = program.line_mapper
     # BBC BASIC variables are global unless they are formal parameters or made
     # LOCAL/PRIVATE; globals are static fields shared by every method. The
     # registry (field name -> CIL type) is populated as methods are lowered.
@@ -164,6 +166,7 @@ def emit_program(program, assembly_name):
     methods = [
         _emit_method(
             entry_name, blocks, signatures, globals_registry, data_index,
+            longjump_targets, line_mapper,
             prologue if entry_name == _MAIN_ENTRY else None,
         )
         for entry_name, blocks in blocks_by_entry.items()
@@ -190,6 +193,21 @@ def _formal_arguments(define_procedure):
 
 _DEFINITIONS = frozenset({"DefineProcedure", "DefineFunction"})
 
+_LONGJUMP_EXCEPTION = "[OwlRuntime]OwlRuntime.LongJumpException"
+
+
+def _collect_longjump_targets(blocks_by_entry):
+    """The set of constant target lines of LONGJUMPs (GOTO out of a routine)."""
+    targets = set()
+    for blocks in blocks_by_entry.values():
+        for block in blocks:
+            for statement in block.statements:
+                if type(statement).__name__ == "LongJump":
+                    target = statement.targetLogicalLine
+                    if type(target).__name__ == "LiteralInteger":
+                        targets.add(int(target.value))
+    return targets
+
 
 def _collect_signatures(blocks_by_entry):
     """Map each PROC/FN name to ``(return_type, [param_types])`` for call sites.
@@ -211,7 +229,7 @@ def _collect_signatures(blocks_by_entry):
 
 
 def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
-                 prologue=None):
+                 longjump_targets=frozenset(), line_mapper=None, prologue=None):
     """Render one routine's basic blocks as a complete CIL method."""
     is_main = entry_name == _MAIN_ENTRY
     if not is_main and entry_name not in signatures:
@@ -235,18 +253,24 @@ def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
         globals_registry=globals_registry,
         data_index=data_index,
         return_type=return_type,
+        longjump_targets=longjump_targets,
+        line_mapper=line_mapper,
     )
     emitter.lower_blocks(blocks)
     emitter.finish()
-    if prologue:
-        # Runs before the first block (e.g. building the DATA array in Main).
-        emitter.lines = list(prologue) + emitter.lines
-    # Guarantee the method returns: add a trailing `ret` unless the last block
-    # already ends in one (END / ENDPROC / =expr), avoiding an unreachable
-    # duplicate. A value-returning FN that falls off the end is malformed, but
-    # the front-end guarantees a final return.
-    if not emitter.lines or emitter.lines[-1] != "ret":
-        emitter.emit("ret")
+
+    # A LONGJUMP (GOTO out of a routine) is thrown as an exception; if any land
+    # in this method (only Main, in practice), wrap the body in a dispatch loop
+    # that catches them and resumes at the labelled target statement.
+    if emitter.landed_longjumps:
+        emitter.lines = _wrap_longjump_dispatch(emitter, prologue)
+    else:
+        if prologue:
+            # Runs before the first block (e.g. building the DATA array in Main).
+            emitter.lines = list(prologue) + emitter.lines
+        # Guarantee a return (END / ENDPROC / =expr already end in ret).
+        if not emitter.lines or emitter.lines[-1] != "ret":
+            emitter.emit("ret")
 
     name = "Main" if is_main else _method_name(entry_name)
     entrypoint = "    .entrypoint\n" if is_main else ""
@@ -258,6 +282,34 @@ def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
         entrypoint=entrypoint,
         locals=emitter.locals_declaration(),
         body=body,
+    )
+
+
+def _wrap_longjump_dispatch(emitter, prologue):
+    """Wrap a method body so LONGJUMP exceptions resume at the target statement.
+
+    Structure: one-time prologue, then a dispatch loop with the body in a .try;
+    the catch records the exception's target line and re-enters, where a
+    dispatcher branches to the matching ``L_<line>:`` label. Normal completion
+    leaves the loop. The prologue (e.g. building the DATA array) is outside the
+    loop so it runs once.
+    """
+    slot = emitter._local_slot("__ljTarget", IntegerOwlType())
+    body = ["leave DONE" if line == "ret" else line for line in emitter.lines]
+    dispatcher = []
+    for line in sorted(emitter.landed_longjumps):
+        dispatcher += ["ldloc V_%d" % slot, "ldc.i4 %d" % line, "beq L_%d" % line]
+    return (
+        list(prologue or [])
+        + ["ldc.i4.0", "stloc V_%d" % slot, "DISPATCH:", ".try", "{"]
+        + dispatcher
+        + body
+        + ["leave DONE", "}",
+           "catch %s" % _LONGJUMP_EXCEPTION, "{",
+           "ldfld int32 %s::TargetLogicalLine" % _LONGJUMP_EXCEPTION,
+           "stloc V_%d" % slot,
+           "leave DISPATCH", "}",
+           "DONE:", "ret"]
     )
 
 
@@ -318,7 +370,8 @@ def _data_init_lines(items):
 
 class _MethodEmitter:
     def __init__(self, formal_args=None, signatures=None,
-                 globals_registry=None, data_index=None, return_type="void"):
+                 globals_registry=None, data_index=None, return_type="void",
+                 longjump_targets=frozenset(), line_mapper=None):
         self.lines = []
         self._local_slots = {}   # variable identifier -> local slot index
         self._local_types = []   # CIL type string, indexed by slot
@@ -330,6 +383,9 @@ class _MethodEmitter:
         self._for_loops = {}       # id(ForToStep) -> loop state, shared with NEXT
         self._label_seq = 0        # for unique intra-method labels
         self._data_index = data_index or {}  # DATA line number -> data array index
+        self._longjump_targets = longjump_targets  # logical lines LONGJUMPs target
+        self._line_mapper = line_mapper
+        self.landed_longjumps = set()  # target lines that have an L_<line>: here
 
     def emit(self, text):
         self.lines.append(text)
@@ -364,6 +420,9 @@ class _MethodEmitter:
         for index, block in enumerate(blocks):
             self.emit("%s:" % self._block_label(block))
             for statement in block.statements:
+                # A statement that a LONGJUMP targets gets a label so the
+                # dispatch loop can resume at it (targets are often mid-block).
+                self._maybe_longjump_label(statement)
                 # Variable storage (arg / local / global) is resolved against
                 # the symbol table of the statement being lowered.
                 self._symbol_table = getattr(statement, "symbolTable", None)
@@ -391,6 +450,14 @@ class _MethodEmitter:
 
     def _block_label(self, block):
         return "BB_%d" % self._block_index[id(block)]
+
+    def _maybe_longjump_label(self, statement):
+        if not self._longjump_targets or self._line_mapper is None:
+            return
+        logical = self._line_mapper.physicalToLogical(statement.lineNum)
+        if logical in self._longjump_targets and logical not in self.landed_longjumps:
+            self.landed_longjumps.add(logical)
+            self.emit("L_%d:" % logical)
 
     def _emit_fall_through(self, block, index):
         last = block.statements[-1] if block.statements else None
@@ -506,6 +573,12 @@ class _MethodEmitter:
         # GOTO carries no code itself: the branch to its (single) successor block
         # is generated by the block fall-through logic.
         pass
+
+    def _stmt_LongJump(self, node):
+        # GOTO out of a routine: throw, to be caught by Main's dispatch loop.
+        self.lower_expression(node.targetLogicalLine)
+        self.emit("newobj instance void %s::.ctor(int32)" % _LONGJUMP_EXCEPTION)
+        self.emit("throw")
 
     def _stmt_DefineProcedure(self, node):
         # The method header is the definition; the marker emits no code.

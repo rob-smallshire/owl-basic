@@ -11,6 +11,15 @@ from helpers import analyse_fixture
 from owl_basic.analysis import analyse_numbered_lines
 
 
+def _statement_types(program):
+    return [
+        type(statement).__name__
+        for blocks in program.ordered_basic_blocks.values()
+        for block in blocks
+        for statement in block.statements
+    ]
+
+
 def test_emit_il_lowers_print_and_arithmetic(dotnet_backend):
     il = dotnet_backend.emit_il(analyse_fixture("six_times_seven.bbctxt"))
     assert 'ldstr "Bah!"' in il
@@ -126,6 +135,53 @@ def test_string_comparison_compile_and_run(compile_and_run):
     # a$="apple",b$="banana": a$="apple"->eq, a$<b$->less, a$<>b$->diff
     stdout = compile_and_run(analyse_fixture("string_compare.bbctxt"))
     assert stdout.split() == ["eq", "less", "diff"]
+
+
+_LONGJUMP_PROGRAM = [
+    (10, 'PRINT "start"'), (20, "PROCjump"), (30, 'PRINT "unreached"'),
+    (40, 'PRINT "landed"'), (50, "END"),
+    (60, "DEFPROCjump"), (70, "GOTO 40"), (80, "ENDPROC"),
+]
+
+
+def test_emit_il_lowers_longjump(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse_numbered_lines(_LONGJUMP_PROGRAM, name="lj"))
+    # The GOTO out of the PROC throws; Main catches and dispatches to the target.
+    assert "newobj instance void [OwlRuntime]OwlRuntime.LongJumpException::.ctor(int32)" in il
+    assert "throw" in il
+    assert "catch [OwlRuntime]OwlRuntime.LongJumpException" in il
+    assert "L_40:" in il
+    assert "beq L_40" in il
+
+
+@requires_dotnet_toolchain
+def test_longjump_out_of_proc_compiles_and_runs(compile_and_run):
+    # PROCjump does GOTO 40 (out of the PROC, into Main); control resumes at
+    # line 40, so "unreached" between the call and line 40 is skipped.
+    stdout = compile_and_run(analyse_numbered_lines(_LONGJUMP_PROGRAM, name="lj"))
+    assert stdout.split() == ["start", "landed"]
+
+
+# Lines 30/40 sit physically before DEFPROC but are reachable only from PROCp
+# (via GOTO 30), so the CFG tags them as part of PROCp and the GOTO stays an
+# ordinary in-scope branch -- no LongJump, no throw.
+_DISPLACED_PROC_PROGRAM = [
+    (10, "PROCp"), (20, "END"), (30, 'PRINT "B"'), (40, "ENDPROC"),
+    (50, "DEFPROCp"), (60, 'PRINT "A"'), (70, "GOTO 30"),
+]
+
+
+def test_displaced_proc_body_goto_is_not_a_longjump(dotnet_backend):
+    program = analyse_numbered_lines(_DISPLACED_PROC_PROGRAM, name="intra")
+    assert "LongJump" not in _statement_types(program)
+    assert "Goto" in _statement_types(program)
+    assert "LongJumpException" not in dotnet_backend.emit_il(program)  # no machinery
+
+
+@requires_dotnet_toolchain
+def test_displaced_proc_body_goto_compiles_and_runs(compile_and_run):
+    program = analyse_numbered_lines(_DISPLACED_PROC_PROGRAM, name="intra")
+    assert compile_and_run(program).split() == ["A", "B"]
 
 
 def test_emit_il_lowers_simple_functions(dotnet_backend):
