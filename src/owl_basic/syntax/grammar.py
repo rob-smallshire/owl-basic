@@ -557,20 +557,23 @@ def p_if_stmt(p):
 def p_if_single_stmt(p):
     '''if_single_stmt : IF expr clause
                       | IF expr THEN clause
-                      | IF expr clause ELSE clause
-                      | IF expr THEN clause ELSE clause'''
+                      | IF expr clause ELSE clause else_discard
+                      | IF expr THEN clause ELSE clause else_discard'''
 
-    # Specialised debugging lexer positions set in here       
+    # In BBC BASIC a single-line IF takes the true clause up to the first ELSE
+    # and the false clause up to the second; any further ELSE clauses are
+    # skip-to-end-of-line dead code (matched by else_discard and ignored).
+    # Specialised debugging lexer positions set in here
     if len(p) == 4:
         p[0] = If(condition = p[2], trueClause = p[3])
         end_pos = p.lexpos(3)
     elif len(p) == 5:
         p[0] = If(condition = p[2], trueClause = p[4])
         end_pos = p.lexpos(4)
-    elif len(p) == 6:
+    elif len(p) == 7:
         p[0] = If(condition = p[2], trueClause = p[3], falseClause = p[5])
         end_pos = p.lexpos(3)
-    elif len(p) == 7:
+    elif len(p) == 8:
         p[0] = If(condition = p[2], trueClause = p[4], falseClause = p[6])
         end_pos = p.lexpos(4)
 
@@ -581,7 +584,15 @@ def p_if_single_stmt(p):
     p[0].startPos = p.lexpos(1)
     assert end_pos is not None
     p[0].endPos = end_pos
-    
+
+
+def p_else_discard(p):
+    '''else_discard :
+                    | ELSE clause else_discard'''
+    # Trailing ELSE clauses on a single-line IF are unreachable (an ELSE met
+    # during execution skips to end of line), so they carry no AST.
+    pass
+
 # The clause is only used with IF statements and
 # possible ON statements when the result of an expression
 # is interpreted as a line number to GOTO
