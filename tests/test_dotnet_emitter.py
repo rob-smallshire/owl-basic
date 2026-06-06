@@ -184,6 +184,13 @@ def test_displaced_proc_body_goto_compiles_and_runs(compile_and_run):
     assert compile_and_run(program).split() == ["A", "B"]
 
 
+@requires_dotnet_toolchain
+def test_int_function_compiles_and_runs(compile_and_run):
+    # INT floors toward negative infinity: INT(3.7)=3, INT(-2.3)=-3
+    stdout = compile_and_run(analyse_fixture("int_function.bbctxt"))
+    assert stdout.split() == ["3", "-3"]
+
+
 def test_emit_il_lowers_simple_functions(dotnet_backend):
     il = dotnet_backend.emit_il(analyse_fixture("simple_functions.bbctxt"))
     assert "System.Math::Abs(int32)" in il

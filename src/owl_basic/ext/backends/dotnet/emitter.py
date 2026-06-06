@@ -1019,6 +1019,12 @@ class _MethodEmitter:
     def _expr_VposFunc(self, node):
         self.emit("call int32 {0}::VPos()".format(_RUNTIME))
 
+    def _expr_IntFunc(self, node):
+        # INT: floor to an integer (the factor is a real after type checking).
+        self.lower_expression(node.factor)
+        self.emit("call float64 %s::Floor(float64)" % _MATH)
+        self.emit("conv.ovf.i4")
+
     def _expr_UnaryMinus(self, node):
         self.lower_expression(node.factor)
         self.emit("neg")
