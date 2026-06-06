@@ -253,7 +253,14 @@ class TypecheckVisitor(Visitor):
             # TODO: Check argument types against Procedure
             # TODO: This needs different code for internal and external linkage
             self.checkActualParameters(user_func)
-        user_func.actualType = PendingOwlType()
+        # The function's return type is inferred between typecheck passes; until
+        # it is known the call stays Pending (so operators over it stay Pending).
+        entry_point = self.__entry_points.get(user_func.name)
+        inferred = getattr(entry_point, "returnType", None)
+        if inferred is not None and not inferred.isA(PendingOwlType()):
+            user_func.actualType = inferred
+        else:
+            user_func.actualType = PendingOwlType()
     
     def visitCallProcedure(self, proc):
         if proc.actualParameters:

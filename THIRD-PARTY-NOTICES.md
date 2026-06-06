@@ -35,14 +35,6 @@ token values, and SWI / VDU variable numbers in the OwlRuntime runtime library
 which is published under the Apache License 2.0 / Castle shared-source terms.
 These items are interface facts rather than copied code.
 
-## Hindley–Milner type inference — `src/owl_basic/owltyping/hindley_milner.py`
-
-A Python implementation by Robert Smallshire, based on the Scala code by Andrew
-Forrest, the Perl code by Nikita Borisov, and the paper "Basic Polymorphic
-Typechecking" by Luca Cardelli. This module is currently unused; if it is
-retained in the compiler, the licensing of the upstream example code should be
-confirmed (or the module replaced with a clean-room implementation).
-
 ## Acorn system font — `OwlRuntime/OwlRuntime/platform/riscos/AcornFont.cs`
 
 The 8×8 bitmap glyph data reproduces the appearance of the Acorn / BBC system

@@ -1,60 +1,59 @@
-'''
-Created on 5 Jan 2010
+"""Type checking and DEF FN return-type inference for the BBC BASIC front-end.
 
-@author: rjs
-'''
+The :class:`~owl_basic.owltyping.typecheck_visitor.TypecheckVisitor` synthesises
+expression types bottom-up, but a user function's return type is not known until
+its body (and the bodies of any functions it calls) have been analysed, so
+function calls are left ``Pending`` on the first pass. We then infer every
+function's return type with :mod:`owl_basic.owltyping.hm_bridge` and re-run the
+visitor, at which point calls resolve and operators over them type correctly.
+"""
 
 import logging
 
-from owl_basic.syntax.ast import DefineFunction
+from owl_basic.flow.traversal import depthFirstSearch
+from owl_basic.syntax.ast import DefineFunction, ReturnFromFunction
 
+from .hm_bridge import infer_return_types
 from .typecheck_visitor import TypecheckVisitor
-from .function_type_inferer import inferTypeOfFunction
-from .set_function_type_visitor import SetFunctionTypeVisitor
-from owl_basic.owltyping.type_system import PendingOwlType
+
+logger = logging.getLogger(__name__)
 
 
 def typecheck(parse_tree, entry_points, options):
-    '''
-    :param parse_tree: The parse_tree to be type checked
-    :param entry_points: A dictionary of entry point names to AstStatements
-    :param options: Command line options.
-    '''
-    logging.debug("Type checking... ")
-    
-    # TODO: Need to iteratively resolve types here.
-    #       while (pending_types_remaining):
+    """Type check *parse_tree*, resolving user-function return types.
+
+    :param parse_tree: The parse tree to be type checked.
+    :param entry_points: A dictionary of entry-point names to AstStatements.
+    :param options: Command-line options.
+    """
+    logger.debug("Type checking...")
+    # First pass: synthesise types; user-function calls are left Pending.
     parse_tree.accept(TypecheckVisitor(entry_points))
-    pending = True
-    while pending:
-        pending = inferUserFunctionTypes(parse_tree, entry_points, options)  
+    # Resolve each DEF FN's return type (handles recursion and promotion).
+    inferUserFunctionReturnTypes(entry_points)
+    # Second pass: with return types known, calls and operators over them type.
+    parse_tree.accept(TypecheckVisitor(entry_points))
 
-def inferUserFunctionTypes(parse_tree, entry_points, options):
-    """
-    Iteratively examine the return types of user defined function calls
-    and assign the actual type.
-    :returns: True if any function types are still pending, otherwise False.
-    """
-    logging.debug("Infer user function types")
-    pending = False
-    for entry_point in list(entry_points.values()):
-        if isinstance(entry_point, DefineFunction):
-            function_type = inferTypeOfFunction(entry_point)
-            if function_type != PendingOwlType():
-                setFunctionType(parse_tree, entry_point.name, function_type)
-            else:
-                pending = True
-    return pending
 
-def setFunctionType(parse_tree, function_name, function_type):
-    '''
-    Given a function name such as 'FNx' set the actual type of all
-    calls to that function.
-    :param function_name: The name of a function including the FN prefix
-    :param type: The type to which the actualType of call should be set
-    '''
-    assert function_name.startswith('FN')
-    # TODO: Visit each function call and the the type of those that match
-    print("Setting type of %s to %s" % (function_name, function_type))
-    sftv = SetFunctionTypeVisitor(function_name, function_type)
-    parse_tree.accept(sftv)
+def inferUserFunctionReturnTypes(entry_points):
+    """Infer and record the return type of every ``DEF FN`` entry point.
+
+    Each function's return expressions are collected by walking the control-flow
+    graph from its entry point, then resolved together so (mutually) recursive
+    functions converge.
+    """
+    define_functions = [
+        entry_point for entry_point in entry_points.values()
+        if isinstance(entry_point, DefineFunction)
+    ]
+    returns_by_name = {
+        function.name: [
+            vertex.returnValue
+            for vertex in depthFirstSearch(function)
+            if isinstance(vertex, ReturnFromFunction)
+        ]
+        for function in define_functions
+    }
+    inferred = infer_return_types(returns_by_name)
+    for function in define_functions:
+        function.returnType = inferred.get(function.name)
