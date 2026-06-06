@@ -50,6 +50,18 @@ def test_emit_il_lowers_print_and_arithmetic():
     assert ".entrypoint" in il
 
 
+def test_emit_il_lowers_scalar_integer_variables():
+    il = _backend().emit_il(_analyse("scalar_variables.bbctxt"))
+    # Two integer locals are declared and assigned, then read back.
+    assert ".locals init" in il
+    assert "int32 V_0" in il
+    assert "int32 V_1" in il
+    assert "stloc V_0" in il
+    assert "stloc V_1" in il
+    assert "ldloc V_0" in il
+    assert "ldloc V_1" in il
+
+
 _toolchain_ready = (
     shutil.which("dotnet") is not None
     and DotnetBackend.find_ilasm() is not None
@@ -70,3 +82,18 @@ def test_six_times_seven_compiles_and_runs(tmp_path):
     assert result.returncode == 0, result.stderr
     # The computed value reaches stdout (BBC BASIC: PRINT "..." 6*7).
     assert "Six times seven is 42" in result.stdout
+
+
+@pytest.mark.skipif(
+    not _toolchain_ready,
+    reason="needs dotnet, a CoreCLR ilasm, and a built net10 OwlRuntime.dll",
+)
+def test_scalar_variables_compile_and_run(tmp_path):
+    dll_filepath = _backend().generate(_analyse("scalar_variables.bbctxt"), tmp_path)
+    shutil.copy(_find_owlruntime_dll(), tmp_path)
+    result = subprocess.run(
+        ["dotnet", str(dll_filepath)], capture_output=True, text=True
+    )
+    assert result.returncode == 0, result.stderr
+    # A% = 6 : B% = 7 : PRINT "Product is " A% * B%
+    assert "Product is 42" in result.stdout

@@ -42,6 +42,23 @@ class CodeGenerationError(OwlBasicError):
     """Raised when the emitter meets an AST node it cannot yet lower."""
 
 
+# Map an OwlType onto the CIL type used for a local / runtime argument. Order
+# matters: ChannelOwlType is an IntegerOwlType, ByteOwlType is distinct.
+_IL_TYPES = [
+    (StringOwlType, "string"),
+    (FloatOwlType, "float64"),
+    (ByteOwlType, "int32"),
+    (IntegerOwlType, "int32"),
+]
+
+
+def _il_type(owl_type):
+    for cls, il in _IL_TYPES:
+        if isinstance(owl_type, cls):
+            return il
+    return "int32"
+
+
 def emit_program(program, assembly_name):
     """Render *program* as a complete textual CIL assembly."""
     emitter = _MethodEmitter()
@@ -53,7 +70,9 @@ def emit_program(program, assembly_name):
     emitter.finish()
 
     body = "\n".join("        " + line for line in emitter.lines)
-    return _ASSEMBLY_TEMPLATE.format(name=assembly_name, body=body)
+    return _ASSEMBLY_TEMPLATE.format(
+        name=assembly_name, locals=emitter.locals_declaration(), body=body
+    )
 
 
 _ASSEMBLY_TEMPLATE = """\
@@ -67,7 +86,7 @@ _ASSEMBLY_TEMPLATE = """\
 {{
     .entrypoint
     .maxstack 8
-{body}
+{locals}{body}
         ret
 }}
 """
@@ -76,9 +95,28 @@ _ASSEMBLY_TEMPLATE = """\
 class _MethodEmitter:
     def __init__(self):
         self.lines = []
+        self._local_slots = {}   # variable identifier -> local slot index
+        self._local_types = []   # CIL type string, indexed by slot
 
     def emit(self, text):
         self.lines.append(text)
+
+    def _local_slot(self, identifier, owl_type):
+        """Return the local slot for *identifier*, allocating one on first use."""
+        if identifier not in self._local_slots:
+            self._local_slots[identifier] = len(self._local_types)
+            self._local_types.append(_il_type(owl_type))
+        return self._local_slots[identifier]
+
+    def locals_declaration(self):
+        """Render the method's ``.locals init`` block (empty if no locals)."""
+        if not self._local_types:
+            return ""
+        entries = ",\n".join(
+            "        %s V_%d" % (il_type, slot)
+            for slot, il_type in enumerate(self._local_types)
+        )
+        return "    .locals init (\n%s\n    )\n" % entries
 
     def finish(self):
         # The assembly template appends the trailing `ret`; nothing to do yet.
@@ -101,6 +139,17 @@ class _MethodEmitter:
         # PRINT terminates the line unless suppressed by a trailing separator
         # (`;`/`,`), which this first slice does not yet model.
         self.emit(_PRINT_NEWLINE)
+
+    def _stmt_ScalarAssignment(self, node):
+        target = node.lValue
+        if type(target).__name__ != "Variable":
+            # Indirection / indexed / pseudo-variable l-values come later.
+            raise CodeGenerationError(
+                "Cannot lower assignment to %r l-value" % type(target).__name__
+            )
+        self.lower_expression(node.rValue)
+        slot = self._local_slot(target.identifier, target.actualType)
+        self.emit("stloc V_%d" % slot)
 
     def _stmt_Rem(self, node):
         # A comment generates no code.
@@ -133,6 +182,10 @@ class _MethodEmitter:
 
     def _expr_LiteralFloat(self, node):
         self.emit("ldc.r8 %r" % float(node.value))
+
+    def _expr_Variable(self, node):
+        slot = self._local_slot(node.identifier, node.actualType)
+        self.emit("ldloc V_%d" % slot)
 
     # -- runtime call selection --------------------------------------------
 
