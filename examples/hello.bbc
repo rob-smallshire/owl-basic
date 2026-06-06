@@ -1,0 +1,4 @@
+REM A short BBC BASIC program, compiled to .NET by OWL BASIC
+PRINT "Hello from BBC BASIC!"
+PRINT "Six times seven is " 6 * 7
+PRINT "And two plus two is " 2 + 2

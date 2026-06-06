@@ -13,6 +13,7 @@ writes mnemonics as text instead of driving ``System.Reflection.Emit``.
 
 import re
 
+from owl_basic.exceptions import OwlBasicError
 from owl_basic.owltyping.type_system import (
     ByteOwlType,
     FloatOwlType,
@@ -37,7 +38,7 @@ _BINARY_OPS = {
 }
 
 
-class CodeGenerationError(Exception):
+class CodeGenerationError(OwlBasicError):
     """Raised when the emitter meets an AST node it cannot yet lower."""
 
 
@@ -100,6 +101,10 @@ class _MethodEmitter:
         # PRINT terminates the line unless suppressed by a trailing separator
         # (`;`/`,`), which this first slice does not yet model.
         self.emit(_PRINT_NEWLINE)
+
+    def _stmt_Rem(self, node):
+        # A comment generates no code.
+        pass
 
     def _stmt_End(self, node):
         # Returning from Main ends the program; the template's trailing `ret`

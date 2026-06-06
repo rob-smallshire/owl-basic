@@ -27,6 +27,7 @@ classifiers = [
 dependencies = [
     "ply>=3.11",
     "stevedore>=5",
+    "click>=8.1",
 ]
 
 [project.urls]
@@ -34,7 +35,7 @@ Repository = "https://github.com/rob-smallshire/owl-basic"
 Issues = "https://github.com/rob-smallshire/owl-basic/issues"
 
 [project.scripts]
-owl-basic = "owl_basic.main:main"
+owl-basic = "owl_basic.cli:cli"
 
 # Code-generation backends, discovered by name via stevedore. Each is named for
 # its target platform (which implies a runtime library). See owl_basic.extension.

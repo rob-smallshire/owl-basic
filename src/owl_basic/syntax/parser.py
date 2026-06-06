@@ -52,7 +52,12 @@ def buildParser(options):
     if _basic_parser is None:
         if options.verbose:
             sys.stderr.write("Building parser... ")
-        _basic_parser = yacc.yacc(module=grammar, write_tables=False, debug=False)
+        _basic_parser = yacc.yacc(
+            module=grammar,
+            write_tables=False,
+            debug=False,
+            errorlog=yacc.NullLogger(),  # silence "unused token" grammar warnings
+        )
         if options.verbose:
             sys.stderr.write("done\n")
 
