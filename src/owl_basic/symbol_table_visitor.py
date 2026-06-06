@@ -27,11 +27,25 @@ class SymbolTableVisitor(Visitor):
     
     globalSymbols = property(_getGlobalSymbols)
     
+    def start(self, entry_point):
+        """Drive CFG traversal from an entry point with an explicit worklist.
+
+        Recursing through ``followSuccessors`` once per node overflows the call
+        stack on large programs, so successors are queued here and processed in
+        a loop instead.
+        """
+        self._worklist = []
+        entry_point.accept(self)
+        while self._worklist:
+            node = self._worklist.pop()
+            if node.symbolTable is None:
+                node.accept(self)
+
     def followSuccessors(self, statement):
-        # Visit successors - depth first through CFG
+        # Queue successors for the worklist in start() (iterative depth-first).
         for out_edge in statement.outEdges:
             if out_edge.symbolTable is None:
-                self.visit(out_edge)
+                self._worklist.append(out_edge)
                 
     def checkPredecessorsAndRefer(self, statement):
         """

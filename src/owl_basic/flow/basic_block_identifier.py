@@ -46,21 +46,32 @@ def coarsenControlFlowGraph(entry_point):
     block = assignBlockAndContinue(entry_point)
     return block
 
-# TODO: Decorate as a tail-call    
 def assignBlockAndContinue(vertex, block=None):
     '''
-    Assign vertex to block and continue with successor vertices
+    Assign vertex to a basic block and continue with successor vertices.
+
+    Done iteratively (an explicit stack rather than recursion) so deep control
+    flow graphs do not overflow the call stack: first assign every reachable
+    vertex to a block, then wire up the block-level edges. ``connect`` is
+    idempotent because the CFG edge collections are sets.
     '''
-    if not vertex.block:           
-        block = ((vertex.inDegree == 1) and block) or BasicBlock()
-        block.statements.append(vertex)
-        vertex.block = block
-        logger.debug("%s with in-degree %s and out-degree %s at %s in %s", vertex, str(vertex.inDegree), str(vertex.outDegree), str(vertex.lineNum), vertex.block)
-        for target in vertex.outEdges:
-            successor_block = assignBlockAndContinue(target, block if vertex.outDegree == 1 else None)
-            if block is not successor_block:
-                connect(block, successor_block)             
-    return vertex.block
+    entry_vertex = vertex
+    stack = [(vertex, block)]
+    reached = []
+    while stack:
+        current, candidate = stack.pop()
+        if not current.block:
+            current.block = ((current.inDegree == 1) and candidate) or BasicBlock()
+            current.block.statements.append(current)
+            reached.append(current)
+            logger.debug("%s with in-degree %s and out-degree %s at %s in %s", current, str(current.inDegree), str(current.outDegree), str(current.lineNum), current.block)
+            for target in current.outEdges:
+                stack.append((target, current.block if current.outDegree == 1 else None))
+    for current in reached:
+        for target in current.outEdges:
+            if current.block is not target.block:
+                connect(current.block, target.block)
+    return entry_vertex.block
            
     
         

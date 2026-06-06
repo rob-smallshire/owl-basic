@@ -4,9 +4,14 @@ from owl_basic.syntax import ast
 
 
 def tagNode(tag, node):
-    if tag not in node.entryPoints:
-        node.addEntryPoint(tag)
-        tagFollowingStatements(node, tag)
+    # Iterative depth-first tagging: recursing per CFG node overflows the call
+    # stack on large programs.
+    stack = [node]
+    while stack:
+        current = stack.pop()
+        if tag not in current.entryPoints:
+            current.addEntryPoint(tag)
+            stack.extend(current.outEdges)
 
 def tagSuccessors(entry_point, line_mapper):
     """
@@ -51,6 +56,11 @@ def deTagFollowingStatements(node, tags):
         deTagNode(tags, successor)
         
 def deTagNode(tags, node):
-    if tags.issubset(node.entryPoints):
-        node.entryPoints.difference_update(tags)
-        deTagFollowingStatements(node, tags)
+    # Iterative depth-first de-tagging, for the same stack-overflow reason as
+    # tagNode.
+    stack = [node]
+    while stack:
+        current = stack.pop()
+        if tags.issubset(current.entryPoints):
+            current.entryPoints.difference_update(tags)
+            stack.extend(current.outEdges)

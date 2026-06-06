@@ -173,7 +173,7 @@ def _run_pipeline(data, physical_to_logical_map, line_offsets, line_number_prefi
     if "__owl__main" in entry_points:
         entry_points["__owl__main"].symbolTable = stv.globalSymbols
     for entry_point in entry_points.values():
-        entry_point.accept(stv)
+        stv.start(entry_point)
 
     return Program(
         name=name,
