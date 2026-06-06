@@ -1,0 +1,23 @@
+[project]
+name = "owl-basic"
+version = "0.6.0"
+description = "A BBC BASIC compiler for the .NET CLR, with pluggable code-generation backends."
+requires-python = ">=3.14"
+dependencies = [
+    "ply>=3.11",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "approvaltests>=14",
+]
+
+# Port-in-place: the compiler currently lives under compiler/ with flat imports
+# (e.g. `from syntax.ast import *`). Putting that directory on the path lets the
+# existing modules resolve unchanged while we port. The package boundary /
+# src-layout restructuring is a deliberate later phase.
+[tool.pytest.ini_options]
+pythonpath = ["compiler"]
+testpaths = ["compiler/tests"]
+python_files = ["test_*.py"]

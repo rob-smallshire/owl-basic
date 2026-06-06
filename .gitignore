@@ -1,0 +1,46 @@
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Packaging / build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Lock file: owl-basic is published to PyPI; consumers resolve their own
+# versions against our declared constraints. A locally-generated uv.lock
+# is fine, but it isn't committed.
+uv.lock
+
+# PLY generated parser tables / debug output
+parser.out
+parsetab.py
+parsetab.pickle
+
+# .NET / C# runtime build output (OwlRuntime)
+[Bb]in/
+[Oo]bj/
+*.user
+
+# Sphinx build output
+docs/_build/
+
+# Test, coverage, type-check, lint caches
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+
+# Editors / IDEs
+.vscode/
