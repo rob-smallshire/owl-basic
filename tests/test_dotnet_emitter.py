@@ -99,6 +99,22 @@ def test_print_manipulators_compile_and_run(compile_and_run):
     assert stdout == "AB\nC\nD\nno newlinejoined\n"
 
 
+def test_emit_il_lowers_function_methods(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse_fixture("functions.bbctxt"))
+    # FNs become value-returning methods, with the return type inferred (HM).
+    assert ".method static int32 FNdouble(int32 A0) cil managed" in il
+    assert ".method static float64 FNhalf(float64 A0) cil managed" in il
+    assert "call int32 FNfact(int32)" in il          # recursive call
+    assert ".method static int32 FNfact(int32 A0) cil managed" in il
+
+
+@requires_dotnet_toolchain
+def test_function_methods_compile_and_run(compile_and_run):
+    # FNdouble(21)=42 (int), FNhalf(7)=3.5 (float), FNfact(5)=120 (recursive)
+    stdout = compile_and_run(analyse_fixture("functions.bbctxt"))
+    assert stdout.split("\n") == ["42", "3.5", "120", ""]
+
+
 def test_emit_il_lowers_string_comparison(dotnet_backend):
     il = dotnet_backend.emit_il(analyse_fixture("string_compare.bbctxt"))
     assert "System.String::Equals(string, string)" in il

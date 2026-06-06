@@ -1,0 +1,9 @@
+PRINT FNdouble(21)
+PRINT FNhalf(7)
+PRINT FNfact(5)
+END
+DEF FNdouble(n%) = n% * 2
+DEF FNhalf(n) = n / 2
+DEF FNfact(n%)
+IF n%=1 OR n%=0 THEN =1
+=n%*FNfact(n%-1)

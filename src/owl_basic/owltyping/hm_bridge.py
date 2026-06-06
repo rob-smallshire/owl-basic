@@ -38,6 +38,7 @@ from owl_basic.owltyping.type_system import (
 from owl_basic.sigil import identifierToType
 from owl_basic.syntax.ast import (
     BinaryIntegerOperator,
+    Cast,
     Divide,
     FalseFunc,
     LiteralFloat,
@@ -145,6 +146,10 @@ def infer_return_types(returns_by_name):
         if isinstance(expr, (TrueFunc, FalseFunc)):
             # TRUE (-1) and FALSE (0) are integers in BBC BASIC.
             return IntegerOwlType()
+        if isinstance(expr, Cast):
+            # The type checker inserts casts (e.g. integer->float) during the
+            # first pass; a cast's value already has the target type.
+            return expr.targetType
         if isinstance(expr, Variable):
             return identifierToType(expr.identifier)
         if isinstance(expr, UserFunc):

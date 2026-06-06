@@ -142,7 +142,7 @@ def emit_program(program, assembly_name):
     method; ``PROC`` calls become ``call`` instructions between them.
     """
     blocks_by_entry = program.ordered_basic_blocks or {}
-    signatures = _collect_proc_signatures(blocks_by_entry)
+    signatures = _collect_signatures(blocks_by_entry)
     # BBC BASIC variables are global unless they are formal parameters or made
     # LOCAL/PRIVATE; globals are static fields shared by every method. The
     # registry (field name -> CIL type) is populated as methods are lowered.
@@ -188,18 +188,25 @@ def _formal_arguments(define_procedure):
     return [formal.argument for formal in parameters.arguments]
 
 
-def _collect_proc_signatures(blocks_by_entry):
-    """Map each PROC name to its CIL parameter types, so calls can be typed."""
+_DEFINITIONS = frozenset({"DefineProcedure", "DefineFunction"})
+
+
+def _collect_signatures(blocks_by_entry):
+    """Map each PROC/FN name to ``(return_type, [param_types])`` for call sites.
+
+    A PROC returns ``void``; a FN returns its inferred ``returnType``.
+    """
     signatures = {}
     for entry_name, blocks in blocks_by_entry.items():
         if entry_name == _MAIN_ENTRY or not blocks:
             continue
         define = blocks[0].statements[0]
-        if type(define).__name__ == "DefineProcedure":
-            signatures[entry_name] = [
-                _il_type(argument.actualType)
-                for argument in _formal_arguments(define)
-            ]
+        kind = type(define).__name__
+        if kind not in _DEFINITIONS:
+            continue
+        return_type = "void" if kind == "DefineProcedure" else _il_type(define.returnType)
+        params = [_il_type(a.actualType) for a in _formal_arguments(define)]
+        signatures[entry_name] = (return_type, params)
     return signatures
 
 
@@ -207,24 +214,27 @@ def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
                  prologue=None):
     """Render one routine's basic blocks as a complete CIL method."""
     is_main = entry_name == _MAIN_ENTRY
-    if not is_main and not entry_name.startswith("PROC"):
-        # FN methods (return values) and GOSUB subroutines come later.
+    if not is_main and entry_name not in signatures:
+        # GOSUB subroutines (SUB...) come later.
         raise CodeGenerationError("Cannot yet emit a method for %r" % entry_name)
 
-    # A PROC's formal parameters become method arguments (ldarg/starg); every
+    return_type = "void" if is_main else signatures[entry_name][0]
+
+    # A PROC/FN's formal parameters become method arguments (ldarg/starg); every
     # other variable is a local.
     formal_args = {}
     parameters = []
-    if not is_main and blocks and type(blocks[0].statements[0]).__name__ == "DefineProcedure":
+    if not is_main and blocks and type(blocks[0].statements[0]).__name__ in _DEFINITIONS:
         for index, argument in enumerate(_formal_arguments(blocks[0].statements[0])):
             formal_args[argument.identifier] = index
             parameters.append("%s A%d" % (_il_type(argument.actualType), index))
 
     emitter = _MethodEmitter(
         formal_args=formal_args,
-        proc_signatures=signatures,
+        signatures=signatures,
         globals_registry=globals_registry,
         data_index=data_index,
+        return_type=return_type,
     )
     emitter.lower_blocks(blocks)
     emitter.finish()
@@ -232,7 +242,9 @@ def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
         # Runs before the first block (e.g. building the DATA array in Main).
         emitter.lines = list(prologue) + emitter.lines
     # Guarantee the method returns: add a trailing `ret` unless the last block
-    # already ends in one (END / ENDPROC), which avoids an unreachable duplicate.
+    # already ends in one (END / ENDPROC / =expr), avoiding an unreachable
+    # duplicate. A value-returning FN that falls off the end is malformed, but
+    # the front-end guarantees a final return.
     if not emitter.lines or emitter.lines[-1] != "ret":
         emitter.emit("ret")
 
@@ -240,6 +252,7 @@ def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
     entrypoint = "    .entrypoint\n" if is_main else ""
     body = "\n".join("        " + line for line in emitter.lines)
     return _METHOD_TEMPLATE.format(
+        return_type=return_type,
         name=name,
         signature=", ".join(parameters),
         entrypoint=entrypoint,
@@ -269,7 +282,7 @@ _ASSEMBLY_TEMPLATE = """\
 
 
 _METHOD_TEMPLATE = """\
-.method static void {name}({signature}) cil managed
+.method static {return_type} {name}({signature}) cil managed
 {{
 {entrypoint}    .maxstack 8
 {locals}{body}
@@ -304,13 +317,14 @@ def _data_init_lines(items):
 
 
 class _MethodEmitter:
-    def __init__(self, formal_args=None, proc_signatures=None,
-                 globals_registry=None, data_index=None):
+    def __init__(self, formal_args=None, signatures=None,
+                 globals_registry=None, data_index=None, return_type="void"):
         self.lines = []
         self._local_slots = {}   # variable identifier -> local slot index
         self._local_types = []   # CIL type string, indexed by slot
         self._formal_args = formal_args or {}        # identifier -> arg index
-        self._proc_signatures = proc_signatures or {}  # PROC name -> [il types]
+        self._signatures = signatures or {}  # PROC/FN name -> (return_type, [params])
+        self._return_type = return_type      # this method's CIL return type
         self._globals = globals_registry if globals_registry is not None else {}
         self._symbol_table = None  # the symbol table of the statement being lowered
         self._for_loops = {}       # id(ForToStep) -> loop state, shared with NEXT
@@ -489,6 +503,10 @@ class _MethodEmitter:
         # The method header is the definition; the marker emits no code.
         pass
 
+    def _stmt_DefineFunction(self, node):
+        # The method header is the definition; the marker emits no code.
+        pass
+
     def _stmt_Local(self, node):
         # LOCAL only declares which variables are method-scoped (the symbol
         # table records that); each gets a local slot when it is referenced.
@@ -592,11 +610,27 @@ class _MethodEmitter:
     def _stmt_CallProcedure(self, node):
         for actual in node.actualParameters or []:
             self.lower_expression(actual)
-        types = self._proc_signatures.get(node.name, [])
-        self.emit("call void %s(%s)" % (_method_name(node.name), ", ".join(types)))
+        _, params = self._signatures.get(node.name, ("void", []))
+        self.emit("call void %s(%s)" % (_method_name(node.name), ", ".join(params)))
 
     def _stmt_ReturnFromProcedure(self, node):
         self.emit("ret")
+
+    def _stmt_ReturnFromFunction(self, node):
+        # =expr : push the result, coerced to the method's return type, and ret.
+        self.lower_expression(node.returnValue)
+        self._coerce(self._return_type, node.returnValue.actualType)
+        self.emit("ret")
+
+    def _coerce(self, target_il, value_type):
+        """Insert a numeric conversion if a value's type differs from target_il."""
+        value_il = _il_type(value_type)
+        if value_il == target_il:
+            return
+        if target_il == "float64" and value_il == "int32":
+            self.emit("conv.r8")
+        elif target_il == "int32" and value_il == "float64":
+            self.emit("conv.i4")
 
     def _stmt_Rem(self, node):
         # A comment generates no code.
@@ -690,6 +724,14 @@ class _MethodEmitter:
     def _expr_DyadicByteIndirection(self, node):
         self._push_memory_index(node)
         self.emit("ldelem.u1")
+
+    def _expr_UserFunc(self, node):
+        # FN call: push the arguments, call the function method, value left on stack.
+        for actual in node.actualParameters or []:
+            self.lower_expression(actual)
+        return_type, params = self._signatures.get(node.name, ("int32", []))
+        self.emit("call %s %s(%s)"
+                  % (return_type, _method_name(node.name), ", ".join(params)))
 
     def _expr_ReadFunc(self, node):
         # Read the next DATA item (a string) and convert it to the target type.
