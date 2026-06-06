@@ -331,6 +331,18 @@ def test_restore_to_line_compiles_and_runs(compile_and_run):
     assert compile_and_run(program).split() == ["11", "22", "33"]
 
 
+@requires_dotnet_toolchain
+def test_on_goto_compiles_and_runs(compile_and_run):
+    # ON X% GOTO 40,50,60 with X%=2 jumps to the second target (1-based).
+    lines = [
+        (10, "X% = 2"), (20, "ON X% GOTO 40, 50, 60"), (30, "END"),
+        (40, 'PRINT "one"'), (45, "END"), (50, 'PRINT "two"'), (55, "END"),
+        (60, 'PRINT "three"'), (65, "END"),
+    ]
+    program = analyse_numbered_lines(lines, name="og")
+    assert compile_and_run(program).strip() == "two"
+
+
 def test_emit_il_lowers_repeat_until(dotnet_backend):
     il = dotnet_backend.emit_il(analyse_fixture("repeat_until.bbctxt"))
     # UNTIL branches back to the REPEAT block while the condition is false.
