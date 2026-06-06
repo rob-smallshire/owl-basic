@@ -49,6 +49,16 @@ def test_emit_il_lowers_if_with_relational_condition(dotnet_backend):
     assert ("brtrue " in il) or ("brfalse " in il)
 
 
+def test_emit_il_lowers_procedure_as_separate_method(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse_fixture("procedure.bbctxt"))
+    # The PROC becomes its own static method, called from Main.
+    assert ".method static void PROCgreet() cil managed" in il
+    assert ".method static void Main() cil managed" in il
+    assert "call void PROCgreet()" in il
+    # Exactly one entry point.
+    assert il.count(".entrypoint") == 1
+
+
 @requires_dotnet_toolchain
 def test_six_times_seven_compiles_and_runs(compile_and_run):
     # The computed value reaches stdout (BBC BASIC: PRINT "..." 6*7).
@@ -80,3 +90,13 @@ def test_conditional_compiles_and_runs(compile_and_run):
     assert "big" in stdout
     assert "small" not in stdout
     assert "done" in stdout
+
+
+@requires_dotnet_toolchain
+def test_procedure_compiles_and_runs(compile_and_run):
+    # PROCgreet : PRINT "after" : END : DEFPROCgreet PRINT "Hi from PROC" ENDPROC
+    stdout = compile_and_run(analyse_fixture("procedure.bbctxt"))
+    assert "Hi from PROC" in stdout
+    assert "after" in stdout
+    # The PROC body runs before control returns to print "after".
+    assert stdout.index("Hi from PROC") < stdout.index("after")

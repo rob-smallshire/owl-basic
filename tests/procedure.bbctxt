@@ -1,0 +1,6 @@
+PROCgreet
+PRINT "after"
+END
+DEFPROCgreet
+PRINT "Hi from PROC"
+ENDPROC
