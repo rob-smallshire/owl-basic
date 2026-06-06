@@ -9,6 +9,19 @@ from owl_basic.syntax.ast import StatementList, Next
 
 logger = logging.getLogger('simplify_visitor')
 
+
+def _localize_child_infos(node):
+    """Give *node* its own ``child_infos`` before reclassifying a child.
+
+    ``child_infos`` is a class-level dict shared by every instance of the node
+    type, so mutating it in place (e.g. when a clause changes from a single
+    StatementList child to a list of statements) would corrupt all other
+    instances of that type across the whole process. Copying onto the instance
+    shadows the class dict and keeps the change local.
+    """
+    if "child_infos" not in node.__dict__:
+        node.child_infos = dict(node.child_infos)
+
 class SimplifyStatementListVisitor(Visitor):
     """
     Visitor for simplifying nested StatementList nodes by flattening the
@@ -54,6 +67,7 @@ class SimplificationVisitor(Visitor):
             statement.parent_index = index
             self.visit(statement)
             
+        _localize_child_infos(statement_list.parent)
         statement_list.parent.child_infos["statements"] = statement_list.child_infos["statements"]
         assert hasattr(statement_list, "statements")
         statement_list.parent.statements = statement_list.statements
@@ -62,6 +76,7 @@ class SimplificationVisitor(Visitor):
         if isinstance(iff.trueClause, StatementList):
             sslv = SimplifyStatementListVisitor()
             sslv.visit(iff.trueClause)
+            _localize_child_infos(iff)
             iff.child_infos['true_clause'] = iff.trueClause.child_infos['statements']
             iff.trueClause = sslv.accumulatedStatements
             if len(iff.trueClause) == 0:
@@ -78,6 +93,7 @@ class SimplificationVisitor(Visitor):
         if isinstance(iff.falseClause, StatementList):
             sslv = SimplifyStatementListVisitor()
             sslv.visit(iff.falseClause)
+            _localize_child_infos(iff)
             iff.child_infos['false_clause'] = iff.falseClause.child_infos['statements']
             iff.falseClause = sslv.accumulatedStatements
             if len(iff.falseClause) == 0:
