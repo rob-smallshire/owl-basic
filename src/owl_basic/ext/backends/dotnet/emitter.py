@@ -234,6 +234,14 @@ def _ldarg(index):
     return "ldarg.%d" % index if index <= 3 else "ldarg %d" % index
 
 
+def _sole_loop_back(node, what):
+    """Return the single loop-back target (REPEAT for UNTIL, FOR for NEXT)."""
+    targets = list(node.loopBackEdges)
+    if len(targets) != 1:
+        raise CodeGenerationError("non-correlated %s" % what)
+    return targets[0]
+
+
 class _MethodEmitter:
     def __init__(self, formal_args=None, proc_signatures=None,
                  globals_registry=None):
@@ -400,6 +408,17 @@ class _MethodEmitter:
         # LOCAL only declares which variables are method-scoped (the symbol
         # table records that); each gets a local slot when it is referenced.
         pass
+
+    def _stmt_Repeat(self, node):
+        # The loop top is just the start of this block; UNTIL branches back to
+        # its label. REPEAT itself emits no code.
+        pass
+
+    def _stmt_Until(self, node):
+        # Loop back to the correlated REPEAT while the condition is false.
+        self.lower_expression(node.condition)
+        repeat = _sole_loop_back(node, "UNTIL")
+        self.emit("brfalse " + self._block_label(repeat.block))
 
     def _stmt_CallProcedure(self, node):
         for actual in node.actualParameters or []:

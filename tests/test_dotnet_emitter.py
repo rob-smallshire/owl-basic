@@ -84,6 +84,12 @@ def test_emit_il_lowers_byte_indirection(dotnet_backend):
     assert "ldelem.u1" in il   # reads (unsigned: 0..255)
 
 
+def test_emit_il_lowers_repeat_until(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse_fixture("repeat_until.bbctxt"))
+    # UNTIL branches back to the REPEAT block while the condition is false.
+    assert "brfalse BB_" in il
+
+
 @requires_dotnet_toolchain
 def test_six_times_seven_compiles_and_runs(compile_and_run):
     # The computed value reaches stdout (BBC BASIC: PRINT "..." 6*7).
@@ -161,3 +167,10 @@ def test_byte_indirection_compiles_and_runs(compile_and_run):
     stdout = compile_and_run(analyse_fixture("byte_indirection.bbctxt"))
     assert "65" in stdout
     assert "66" in stdout
+
+
+@requires_dotnet_toolchain
+def test_repeat_until_compiles_and_runs(compile_and_run):
+    # n%=0 : REPEAT n%=n%+1 : PRINT n% : UNTIL n%>=3  -> 1, 2, 3
+    stdout = compile_and_run(analyse_fixture("repeat_until.bbctxt"))
+    assert stdout.split() == ["1", "2", "3"]

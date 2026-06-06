@@ -1,0 +1,6 @@
+n% = 0
+REPEAT
+n% = n% + 1
+PRINT n%
+UNTIL n% >= 3
+END
