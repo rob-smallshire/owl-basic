@@ -1,23 +1,56 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "owl-basic"
-version = "0.6.0"
+dynamic = ["version"]
+authors = [
+    { name = "Robert Smallshire", email = "rob@sixty-north.com" },
+]
 description = "A BBC BASIC compiler for the .NET CLR, with pluggable code-generation backends."
+readme = "README.md"
 requires-python = ">=3.14"
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Compilers",
+]
 dependencies = [
     "ply>=3.11",
 ]
 
+[project.urls]
+Repository = "https://github.com/sixty-north/owl-basic"
+Issues = "https://github.com/sixty-north/owl-basic/issues"
+
+[project.scripts]
+owl-basic = "owl_basic.main:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.dynamic]
+version = { attr = "owl_basic.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
 [dependency-groups]
-dev = [
-    "pytest>=8.3",
+test = [
+    "pytest>=8",
     "approvaltests>=14",
 ]
-
-# Port-in-place: the compiler currently lives under compiler/ with flat imports
-# (e.g. `from syntax.ast import *`). Putting that directory on the path lets the
-# existing modules resolve unchanged while we port. The package boundary /
-# src-layout restructuring is a deliberate later phase.
-[tool.pytest.ini_options]
-pythonpath = ["compiler"]
-testpaths = ["compiler/tests"]
-python_files = ["test_*.py"]
+dev = [
+    { include-group = "test" },
+]
