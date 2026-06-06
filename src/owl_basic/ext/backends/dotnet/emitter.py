@@ -427,6 +427,10 @@ class _MethodEmitter:
         # by block, falling through where the layout allows (cf. the legacy CIL
         # visitor). The condition leaves an OWL boolean (0 / -1) on the stack.
         self.lower_expression(node.condition)
+        if not node.trueClause:
+            # Empty THEN clause (e.g. IF c THEN ELSE ...): the true target is the
+            # fall-through, which we can't yet distinguish from the false target.
+            raise CodeGenerationError("IF with an empty THEN clause")
         true_statement = node.trueClause[0]
         false_targets = set(node.outEdges)
         false_targets.discard(true_statement)
