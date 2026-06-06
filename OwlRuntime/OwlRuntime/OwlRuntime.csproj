@@ -41,7 +41,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.VisualBasic" />
-    <Reference Include="nunit.framework, Version=2.4.8.0, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL" />
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -59,7 +58,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BasicCommands.cs" />
-    <Compile Include="BasicCommandsTest.cs" />
     <Compile Include="OwlModule.cs" />
     <Compile Include="platform\MemoryMap.cs" />
     <Compile Include="platform\riscos\AbstractScreenMode.cs" />
@@ -79,7 +77,6 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="platform\riscos\VduSystem.cs" />
-    <Compile Include="platform\riscos\VduSystemTest.cs" />
     <Compile Include="platform\riscos\VduVariableAttribute.cs" />
     <Compile Include="PrintManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
