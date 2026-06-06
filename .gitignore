@@ -14,6 +14,15 @@ dist/
 *.egg-info/
 *.egg
 
+# Copyrighted test fixtures (Acorn disc images etc.) are local-only and must
+# not be committed or published. See tests/data/README.md.
+tests/data/*.ssd
+tests/data/*.dsd
+tests/data/*.adf
+tests/data/*.adl
+tests/data/*.img
+tests/data/*.uef
+
 # Lock file: owl-basic is published to PyPI; consumers resolve their own
 # versions against our declared constraints. A locally-generated uv.lock
 # is fine, but it isn't committed.
