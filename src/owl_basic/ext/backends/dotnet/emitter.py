@@ -187,6 +187,20 @@ class _MethodEmitter:
         slot = self._local_slot(node.identifier, node.actualType)
         self.emit("ldloc V_%d" % slot)
 
+    def _expr_Cast(self, node):
+        # Numeric coercions the type checker inserts (e.g. integer -> float for
+        # mixed arithmetic, or assigning an integer to a real variable).
+        self.lower_expression(node.value)
+        target = node.targetType
+        if isinstance(target, FloatOwlType):
+            self.emit("conv.r8")
+        elif isinstance(target, (IntegerOwlType, ByteOwlType)):
+            self.emit("conv.i4")
+        else:
+            raise CodeGenerationError(
+                "Cannot lower cast to %r" % type(target).__name__
+            )
+
     # -- runtime call selection --------------------------------------------
 
     def _print_call(self, item):

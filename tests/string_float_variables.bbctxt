@@ -1,0 +1,5 @@
+S$ = "Answer is "
+N = 3.5
+PRINT S$ N
+C = 6
+PRINT C

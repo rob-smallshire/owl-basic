@@ -62,6 +62,14 @@ def test_emit_il_lowers_scalar_integer_variables():
     assert "ldloc V_1" in il
 
 
+def test_emit_il_lowers_string_and_float_variables():
+    il = _backend().emit_il(_analyse("string_float_variables.bbctxt"))
+    assert "string V_0" in il      # S$
+    assert "float64 V_1" in il     # N
+    assert "float64 V_2" in il     # C (real), assigned from an integer literal
+    assert "conv.r8" in il         # integer -> float cast for C = 6
+
+
 _toolchain_ready = (
     shutil.which("dotnet") is not None
     and DotnetBackend.find_ilasm() is not None
@@ -97,3 +105,21 @@ def test_scalar_variables_compile_and_run(tmp_path):
     assert result.returncode == 0, result.stderr
     # A% = 6 : B% = 7 : PRINT "Product is " A% * B%
     assert "Product is 42" in result.stdout
+
+
+@pytest.mark.skipif(
+    not _toolchain_ready,
+    reason="needs dotnet, a CoreCLR ilasm, and a built net10 OwlRuntime.dll",
+)
+def test_string_and_float_variables_compile_and_run(tmp_path):
+    dll_filepath = _backend().generate(
+        _analyse("string_float_variables.bbctxt"), tmp_path
+    )
+    shutil.copy(_find_owlruntime_dll(), tmp_path)
+    result = subprocess.run(
+        ["dotnet", str(dll_filepath)], capture_output=True, text=True
+    )
+    assert result.returncode == 0, result.stderr
+    # S$="Answer is " : N=3.5 : PRINT S$ N  -> "Answer is 3.5"; C=6 : PRINT C -> "6"
+    assert "Answer is 3.5" in result.stdout
+    assert "\n6" in result.stdout
