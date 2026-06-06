@@ -1,0 +1,5 @@
+PROCshow("Value: ", 42)
+END
+DEFPROCshow(label$, n%)
+PRINT label$ n%
+ENDPROC

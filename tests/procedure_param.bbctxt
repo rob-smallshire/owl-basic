@@ -1,0 +1,5 @@
+PROCsquare(5)
+END
+DEFPROCsquare(n%)
+PRINT n%*n%
+ENDPROC

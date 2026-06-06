@@ -59,6 +59,14 @@ def test_emit_il_lowers_procedure_as_separate_method(dotnet_backend):
     assert il.count(".entrypoint") == 1
 
 
+def test_emit_il_lowers_procedure_with_parameters(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse_fixture("procedure_param.bbctxt"))
+    # Formal parameters become typed method arguments, read with ldarg.
+    assert ".method static void PROCsquare(int32 A0) cil managed" in il
+    assert "ldarg.0" in il
+    assert "call void PROCsquare(int32)" in il
+
+
 @requires_dotnet_toolchain
 def test_six_times_seven_compiles_and_runs(compile_and_run):
     # The computed value reaches stdout (BBC BASIC: PRINT "..." 6*7).
@@ -100,3 +108,17 @@ def test_procedure_compiles_and_runs(compile_and_run):
     assert "after" in stdout
     # The PROC body runs before control returns to print "after".
     assert stdout.index("Hi from PROC") < stdout.index("after")
+
+
+@requires_dotnet_toolchain
+def test_procedure_with_parameter_compiles_and_runs(compile_and_run):
+    # PROCsquare(5) : ... DEFPROCsquare(n%) PRINT n%*n% ENDPROC -> 25
+    assert "25" in compile_and_run(analyse_fixture("procedure_param.bbctxt"))
+
+
+@requires_dotnet_toolchain
+def test_procedure_with_mixed_parameters_compiles_and_runs(compile_and_run):
+    # PROCshow("Value: ", 42) with formals (label$, n%) -> "Value: 42"
+    assert "Value: 42" in compile_and_run(
+        analyse_fixture("procedure_params2.bbctxt")
+    )

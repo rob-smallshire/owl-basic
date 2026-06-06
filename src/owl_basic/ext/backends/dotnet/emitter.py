@@ -96,21 +96,54 @@ def emit_program(program, assembly_name):
     method; ``PROC`` calls become ``call`` instructions between them.
     """
     blocks_by_entry = program.ordered_basic_blocks or {}
+    signatures = _collect_proc_signatures(blocks_by_entry)
     methods = [
-        _emit_method(entry_name, blocks)
+        _emit_method(entry_name, blocks, signatures)
         for entry_name, blocks in blocks_by_entry.items()
     ]
     return _ASSEMBLY_TEMPLATE.format(name=assembly_name, methods="\n\n".join(methods))
 
 
-def _emit_method(entry_name, blocks):
+def _formal_arguments(define_procedure):
+    """Yield the formal parameter Variables of a ``DEFPROC``, in order."""
+    parameters = define_procedure.formalParameters
+    if parameters is None:
+        return []
+    return [formal.argument for formal in parameters.arguments]
+
+
+def _collect_proc_signatures(blocks_by_entry):
+    """Map each PROC name to its CIL parameter types, so calls can be typed."""
+    signatures = {}
+    for entry_name, blocks in blocks_by_entry.items():
+        if entry_name == _MAIN_ENTRY or not blocks:
+            continue
+        define = blocks[0].statements[0]
+        if type(define).__name__ == "DefineProcedure":
+            signatures[entry_name] = [
+                _il_type(argument.actualType)
+                for argument in _formal_arguments(define)
+            ]
+    return signatures
+
+
+def _emit_method(entry_name, blocks, signatures):
     """Render one routine's basic blocks as a complete CIL method."""
     is_main = entry_name == _MAIN_ENTRY
     if not is_main and not entry_name.startswith("PROC"):
         # FN methods (return values) and GOSUB subroutines come later.
         raise CodeGenerationError("Cannot yet emit a method for %r" % entry_name)
 
-    emitter = _MethodEmitter()
+    # A PROC's formal parameters become method arguments (ldarg/starg); every
+    # other variable is a local.
+    formal_args = {}
+    parameters = []
+    if not is_main and blocks and type(blocks[0].statements[0]).__name__ == "DefineProcedure":
+        for index, argument in enumerate(_formal_arguments(blocks[0].statements[0])):
+            formal_args[argument.identifier] = index
+            parameters.append("%s A%d" % (_il_type(argument.actualType), index))
+
+    emitter = _MethodEmitter(formal_args=formal_args, proc_signatures=signatures)
     emitter.lower_blocks(blocks)
     emitter.finish()
     # Guarantee the method returns: add a trailing `ret` unless the last block
@@ -123,6 +156,7 @@ def _emit_method(entry_name, blocks):
     body = "\n".join("        " + line for line in emitter.lines)
     return _METHOD_TEMPLATE.format(
         name=name,
+        signature=", ".join(parameters),
         entrypoint=entrypoint,
         locals=emitter.locals_declaration(),
         body=body,
@@ -149,18 +183,24 @@ _ASSEMBLY_TEMPLATE = """\
 
 
 _METHOD_TEMPLATE = """\
-.method static void {name}() cil managed
+.method static void {name}({signature}) cil managed
 {{
 {entrypoint}    .maxstack 8
 {locals}{body}
 }}"""
 
 
+def _ldarg(index):
+    return "ldarg.%d" % index if index <= 3 else "ldarg %d" % index
+
+
 class _MethodEmitter:
-    def __init__(self):
+    def __init__(self, formal_args=None, proc_signatures=None):
         self.lines = []
         self._local_slots = {}   # variable identifier -> local slot index
         self._local_types = []   # CIL type string, indexed by slot
+        self._formal_args = formal_args or {}        # identifier -> arg index
+        self._proc_signatures = proc_signatures or {}  # PROC name -> [il types]
 
     def emit(self, text):
         self.lines.append(text)
@@ -241,8 +281,11 @@ class _MethodEmitter:
                 "Cannot lower assignment to %r l-value" % type(target).__name__
             )
         self.lower_expression(node.rValue)
-        slot = self._local_slot(target.identifier, target.actualType)
-        self.emit("stloc V_%d" % slot)
+        if target.identifier in self._formal_args:
+            self.emit("starg %d" % self._formal_args[target.identifier])
+        else:
+            slot = self._local_slot(target.identifier, target.actualType)
+            self.emit("stloc V_%d" % slot)
 
     def _stmt_If(self, node):
         # Flow analysis emptied the clauses into their own blocks; branch to them
@@ -280,10 +323,10 @@ class _MethodEmitter:
         pass
 
     def _stmt_CallProcedure(self, node):
-        if node.actualParameters:
-            # Parameter passing comes in the next slice.
-            raise CodeGenerationError("PROC parameters not yet lowered")
-        self.emit("call void %s()" % _method_name(node.name))
+        for actual in node.actualParameters or []:
+            self.lower_expression(actual)
+        types = self._proc_signatures.get(node.name, [])
+        self.emit("call void %s(%s)" % (_method_name(node.name), ", ".join(types)))
 
     def _stmt_ReturnFromProcedure(self, node):
         self.emit("ret")
@@ -340,8 +383,11 @@ class _MethodEmitter:
         self.emit("ldc.r8 %r" % float(node.value))
 
     def _expr_Variable(self, node):
-        slot = self._local_slot(node.identifier, node.actualType)
-        self.emit("ldloc V_%d" % slot)
+        if node.identifier in self._formal_args:
+            self.emit(_ldarg(self._formal_args[node.identifier]))
+        else:
+            slot = self._local_slot(node.identifier, node.actualType)
+            self.emit("ldloc V_%d" % slot)
 
     def _expr_Cast(self, node):
         # Numeric coercions the type checker inserts (e.g. integer -> float for
