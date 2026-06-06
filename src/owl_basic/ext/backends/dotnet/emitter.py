@@ -135,10 +135,19 @@ def emit_program(program, assembly_name):
     # is built at the top of Main (before any PROC that might READ runs).
     data = getattr(program, "data", None)
     data_items = list(data.data) if data is not None and data.data else []
+    # data.index is keyed by *physical* line; RESTORE <line> targets *logical*
+    # lines, so re-key by logical line number via the line mapper.
+    data_index = {}
+    if data is not None and data.index:
+        line_mapper = program.line_mapper
+        for physical, item_index in data.index.items():
+            logical = line_mapper.physicalToLogical(physical)
+            if logical is not None:
+                data_index[logical] = item_index
     prologue = _data_init_lines(data_items) if data_items else None
     methods = [
         _emit_method(
-            entry_name, blocks, signatures, globals_registry,
+            entry_name, blocks, signatures, globals_registry, data_index,
             prologue if entry_name == _MAIN_ENTRY else None,
         )
         for entry_name, blocks in blocks_by_entry.items()
@@ -178,7 +187,8 @@ def _collect_proc_signatures(blocks_by_entry):
     return signatures
 
 
-def _emit_method(entry_name, blocks, signatures, globals_registry, prologue=None):
+def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
+                 prologue=None):
     """Render one routine's basic blocks as a complete CIL method."""
     is_main = entry_name == _MAIN_ENTRY
     if not is_main and not entry_name.startswith("PROC"):
@@ -198,6 +208,7 @@ def _emit_method(entry_name, blocks, signatures, globals_registry, prologue=None
         formal_args=formal_args,
         proc_signatures=signatures,
         globals_registry=globals_registry,
+        data_index=data_index,
     )
     emitter.lower_blocks(blocks)
     emitter.finish()
@@ -278,7 +289,7 @@ def _data_init_lines(items):
 
 class _MethodEmitter:
     def __init__(self, formal_args=None, proc_signatures=None,
-                 globals_registry=None):
+                 globals_registry=None, data_index=None):
         self.lines = []
         self._local_slots = {}   # variable identifier -> local slot index
         self._local_types = []   # CIL type string, indexed by slot
@@ -288,6 +299,7 @@ class _MethodEmitter:
         self._symbol_table = None  # the symbol table of the statement being lowered
         self._for_loops = {}       # id(ForToStep) -> loop state, shared with NEXT
         self._label_seq = 0        # for unique intra-method labels
+        self._data_index = data_index or {}  # DATA line number -> data array index
 
     def emit(self, text):
         self.lines.append(text)
@@ -527,11 +539,28 @@ class _MethodEmitter:
         pass
 
     def _stmt_Restore(self, node):
-        if node.targetLogicalLine is not None:
-            # RESTORE <line> needs the line->index map; bare RESTORE for now.
-            raise CodeGenerationError("RESTORE <line> not yet supported")
-        self.emit("ldc.i4.m1")   # next READ pre-increments to index 0
+        target = node.targetLogicalLine
+        if target is None:
+            index = 0                       # bare RESTORE: back to the first item
+        elif type(target).__name__ == "LiteralInteger":
+            # RESTORE <line>: the first DATA item on or after that line. Resolved
+            # at compile time; a non-literal target would need a runtime map.
+            index = self._resolve_restore(int(target.value))
+        else:
+            raise CodeGenerationError("RESTORE with a non-constant line")
+        # The read index is pre-incremented, so point one before the target.
+        self.emit("ldc.i4 %d" % (index - 1))
         self.emit("stsfld int32 %s" % _DATA_INDEX_FIELD)
+
+    def _resolve_restore(self, line):
+        if line in self._data_index:
+            return self._data_index[line]
+        at_or_after = [n for n in self._data_index if n >= line]
+        if not at_or_after:
+            raise CodeGenerationError(
+                "RESTORE %d: no DATA at or after that line" % line
+            )
+        return self._data_index[min(at_or_after)]
 
     def _stmt_Repeat(self, node):
         # The loop top is just the start of this block; UNTIL branches back to

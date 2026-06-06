@@ -8,6 +8,8 @@ tests are skipped unless the full .NET toolchain is present (see conftest:
 from conftest import requires_dotnet_toolchain
 from helpers import analyse_fixture
 
+from owl_basic.analysis import analyse_numbered_lines
+
 
 def test_emit_il_lowers_print_and_arithmetic(dotnet_backend):
     il = dotnet_backend.emit_il(analyse_fixture("six_times_seven.bbctxt"))
@@ -112,6 +114,18 @@ def test_data_read_restore_compiles_and_runs(compile_and_run):
     # DATA 10,20,hello : READ a% (10), c$ ("20") : RESTORE : READ d% (10)
     stdout = compile_and_run(analyse_fixture("data_read.bbctxt"))
     assert stdout.split() == ["10", "20", "10"]
+
+
+@requires_dotnet_toolchain
+def test_restore_to_line_compiles_and_runs(compile_and_run):
+    # RESTORE 20 rewinds to the DATA on line 20, so READ c% gets 33.
+    lines = [
+        (10, "DATA 11, 22"), (20, "DATA 33, 44"),
+        (30, "READ a%"), (40, "READ b%"), (50, "RESTORE 20"), (60, "READ c%"),
+        (70, "PRINT a%"), (80, "PRINT b%"), (90, "PRINT c%"), (100, "END"),
+    ]
+    program = analyse_numbered_lines(lines, name="restoreline")
+    assert compile_and_run(program).split() == ["11", "22", "33"]
 
 
 def test_emit_il_lowers_repeat_until(dotnet_backend):
