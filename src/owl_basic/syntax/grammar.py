@@ -1967,9 +1967,17 @@ def p_empty(p):
 #=============================================================================#
 # ERRORS
 
+# Syntax errors from the most recent parse. parser.parse() clears this before
+# each parse; callers (e.g. owl_basic.analysis) read it afterwards to decide
+# strict-vs-lenient handling, robustly and independent of logging configuration.
+syntax_errors = []
+
+
 # Error rule for syntax errors
 def p_error(p):
     if p is None:
-        logging.error("Syntax error at end of input (unexpected EOF)")
+        message = "Syntax error at end of input (unexpected EOF)"
     else:
-        logging.error("Syntax error at %r (physical line %s)", p.value, p.lineno)
+        message = "Syntax error at %r (physical line %s)" % (p.value, p.lineno)
+    syntax_errors.append(message)
+    logging.error(message)

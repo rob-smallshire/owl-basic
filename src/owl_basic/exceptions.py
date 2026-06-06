@@ -11,3 +11,11 @@ class OwlBasicError(Exception):
 
 class ExtensionError(OwlBasicError):
     """Raised when a plug-in extension cannot be found or loaded."""
+
+
+class CompileError(OwlBasicError):
+    """Raised when a program cannot be compiled (e.g. unparseable source).
+
+    By default the compiler is strict: an unparseable line is a CompileError.
+    A lenient option recovers per line instead.
+    """

@@ -75,6 +75,7 @@ def parse(data, options):
 
     parser = buildParser(options)
 
+    del grammar.syntax_errors[:]  # reset; p_error appends, callers read after
     parse_tree = parser.parse(data, lexer=lexer, tracking=True)
     if options.verbose:
         sys.stderr.write("done\n")

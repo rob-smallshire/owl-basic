@@ -31,9 +31,11 @@ from owl_basic.flow import (
     locateEntryPoints,
     orderBasicBlocks,
 )
+from owl_basic.exceptions import CompileError
 from owl_basic.line_mapper import LineMapper
 from owl_basic.owltyping.typecheck import typecheck
 from owl_basic.source_debugging import SourceDebuggingVisitor
+from owl_basic.syntax import grammar as _grammar
 from owl_basic.syntax import parser as syntax_parser
 
 logger = logging.getLogger(__name__)
@@ -43,6 +45,12 @@ class _DefaultOptions:
     verbose = False
     use_clr = False
     debug_lex = False
+
+
+def _line_parse_errors(text, options):
+    """Parse a single line body; return the list of syntax errors (empty if OK)."""
+    syntax_parser.parse(text if text.endswith("\n") else text + "\n", options)
+    return list(_grammar.syntax_errors)
 
 
 def _synthesize_line_numbers(source):
@@ -81,16 +89,42 @@ def analyse(source, name, source_filepath=None, options=None):
     )
 
 
-def analyse_numbered_lines(numbered_lines, name, source_filepath=None, options=None):
+def analyse_numbered_lines(numbered_lines, name, source_filepath=None, options=None,
+                           strict=True):
     """Analyse line-numbered BASIC source given as ``(line_number, text)`` pairs.
 
     Real programs carry explicit line numbers (e.g. detokenised Sphinx, whose
     detokeniser returns exactly these pairs) and GOTO/GOSUB reference them. The
     bodies (without their leading numbers) are parsed, and the *real* line
     numbers drive the physical->logical map so jump targets resolve.
+
+    When ``strict`` (the default), any line that cannot be parsed raises a
+    :class:`~owl_basic.exceptions.CompileError`. When not strict, such a line is
+    recovered (replaced with a placeholder) so the rest of the program compiles
+    — matching the interpreter, which stores odd lines and only errors on them
+    at run time.
     """
     options = options or _DefaultOptions()
     numbered_lines = list(numbered_lines)
+
+    unparseable = [
+        number for number, text in numbered_lines
+        if text.strip() and _line_parse_errors(text, options)
+    ]
+    if unparseable and strict:
+        raise CompileError(
+            "could not parse %d line(s): %s"
+            % (len(unparseable), ", ".join(str(n) for n in unparseable))
+        )
+    if unparseable:  # lenient: replace each unparseable line with a no-op placeholder
+        bad = set(unparseable)
+        logger.warning("lenient compile: %d unparseable line(s) recovered: %s",
+                       len(bad), sorted(bad))
+        numbered_lines = [
+            (number, "REM (owl-basic: unparseable line recovered)" if number in bad else text)
+            for number, text in numbered_lines
+        ]
+
     source = "\n".join(text for _, text in numbered_lines) + "\n"
     data, synthesized, line_offsets, line_number_prefixes = _synthesize_line_numbers(source)
     physical_to_logical_map = [number for number, _ in numbered_lines]
