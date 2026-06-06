@@ -9,13 +9,7 @@ import logging
 
 import pytest
 
-from owl_basic.syntax import parser as _parser
-
-
-class _Options:
-    debug_lex = False
-    verbose = False
-    use_clr = False
+from helpers import parse as parse_source
 
 
 class ParseError(Exception):
@@ -42,9 +36,7 @@ def parse_statements(source):
     previous_level = root.level
     root.setLevel(logging.ERROR)
     try:
-        tree = _parser.parse(
-            source if source.endswith("\n") else source + "\n", _Options()
-        )
+        tree = parse_source(source)
     finally:
         root.removeHandler(handler)
         root.setLevel(previous_level)

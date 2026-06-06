@@ -4,6 +4,7 @@ Builds up the BBC BASIC -> Hindley-Milner bridge one capability at a time:
 literal returns first, then function-call returns and (mutual) recursion.
 """
 
+from helpers import define_functions, returns_by_function
 from owl_basic.owltyping.hm_bridge import (
     infer_function_return_types,
     infer_return_types,
@@ -14,58 +15,14 @@ from owl_basic.owltyping.type_system import (
     ObjectOwlType,
     StringOwlType,
 )
-from owl_basic.syntax import parser as _parser
-from owl_basic.syntax.ast import DefineFunction, ReturnFromFunction
-
-
-class _Options:
-    debug_lex = False
-    verbose = False
-    use_clr = False
 
 
 def _infer(source):
-    tree = _parser.parse(source + "\n", _Options())
-    functions = [
-        s for s in tree.statements.statements if isinstance(s, DefineFunction)
-    ]
-    return infer_function_return_types(functions)
-
-
-def _walk(node):
-    yield node
-    for child in node.children.values():
-        for sub in (child if isinstance(child, list) else [child]):
-            if sub is not None and hasattr(sub, "children"):
-                yield from _walk(sub)
-
-
-def _returns_by_function(source):
-    """Attribute every ``= expr`` return to the DEF FN it belongs to.
-
-    Multi-line functions spread their returns across sibling statements (and
-    into IF clauses); this mirrors the linear span the flow analysis computes,
-    which is enough for these focused tests.
-    """
-    tree = _parser.parse(source + "\n", _Options())
-    by_function = {}
-    current = None
-    seen = set()
-    for statement in tree.statements.statements:
-        if isinstance(statement, DefineFunction):
-            current = statement.name
-            by_function.setdefault(current, [])
-        if current is None:
-            continue
-        for node in _walk(statement):
-            if isinstance(node, ReturnFromFunction) and id(node) not in seen:
-                seen.add(id(node))
-                by_function[current].append(node.returnValue)
-    return by_function
+    return infer_function_return_types(define_functions(source))
 
 
 def _infer_multiline(source):
-    return infer_return_types(_returns_by_function(source))
+    return infer_return_types(returns_by_function(source))
 
 
 def test_integer_literal_return():

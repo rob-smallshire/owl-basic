@@ -5,17 +5,13 @@ exercise return collection over the control-flow graph, unlike the focused unit
 tests in ``test_hm_bridge.py``.
 """
 
+from helpers import function_return_types
 from owl_basic.analysis import analyse
 from owl_basic.owltyping.type_system import FloatOwlType, IntegerOwlType
 
 
 def _function_return_types(source):
-    program = analyse(source, "t")
-    return {
-        name: getattr(entry, "returnType", None)
-        for name, entry in program.entry_points.items()
-        if name.startswith("FN")
-    }
+    return function_return_types(analyse(source, "t"))
 
 
 def test_pipeline_infers_recursive_float_factorial():
