@@ -37,6 +37,26 @@ _BINARY_OPS = {
     "Divide": "div",
 }
 
+# BBC BASIC's AND/OR/EOR are bitwise; with OWL booleans (0 / -1) they double as
+# the logical connectives in conditions.
+_LOGICAL_OPS = {
+    "And": "and",
+    "Or": "or",
+    "Eor": "xor",
+}
+
+# Numeric relational operators, as CIL opcode sequences that leave an OWL
+# boolean (0 / -1) on the stack. The trailing `neg` converts a CLR boolean
+# (0 / 1) into BBC's 0 / -1; `<>`/`<=`/`>=` build on `ceq`/`clt`/`cgt`.
+_RELATIONAL_OPS = {
+    "Equal": ["ceq", "neg"],
+    "NotEqual": ["ceq", "ldc.i4.1", "sub"],
+    "LessThan": ["clt", "neg"],
+    "GreaterThan": ["cgt", "neg"],
+    "LessThanEqual": ["cgt", "ldc.i4.0", "ceq", "neg"],
+    "GreaterThanEqual": ["clt", "ldc.i4.0", "ceq", "neg"],
+}
+
 
 class CodeGenerationError(OwlBasicError):
     """Raised when the emitter meets an AST node it cannot yet lower."""
@@ -63,16 +83,22 @@ def emit_program(program, assembly_name):
     """Render *program* as a complete textual CIL assembly."""
     emitter = _MethodEmitter()
     blocks_by_entry = program.ordered_basic_blocks or {}
-    # Only the main program entry point is lowered in this first slice.
-    for block in blocks_by_entry.get("__owl__main", []):
-        for statement in block.statements:
-            emitter.lower_statement(statement)
+    # Only the main program entry point is lowered for now.
+    emitter.lower_blocks(blocks_by_entry.get("__owl__main", []))
     emitter.finish()
 
     body = "\n".join("        " + line for line in emitter.lines)
     return _ASSEMBLY_TEMPLATE.format(
         name=assembly_name, locals=emitter.locals_declaration(), body=body
     )
+
+
+# Statements that emit their own control transfer (or end the method), so the
+# block they end needs no implicit fall-through branch generated for it.
+_BRANCHING_STATEMENTS = frozenset(
+    {"If", "OnGoto", "End", "ReturnFromProcedure", "ReturnFromFunction",
+     "LongJump", "Run", "Raise"}
+)
 
 
 _ASSEMBLY_TEMPLATE = """\
@@ -118,6 +144,35 @@ class _MethodEmitter:
         )
         return "    .locals init (\n%s\n    )\n" % entries
 
+    # -- basic blocks -------------------------------------------------------
+
+    def lower_blocks(self, blocks):
+        """Lower a routine's basic blocks (in topological order) with labels.
+
+        Control flow is carried by the block-level CFG: each block gets a label,
+        and a block whose single successor is not the next block in order ends
+        with an explicit branch (otherwise it falls through).
+        """
+        self._block_index = {id(block): index for index, block in enumerate(blocks)}
+        for index, block in enumerate(blocks):
+            self.emit("%s:" % self._block_label(block))
+            for statement in block.statements:
+                self.lower_statement(statement)
+            self._emit_fall_through(block, index)
+
+    def _block_label(self, block):
+        return "BB_%d" % self._block_index[id(block)]
+
+    def _emit_fall_through(self, block, index):
+        last = block.statements[-1] if block.statements else None
+        if last is not None and type(last).__name__ in _BRANCHING_STATEMENTS:
+            return  # the statement emitted its own control transfer
+        successors = list(block.outEdges)
+        if len(successors) == 1:
+            successor = successors[0]
+            if self._block_index.get(id(successor)) != index + 1:
+                self.emit("br " + self._block_label(successor))
+
     def finish(self):
         # The assembly template appends the trailing `ret`; nothing to do yet.
         pass
@@ -151,6 +206,37 @@ class _MethodEmitter:
         slot = self._local_slot(target.identifier, target.actualType)
         self.emit("stloc V_%d" % slot)
 
+    def _stmt_If(self, node):
+        # Flow analysis emptied the clauses into their own blocks; branch to them
+        # by block, falling through where the layout allows (cf. the legacy CIL
+        # visitor). The condition leaves an OWL boolean (0 / -1) on the stack.
+        self.lower_expression(node.condition)
+        true_statement = node.trueClause[0]
+        false_targets = set(node.outEdges)
+        false_targets.discard(true_statement)
+        if len(false_targets) != 1:
+            raise CodeGenerationError("IF with %d false targets" % len(false_targets))
+        false_statement = next(iter(false_targets))
+
+        this_index = self._block_index[id(node.block)]
+        true_index = self._block_index[id(true_statement.block)]
+        false_index = self._block_index[id(false_statement.block)]
+        true_label = self._block_label(true_statement.block)
+        false_label = self._block_label(false_statement.block)
+
+        if true_index == this_index + 1:
+            self.emit("brfalse " + false_label)          # fall through to true
+        elif false_index == this_index + 1:
+            self.emit("brtrue " + true_label)            # fall through to false
+        else:
+            self.emit("brtrue " + true_label)
+            self.emit("br " + false_label)
+
+    def _stmt_Goto(self, node):
+        # GOTO carries no code itself: the branch to its (single) successor block
+        # is generated by the block fall-through logic.
+        pass
+
     def _stmt_Rem(self, node):
         # A comment generates no code.
         pass
@@ -169,10 +255,29 @@ class _MethodEmitter:
             self.lower_expression(node.rhs)
             self.emit(_BINARY_OPS[name])
             return
+        if name in _LOGICAL_OPS:
+            self.lower_expression(node.lhs)
+            self.lower_expression(node.rhs)
+            self.emit(_LOGICAL_OPS[name])
+            return
+        if name in _RELATIONAL_OPS:
+            self._lower_relational(node, _RELATIONAL_OPS[name])
+            return
         handler = getattr(self, "_expr_" + name, None)
         if handler is None:
             raise CodeGenerationError("Cannot lower expression node %r" % name)
         handler(node)
+
+    def _lower_relational(self, node, opcodes):
+        if isinstance(node.lhs.actualType, StringOwlType) or isinstance(
+            node.rhs.actualType, StringOwlType
+        ):
+            # String comparison (String.Compare/Equals) comes later.
+            raise CodeGenerationError("string comparison not yet lowered")
+        self.lower_expression(node.lhs)
+        self.lower_expression(node.rhs)
+        for opcode in opcodes:
+            self.emit(opcode)
 
     def _expr_LiteralString(self, node):
         self.emit("ldstr " + _il_string(node.value))

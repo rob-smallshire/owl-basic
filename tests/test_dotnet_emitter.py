@@ -70,6 +70,15 @@ def test_emit_il_lowers_string_and_float_variables():
     assert "conv.r8" in il         # integer -> float cast for C = 6
 
 
+def test_emit_il_lowers_if_with_relational_condition():
+    il = _backend().emit_il(_analyse("conditional.bbctxt"))
+    assert "cgt" in il             # A% > 5
+    assert "\n        neg" in il   # converted to a BBC boolean (0 / -1)
+    # The clauses live in their own labelled blocks, reached by a branch.
+    assert "BB_0:" in il
+    assert ("brtrue " in il) or ("brfalse " in il)
+
+
 _toolchain_ready = (
     shutil.which("dotnet") is not None
     and DotnetBackend.find_ilasm() is not None
@@ -123,3 +132,20 @@ def test_string_and_float_variables_compile_and_run(tmp_path):
     # S$="Answer is " : N=3.5 : PRINT S$ N  -> "Answer is 3.5"; C=6 : PRINT C -> "6"
     assert "Answer is 3.5" in result.stdout
     assert "\n6" in result.stdout
+
+
+@pytest.mark.skipif(
+    not _toolchain_ready,
+    reason="needs dotnet, a CoreCLR ilasm, and a built net10 OwlRuntime.dll",
+)
+def test_conditional_compiles_and_runs(tmp_path):
+    dll_filepath = _backend().generate(_analyse("conditional.bbctxt"), tmp_path)
+    shutil.copy(_find_owlruntime_dll(), tmp_path)
+    result = subprocess.run(
+        ["dotnet", str(dll_filepath)], capture_output=True, text=True
+    )
+    assert result.returncode == 0, result.stderr
+    # A%=8 : IF A%>5 THEN PRINT "big" ELSE PRINT "small" : PRINT "done"
+    assert "big" in result.stdout
+    assert "small" not in result.stdout
+    assert "done" in result.stdout
