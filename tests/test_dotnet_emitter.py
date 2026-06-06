@@ -99,6 +99,26 @@ def test_print_manipulators_compile_and_run(compile_and_run):
     assert stdout == "AB\nC\nD\nno newlinejoined\n"
 
 
+def test_emit_il_lowers_string_functions(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse_fixture("string_functions.bbctxt"))
+    assert "System.String::Concat(string, string)" in il
+    assert "System.String::get_Length()" in il
+    assert "BasicCommands::LeftStr(string, int32)" in il
+    assert "BasicCommands::RightStr(string, int32)" in il
+    assert "BasicCommands::MidStr(string, int32, int32)" in il
+    assert "BasicCommands::Chr(int32)" in il
+    assert "BasicCommands::Asc(string)" in il
+    assert "BasicCommands::Instr(string, string)" in il
+
+
+@requires_dotnet_toolchain
+def test_string_functions_compile_and_run(compile_and_run):
+    stdout = compile_and_run(analyse_fixture("string_functions.bbctxt"))
+    assert stdout.split("\n") == [
+        "5", "HE", "LO", "ELL", "A", "65", "3", "foobar", "",
+    ]
+
+
 def test_emit_il_lowers_data_read_restore(dotnet_backend):
     il = dotnet_backend.emit_il(analyse_fixture("data_read.bbctxt"))
     # DATA becomes a static string array, READ reads/parses it, RESTORE rewinds.

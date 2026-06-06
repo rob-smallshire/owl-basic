@@ -692,6 +692,61 @@ class _MethodEmitter:
         else:  # integer / byte
             self.emit("call int32 [System.Runtime]System.Int32::Parse(string)")
 
+    # -- string operations --------------------------------------------------
+
+    def _expr_Concatenate(self, node):
+        self.lower_expression(node.lhs)
+        self.lower_expression(node.rhs)
+        self.emit("call string [System.Runtime]System.String::Concat(string, string)")
+
+    def _expr_LenFunc(self, node):
+        self.lower_expression(node.factor)
+        self.emit("call instance int32 [System.Runtime]System.String::get_Length()")
+
+    def _expr_AscFunc(self, node):
+        self.lower_expression(node.factor)
+        self.emit("call int32 {0}::Asc(string)".format(_RUNTIME))
+
+    def _expr_ChrStrFunc(self, node):
+        self.lower_expression(node.factor)
+        self.emit("call string {0}::Chr(int32)".format(_RUNTIME))
+
+    def _expr_InstrFunc(self, node):
+        self.lower_expression(node.source)
+        self.lower_expression(node.subString)
+        if node.startPosition is not None:
+            self.lower_expression(node.startPosition)
+            self.emit("call int32 {0}::InstrAt(string, string, int32)".format(_RUNTIME))
+        else:
+            self.emit("call int32 {0}::Instr(string, string)".format(_RUNTIME))
+
+    def _expr_LeftStrFunc(self, node):
+        self.lower_expression(node.source)
+        if node.length is not None:
+            self.lower_expression(node.length)
+            self.emit("call string {0}::LeftStr(string, int32)".format(_RUNTIME))
+        else:
+            self.emit("call string {0}::LeftStr(string)".format(_RUNTIME))
+
+    def _expr_RightStrFunc(self, node):
+        self.lower_expression(node.source)
+        if node.length is not None:
+            self.lower_expression(node.length)
+            self.emit("call string {0}::RightStr(string, int32)".format(_RUNTIME))
+        else:
+            self.emit("call string {0}::RightStr(string)".format(_RUNTIME))
+
+    def _expr_MidStrFunc(self, node):
+        self.lower_expression(node.source)
+        self.lower_expression(node.position)
+        if node.length is not None:
+            self.lower_expression(node.length)
+            self.emit(
+                "call string {0}::MidStr(string, int32, int32)".format(_RUNTIME)
+            )
+        else:
+            self.emit("call string {0}::MidStr(string, int32)".format(_RUNTIME))
+
     def _expr_UnaryMinus(self, node):
         self.lower_expression(node.factor)
         self.emit("neg")
