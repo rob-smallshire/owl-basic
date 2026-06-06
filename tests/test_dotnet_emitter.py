@@ -185,6 +185,12 @@ def test_displaced_proc_body_goto_compiles_and_runs(compile_and_run):
 
 
 @requires_dotnet_toolchain
+def test_lomem_compiles_and_runs(compile_and_run):
+    # LOMEM is a pseudo-variable backed by an OwlRuntime property: write/read.
+    assert "1000" in compile_and_run(analyse_fixture("lomem.bbctxt"))
+
+
+@requires_dotnet_toolchain
 def test_int_function_compiles_and_runs(compile_and_run):
     # INT floors toward negative infinity: INT(3.7)=3, INT(-2.3)=-3
     stdout = compile_and_run(analyse_fixture("int_function.bbctxt"))

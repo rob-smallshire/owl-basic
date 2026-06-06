@@ -182,6 +182,7 @@ def emit_program(program, assembly_name):
             entry_name, blocks, signatures, globals_registry, data_index,
             longjump_targets, line_mapper,
             prologue if entry_name == _MAIN_ENTRY else None,
+            data_count=len(data_items),
         )
         for entry_name, blocks in blocks_by_entry.items()
     ]
@@ -243,7 +244,8 @@ def _collect_signatures(blocks_by_entry):
 
 
 def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
-                 longjump_targets=frozenset(), line_mapper=None, prologue=None):
+                 longjump_targets=frozenset(), line_mapper=None, prologue=None,
+                 data_count=0):
     """Render one routine's basic blocks as a complete CIL method."""
     is_main = entry_name == _MAIN_ENTRY
     if not is_main and entry_name not in signatures:
@@ -269,6 +271,7 @@ def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
         return_type=return_type,
         longjump_targets=longjump_targets,
         line_mapper=line_mapper,
+        data_count=data_count,
     )
     emitter.lower_blocks(blocks)
     emitter.finish()
@@ -386,7 +389,7 @@ def _data_init_lines(items):
 class _MethodEmitter:
     def __init__(self, formal_args=None, signatures=None,
                  globals_registry=None, data_index=None, return_type="void",
-                 longjump_targets=frozenset(), line_mapper=None):
+                 longjump_targets=frozenset(), line_mapper=None, data_count=0):
         self.lines = []
         self._local_slots = {}   # variable identifier -> local slot index
         self._local_types = []   # CIL type string, indexed by slot
@@ -398,6 +401,7 @@ class _MethodEmitter:
         self._for_loops = {}       # id(ForToStep) -> loop state, shared with NEXT
         self._label_seq = 0        # for unique intra-method labels
         self._data_index = data_index or {}  # DATA line number -> data array index
+        self._data_count = data_count        # total DATA items (for RESTORE past end)
         self._longjump_targets = longjump_targets  # logical lines LONGJUMPs target
         self._line_mapper = line_mapper
         self.landed_longjumps = set()  # target lines that have an L_<line>: here
@@ -539,6 +543,11 @@ class _MethodEmitter:
             self.lower_expression(node.rValue)
             self.emit("stelem.i1")
             return
+        if name == "LomemValue":
+            # LOMEM = v : the runtime models the BBC memory boundary as a property.
+            self.lower_expression(node.rValue)
+            self.emit("call void %s::set_Lomem(int32)" % _RUNTIME)
+            return
         if name != "Variable":
             # Indexed / pseudo-variable l-values come later.
             raise CodeGenerationError(
@@ -594,6 +603,17 @@ class _MethodEmitter:
         # GOTO out of a routine: throw, to be caught by Main's dispatch loop.
         self.lower_expression(node.targetLogicalLine)
         self.emit("newobj instance void %s::.ctor(int32)" % _LONGJUMP_EXCEPTION)
+        self.emit("throw")
+
+    def _stmt_Raise(self, node):
+        # Throw a named OwlRuntime exception carrying the source line (e.g.
+        # ExecutedDefinitionException when control reaches a DEF line).
+        logical = 0
+        if self._line_mapper is not None:
+            logical = self._line_mapper.physicalToLogical(node.lineNum) or 0
+        self.emit("ldc.i4 %d" % logical)
+        self.emit("newobj instance void [OwlRuntime]OwlRuntime.%s::.ctor(int32)"
+                  % node.type)
         self.emit("throw")
 
     def _stmt_DefineProcedure(self, node):
@@ -762,9 +782,9 @@ class _MethodEmitter:
             return self._data_index[line]
         at_or_after = [n for n in self._data_index if n >= line]
         if not at_or_after:
-            raise CodeGenerationError(
-                "RESTORE %d: no DATA at or after that line" % line
-            )
+            # No DATA at or after the line: point past the end so the next READ
+            # is out of data (matching BBC, which would error then).
+            return self._data_count
         return self._data_index[min(at_or_after)]
 
     def _stmt_Repeat(self, node):
@@ -1018,6 +1038,9 @@ class _MethodEmitter:
 
     def _expr_VposFunc(self, node):
         self.emit("call int32 {0}::VPos()".format(_RUNTIME))
+
+    def _expr_LomemValue(self, node):
+        self.emit("call int32 %s::get_Lomem()" % _RUNTIME)
 
     def _expr_IntFunc(self, node):
         # INT: floor to an integer (the factor is a real after type checking).
