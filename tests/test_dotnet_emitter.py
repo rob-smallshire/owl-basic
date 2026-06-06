@@ -99,6 +99,19 @@ def test_print_manipulators_compile_and_run(compile_and_run):
     assert stdout == "AB\nC\nD\nno newlinejoined\n"
 
 
+def test_emit_il_lowers_string_comparison(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse_fixture("string_compare.bbctxt"))
+    assert "System.String::Equals(string, string)" in il
+    assert "System.String::Compare(string, string)" in il
+
+
+@requires_dotnet_toolchain
+def test_string_comparison_compile_and_run(compile_and_run):
+    # a$="apple",b$="banana": a$="apple"->eq, a$<b$->less, a$<>b$->diff
+    stdout = compile_and_run(analyse_fixture("string_compare.bbctxt"))
+    assert stdout.split() == ["eq", "less", "diff"]
+
+
 def test_emit_il_lowers_simple_functions(dotnet_backend):
     il = dotnet_backend.emit_il(analyse_fixture("simple_functions.bbctxt"))
     assert "System.Math::Abs(int32)" in il

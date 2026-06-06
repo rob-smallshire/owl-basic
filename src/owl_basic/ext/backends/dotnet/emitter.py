@@ -77,6 +77,20 @@ _RELATIONAL_OPS = {
     "GreaterThanEqual": ["clt", "ldc.i4.0", "ceq", "neg"],
 }
 
+_STRING_EQUALS = "call bool [System.Runtime]System.String::Equals(string, string)"
+_STRING_COMPARE = "call int32 [System.Runtime]System.String::Compare(string, string)"
+
+# String equality from String.Equals; ordering from the sign of String.Compare.
+# All leave an OWL boolean (0 / -1).
+_STRING_RELATIONAL = {
+    "Equal": [_STRING_EQUALS, "neg"],
+    "NotEqual": [_STRING_EQUALS, "ldc.i4.0", "ceq", "neg"],
+    "LessThan": [_STRING_COMPARE, "ldc.i4.0", "clt", "neg"],
+    "GreaterThan": [_STRING_COMPARE, "ldc.i4.0", "cgt", "neg"],
+    "LessThanEqual": [_STRING_COMPARE, "ldc.i4.0", "cgt", "ldc.i4.0", "ceq", "neg"],
+    "GreaterThanEqual": [_STRING_COMPARE, "ldc.i4.0", "clt", "ldc.i4.0", "ceq", "neg"],
+}
+
 
 class CodeGenerationError(OwlBasicError):
     """Raised when the emitter meets an AST node it cannot yet lower."""
@@ -608,21 +622,21 @@ class _MethodEmitter:
             self.emit(_LOGICAL_OPS[name])
             return
         if name in _RELATIONAL_OPS:
-            self._lower_relational(node, _RELATIONAL_OPS[name])
+            self._lower_relational(node)
             return
         handler = getattr(self, "_expr_" + name, None)
         if handler is None:
             raise CodeGenerationError("Cannot lower expression node %r" % name)
         handler(node)
 
-    def _lower_relational(self, node, opcodes):
-        if isinstance(node.lhs.actualType, StringOwlType) or isinstance(
+    def _lower_relational(self, node):
+        name = type(node).__name__
+        string_operands = isinstance(node.lhs.actualType, StringOwlType) or isinstance(
             node.rhs.actualType, StringOwlType
-        ):
-            # String comparison (String.Compare/Equals) comes later.
-            raise CodeGenerationError("string comparison not yet lowered")
+        )
         self.lower_expression(node.lhs)
         self.lower_expression(node.rhs)
+        opcodes = _STRING_RELATIONAL[name] if string_operands else _RELATIONAL_OPS[name]
         for opcode in opcodes:
             self.emit(opcode)
 

@@ -1,0 +1,6 @@
+a$ = "apple"
+b$ = "banana"
+IF a$ = "apple" THEN PRINT "eq" ELSE PRINT "ne"
+IF a$ < b$ THEN PRINT "less" ELSE PRINT "notless"
+IF a$ <> b$ THEN PRINT "diff" ELSE PRINT "same"
+END
