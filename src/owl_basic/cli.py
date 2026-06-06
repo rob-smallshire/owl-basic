@@ -58,10 +58,10 @@ def _find_owlruntime_dll() -> Path | None:
     return max(matches, key=lambda path: path.stat().st_mtime)
 
 
-def _compile(source: Path, output_dir: Path, backend_name: str) -> Path:
+def _compile(source: Path, output_dir: Path, backend_name: str, encoding: str) -> Path:
     """Compile *source* to an assembly under *output_dir*; return its path."""
     program = analyse(
-        source.read_text(encoding="latin-1"),
+        source.read_text(encoding=encoding),
         name=source.stem,
         source_filepath=str(source),
     )
@@ -93,6 +93,10 @@ _output_option = click.option(
     default=Path("."), show_default=True,
     help="Directory for the compiled assembly.",
 )
+_encoding_option = click.option(
+    "-e", "--encoding", default="acorn", show_default=True,
+    help="Character encoding of the source file (e.g. acorn, latin-1, utf-8).",
+)
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
@@ -105,10 +109,11 @@ def cli() -> None:
 @_source_argument
 @_backend_option
 @_output_option
-def compile_command(source: Path, backend: str, output_dir: Path) -> None:
+@_encoding_option
+def compile_command(source: Path, backend: str, output_dir: Path, encoding: str) -> None:
     """Compile a BBC BASIC SOURCE file to a .NET assembly."""
     try:
-        artifact = _compile(source, output_dir, backend)
+        artifact = _compile(source, output_dir, backend, encoding)
     except OwlBasicError as error:
         _fail(str(error))
     _status("Compiled %s -> %s" % (source, artifact))
@@ -118,10 +123,11 @@ def compile_command(source: Path, backend: str, output_dir: Path) -> None:
 @_source_argument
 @_backend_option
 @_output_option
-def run_command(source: Path, backend: str, output_dir: Path) -> None:
+@_encoding_option
+def run_command(source: Path, backend: str, output_dir: Path, encoding: str) -> None:
     """Compile a BBC BASIC SOURCE file and run it on .NET."""
     try:
-        artifact = _compile(source, output_dir, backend)
+        artifact = _compile(source, output_dir, backend, encoding)
     except OwlBasicError as error:
         _fail(str(error))
     _status("Running %s ..." % artifact)

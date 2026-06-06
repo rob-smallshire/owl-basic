@@ -316,6 +316,12 @@ def DecodeLineNo(lineNo):
 def ReadLines(data):
     """Returns a list of [line number, tokenised line] from a binary
        BBC BASIC format file."""
+    # The decoders operate on a string in which each character is one byte
+    # (the Python 2 str model). On Python 3 a file is read as bytes, where
+    # indexing yields ints; decode to Latin-1 so byte values 0-255 map 1:1 to
+    # characters and the ord()/'\xff'/regex logic works unchanged.
+    if isinstance(data, (bytes, bytearray)):
+        data = data.decode("latin-1")
     decoder = fileType(data)
     lines = decoder.decode()
     return lines
