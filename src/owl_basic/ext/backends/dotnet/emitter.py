@@ -469,16 +469,24 @@ class _MethodEmitter:
         # by block, falling through where the layout allows (cf. the legacy CIL
         # visitor). The condition leaves an OWL boolean (0 / -1) on the stack.
         self.lower_expression(node.condition)
-        if not node.trueClause:
-            # Empty THEN clause (e.g. IF c THEN ELSE ...): the true target is the
-            # fall-through, which we can't yet distinguish from the false target.
-            raise CodeGenerationError("IF with an empty THEN clause")
-        true_statement = node.trueClause[0]
-        false_targets = set(node.outEdges)
-        false_targets.discard(true_statement)
-        if len(false_targets) != 1:
-            raise CodeGenerationError("IF with %d false targets" % len(false_targets))
-        false_statement = next(iter(false_targets))
+        # Identify the true/false successor statements. One clause may be empty
+        # (e.g. IF c THEN ELSE foo); whichever clause is present names its target,
+        # and the remaining out-edge is the other branch.
+        edges = set(node.outEdges)
+        if node.trueClause:
+            true_statement = node.trueClause[0]
+            others = edges - {true_statement}
+            if len(others) != 1:
+                raise CodeGenerationError("IF with %d false targets" % len(others))
+            false_statement = next(iter(others))
+        elif node.falseClause:
+            false_statement = node.falseClause[0]
+            others = edges - {false_statement}
+            if len(others) != 1:
+                raise CodeGenerationError("IF with %d true targets" % len(others))
+            true_statement = next(iter(others))
+        else:
+            raise CodeGenerationError("IF with no clauses")
 
         this_index = self._block_index[id(node.block)]
         true_index = self._block_index[id(true_statement.block)]

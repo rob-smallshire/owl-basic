@@ -233,6 +233,13 @@ def test_string_and_float_variables_compile_and_run(compile_and_run):
 
 
 @requires_dotnet_toolchain
+def test_if_empty_then_compiles_and_runs(compile_and_run):
+    # IF n%=0 THEN ELSE PRINT "nonzero" : the empty THEN branch is the true path.
+    stdout = compile_and_run(analyse_fixture("if_empty_then.bbctxt"))
+    assert stdout.split() == ["nonzero", "done"]
+
+
+@requires_dotnet_toolchain
 def test_conditional_compiles_and_runs(compile_and_run):
     # A%=8 : IF A%>5 THEN PRINT "big" ELSE PRINT "small" : PRINT "done"
     stdout = compile_and_run(analyse_fixture("conditional.bbctxt"))
