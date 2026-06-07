@@ -886,6 +886,10 @@ class _MethodEmitter:
     def _emit_dynamic_restore(self, target):
         # RESTORE <expr>: an inline jump table over the (compile-time-known) DATA
         # lines, since the read index must be set from a runtime line number.
+        # BBC RESTORE points at the first DATA statement *at or after* the given
+        # line, not only an exact match -- so, testing the DATA lines in
+        # ascending order, the first line with target <= line is the target
+        # (this matches the constant path in _resolve_restore).
         self.lower_expression(target)            # line number on the stack
         end = self._new_label("ENDR")
         cases = []
@@ -893,9 +897,9 @@ class _MethodEmitter:
             label = self._new_label("SETR")
             self.emit("dup")
             self.emit("ldc.i4 %d" % line)
-            self.emit("beq %s" % label)
+            self.emit("ble %s" % label)
             cases.append((label, item_index))
-        self.emit("pop")                         # no match: point past the end
+        self.emit("pop")                         # no DATA at or after: past the end
         self.emit("ldc.i4 %d" % (self._data_count - 1))
         self.emit("stsfld int32 %s" % _DATA_INDEX_FIELD)
         self.emit("br %s" % end)

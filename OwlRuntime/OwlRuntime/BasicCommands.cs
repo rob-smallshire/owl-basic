@@ -22,8 +22,17 @@ namespace OwlRuntime
         private const int owlFalse = 0;
         private const string acornDateTimeFormat = "ddd,dd MMM yyyy.HH:mm:ss";
         private const string bb4WDateTimeFormat = "ddd.dd MMM yyyy,HH:mm:ss";
-        private static Random random = new Random();
-        private static double lastRnd1Value;
+        // BBC BASIC's RND is a 33-bit linear-feedback shift register using the
+        // primitive trinomial (33,20,0). This is a clean-room reimplementation of
+        // the behaviour of the BASIC II ROM: a 32-bit value (the seed bytes the
+        // ROM keeps at &0D-&10) plus a one-bit overflow (the 33rd bit, &11 bit 0).
+        // Each RND call advances the register 32 steps; the feedback bit is
+        // bit 19 XOR bit 32. The power-on ("cold") seed is the bytes "ARW", and
+        // because nothing re-seeds it, a program's "random" sequence is identical
+        // on every run from a cold start -- just as on a real machine.
+        private const uint coldRandomSeed = 0x00575241; // 'A','R','W' at &0D,&0E,&0F
+        private static uint randomSeed;
+        private static int randomOverflow;
         private static int time;
         private static int ticksAtTime;
 
@@ -35,6 +44,18 @@ namespace OwlRuntime
 
             ticksAtTime = Environment.TickCount;
             time = ticksAtTime / 10;
+
+            // Start from the BBC cold seed (deterministic, matching a real
+            // machine). OWL_RANDOM_SEED overrides it for testing, exactly as a
+            // RND(-n) reseed would: it sets the 32-bit state and clears overflow.
+            randomSeed = coldRandomSeed;
+            randomOverflow = 0;
+            string seedText = Environment.GetEnvironmentVariable("OWL_RANDOM_SEED");
+            int seedValue;
+            if (!string.IsNullOrEmpty(seedText) && Int32.TryParse(seedText, out seedValue))
+            {
+                randomSeed = (uint) seedValue;
+            }
         }
 
         public class NoSuchChannelException : ApplicationException
@@ -395,31 +416,65 @@ namespace OwlRuntime
             return cki.KeyChar;
         }
 
+        /// <summary>
+        /// Advance the 33-bit LFSR by 32 steps (one RND call). The feedback bit
+        /// is bit 19 XOR bit 32; everything shifts up by one and the feedback
+        /// enters at bit 0.
+        /// </summary>
+        private static void StepRandom()
+        {
+            for (int i = 0; i < 32; i++)
+            {
+                int newBit = (int) ((randomSeed >> 19) & 1u) ^ randomOverflow;
+                randomOverflow = (int) ((randomSeed >> 31) & 1u);
+                randomSeed = (randomSeed << 1) | (uint) newBit;
+            }
+        }
+
+        /// <summary>
+        /// The current state as a real in [0, 1). The ROM copies the seed bytes
+        /// &amp;0D,&amp;0E,&amp;0F,&amp;10 into the floating-point mantissa
+        /// most-significant-first, so the value is the byte-reversed 32-bit seed
+        /// divided by 2^32.
+        /// </summary>
+        private static double RandomFraction()
+        {
+            uint m = (randomSeed << 24)
+                   | ((randomSeed & 0x0000FF00u) << 8)
+                   | ((randomSeed >> 8) & 0x0000FF00u)
+                   | (randomSeed >> 24);
+            return m / 4294967296.0;
+        }
+
         public static double Rnd()
         {
-            return random.Next(Int32.MinValue, Int32.MaxValue);
+            // RND with no argument: a full-range 32-bit signed integer.
+            StepRandom();
+            return (int) randomSeed;
         }
 
         public static double Rnd(int n)
         {
             if (n < 0)
             {
-                // Re-seed RNG with n
-                random = new Random(n);
-                return random.Next();
+                // RND(-n): seed the generator from n and return n.
+                randomSeed = (uint) n;
+                randomOverflow = 0;
+                return n;
             }
             if (n == 0)
             {
-                // Return the same as the previous Rnd(1) call
-                return lastRnd1Value;
+                // RND(0): repeat the last RND(1) -- the current state, no step.
+                return RandomFraction();
             }
+            StepRandom();
             if (n == 1)
             {
-                // Return double between 0.0 and 1.0
-                lastRnd1Value = random.NextDouble();
-                return lastRnd1Value;
+                // RND(1): a real in [0, 1).
+                return RandomFraction();
             }
-            return random.Next(1, n + 1);
+            // RND(n) for n >= 2: an integer in 1..n.
+            return 1 + (int) (RandomFraction() * n);
         }
 
         public static void Vdu(byte b)
