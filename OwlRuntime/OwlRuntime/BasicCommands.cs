@@ -591,6 +591,12 @@ namespace OwlRuntime
         
         public static Queue<object> Input(bool prompt, params Type[] types)
         {
+            if (Environment.GetEnvironmentVariable("OWL_RND_TRACE") != null)
+            {
+                // Diagnostic: the RND state at each input prompt, to diff against
+                // the real machine's seed bytes (&0D-&10 + &11 bit 0).
+                Console.Error.WriteLine("RND {0:X8} {1}", randomSeed, randomOverflow);
+            }
             Queue<string> strings = new Queue<string>();
             do
             {
