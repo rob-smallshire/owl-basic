@@ -214,6 +214,26 @@ def _formal_arguments(define_procedure):
     return [formal.argument for formal in parameters.arguments]
 
 
+def _default_value(il_type):
+    """The CIL instruction loading the BBC default for a type ("" / 0 / 0.0)."""
+    if il_type == "string":
+        return 'ldstr ""'
+    if il_type == "float64":
+        return "ldc.r8 0.0"
+    return "ldc.i4.0"
+
+
+def _collect_locals(blocks):
+    """Return ``[(identifier, owl_type)]`` for LOCAL/PRIVATE vars in a routine."""
+    locals_by_name = {}
+    for block in blocks:
+        for statement in block.statements:
+            if type(statement).__name__ in ("Local", "Private"):
+                for variable in (statement.variables or []):
+                    locals_by_name.setdefault(variable.identifier, variable.actualType)
+    return list(locals_by_name.items())
+
+
 _DEFINITIONS = frozenset({"DefineProcedure", "DefineFunction"})
 
 _LONGJUMP_EXCEPTION = "[OwlRuntime]OwlRuntime.LongJumpException"
@@ -283,17 +303,18 @@ def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
 
     return_type = "void" if is_main else signatures[entry_name][0]
 
-    # A PROC/FN's formal parameters become method arguments (ldarg/starg); every
-    # other variable is a local.
-    formal_args = {}
+    # A PROC/FN's formal parameters are received as method arguments (so the
+    # caller can pass them), then -- like LOCALs -- copied into the global field
+    # of that name for the duration of the routine (BBC dynamic scoping: a called
+    # routine sees the caller's parameter values via the global).
+    formal_params = []   # (identifier, owl_type, arg_index)
     parameters = []
     if not is_main and blocks and type(blocks[0].statements[0]).__name__ in _DEFINITIONS:
         for index, argument in enumerate(_formal_arguments(blocks[0].statements[0])):
-            formal_args[argument.identifier] = index
+            formal_params.append((argument.identifier, argument.actualType, index))
             parameters.append("%s A%d" % (_il_type(argument.actualType), index))
 
     emitter = _MethodEmitter(
-        formal_args=formal_args,
         signatures=signatures,
         globals_registry=globals_registry,
         data_index=data_index,
@@ -302,6 +323,35 @@ def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
         line_mapper=line_mapper,
         data_count=data_count,
     )
+
+    # Both formal parameters and LOCAL/PRIVATE variables are the globals of that
+    # name, saved on entry and restored on every exit (BBC dynamic scoping). A
+    # parameter is then initialised from its incoming argument; a LOCAL to the
+    # default. Set up before lowering so ENDPROC/=expr emit the restores.
+    save_prologue = []
+    param_names = {identifier for identifier, _, _ in formal_params}
+    inits = (
+        [] if is_main else
+        [(identifier, owl_type, ("arg", arg_index))
+         for identifier, owl_type, arg_index in formal_params]
+        + [(identifier, owl_type, ("default", None))
+           for identifier, owl_type in _collect_locals(blocks)
+           if identifier not in param_names]
+    )
+    for identifier, owl_type, (init_kind, init_arg) in inits:
+        field = _global_field_name(identifier)
+        il_type = _il_type(owl_type)
+        globals_registry[field] = il_type
+        save_slot = emitter._local_slot("__save_%s" % field, owl_type)
+        emitter.local_restores.append((field, il_type, save_slot))
+        init_line = _ldarg(init_arg) if init_kind == "arg" else _default_value(il_type)
+        save_prologue += [
+            "ldsfld %s %s" % (il_type, field),     # save the caller's value
+            "stloc V_%d" % save_slot,
+            init_line,                             # arg value, or the default
+            "stsfld %s %s" % (il_type, field),
+        ]
+
     emitter.lower_blocks(blocks)
     emitter.finish()
 
@@ -311,12 +361,12 @@ def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
     if emitter.landed_longjumps:
         emitter.lines = _wrap_longjump_dispatch(emitter, prologue)
     else:
-        if prologue:
-            # Runs before the first block (e.g. building the DATA array in Main).
-            emitter.lines = list(prologue) + emitter.lines
-        # Guarantee a return (END / ENDPROC / =expr already end in ret).
+        startup = list(prologue) if prologue else []
+        # Runs before the first block (DATA array in Main; LOCAL save elsewhere).
+        emitter.lines = startup + save_prologue + emitter.lines
+        # Guarantee a return; a fall-through restores LOCALs first.
         if not emitter.lines or emitter.lines[-1] != "ret":
-            emitter.emit("ret")
+            emitter.lines += emitter._local_restore_lines() + ["ret"]
 
     name = "Main" if is_main else _method_name(entry_name)
     entrypoint = "    .entrypoint\n" if is_main else ""
@@ -416,13 +466,12 @@ def _data_init_lines(items):
 
 
 class _MethodEmitter:
-    def __init__(self, formal_args=None, signatures=None,
+    def __init__(self, signatures=None,
                  globals_registry=None, data_index=None, return_type="void",
                  longjump_targets=frozenset(), line_mapper=None, data_count=0):
         self.lines = []
         self._local_slots = {}   # variable identifier -> local slot index
         self._local_types = []   # CIL type string, indexed by slot
-        self._formal_args = formal_args or {}        # identifier -> arg index
         self._signatures = signatures or {}  # PROC/FN name -> (return_type, [params])
         self._return_type = return_type      # this method's CIL return type
         self._globals = globals_registry if globals_registry is not None else {}
@@ -435,6 +484,7 @@ class _MethodEmitter:
         self._line_mapper = line_mapper
         self.landed_longjumps = set()  # target lines that have an L_<line>: here
         self._input_queue_slot = None  # reused local for the INPUT result queue
+        self.local_restores = []       # (field, il_type, save_slot) for LOCAL vars
 
     def emit(self, text):
         self.lines.append(text)
@@ -478,24 +528,18 @@ class _MethodEmitter:
                 self.lower_statement(statement)
             self._emit_fall_through(block, index)
 
-    def _variable_storage(self, variable):
-        """Classify a variable reference as ('arg'|'local'|'global', locus).
+    def _variable_field(self, variable):
+        """The static field backing a variable reference.
 
-        Formal parameters are method arguments; LOCAL/PRIVATE variables are
-        method locals; everything else is a program-wide global static field
-        (BBC BASIC variables are global by default).
+        Every BBC variable is a global static field. Formal parameters and
+        LOCAL/PRIVATE variables are also that global, saved on entry and restored
+        on exit (dynamic scoping: a called routine sees the caller's value) by
+        the save/restore prologue -- so all references are just the field.
         """
-        identifier = variable.identifier
-        if identifier in self._formal_args:
-            return "arg", self._formal_args[identifier]
-        symbol = self._symbol_table.lookup(identifier) if self._symbol_table else None
-        modifier = getattr(symbol, "modifier", None)
-        if modifier in _METHOD_SCOPED_MODIFIERS:
-            return "local", self._local_slot(identifier, variable.actualType)
-        field = _global_field_name(identifier)
+        field = _global_field_name(variable.identifier)
         if field not in self._globals:
             self._globals[field] = _il_type(variable.actualType)
-        return "global", field
+        return field
 
     def _block_label(self, block):
         return "BB_%d" % self._block_index[id(block)]
@@ -890,13 +934,23 @@ class _MethodEmitter:
         _, params = self._signatures.get(node.name, ("void", []))
         self.emit("call void %s(%s)" % (_method_name(node.name), ", ".join(params)))
 
+    def _local_restore_lines(self):
+        """Restore each LOCAL/PRIVATE global from its saved value (BBC LOCAL)."""
+        lines = []
+        for field, il_type, save_slot in self.local_restores:
+            lines += ["ldloc V_%d" % save_slot, "stsfld %s %s" % (il_type, field)]
+        return lines
+
     def _stmt_ReturnFromProcedure(self, node):
+        self.lines.extend(self._local_restore_lines())
         self.emit("ret")
 
     def _stmt_ReturnFromFunction(self, node):
-        # =expr : push the result, coerced to the method's return type, and ret.
+        # =expr : push the result (computed with LOCALs still in effect), coerce
+        # to the return type, restore LOCALs, then ret.
         self.lower_expression(node.returnValue)
         self._coerce(self._return_type, node.returnValue.actualType)
+        self.lines.extend(self._local_restore_lines())
         self.emit("ret")
 
     def _coerce(self, target_il, value_type):
@@ -961,22 +1015,12 @@ class _MethodEmitter:
         self.emit("ldc.r8 %r" % float(node.value))
 
     def _load_variable(self, variable):
-        kind, locus = self._variable_storage(variable)
-        if kind == "arg":
-            self.emit(_ldarg(locus))
-        elif kind == "local":
-            self.emit("ldloc V_%d" % locus)
-        else:
-            self.emit("ldsfld %s %s" % (self._globals[locus], locus))
+        field = self._variable_field(variable)
+        self.emit("ldsfld %s %s" % (self._globals[field], field))
 
     def _store_variable(self, variable):
-        kind, locus = self._variable_storage(variable)
-        if kind == "arg":
-            self.emit("starg %d" % locus)
-        elif kind == "local":
-            self.emit("stloc V_%d" % locus)
-        else:
-            self.emit("stsfld %s %s" % (self._globals[locus], locus))
+        field = self._variable_field(variable)
+        self.emit("stsfld %s %s" % (self._globals[field], field))
 
     def _expr_Variable(self, node):
         self._load_variable(node)
