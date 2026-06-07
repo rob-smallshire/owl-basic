@@ -1065,7 +1065,10 @@ namespace OwlRuntime
 
         public static int Pos()
         {
-            return vdu.TextCursorX;
+            // The text cursor column is tracked by the print manager (it advances
+            // as characters are written and resets to 0 on a newline); the VDU's
+            // TextCursorX is only meaningful under a full graphical screen mode.
+            return printManager.Count;
         }
 
         public static int VPos()
