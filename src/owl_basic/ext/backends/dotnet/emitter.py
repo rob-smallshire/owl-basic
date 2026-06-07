@@ -1066,10 +1066,12 @@ class _MethodEmitter:
         target = node.actualType
         if isinstance(target, StringOwlType):
             return
-        if isinstance(target, FloatOwlType):
-            self.emit("call float64 [System.Runtime]System.Double::Parse(string)")
-        else:  # integer / byte
-            self.emit("call int32 [System.Runtime]System.Int32::Parse(string)")
+        # READ of a numeric uses BBC's VAL semantics (leading numeric part, 0 if
+        # none) rather than a strict Parse, so empty DATA items (between adjacent
+        # commas) and trailing whitespace yield 0 instead of throwing.
+        self.emit("call float64 %s::Val(string)" % _RUNTIME)
+        if not isinstance(target, FloatOwlType):  # integer / byte
+            self.emit("conv.i4")
 
     # -- string operations --------------------------------------------------
 

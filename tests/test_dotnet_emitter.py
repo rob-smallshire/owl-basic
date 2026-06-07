@@ -297,8 +297,21 @@ def test_emit_il_lowers_data_read_restore(dotnet_backend):
     assert ".field static string[] __data" in il
     assert "newarr [System.Runtime]System.String" in il
     assert "ldelem.ref" in il
-    assert "System.Int32::Parse(string)" in il
+    # Numeric READ uses BBC VAL semantics (empty/garbage -> 0), not a strict Parse.
+    assert "BasicCommands::Val(string)" in il
     assert "stsfld int32 __dataIndex" in il
+
+
+@requires_dotnet_toolchain
+def test_data_empty_items_preserved(compile_and_run):
+    # Empty DATA items between adjacent commas (or a trailing comma) are
+    # significant: N commas yield N+1 items, keeping sequential READ aligned.
+    # "DATA ,,x" -> ["","","x"]; "DATA ,7" -> ["","7"]. A numeric READ of an
+    # empty item yields 0 (BBC VAL semantics), not an error.
+    stdout = compile_and_run(analyse_fixture("data_empty_items.bbctxt"))
+    assert "[][][x]" in stdout
+    lines = [l.strip() for l in stdout.splitlines() if l.strip()]
+    assert lines[-2:] == ["0", "7"]
 
 
 @requires_dotnet_toolchain

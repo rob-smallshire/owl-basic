@@ -1,0 +1,11 @@
+READ a$
+READ b$
+READ c$
+READ n%
+READ m%
+PRINT "["+a$+"]["+b$+"]["+c$+"]"
+PRINT n%
+PRINT m%
+END
+DATA ,,x
+DATA ,7

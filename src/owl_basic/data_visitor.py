@@ -1,5 +1,4 @@
 import logging
-import re
 from owl_basic.visitor import Visitor
 
 class DataVisitor(Visitor):
@@ -27,19 +26,55 @@ class DataVisitor(Visitor):
         self.index = {} # physical 0-based line number -> data[index]
 
     def parse(self, data):
-        "Parse the text following a DATA statement into items"
-        # Break the data into fields
-        raw_items = re.findall(r'(?:\s*"((?:[^"]+|"")*)"(?!")\s*)|([^,]+)', data)
+        """Split the text following a DATA statement into comma-separated items.
+
+        Commas delimit items, so N commas yield N+1 items: empty items between
+        adjacent commas (or a trailing comma) are significant -- READ returns
+        ""/0 for them and they keep sequential READ and RESTORE offsets aligned
+        with the real interpreter. A double-quoted item may contain commas; ""
+        inside quotes is a literal quote, and any characters between the closing
+        quote and the next comma are ignored. Leading whitespace is stripped
+        from unquoted items; trailing whitespace is stripped only from the final
+        item (which runs to the end of the line).
+        """
         items = []
-        for i, (quoted, unquoted) in enumerate(raw_items):
-            if quoted:
-                item = quoted.replace('""', '"')
+        last_was_quoted = False
+        i, n = 0, len(data)
+        while True:
+            # Skip leading spaces to see whether this item is quoted.
+            j = i
+            while j < n and data[j] == ' ':
+                j += 1
+            if j < n and data[j] == '"':
+                j += 1
+                chars = []
+                while j < n:
+                    if data[j] == '"':
+                        if j + 1 < n and data[j + 1] == '"':
+                            chars.append('"')
+                            j += 2
+                            continue
+                        j += 1
+                        break
+                    chars.append(data[j])
+                    j += 1
+                items.append(''.join(chars))
+                last_was_quoted = True
+                # Ignore anything between the closing quote and the next comma.
+                while j < n and data[j] != ',':
+                    j += 1
             else:
-                item = unquoted.lstrip()
-                # If its the last item on the line, strip trailing space
-                if i == len(raw_items) - 1:
-                    item = item.rstrip()
-            items.append(item)
+                k = data.find(',', i)
+                if k == -1:
+                    k = n
+                items.append(data[i:k].lstrip())
+                last_was_quoted = False
+                j = k
+            if j >= n:
+                break
+            i = j + 1  # consume the comma and continue with the next field
+        if items and not last_was_quoted:
+            items[-1] = items[-1].rstrip()
         return items
     
     def visitAstNode(self, node):
