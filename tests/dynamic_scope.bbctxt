@@ -1,0 +1,10 @@
+PROCouter("hello")
+END
+DEFPROCouter(Z$)
+LOCAL I%
+I% = 7
+PROCinner
+ENDPROC
+DEFPROCinner
+PRINT Z$;I%
+ENDPROC

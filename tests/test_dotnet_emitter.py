@@ -461,6 +461,15 @@ def test_local_variable_shadows_global_compiles_and_runs(compile_and_run):
 
 
 @requires_dotnet_toolchain
+def test_dynamic_scoping_local_and_parameter_visible_to_called_routine(compile_and_run):
+    # In BBC BASIC a LOCAL and a formal parameter are dynamically scoped: each is
+    # the global of that name, saved on entry and restored on exit, so a routine
+    # called in between (PROCinner) sees the caller's parameter Z$ ("hello") and
+    # LOCAL I% (7) through those globals. Sphinx's word-wrap printer relies on it.
+    assert "hello7" in compile_and_run(analyse_fixture("dynamic_scope.bbctxt"))
+
+
+@requires_dotnet_toolchain
 def test_byte_indirection_compiles_and_runs(compile_and_run):
     # ptr%?10=65 (dyadic write), ?20=66 (unary write), read back via dyadic.
     stdout = compile_and_run(analyse_fixture("byte_indirection.bbctxt"))
