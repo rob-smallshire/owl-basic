@@ -30,7 +30,10 @@ from owl_basic.analysis import analyse_numbered_lines
 from owl_basic.bbc_basic.detokenizer import detokenize_lines
 
 _SPHINX = os.path.join(FIXTURES_DIRPATH, "data", "sphinx2-deprotected.bbc")
-_SOLUTION = os.path.join(FIXTURES_DIRPATH, "data", "sphinx_solution.txt")
+# The authoritative Paul Sanderson / Impact Games Club route (transcribed from
+# sphinx_solution.jpeg); the most complete one, scoring the full 800. See
+# tests/data/SPHINX_ADVENTURE.md.
+_SOLUTION = os.path.join(FIXTURES_DIRPATH, "data", "sphinx_solution4.txt")
 
 # A seed for which this driver solves the whole game (the random encounters fall
 # where the sword/axe and lamp handling can deal with them).
