@@ -598,7 +598,15 @@ namespace OwlRuntime
                 {
                     printManager.Print('?');
                 }
-                string line = Console.ReadLine() ?? "";   // EOF -> empty input, don't crash
+                string line = Console.ReadLine();
+                if (line == null)
+                {
+                    // Genuine end of input on a redirected/headless run (an empty
+                    // line is "", not null). There is nothing more to read, so end
+                    // the program rather than spin returning empty input forever.
+                    Console.Out.Flush();
+                    Environment.Exit(0);
+                }
                 foreach (string field in line.Split(','))
                 {
                     strings.Enqueue(field);

@@ -521,7 +521,10 @@ namespace OwlRuntime.platform.riscos
 
         private void DeleteCharacter()
         {
-            throw new NotImplementedException();
+            // VDU 127: move the text cursor back one place and delete the
+            // character there. (Graphics modes leave this as a no-op.)
+            TextCursorX -= textCursor.MovementX;
+            screenMode.DeleteCharacterAtText();
         }
 
         private void DisplayCharacter(byte code)

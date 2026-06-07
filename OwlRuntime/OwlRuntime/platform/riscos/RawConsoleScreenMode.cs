@@ -32,6 +32,15 @@ namespace OwlRuntime.platform.riscos
             Console.Out.Write(c);
         }
 
+        public override void DeleteCharacterAtText()
+        {
+            // Destructive backspace on a host terminal: step back, overwrite the
+            // character with a space, and step back again.
+            Console.Out.Write('\b');
+            Console.Out.Write(' ');
+            Console.Out.Write('\b');
+        }
+
         public override void NewLine()
         {
             // The base implementation enqueues VDU 10/13, which the VDU system

@@ -314,6 +314,16 @@ namespace OwlRuntime.platform.riscos
 
         public abstract void PrintCharAtGraphics(char c);
         public abstract void PrintCharAtText(char c);
+
+        /// <summary>
+        /// Destructively delete the character to the left of the text cursor
+        /// (VDU 127). The default does nothing; text modes that drive a host
+        /// terminal override it.
+        /// </summary>
+        public virtual void DeleteCharacterAtText()
+        {
+            // Do nothing by default.
+        }
         public abstract void ScrollTextArea(int left, int bottom, int right, int top, Direction direction, ScrollMovement movement);
 
         public virtual void NewLine()
