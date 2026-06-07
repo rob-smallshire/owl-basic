@@ -13,6 +13,9 @@ playthrough test (`tests/test_sphinx_playthrough.py`) and the driver
 | `sphinx_solution.txt` | solutionarchive.com id 20885 | The route used by the playthrough test. Comma/newline separated. |
 | `sphinx_solution2.txt` | solutionarchive.com id 712 | Faithful re-transcription (see "Interpretation" below). |
 | `sphinx_solution3.txt` | hand transcription of id 712 | One command per line; expands the `(AXE)` note to `TAKE AXE`. |
+| `sphinx_solution4.txt` | `sphinx_solution.jpeg` | **Authoritative original**: the Impact Games Club sheet by Paul Sanderson ("instructions to type in are in capitals"), faithfully transcribed. The most complete route — its fuller staging drops deliver every treasure, scoring the full **800/800** (seeds 1 and 4). The online versions appear to be imperfect copies of this. No `(AXE)` note. |
+
+The scanned original is kept at `sphinx_solution.jpeg`.
 
 All three are the *treasure route* — the sequence of commands that collects and
 delivers the treasure. They are **not** complete input scripts: they omit the
