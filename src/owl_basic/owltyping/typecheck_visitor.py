@@ -4,6 +4,7 @@ import logging
 
 from owl_basic.visitor import Visitor
 from owl_basic.errors import *
+from owl_basic.exceptions import CompileError
 from owl_basic.utility import underscoresToCamelCase
 from owl_basic.syntax.ast import Cast, Concatenate, LiteralInteger
 from owl_basic.ast_utils import elideNode
@@ -13,6 +14,20 @@ from owl_basic.owltyping.type_system import (NumericOwlType, ObjectOwlType, Inte
 
 _INT32_MIN = -2147483648
 _INT32_MAX = 2147483647
+_INT64_MIN = -(2 ** 63)
+_INT64_MAX = 2 ** 63 - 1
+
+
+def _integer_range(owl_type):
+    '''The (min, max) range of an integer storage type, or None if the type is
+    not a fixed-width integer (so no range check applies).'''
+    if isinstance(owl_type, ByteOwlType):
+        return (0, 255)
+    if isinstance(owl_type, LongIntegerOwlType):
+        return (_INT64_MIN, _INT64_MAX)
+    if isinstance(owl_type, IntegerOwlType):   # ChannelOwlType is an int32 too
+        return (_INT32_MIN, _INT32_MAX)
+    return None
 
 # Integer arithmetic that is safe to fold at compile time. DIV/MOD are left to
 # the runtime so their truncate-toward-zero sign behaviour is defined in exactly
@@ -563,6 +578,7 @@ class TypecheckVisitor(Visitor):
         '''
         assert target_type is not None
         if r_value is not None: # TODO Could this be an assert?
+            self._checkConstantInRange(r_value, target_type)
             if r_value.actualType.isConvertibleTo(target_type):
                 if r_value.actualType is not target_type:
                     self.insertCast(r_value, r_value.actualType, target_type)
@@ -570,6 +586,24 @@ class TypecheckVisitor(Visitor):
                 message = "Cannot assign %s to %s" % (r_value.actualType.__doc__, target_type.__doc__)
                 self.typeMismatch(r_value, message)
                 
+    def _checkConstantInRange(self, r_value, target_type):
+        '''
+        A constant (an integer literal, possibly the result of folding) stored
+        into a narrower integer variable is an error the compiler can prove now,
+        rather than truncating silently: A% = 100000*80500 is rejected at
+        compile time. Dynamic (non-constant) narrowing is checked at runtime.
+        '''
+        if not isinstance(r_value, LiteralInteger):
+            return
+        bounds = _integer_range(target_type)
+        if bounds is None:
+            return
+        low, high = bounds
+        if not (low <= r_value.value <= high):
+            raise CompileError(
+                "constant %d is out of range for %s at line %s"
+                % (r_value.value, target_type.__doc__, r_value.lineNum))
+
     def typeError(self, node, message):
         message = "%s at line %d" % (message, node.lineNum)
         internal(message)

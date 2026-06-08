@@ -9,9 +9,12 @@ The first group are guard rails: constant subexpressions in array indices, FOR
 bounds, DIV/MOD etc. must keep working exactly as before folding. The second
 group is the new folding behaviour.
 """
+import pytest
+
 from conftest import requires_dotnet_toolchain
 
 from owl_basic.analysis import analyse
+from owl_basic.exceptions import CompileError
 
 
 # --- guard rails: behaviour that must be preserved ------------------------
@@ -75,3 +78,27 @@ def test_emit_il_folds_constant_product(dotnet_backend):
     # The multiply is folded away to a single wide literal; no `mul` remains.
     il = dotnet_backend.emit_il(analyse("PRINT 100000 * 80500\nEND\n", name="cf_il"))
     assert "ldc.i8 8050000000" in il
+
+
+# --- compile-time diagnosis of constant overflow into a narrow variable ---
+
+def test_constant_overflow_into_int_var_is_compile_error():
+    # A% is 32-bit: storing a constant that the fold proves is out of range
+    # is rejected at compile time, not silently truncated.
+    with pytest.raises(CompileError):
+        analyse("A% = 100000 * 80500\nEND\n", name="cf_of_int")
+
+
+def test_constant_overflow_into_byte_var_is_compile_error():
+    with pytest.raises(CompileError):
+        analyse("A& = 300\nEND\n", name="cf_of_byte")
+
+
+def test_in_range_constant_into_int_var_is_fine():
+    # A value that fits is accepted (no exception).
+    analyse("A% = 2000000000\nEND\n", name="cf_ok")
+
+
+def test_wide_constant_into_long_var_is_fine():
+    # The same overflowing constant is fine in a 64-bit %% variable.
+    analyse("A%% = 100000 * 80500\nEND\n", name="cf_ok_long")
