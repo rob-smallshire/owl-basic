@@ -316,11 +316,6 @@ def p_def_fn_stmt(p):
     assert end_pos is not None
     p[0].endPos = end_pos
     
-def p_end_fn_stmt(p):
-    '''end_fn_stmt : EQ expr %prec UEQUAL'''
-    p[0] = ReturnFromFunction(returnValue = p[2])
-    p[0].lineNum = p.lineno(1) - 1
-    
 def p_def_proc_stmt(p):
     '''def_proc_stmt : DEF PROC_ID statement
                      | DEF PROC_ID LPAREN formal_arg_list RPAREN statement'''
@@ -1317,6 +1312,17 @@ def p_expr(p):
             p[0] = Eor(lhs = p[1], rhs = p[3])
         p[0].lineNum = p.lineno(2) - 1
     p[0].isLValue = False
+
+def p_end_fn_stmt(p):
+    # =expr is a function return. It is defined AFTER p_expr so that, in the
+    # reduce/reduce on `IF a=b` (where `a=b` could be the equality `expr EQ expr`
+    # or `a` + the return `EQ expr`), PLY -- which breaks reduce/reduce ties by
+    # earliest rule -- picks the equality, matching real BBC BASIC (IF 1=1:... is
+    # the condition 1=1). A bare =expr (no left operand, e.g. after a colon) has
+    # no such conflict and is still a return.
+    '''end_fn_stmt : EQ expr %prec UEQUAL'''
+    p[0] = ReturnFromFunction(returnValue = p[2])
+    p[0].lineNum = p.lineno(1) - 1
 
 def p_dyadic_indirection(p):
     """dyadic_indirection : variable QUERY factor
