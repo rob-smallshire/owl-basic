@@ -16,6 +16,7 @@ import re
 from owl_basic.exceptions import OwlBasicError
 from owl_basic.owltyping.type_system import (
     AddressOwlType,
+    ArrayOwlType,
     ByteOwlType,
     FloatOwlType,
     IntegerOwlType,
@@ -127,6 +128,11 @@ _STELEM = {"int32": "stelem.i4", "float64": "stelem.r8", "string": "stelem.ref"}
 
 
 def _il_type(owl_type):
+    if isinstance(owl_type, ArrayOwlType):
+        element = owl_type.elementType()
+        element_il = _il_type(element) if element is not None else "int32"
+        rank = owl_type.arrayRank() or 1     # rank is often unspecified -> 1-D
+        return element_il + "[" + "," * (rank - 1) + "]"
     for cls, il in _IL_TYPES:
         if isinstance(owl_type, cls):
             return il
@@ -143,6 +149,15 @@ def _global_field_name(identifier):
     prefix = _SIGIL_PREFIX.get(identifier[-1:], "f_")
     stem = identifier[:-1] if identifier[-1:] in _SIGIL_PREFIX else identifier
     return prefix + _NON_IDENT.sub("_", stem)
+
+
+def _field_name(identifier):
+    """The static-field name for any variable reference. An array identifier
+    ends in ``(`` (e.g. ``A%(``); its field gets an ``arr_`` prefix so the array
+    ``A%()`` is distinct from the scalar ``A%``."""
+    if identifier.endswith("("):
+        return "arr_" + _global_field_name(identifier[:-1])
+    return _global_field_name(identifier)
 
 
 _MAIN_ENTRY = "__owl__main"
@@ -222,6 +237,8 @@ def _formal_arguments(define_procedure):
 
 def _default_value(il_type):
     """The CIL instruction loading the BBC default for a type ("" / 0 / 0.0)."""
+    if il_type.endswith("]"):
+        return "ldnull"            # an array reference defaults to null
     if il_type == "string":
         return 'ldstr ""'
     if il_type == "float64":
@@ -350,7 +367,7 @@ def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
            if identifier not in param_names]
     )
     for identifier, owl_type, (init_kind, init_arg) in inits:
-        field = _global_field_name(identifier)
+        field = _field_name(identifier)
         il_type = _il_type(owl_type)
         globals_registry[field] = il_type
         save_slot = emitter._local_slot("__save_%s" % field, owl_type)
@@ -489,6 +506,7 @@ class _MethodEmitter:
         self._symbol_table = None  # the symbol table of the statement being lowered
         self._for_loops = {}       # id(ForToStep) -> loop state, shared with NEXT
         self._label_seq = 0        # for unique intra-method labels
+        self._elementwise_index = None  # local slot when lowering a whole-array op
         self._data_index = data_index or {}  # DATA line number -> data array index
         self._data_count = data_count        # total DATA items (for RESTORE past end)
         self._longjump_targets = longjump_targets  # logical lines LONGJUMPs target
@@ -1115,6 +1133,70 @@ class _MethodEmitter:
         self.emit("add")                 # DIM b n -> n+1 bytes (b?0 .. b?n)
         self.emit("call int32 [OwlRuntime]OwlRuntime.MemoryMap::Allocate(int32)")
         self._store_variable(node.identifier)
+
+    def _array_rank(self, node):
+        """The rank of a whole-array reference -- from its type if known, else
+        1 (array params/actuals usually leave rank unspecified)."""
+        owl_type = getattr(node, "actualType", None)
+        if isinstance(owl_type, ArrayOwlType) and owl_type.arrayRank():
+            return owl_type.arrayRank()
+        return 1
+
+    def _expr_Array(self, node):
+        """A whole-array reference. Inside a whole-array assignment it means the
+        i-th element of that array (B%() -> B%[i]); elsewhere (a PROC/FN actual)
+        it pushes the array reference itself."""
+        if self._elementwise_index is not None:
+            field, array_il, element_il = self._array_field(node.identifier, 1)
+            self.emit("ldsfld %s %s" % (array_il, field))
+            self.emit("ldloc V_%d" % self._elementwise_index)
+            self.emit(_LDELEM[element_il])
+            return
+        field, array_il, _element = self._array_field(node.identifier,
+                                                       self._array_rank(node))
+        self.emit("ldsfld %s %s" % (array_il, field))
+
+    def _stmt_ArrayAssignment(self, node):
+        """Whole-array assignment A() = <expr> (BASIC V): assign every element.
+
+        Lowered as a loop over the target's elements; the right-hand side is
+        evaluated element-wise, so a scalar fills (A() = 0), a whole array copies
+        (A() = B()), and a mix is applied per element (A() = B() + C()). One
+        dimension for now; the RHS is a single expression."""
+        target = node.lValue
+        rvalues = node.rValue
+        if len(rvalues) != 1:
+            raise CodeGenerationError(
+                "array initialiser lists (A() = a, b, ...) are not supported yet")
+        field, array_il, element_il = self._array_field(target.identifier, 1)
+        if array_il.endswith(",]") or "," in array_il:
+            raise CodeGenerationError(
+                "whole-array operations on multidimensional arrays are not "
+                "supported yet")
+        rhs = rvalues[0]
+        index = self._local_slot("__wa_index", IntegerOwlType())
+        top = self._new_label("wa_top")
+        end = self._new_label("wa_end")
+        self.emit("ldc.i4.0")
+        self.emit("stloc V_%d" % index)
+        self.emit("%s:" % top)
+        self.emit("ldloc V_%d" % index)                 # i >= length -> done
+        self.emit("ldsfld %s %s" % (array_il, field))
+        self.emit("ldlen")
+        self.emit("conv.i4")
+        self.emit("bge %s" % end)
+        self.emit("ldsfld %s %s" % (array_il, field))   # target[i] = <rhs(i)>
+        self.emit("ldloc V_%d" % index)
+        self._elementwise_index = index
+        self.lower_expression(rhs)
+        self._elementwise_index = None
+        self.emit(_STELEM[element_il])
+        self.emit("ldloc V_%d" % index)                 # i = i + 1
+        self.emit("ldc.i4.1")
+        self.emit("add")
+        self.emit("stloc V_%d" % index)
+        self.emit("br %s" % top)
+        self.emit("%s:" % end)
 
     def _expr_Indexer(self, node):
         """A(i[,j...]) as an r-value: load the element."""

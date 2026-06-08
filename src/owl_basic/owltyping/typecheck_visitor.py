@@ -52,10 +52,16 @@ class TypecheckVisitor(Visitor):
         self.visit(assignment.lValue)
         self.visit(assignment.rValue)
         if isinstance(assignment.rValue, list):
-            # Deal with L-values which are lists
-            if assignment.lValue.actualType.isA(ArrayOwlType):
+            # A whole-array assignment: A() = <expr-list>. Scalar operands are
+            # cast to the element type (fill/init); a whole-array operand (e.g.
+            # the B() of A() = B()) is left alone -- it is applied element-wise.
+            if assignment.lValue.actualType.isArray():
+                element_type = assignment.lValue.actualType.elementType()
                 for item in assignment.rValue:
-                    self.checkAndInsertRValueCast(item, assignment.lValue.actualType._getElementType())
+                    item_type = getattr(item, "actualType", None)
+                    if item_type is not None and item_type.isArray():
+                        continue
+                    self.checkAndInsertRValueCast(item, element_type)
             else:
                 message = "List is only assignable to an array"
                 self.typeMismatch(assignment, message)

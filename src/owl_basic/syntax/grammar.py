@@ -701,9 +701,26 @@ def p_decrement(p):
 
 # LOCAL statement
 def p_local_stmt(p):
-    '''local_stmt : LOCAL variable_list'''
+    '''local_stmt : LOCAL local_var_list'''
     p[0] = Local(variables = p[2])
     p[0].lineNum = p.lineno(1) - 1
+
+def p_local_var_list(p):
+    '''local_var_list : local_var
+                      | local_var_list COMMA local_var'''
+    if len(p) == 2:
+        p[0] = VariableList()
+        p[0].append(p[1])
+    else:
+        p[0] = p[1]
+        p[0].append(p[3])
+
+def p_local_var(p):
+    # A LOCAL/PRIVATE item is a scalar (variable) or a whole array (array),
+    # e.g. LOCAL i%, a%() -- the array is dynamic-scoped like a scalar.
+    '''local_var : variable
+                 | array'''
+    p[0] = p[1]
 
 # MANDEL statement
 def p_mandel_stmt(p):
@@ -871,7 +888,7 @@ def p_format_manipulator(p):
 
 # PRIVATE statement
 def p_private_stmt(p):
-    '''private_stmt : PRIVATE variable_list'''
+    '''private_stmt : PRIVATE local_var_list'''
     p[0] = Private(variables = p[2])
     p[0].lineNum = p.lineno(1) - 1
     

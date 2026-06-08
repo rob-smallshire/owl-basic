@@ -108,3 +108,66 @@ def test_two_byte_blocks_do_not_overlap(compile_and_run):
         "DIM p% 10\nDIM q% 10\np%?0 = 1\nq%?0 = 2\nPRINT p%?0\nPRINT q%?0\nEND\n",
         name="two"))
     assert out.splitlines() == ["1", "2"]     # writing q didn't clobber p
+
+
+# --- arrays as PROC/FN parameters (1-D; passed by reference) ------------------
+
+@requires_dotnet_toolchain
+def test_array_passed_to_procedure(compile_and_run):
+    out = compile_and_run(analyse(
+        "DIM B%(3)\nB%(1) = 42\nPROCt(B%())\nEND\n"
+        "DEF PROCt(a%())\nPRINT a%(1)\nENDPROC\n", name="aparam"))
+    assert out.splitlines() == ["42"]
+
+
+@requires_dotnet_toolchain
+def test_array_parameter_is_by_reference(compile_and_run):
+    # BBC passes arrays by reference: an element written in the PROC persists.
+    out = compile_and_run(analyse(
+        "DIM B%(3)\nB%(1) = 1\nPROCinc(B%())\nPRINT B%(1)\nEND\n"
+        "DEF PROCinc(a%())\na%(1) = a%(1) + 10\nENDPROC\n", name="aref"))
+    assert out.splitlines() == ["11"]
+
+
+# --- LOCAL arrays (dynamic-scoped: DIM a fresh one, restore on exit) ----------
+
+@requires_dotnet_toolchain
+def test_local_array(compile_and_run):
+    out = compile_and_run(analyse(
+        "PROCt\nEND\n"
+        "DEF PROCt\nLOCAL a%()\nDIM a%(3)\na%(2) = 7\nPRINT a%(2)\nENDPROC\n",
+        name="larr"))
+    assert out.splitlines() == ["7"]
+
+
+@requires_dotnet_toolchain
+def test_local_array_shadows_then_restores_global(compile_and_run):
+    # A global a%() is hidden by the PROC's LOCAL a%() and restored on exit.
+    out = compile_and_run(analyse(
+        "DIM a%(3)\na%(0) = 99\nPROCt\nPRINT a%(0)\nEND\n"
+        "DEF PROCt\nLOCAL a%()\nDIM a%(2)\na%(0) = 1\nENDPROC\n", name="lshadow"))
+    assert out.splitlines() == ["99"]
+
+
+# --- whole-array operations (BASIC V; 1-D) -----------------------------------
+
+@requires_dotnet_toolchain
+def test_whole_array_fill(compile_and_run):
+    out = compile_and_run(analyse(
+        "DIM A%(3)\nA%() = 7\nPRINT A%(0)\nPRINT A%(3)\nEND\n", name="wfill"))
+    assert out.splitlines() == ["7", "7"]
+
+
+@requires_dotnet_toolchain
+def test_whole_array_copy(compile_and_run):
+    out = compile_and_run(analyse(
+        "DIM A%(3)\nDIM B%(3)\nB%(2) = 5\nA%() = B%()\nPRINT A%(2)\nEND\n", name="wcopy"))
+    assert out.splitlines() == ["5"]
+
+
+@requires_dotnet_toolchain
+def test_whole_array_elementwise_arithmetic(compile_and_run):
+    out = compile_and_run(analyse(
+        "DIM A%(3)\nDIM B%(3)\nB%(1) = 10\nA%() = B%() + 1\n"
+        "PRINT A%(1)\nPRINT A%(0)\nEND\n", name="wew"))
+    assert out.splitlines() == ["11", "1"]   # B(1)=10 -> 11; B(0)=0 -> 1
