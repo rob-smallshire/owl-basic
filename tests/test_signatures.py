@@ -128,3 +128,16 @@ def test_emitter_runtime_signatures_match_the_dll(dotnet_backend):
         except KeyError:
             unmatched.append("%s::%s(%s)" % (class_name, method, params))
     assert not unmatched, "emitter signatures absent from the DLL: %s" % unmatched
+
+
+def test_committed_manifest_loads_and_has_the_emitted_methods():
+    """The committed manifest (what the emitter loads at compile time) is valid
+    and resolves the runtime calls the emitter makes."""
+    from owl_basic.ext.backends.dotnet.signatures import MANIFEST_FILEPATH
+    manifest = SignatureManifest.load(MANIFEST_FILEPATH)
+    assert manifest.call("BasicCommands", "NewLine") == (
+        "call void [OwlRuntime]OwlRuntime.BasicCommands::NewLine()")
+    assert manifest.call("BasicCommands", "Print", ["int32"]).startswith("call void")
+    assert manifest.call("BasicCommands", "LeftStr", ["string", "int32"]).startswith(
+        "call string")
+    assert manifest.call("MemoryMap", "Allocate", ["int32"]).endswith("Allocate(int32)")

@@ -24,6 +24,10 @@ from owl_basic.owltyping.type_system import (
 )
 from owl_basic.symbol_tables import SymbolInfo
 from owl_basic.sigil import identifierToType
+from owl_basic.ext.backends.dotnet.signatures import (
+    MANIFEST_FILEPATH,
+    SignatureManifest,
+)
 
 # Symbol modifiers that mean the variable is stored in a method (not globally).
 _METHOD_SCOPED_MODIFIERS = frozenset(
@@ -31,13 +35,19 @@ _METHOD_SCOPED_MODIFIERS = frozenset(
      SymbolInfo.modifier_local, SymbolInfo.modifier_private}
 )
 
-# A curated slice of the OwlRuntime "signature manifest": the textual CIL
-# signatures of the BasicCommands methods we call. This will be generated from
-# OwlRuntime.dll (via monodis / reflection) rather than hand-listed; for now the
-# handful we emit are spelled out. See BasicCommands in the OwlRuntime project.
-_RUNTIME = "[OwlRuntime]OwlRuntime.BasicCommands"
+# OwlRuntime call signatures come from the committed manifest, generated from the
+# built assembly (see signatures.py) -- so the emitter no longer hand-writes a
+# runtime method's CIL signature, and a drift from the DLL is caught by a test.
+_MANIFEST = SignatureManifest.load(MANIFEST_FILEPATH)
 
-_PRINT_NEWLINE = "call void {0}::NewLine()".format(_RUNTIME)
+
+def _runtime(method, *arg_types, cls="BasicCommands"):
+    """The CIL ``call`` for an OwlRuntime method, with the overload chosen by
+    *arg_types* (the CIL types of the pushed arguments)."""
+    return _MANIFEST.call(cls, method, list(arg_types))
+
+
+_PRINT_NEWLINE = _runtime("NewLine")
 
 _MATH = "[System.Runtime]System.Math"
 
@@ -56,7 +66,7 @@ _CLR_TYPE_TOKEN = {
 }
 
 # OwlRuntime models BBC BASIC's address space as a byte array for ? indirection.
-_MEMORY_ARRAY = "call uint8[] [OwlRuntime]OwlRuntime.MemoryMap::get_Memory()"
+_MEMORY_ARRAY = _runtime("get_Memory", cls="MemoryMap")
 
 _BYTE_INDIRECTIONS = frozenset({"UnaryByteIndirection", "DyadicByteIndirection"})
 
@@ -277,7 +287,7 @@ def _emit_reset_method(globals_registry, has_data):
         lines.append("stsfld %s %s" % (il_type, name))
     # RUN clears variables; also release any DIM byte blocks so re-running DIM
     # re-allocates from the start of the heap rather than leaking it.
-    lines.append("call void [OwlRuntime]OwlRuntime.MemoryMap::ResetHeap()")
+    lines.append(_runtime("ResetHeap", cls="MemoryMap"))
     if has_data:
         lines += ["ldc.i4.m1", "stsfld int32 %s" % _DATA_INDEX_FIELD]
     lines.append("ret")
@@ -626,9 +636,9 @@ class _MethodEmitter:
         if manipulator == "'":
             self.emit(_PRINT_NEWLINE)            # force a newline
         elif manipulator == "~":
-            self.emit("call void {0}::HexFormat()".format(_RUNTIME))
+            self.emit(_runtime("HexFormat"))
         elif manipulator == ",":
-            self.emit("call void {0}::CompleteField()".format(_RUNTIME))
+            self.emit(_runtime("CompleteField"))
         elif manipulator == ";":
             pass  # a separator; trailing ';' suppresses the newline (above)
         else:
@@ -648,7 +658,7 @@ class _MethodEmitter:
         if name == "LomemValue":
             # LOMEM = v : the runtime models the BBC memory boundary as a property.
             self.lower_expression(node.rValue)
-            self.emit("call void %s::set_Lomem(int32)" % _RUNTIME)
+            self.emit(_runtime("set_Lomem", "int32"))
             return
         if name == "Indexer":
             # A(i) = v : store into an array element.
@@ -895,7 +905,7 @@ class _MethodEmitter:
         if node.number is None:
             raise CodeGenerationError("extended MODE syntax not yet supported")
         self.lower_expression(node.number)
-        self.emit("call void %s::Mode(int32)" % _RUNTIME)
+        self.emit(_runtime("Mode", "int32"))
 
     def _stmt_Data(self, node):
         # DATA is compiled to a static array (built in Main); no inline code.
@@ -1131,7 +1141,7 @@ class _MethodEmitter:
             self.emit("conv.i4")
         self.emit("ldc.i4.1")
         self.emit("add")                 # DIM b n -> n+1 bytes (b?0 .. b?n)
-        self.emit("call int32 [OwlRuntime]OwlRuntime.MemoryMap::Allocate(int32)")
+        self.emit(_runtime("Allocate", "int32", cls="MemoryMap"))
         self._store_variable(node.identifier)
 
     def _array_rank(self, node):
@@ -1280,7 +1290,7 @@ class _MethodEmitter:
         # READ of a numeric uses BBC's VAL semantics (leading numeric part, 0 if
         # none) rather than a strict Parse, so empty DATA items (between adjacent
         # commas) and trailing whitespace yield 0 instead of throwing.
-        self.emit("call float64 %s::Val(string)" % _RUNTIME)
+        self.emit(_runtime("Val", "string"))
         if not isinstance(target, FloatOwlType):  # integer / byte
             self.emit("conv.i4")
 
@@ -1297,51 +1307,49 @@ class _MethodEmitter:
 
     def _expr_AscFunc(self, node):
         self.lower_expression(node.factor)
-        self.emit("call int32 {0}::Asc(string)".format(_RUNTIME))
+        self.emit(_runtime("Asc", "string"))
 
     def _expr_ValFunc(self, node):
         self.lower_expression(node.factor)
-        self.emit("call float64 {0}::Val(string)".format(_RUNTIME))
+        self.emit(_runtime("Val", "string"))
 
     def _expr_ChrStrFunc(self, node):
         self.lower_expression(node.factor)
-        self.emit("call string {0}::Chr(int32)".format(_RUNTIME))
+        self.emit(_runtime("Chr", "int32"))
 
     def _expr_InstrFunc(self, node):
         self.lower_expression(node.source)
         self.lower_expression(node.subString)
         if node.startPosition is not None:
             self.lower_expression(node.startPosition)
-            self.emit("call int32 {0}::InstrAt(string, string, int32)".format(_RUNTIME))
+            self.emit(_runtime("InstrAt", "string", "string", "int32"))
         else:
-            self.emit("call int32 {0}::Instr(string, string)".format(_RUNTIME))
+            self.emit(_runtime("Instr", "string", "string"))
 
     def _expr_LeftStrFunc(self, node):
         self.lower_expression(node.source)
         if node.length is not None:
             self.lower_expression(node.length)
-            self.emit("call string {0}::LeftStr(string, int32)".format(_RUNTIME))
+            self.emit(_runtime("LeftStr", "string", "int32"))
         else:
-            self.emit("call string {0}::LeftStr(string)".format(_RUNTIME))
+            self.emit(_runtime("LeftStr", "string"))
 
     def _expr_RightStrFunc(self, node):
         self.lower_expression(node.source)
         if node.length is not None:
             self.lower_expression(node.length)
-            self.emit("call string {0}::RightStr(string, int32)".format(_RUNTIME))
+            self.emit(_runtime("RightStr", "string", "int32"))
         else:
-            self.emit("call string {0}::RightStr(string)".format(_RUNTIME))
+            self.emit(_runtime("RightStr", "string"))
 
     def _expr_MidStrFunc(self, node):
         self.lower_expression(node.source)
         self.lower_expression(node.position)
         if node.length is not None:
             self.lower_expression(node.length)
-            self.emit(
-                "call string {0}::MidStr(string, int32, int32)".format(_RUNTIME)
-            )
+            self.emit(_runtime("MidStr", "string", "int32", "int32"))
         else:
-            self.emit("call string {0}::MidStr(string, int32)".format(_RUNTIME))
+            self.emit(_runtime("MidStr", "string", "int32"))
 
     # -- simple numeric / boolean functions ---------------------------------
 
@@ -1367,27 +1375,27 @@ class _MethodEmitter:
 
     def _expr_SqrFunc(self, node):
         self.lower_expression(node.factor)
-        self.emit("call float64 {0}::Sqr(float64)".format(_RUNTIME))
+        self.emit(_runtime("Sqr", "float64"))
 
     def _expr_RndFunc(self, node):
         if node.option is not None:
             self.lower_expression(node.option)
-            self.emit("call float64 {0}::Rnd(int32)".format(_RUNTIME))
+            self.emit(_runtime("Rnd", "int32"))
         else:
-            self.emit("call float64 {0}::Rnd()".format(_RUNTIME))
+            self.emit(_runtime("Rnd"))
 
     def _expr_PosFunc(self, node):
-        self.emit("call int32 {0}::Pos()".format(_RUNTIME))
+        self.emit(_runtime("Pos"))
 
     def _expr_VposFunc(self, node):
-        self.emit("call int32 {0}::VPos()".format(_RUNTIME))
+        self.emit(_runtime("VPos"))
 
     def _expr_LomemValue(self, node):
-        self.emit("call int32 %s::get_Lomem()" % _RUNTIME)
+        self.emit(_runtime("get_Lomem"))
 
     def _expr_GetFunc(self, node):
         # GET: read one keypress, returning its code.
-        self.emit("call int32 %s::Get()" % _RUNTIME)
+        self.emit(_runtime("Get"))
 
     def _expr_IntFunc(self, node):
         # INT: floor to an integer (the factor is a real after type checking).
@@ -1430,7 +1438,7 @@ class _MethodEmitter:
         else:
             # Fall back to the static node shape when the type is unresolved.
             arg = _arg_from_node(item)
-        return "call void {0}::Print({1})".format(_RUNTIME, arg)
+        return _runtime("Print", arg)
 
 
 def _arg_from_node(node):

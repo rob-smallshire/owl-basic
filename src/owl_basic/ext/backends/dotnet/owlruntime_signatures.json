@@ -1,0 +1,684 @@
+{
+  "BasicCommands::Add": [
+    [
+      "float64",
+      [
+        "object",
+        "int32"
+      ]
+    ],
+    [
+      "float64",
+      [
+        "object",
+        "float64"
+      ]
+    ],
+    [
+      "object",
+      [
+        "object",
+        "object"
+      ]
+    ]
+  ],
+  "BasicCommands::Asc": [
+    [
+      "int32",
+      [
+        "string"
+      ]
+    ]
+  ],
+  "BasicCommands::Bget": [
+    [
+      "int32",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::Bput": [
+    [
+      "void",
+      [
+        "int32",
+        "uint8"
+      ]
+    ]
+  ],
+  "BasicCommands::Chr": [
+    [
+      "string",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::Close": [
+    [
+      "void",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::Cls": [
+    [
+      "void",
+      []
+    ]
+  ],
+  "BasicCommands::Colour": [
+    [
+      "void",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::CompleteField": [
+    [
+      "void",
+      []
+    ]
+  ],
+  "BasicCommands::Concatenate": [
+    [
+      "string",
+      [
+        "object",
+        "string"
+      ]
+    ]
+  ],
+  "BasicCommands::DecFormat": [
+    [
+      "void",
+      []
+    ]
+  ],
+  "BasicCommands::DisableRightJustifyNumerics": [
+    [
+      "void",
+      []
+    ]
+  ],
+  "BasicCommands::Equal": [
+    [
+      "int32",
+      [
+        "object",
+        "object"
+      ]
+    ],
+    [
+      "int32",
+      [
+        "object",
+        "int32"
+      ]
+    ],
+    [
+      "int32",
+      [
+        "object",
+        "float64"
+      ]
+    ],
+    [
+      "int32",
+      [
+        "object",
+        "string"
+      ]
+    ],
+    [
+      "int32",
+      [
+        "int32",
+        "object"
+      ]
+    ],
+    [
+      "int32",
+      [
+        "float64",
+        "object"
+      ]
+    ],
+    [
+      "int32",
+      [
+        "string",
+        "object"
+      ]
+    ]
+  ],
+  "BasicCommands::Eval": [
+    [
+      "object",
+      [
+        "string",
+        "class [System.Runtime]System.Type"
+      ]
+    ]
+  ],
+  "BasicCommands::Ext": [
+    [
+      "int64",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::Gcol": [
+    [
+      "void",
+      [
+        "int32",
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::GcolTint": [
+    [
+      "void",
+      [
+        "int32",
+        "int32",
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::Get": [
+    [
+      "int32",
+      []
+    ]
+  ],
+  "BasicCommands::GetPtr": [
+    [
+      "int64",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::HexFormat": [
+    [
+      "void",
+      []
+    ]
+  ],
+  "BasicCommands::Inkey": [
+    [
+      "int32",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::Input": [
+    [
+      "class [System.Runtime]System.Collections.Generic.Queue`1<object>",
+      [
+        "bool",
+        "class [System.Runtime]System.Type[]"
+      ]
+    ]
+  ],
+  "BasicCommands::Instr": [
+    [
+      "int32",
+      [
+        "string",
+        "string"
+      ]
+    ]
+  ],
+  "BasicCommands::InstrAt": [
+    [
+      "int32",
+      [
+        "string",
+        "string",
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::LeftStr": [
+    [
+      "string",
+      [
+        "string",
+        "int32"
+      ]
+    ],
+    [
+      "string",
+      [
+        "string"
+      ]
+    ]
+  ],
+  "BasicCommands::Mandel": [
+    [
+      "void",
+      [
+        "float64",
+        "float64"
+      ]
+    ]
+  ],
+  "BasicCommands::MidStr": [
+    [
+      "string",
+      [
+        "string",
+        "int32",
+        "int32"
+      ]
+    ],
+    [
+      "string",
+      [
+        "string",
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::Mode": [
+    [
+      "void",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::NewLine": [
+    [
+      "void",
+      []
+    ]
+  ],
+  "BasicCommands::NotEqual": [
+    [
+      "int32",
+      [
+        "object",
+        "object"
+      ]
+    ],
+    [
+      "int32",
+      [
+        "object",
+        "int32"
+      ]
+    ],
+    [
+      "int32",
+      [
+        "object",
+        "float64"
+      ]
+    ],
+    [
+      "int32",
+      [
+        "object",
+        "string"
+      ]
+    ],
+    [
+      "int32",
+      [
+        "int32",
+        "object"
+      ]
+    ],
+    [
+      "int32",
+      [
+        "float64",
+        "object"
+      ]
+    ],
+    [
+      "int32",
+      [
+        "string",
+        "object"
+      ]
+    ]
+  ],
+  "BasicCommands::Openin": [
+    [
+      "int32",
+      [
+        "string"
+      ]
+    ]
+  ],
+  "BasicCommands::Openout": [
+    [
+      "int32",
+      [
+        "string"
+      ]
+    ]
+  ],
+  "BasicCommands::Openup": [
+    [
+      "int32",
+      [
+        "string"
+      ]
+    ]
+  ],
+  "BasicCommands::Plot": [
+    [
+      "void",
+      [
+        "int32",
+        "int32",
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::Pos": [
+    [
+      "int32",
+      []
+    ]
+  ],
+  "BasicCommands::Pow": [
+    [
+      "int32",
+      [
+        "int32",
+        "int32"
+      ]
+    ],
+    [
+      "float64",
+      [
+        "float64",
+        "float64"
+      ]
+    ]
+  ],
+  "BasicCommands::Print": [
+    [
+      "void",
+      [
+        "int32",
+        "object[]"
+      ]
+    ],
+    [
+      "void",
+      [
+        "string"
+      ]
+    ],
+    [
+      "void",
+      [
+        "int32"
+      ]
+    ],
+    [
+      "void",
+      [
+        "float64"
+      ]
+    ],
+    [
+      "void",
+      [
+        "object"
+      ]
+    ]
+  ],
+  "BasicCommands::RandomFraction": [
+    [
+      "float64",
+      []
+    ]
+  ],
+  "BasicCommands::RightJustifyNumerics": [
+    [
+      "void",
+      []
+    ]
+  ],
+  "BasicCommands::RightStr": [
+    [
+      "string",
+      [
+        "string",
+        "int32"
+      ]
+    ],
+    [
+      "string",
+      [
+        "string"
+      ]
+    ]
+  ],
+  "BasicCommands::Rnd": [
+    [
+      "float64",
+      []
+    ],
+    [
+      "float64",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::SetPtr": [
+    [
+      "void",
+      [
+        "int32",
+        "int64"
+      ]
+    ]
+  ],
+  "BasicCommands::Spc": [
+    [
+      "void",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::Sqr": [
+    [
+      "float64",
+      [
+        "float64"
+      ]
+    ]
+  ],
+  "BasicCommands::StepRandom": [
+    [
+      "void",
+      []
+    ]
+  ],
+  "BasicCommands::TabH": [
+    [
+      "void",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::TabXY": [
+    [
+      "void",
+      [
+        "int32",
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::VPos": [
+    [
+      "int32",
+      []
+    ]
+  ],
+  "BasicCommands::Val": [
+    [
+      "float64",
+      [
+        "string"
+      ]
+    ]
+  ],
+  "BasicCommands::Vdu": [
+    [
+      "void",
+      [
+        "uint8"
+      ]
+    ],
+    [
+      "void",
+      [
+        "int16"
+      ]
+    ]
+  ],
+  "BasicCommands::VduFlush": [
+    [
+      "void",
+      []
+    ]
+  ],
+  "BasicCommands::get_CurrentDateTime": [
+    [
+      "string",
+      []
+    ]
+  ],
+  "BasicCommands::get_End": [
+    [
+      "int32",
+      []
+    ]
+  ],
+  "BasicCommands::get_Himem": [
+    [
+      "int32",
+      []
+    ]
+  ],
+  "BasicCommands::get_Lomem": [
+    [
+      "int32",
+      []
+    ]
+  ],
+  "BasicCommands::get_Page": [
+    [
+      "int32",
+      []
+    ]
+  ],
+  "BasicCommands::get_Time": [
+    [
+      "int32",
+      []
+    ]
+  ],
+  "BasicCommands::get_Top": [
+    [
+      "int32",
+      []
+    ]
+  ],
+  "BasicCommands::set_CurrentDateTime": [
+    [
+      "void",
+      [
+        "string"
+      ]
+    ]
+  ],
+  "BasicCommands::set_End": [
+    [
+      "void",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::set_Himem": [
+    [
+      "void",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::set_Lomem": [
+    [
+      "void",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::set_Page": [
+    [
+      "void",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::set_Time": [
+    [
+      "void",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::set_Top": [
+    [
+      "void",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "MemoryMap::Allocate": [
+    [
+      "int32",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "MemoryMap::ResetHeap": [
+    [
+      "void",
+      []
+    ]
+  ],
+  "MemoryMap::get_Memory": [
+    [
+      "uint8[]",
+      []
+    ]
+  ]
+}

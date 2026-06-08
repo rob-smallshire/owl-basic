@@ -15,6 +15,8 @@ a standalone tool that still reads modern assemblies. It renders each method as:
 We parse the ``default <ret> <Name> (<typed params>) cil managed`` lines of the
 OwlRuntime classes into a manifest keyed by ``(class, method)``.
 """
+import json
+import os
 import re
 import shutil
 import subprocess
@@ -163,3 +165,61 @@ class SignatureManifest:
         return "%s %s %s.%s::%s(%s)" % (
             op, return_type, _NAMESPACE, class_name, method, ", ".join(params)
         )
+
+    # -- serialisation (the committed manifest) -----------------------------
+
+    def to_dict(self):
+        """A JSON-friendly ``{"Class::method": [[ret, [params]], ...]}``."""
+        return {"%s::%s" % key: [[ret, params] for ret, params in overloads]
+                for key, overloads in sorted(self._overloads.items())}
+
+    @classmethod
+    def from_dict(cls, data):
+        overloads = {}
+        for key, items in data.items():
+            class_name, method = key.split("::", 1)
+            overloads[(class_name, method)] = [(ret, list(params)) for ret, params in items]
+        return cls(overloads)
+
+    @classmethod
+    def load(cls, json_filepath):
+        """Load a previously generated, committed manifest."""
+        with open(json_filepath) as handle:
+            return cls.from_dict(json.load(handle))
+
+    def restricted_to(self, class_names):
+        """A manifest keeping only the named classes."""
+        keep = set(class_names)
+        return SignatureManifest(
+            {key: overloads for key, overloads in self._overloads.items()
+             if key[0] in keep})
+
+    def write(self, json_filepath):
+        with open(json_filepath, "w") as handle:
+            json.dump(self.to_dict(), handle, indent=2)
+            handle.write("\n")
+
+
+# The committed manifest the emitter loads at compile time (no monodis needed at
+# compile time). Regenerate it from a freshly built OwlRuntime.dll with:
+#     python -m owl_basic.ext.backends.dotnet.signatures <OwlRuntime.dll>
+MANIFEST_FILENAME = "owlruntime_signatures.json"
+MANIFEST_FILEPATH = os.path.join(os.path.dirname(__file__), MANIFEST_FILENAME)
+
+# The OwlRuntime classes the emitter calls into (others, e.g. the graphics
+# classes monodis chokes on, are not needed and kept out of the committed file).
+_EMITTED_CLASSES = ("BasicCommands", "MemoryMap")
+
+
+def regenerate(dll_filepath, json_filepath=MANIFEST_FILEPATH):
+    """Extract from *dll_filepath* and write the committed manifest file."""
+    manifest = SignatureManifest.from_assembly(dll_filepath).restricted_to(_EMITTED_CLASSES)
+    manifest.write(json_filepath)
+    return json_filepath
+
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) != 2:
+        sys.exit("usage: python -m owl_basic.ext.backends.dotnet.signatures <OwlRuntime.dll>")
+    print("wrote", regenerate(sys.argv[1]))
