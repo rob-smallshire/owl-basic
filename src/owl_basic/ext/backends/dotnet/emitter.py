@@ -1154,6 +1154,13 @@ class _MethodEmitter:
             return
         field, array_il, _element = self._array_field(node.identifier,
                                                        self._array_rank(node))
+        # Rank isn't tracked on array param/actual types, so we assume 1-D; if the
+        # array was actually DIMmed multidimensional, fail cleanly rather than
+        # passing a mismatched reference.
+        if "," in self._globals.get(field, ""):
+            raise CodeGenerationError(
+                "passing a multidimensional array as a parameter is not "
+                "supported yet")
         self.emit("ldsfld %s %s" % (array_il, field))
 
     def _stmt_ArrayAssignment(self, node):
@@ -1168,11 +1175,14 @@ class _MethodEmitter:
         if len(rvalues) != 1:
             raise CodeGenerationError(
                 "array initialiser lists (A() = a, b, ...) are not supported yet")
-        field, array_il, element_il = self._array_field(target.identifier, 1)
-        if array_il.endswith(",]") or "," in array_il:
+        # The real rank is the one the array was DIMmed with (registered field
+        # type), not the 1-D type we would compute here -- check that before the
+        # 1-D element loop, so a multidim array fails cleanly rather than silently.
+        if "," in self._globals.get(_field_name(target.identifier), ""):
             raise CodeGenerationError(
                 "whole-array operations on multidimensional arrays are not "
                 "supported yet")
+        field, array_il, element_il = self._array_field(target.identifier, 1)
         rhs = rvalues[0]
         index = self._local_slot("__wa_index", IntegerOwlType())
         top = self._new_label("wa_top")

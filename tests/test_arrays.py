@@ -171,3 +171,26 @@ def test_whole_array_elementwise_arithmetic(compile_and_run):
         "DIM A%(3)\nDIM B%(3)\nB%(1) = 10\nA%() = B%() + 1\n"
         "PRINT A%(1)\nPRINT A%(0)\nEND\n", name="wew"))
     assert out.splitlines() == ["11", "1"]   # B(1)=10 -> 11; B(0)=0 -> 1
+
+
+# --- deferred cases fail cleanly (a CodeGenerationError, never silent bad IL) --
+
+import pytest
+
+from owl_basic.ext.backends.dotnet.emitter import CodeGenerationError
+
+
+def test_array_initialiser_list_is_a_clean_error(dotnet_backend):
+    with pytest.raises(CodeGenerationError):
+        dotnet_backend.emit_il(analyse("DIM A%(3)\nA%() = 1,2,3\nEND\n", name="il"))
+
+
+def test_multidimensional_whole_array_op_is_a_clean_error(dotnet_backend):
+    with pytest.raises(CodeGenerationError):
+        dotnet_backend.emit_il(analyse("DIM A%(2,2)\nA%() = 0\nEND\n", name="mw"))
+
+
+def test_multidimensional_array_parameter_is_a_clean_error(dotnet_backend):
+    with pytest.raises(CodeGenerationError):
+        dotnet_backend.emit_il(analyse(
+            "DIM B%(2,2)\nPROCt(B%())\nEND\nDEF PROCt(a%())\nENDPROC\n", name="mp"))
