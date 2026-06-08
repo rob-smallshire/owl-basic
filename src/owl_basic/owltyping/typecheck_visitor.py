@@ -92,6 +92,21 @@ class TypecheckVisitor(Visitor):
         self.determineNumericResultType(operator)
         self.promoteNumericOperands(operator)
                 
+    def visitDivide(self, divide):
+        '''
+        Specialization of visitBinaryNumericOperator: BBC BASIC '/' is always
+        real division, even for integer operands (1/10 == 0.1), unlike DIV.
+        Promote both operands to float and yield a float result.
+        '''
+        self.visit(divide.lhs)
+        self.visit(divide.rhs)
+        if divide.lhs.actualType == PendingOwlType() or divide.rhs.actualType == PendingOwlType():
+            divide.actualType = PendingOwlType()
+            return
+        self.insertCast(divide.lhs, source=divide.lhs.actualType, target=FloatOwlType())
+        self.insertCast(divide.rhs, source=divide.rhs.actualType, target=FloatOwlType())
+        divide.actualType = FloatOwlType()
+
     def visitPlus(self, plus):
         '''
         Specialization of visitBinaryNumericOperator to handle string concatenation

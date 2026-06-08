@@ -1233,11 +1233,14 @@ namespace OwlRuntime
         {
             get
             {
-                
+                // TIME counts in centiseconds. Advance ticksAtTime only by the
+                // whole centiseconds consumed, keeping the leftover < 10 ms for
+                // the next read -- otherwise rapid polling (as benchmarks do)
+                // discards the sub-centisecond elapsed time and TIME never moves.
                 int currentTicks = Environment.TickCount;
-                int elapsedTicks = currentTicks - ticksAtTime;
-                time += elapsedTicks / 10;
-                ticksAtTime = currentTicks;
+                int elapsedCentiseconds = (currentTicks - ticksAtTime) / 10;
+                time += elapsedCentiseconds;
+                ticksAtTime += elapsedCentiseconds * 10;
                 return time;
             }
 
