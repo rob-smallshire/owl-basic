@@ -71,10 +71,11 @@ def test_runtime_sum_stays_in_range(compile_and_run):
 
 @requires_dotnet_toolchain
 def test_runtime_overflow_into_int_var_errors(compile_expecting_error):
-    # Dynamic narrowing that overflows int32 fails loudly at runtime rather
-    # than silently wrapping.
-    compile_expecting_error(analyse(
+    # Dynamic narrowing that overflows int32 fails loudly at runtime with a
+    # BBC-style "Number too big" error, not a raw .NET OverflowException.
+    out = compile_expecting_error(analyse(
         "B% = 100000\nC% = 80500\nA% = B% * C%\nPRINT A%\nEND\n", name="rt3"))
+    assert "Number too big" in out
 
 
 @requires_dotnet_toolchain

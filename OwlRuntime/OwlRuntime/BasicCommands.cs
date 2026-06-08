@@ -1390,6 +1390,19 @@ namespace OwlRuntime
         }
     }
 
+    /// <summary>
+    /// Thrown when a 64-bit value is stored into a narrower (32-bit) variable
+    /// and does not fit: BBC BASIC error 20, "Number too big".
+    /// </summary>
+    public class NumberTooBigException :OwlRuntimeException
+    {
+        public const int ErrorNumber = 20;
+        public NumberTooBigException() :
+            base("Number too big")
+        {
+        }
+    }
+
     public class NoSuchFnProcException :OwlRuntimeException
     {
         private string name;

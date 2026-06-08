@@ -286,6 +286,8 @@ def _collect_locals(blocks):
 _DEFINITIONS = frozenset({"DefineProcedure", "DefineFunction"})
 
 _LONGJUMP_EXCEPTION = "[OwlRuntime]OwlRuntime.LongJumpException"
+_OVERFLOW_EXCEPTION = "[System.Runtime]System.OverflowException"
+_NUMBER_TOO_BIG = "[OwlRuntime]OwlRuntime.NumberTooBigException"
 
 
 def _emit_reset_method(globals_registry, has_data):
@@ -424,6 +426,14 @@ def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
         if not emitter.lines or emitter.lines[-1] != "ret":
             emitter.lines += emitter._local_restore_lines() + ["ret"]
 
+    # An int64->int32 narrowing that overflows raises OverflowException via the
+    # CLR's own conv.ovf.i4 (cheap on the in-range path). Catch it once, at the
+    # program boundary, and re-raise it as BBC error 20 ("Number too big"). The
+    # catch wraps Main, so overflow thrown anywhere (including inside a PROC)
+    # surfaces with the BBC message.
+    if is_main:
+        emitter.lines = _wrap_overflow_report(emitter.lines)
+
     name = "Main" if is_main else _method_name(entry_name)
     entrypoint = "    .entrypoint\n" if is_main else ""
     body = "\n".join("        " + line for line in emitter.lines)
@@ -434,6 +444,23 @@ def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
         entrypoint=entrypoint,
         locals=emitter.locals_declaration(),
         body=body,
+    )
+
+
+def _wrap_overflow_report(lines):
+    """Wrap a method body so an int32-narrowing OverflowException re-raises as
+    the BBC "Number too big" error. The CLR's conv.ovf.i4 does the (cheap)
+    range check; this only pays on the exceptional path."""
+    body = ["leave OWL_OVERFLOW_DONE" if line == "ret" else line for line in lines]
+    return (
+        [".try", "{"]
+        + body
+        + ["leave OWL_OVERFLOW_DONE", "}",
+           "catch %s" % _OVERFLOW_EXCEPTION, "{",
+           "pop",
+           "newobj instance void %s::.ctor()" % _NUMBER_TOO_BIG,
+           "throw", "}",
+           "OWL_OVERFLOW_DONE:", "ret"]
     )
 
 
@@ -1484,9 +1511,11 @@ class _MethodEmitter:
             self.emit("conv.i8")
         elif isinstance(target, (IntegerOwlType, ByteOwlType, AddressOwlType)):
             # Addresses and bytes are int32-sized on the CIL stack. Narrowing a
-            # 64-bit value to 32 bits is checked: an out-of-range value is a
-            # runtime overflow rather than a silent truncation. Float->int stays
-            # a plain (truncating) conversion, matching BBC INT semantics.
+            # 64-bit value to 32 bits is checked by the CLR's own conv.ovf.i4
+            # (near-free on the in-range path); the OverflowException it raises
+            # is converted once, at the program boundary, into BBC error 20
+            # ("Number too big"). Float->int stays a plain (truncating)
+            # conversion, matching BBC INT semantics.
             if isinstance(getattr(node, "sourceType", None), LongIntegerOwlType):
                 self.emit("conv.ovf.i4")
             else:
