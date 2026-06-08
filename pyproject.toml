@@ -64,6 +64,7 @@ test = [
 dev = [
     "bump-my-version>=0.28",
     { include-group = "test" },
+    "oaknut-disc>=12.6.1",
 ]
 
 [tool.bumpversion]
