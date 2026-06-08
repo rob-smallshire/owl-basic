@@ -82,4 +82,6 @@ jobs:
         # --no-sync keeps the wheel we just installed and skips the
         # implicit re-sync that would otherwise reinstate an editable
         # install of the source tree, defeating the point.
-        run: uv run --no-sync pytest -v
+        # --runslow includes the full Sphinx Adventure playthroughs, which
+        # are skipped by default locally for a fast inner loop.
+        run: uv run --no-sync pytest -v --runslow

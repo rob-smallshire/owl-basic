@@ -28,6 +28,32 @@ requires_dotnet_toolchain = pytest.mark.skipif(
 )
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--runslow", action="store_true", default=False,
+        help="run slow tests (e.g. the full Sphinx Adventure playthroughs)",
+    )
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "slow: a long-running test (minutes), skipped unless --runslow is given",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    # The Sphinx playthroughs drive the whole game interactively and take a
+    # couple of minutes between them, dwarfing the rest of the suite. Skip
+    # anything marked `slow` unless the run opts in with --runslow (CI does).
+    if config.getoption("--runslow"):
+        return
+    skip_slow = pytest.mark.skip(reason="slow; pass --runslow to run")
+    for item in items:
+        if "slow" in item.keywords:
+            item.add_marker(skip_slow)
+
+
 @pytest.fixture
 def dotnet_backend():
     """The discoverable ``dotnet`` backend extension."""

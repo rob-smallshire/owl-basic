@@ -52,6 +52,7 @@ def _compile_sphinx(dotnet_backend, tmp_path):
     return dll_filepath
 
 
+@pytest.mark.slow
 @requires_dotnet_toolchain
 @requires_posix
 def test_solves_the_whole_game(dotnet_backend, tmp_path):
@@ -68,6 +69,7 @@ def test_solves_the_whole_game(dotnet_backend, tmp_path):
     assert "You've solved the puzzle" in result["transcript"]
 
 
+@pytest.mark.slow
 @requires_dotnet_toolchain
 @requires_posix
 def test_cold_seed_plays_robustly(dotnet_backend, tmp_path):
