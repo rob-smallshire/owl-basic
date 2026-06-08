@@ -15,6 +15,7 @@ compiled program's own output, so ``owl-basic run prog.bbc | ...`` stays clean.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -23,7 +24,9 @@ from pathlib import Path
 import click
 
 from owl_basic import __version__
-from owl_basic.analysis import analyse
+from owl_basic.analysis import analyse, analyse_numbered_lines
+from owl_basic.bbc_basic.detokenizer import detokenize_lines
+from owl_basic.bbc_basic.tokens import LINE_RECORD_MARKER
 from owl_basic.exceptions import OwlBasicError
 from owl_basic.extension import create_extension, list_extensions
 
@@ -58,13 +61,44 @@ def _find_owlruntime_dll() -> Path | None:
     return max(matches, key=lambda path: path.stat().st_mtime)
 
 
+_LINE_NUMBERED = re.compile(r"\s*\d")
+
+
+def _analyse_source(source: Path, encoding: str):
+    """Analyse a BASIC *source* file, picking the right front end for its form.
+
+    Three forms are accepted transparently:
+
+    * a tokenised image (``.bbc`` from the benchmark/program discs), recognised
+      by its leading line-record marker -- detokenised, then analysed by real
+      line number so GOTO/GOSUB targets resolve;
+    * a plain-text *listing* whose lines carry explicit BBC line numbers (as
+      LISTed or detokenised programs do) -- likewise analysed by line number;
+    * a number-free snippet -- analysed with synthesised line numbers.
+    """
+    data = source.read_bytes()
+    if data[:1] == bytes((LINE_RECORD_MARKER,)):
+        return analyse_numbered_lines(
+            detokenize_lines(data), name=source.stem, source_filepath=str(source)
+        )
+
+    text = data.decode(encoding)
+    non_blank = [line for line in text.splitlines() if line.strip()]
+    if non_blank and all(_LINE_NUMBERED.match(line) for line in non_blank):
+        numbered = []
+        for line in non_blank:
+            number, _, body = line.strip().partition(" ")
+            numbered.append((int(number), " " + body if body else body))
+        return analyse_numbered_lines(
+            numbered, name=source.stem, source_filepath=str(source)
+        )
+
+    return analyse(text, name=source.stem, source_filepath=str(source))
+
+
 def _compile(source: Path, output_dir: Path, backend_name: str, encoding: str) -> Path:
     """Compile *source* to an assembly under *output_dir*; return its path."""
-    program = analyse(
-        source.read_text(encoding=encoding),
-        name=source.stem,
-        source_filepath=str(source),
-    )
+    program = _analyse_source(source, encoding)
     backend = create_extension("backend", _BACKEND_NAMESPACE, backend_name)
     output_dir.mkdir(parents=True, exist_ok=True)
     artifact = backend.generate(program, output_dir)
