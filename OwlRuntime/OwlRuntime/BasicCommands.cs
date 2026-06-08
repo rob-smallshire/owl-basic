@@ -585,6 +585,11 @@ namespace OwlRuntime
             printManager.Print(i);
         }
 
+        public static void Print(long i)
+        {
+            printManager.Print(i);
+        }
+
         public static void Print(double d)
         {
             printManager.Print(d);

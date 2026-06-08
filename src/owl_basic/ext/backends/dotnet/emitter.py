@@ -20,6 +20,7 @@ from owl_basic.owltyping.type_system import (
     ByteOwlType,
     FloatOwlType,
     IntegerOwlType,
+    LongIntegerOwlType,
     StringOwlType,
 )
 from owl_basic.symbol_tables import SymbolInfo
@@ -139,14 +140,15 @@ class CodeGenerationError(OwlBasicError):
 _IL_TYPES = [
     (StringOwlType, "string"),
     (FloatOwlType, "float64"),
+    (LongIntegerOwlType, "int64"),
     (ByteOwlType, "int32"),
     (IntegerOwlType, "int32"),
 ]
 
 # Element load/store opcodes for a 1-D array (vector), keyed by the element's
 # CIL type. Multidimensional arrays use Get/Set method calls instead.
-_LDELEM = {"int32": "ldelem.i4", "float64": "ldelem.r8", "string": "ldelem.ref"}
-_STELEM = {"int32": "stelem.i4", "float64": "stelem.r8", "string": "stelem.ref"}
+_LDELEM = {"int32": "ldelem.i4", "int64": "ldelem.i8", "float64": "ldelem.r8", "string": "ldelem.ref"}
+_STELEM = {"int32": "stelem.i4", "int64": "stelem.i8", "float64": "stelem.r8", "string": "stelem.ref"}
 
 
 def _il_type(owl_type):
@@ -265,6 +267,8 @@ def _default_value(il_type):
         return 'ldstr ""'
     if il_type == "float64":
         return "ldc.r8 0.0"
+    if il_type == "int64":
+        return "ldc.i8 0"
     return "ldc.i4.0"
 
 
@@ -294,6 +298,8 @@ def _emit_reset_method(globals_registry, has_data):
             lines.append('ldstr ""')
         elif il_type == "float64":
             lines.append("ldc.r8 0.0")
+        elif il_type == "int64":
+            lines.append("ldc.i8 0")
         else:
             lines.append("ldc.i4.0")
         lines.append("stsfld %s %s" % (il_type, name))
@@ -501,7 +507,11 @@ def _sole_loop_back(node, what):
 
 
 def _load_zero(il_type):
-    return "ldc.r8 0.0" if il_type == "float64" else "ldc.i4.0"
+    if il_type == "float64":
+        return "ldc.r8 0.0"
+    if il_type == "int64":
+        return "ldc.i8 0"
+    return "ldc.i4.0"
 
 
 def _data_init_lines(items):
@@ -1035,10 +1045,9 @@ class _MethodEmitter:
         value_il = _il_type(value_type)
         if value_il == target_il:
             return
-        if target_il == "float64" and value_il == "int32":
-            self.emit("conv.r8")
-        elif target_il == "int32" and value_il == "float64":
-            self.emit("conv.i4")
+        conversions = {"float64": "conv.r8", "int64": "conv.i8", "int32": "conv.i4"}
+        if target_il in conversions and value_il in conversions:
+            self.emit(conversions[target_il])
 
     def _stmt_Rem(self, node):
         # A comment generates no code.
@@ -1092,7 +1101,11 @@ class _MethodEmitter:
         self.emit("ldstr " + _il_string(node.value))
 
     def _expr_LiteralInteger(self, node):
-        self.emit("ldc.i4 %d" % int(node.value))
+        # A literal typed as a 64-bit LongInteger (too big for int32) loads wide.
+        if isinstance(node.actualType, LongIntegerOwlType):
+            self.emit("ldc.i8 %d" % int(node.value))
+        else:
+            self.emit("ldc.i4 %d" % int(node.value))
 
     def _expr_LiteralFloat(self, node):
         self.emit("ldc.r8 %r" % float(node.value))
@@ -1466,8 +1479,12 @@ class _MethodEmitter:
         target = node.targetType
         if isinstance(target, FloatOwlType):
             self.emit("conv.r8")
+        elif isinstance(target, LongIntegerOwlType):
+            # Widen to 64 bits (e.g. an int32 operand in a %% expression).
+            self.emit("conv.i8")
         elif isinstance(target, (IntegerOwlType, ByteOwlType, AddressOwlType)):
-            # Addresses and bytes are int32-sized on the CIL stack.
+            # Addresses and bytes are int32-sized on the CIL stack. Narrowing a
+            # 64-bit value here truncates for now; checked narrowing is issue #6.
             self.emit("conv.i4")
         else:
             raise CodeGenerationError(
@@ -1480,6 +1497,8 @@ class _MethodEmitter:
         owl_type = getattr(item, "actualType", None)
         if isinstance(owl_type, StringOwlType):
             arg = "string"
+        elif isinstance(owl_type, LongIntegerOwlType):
+            arg = "int64"
         elif isinstance(owl_type, (IntegerOwlType, ByteOwlType)):
             arg = "int32"
         elif isinstance(owl_type, FloatOwlType):

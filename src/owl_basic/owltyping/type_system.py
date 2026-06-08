@@ -120,6 +120,16 @@ class IntegerOwlType(NumericOwlType, metaclass=OwlTypeSingleton):
     def isDefined(self):
         return True
     
+class LongIntegerOwlType(NumericOwlType, metaclass=OwlTypeSingleton):
+    "LongInteger"
+    # A 64-bit signed integer (the %% sigil, as in some modern BBC BASICs).
+
+    def bitsIntegerPrecision(self):
+        return 64
+
+    def isDefined(self):
+        return True
+
 class AddressOwlType(NumericOwlType, metaclass=OwlTypeSingleton):
     "Address"
     
@@ -200,9 +210,15 @@ class IntegerArrayOwlType(ArrayOwlType):
     def __init__(self, rank=None):
         super(IntegerArrayOwlType, self).__init__(IntegerOwlType(), rank)
    
+class LongIntegerArrayOwlType(ArrayOwlType):
+    "Array[LongInteger]"
+
+    def __init__(self, rank=None):
+        super(LongIntegerArrayOwlType, self).__init__(LongIntegerOwlType(), rank)
+
 class FloatArrayOwlType(ArrayOwlType):
     "Array[Integer]"
-    
+
     def __init__(self, rank=None):
         super(FloatArrayOwlType, self).__init__(FloatOwlType(), rank)
 

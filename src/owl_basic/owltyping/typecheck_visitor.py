@@ -8,8 +8,11 @@ from owl_basic.utility import underscoresToCamelCase
 from owl_basic.syntax.ast import Cast, Concatenate
 from owl_basic.ast_utils import elideNode
 from owl_basic.owltyping.type_system import (NumericOwlType, ObjectOwlType, IntegerOwlType,
-                                FloatOwlType, ByteOwlType, PendingOwlType,
+                                LongIntegerOwlType, FloatOwlType, ByteOwlType, PendingOwlType,
                                 StringOwlType, ArrayOwlType)
+
+_INT32_MIN = -2147483648
+_INT32_MAX = 2147483647
 from owl_basic import sigil
 
 logger = logging.getLogger('owltyping.typecheck_visitor')
@@ -106,6 +109,14 @@ class TypecheckVisitor(Visitor):
         self.insertCast(divide.lhs, source=divide.lhs.actualType, target=FloatOwlType())
         self.insertCast(divide.rhs, source=divide.rhs.actualType, target=FloatOwlType())
         divide.actualType = FloatOwlType()
+
+    def visitLiteralInteger(self, node):
+        '''
+        An integer literal too large for the 32-bit range is a 64-bit integer
+        (a LongInteger), so e.g. PRINT 5000000000 does not overflow.
+        '''
+        if not (_INT32_MIN <= node.value <= _INT32_MAX):
+            node.actualType = LongIntegerOwlType()
 
     def visitPlus(self, plus):
         '''
@@ -341,6 +352,14 @@ class TypecheckVisitor(Visitor):
         elif opTypes(ByteOwlType(),    IntegerOwlType()) : operator.actualType = IntegerOwlType()
         elif opTypes(IntegerOwlType(), ByteOwlType())    : operator.actualType = IntegerOwlType()
         elif opTypes(ByteOwlType(),    ByteOwlType())    : operator.actualType = IntegerOwlType()
+        # A 64-bit LongInteger dominates narrower integers; mixed with a float
+        # it promotes to float (which may lose precision above 2^53).
+        elif opTypes(LongIntegerOwlType(), FloatOwlType())   : operator.actualType = FloatOwlType()
+        elif opTypes(FloatOwlType(),   LongIntegerOwlType()) : operator.actualType = FloatOwlType()
+        elif opTypes(LongIntegerOwlType(), IntegerOwlType()) : operator.actualType = LongIntegerOwlType()
+        elif opTypes(IntegerOwlType(), LongIntegerOwlType()) : operator.actualType = LongIntegerOwlType()
+        elif opTypes(LongIntegerOwlType(), ByteOwlType())    : operator.actualType = LongIntegerOwlType()
+        elif opTypes(ByteOwlType(),    LongIntegerOwlType()) : operator.actualType = LongIntegerOwlType()
         elif operator.lhs.actualType == operator.rhs.actualType:
             operator.actualType = operator.lhs.actualType
         else:
@@ -376,6 +395,19 @@ class TypecheckVisitor(Visitor):
         elif opTypes(ByteOwlType(), ByteOwlType()):
             self.insertCast(operator.lhs, source=ByteOwlType(), target=IntegerOwlType())
             self.insertCast(operator.rhs, source=ByteOwlType(), target=IntegerOwlType())
+        # Widen the narrower operand to 64 bits (or to float) so both match.
+        elif opTypes(IntegerOwlType(), LongIntegerOwlType()):
+            self.insertCast(operator.lhs, source=IntegerOwlType(), target=LongIntegerOwlType())
+        elif opTypes(LongIntegerOwlType(), IntegerOwlType()):
+            self.insertCast(operator.rhs, source=IntegerOwlType(), target=LongIntegerOwlType())
+        elif opTypes(ByteOwlType(), LongIntegerOwlType()):
+            self.insertCast(operator.lhs, source=ByteOwlType(), target=LongIntegerOwlType())
+        elif opTypes(LongIntegerOwlType(), ByteOwlType()):
+            self.insertCast(operator.rhs, source=ByteOwlType(), target=LongIntegerOwlType())
+        elif opTypes(LongIntegerOwlType(), FloatOwlType()):
+            self.insertCast(operator.lhs, source=LongIntegerOwlType(), target=FloatOwlType())
+        elif opTypes(FloatOwlType(), LongIntegerOwlType()):
+            self.insertCast(operator.rhs, source=LongIntegerOwlType(), target=FloatOwlType())
     
     def insertNumericCasts(self, node):
         """

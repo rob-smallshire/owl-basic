@@ -342,6 +342,19 @@ namespace OwlRuntime
             Print(s);
         }
 
+        public void Print(long i)
+        {
+            // A 64-bit integer prints in full: the real-number sig-fig format
+            // ("G" + precision) would push a 10+ digit integer into scientific
+            // notation (6000000000 -> 6E+09), which is wrong for an integer.
+            string s = numberBase == NumberBase.Hexadecimal ? i.ToString("X") : i.ToString();
+            if (numberJustification == Justification.Right)
+            {
+                Spc(fieldWidth - s.Length);
+            }
+            Print(s);
+        }
+
         /// <summary>
         /// The string a number would PRINT as (honouring @%), without any field
         /// justification -- used by both Print(double) and STR$.
