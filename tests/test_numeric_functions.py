@@ -55,3 +55,10 @@ def test_real_benchmarks_compile(dotnet_backend):
             detokenize_lines(open(path, "rb").read()), name=name.lower())
         il = dotnet_backend.emit_il(program)
         assert ".entrypoint" in il, name
+
+
+@requires_dotnet_toolchain
+def test_print_spc(compile_and_run):
+    # SPC(n) prints n spaces.
+    out = compile_and_run(analyse('PRINT "a";SPC(3);"b"\nEND\n', name="spc"))
+    assert out == "a   b\n"

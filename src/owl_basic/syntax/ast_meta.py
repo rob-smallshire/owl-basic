@@ -208,8 +208,31 @@ class AstNode(Visitable, metaclass=AstMeta):
     
     def _getDescription(self):
         return self._description or self.__class__.__name__
-    
+
     description = property(_getDescription)
+
+    def __repr__(self):
+        """A useful node summary: class, line, type, scalar options and the
+        names of present children (not their contents, to stay bounded)."""
+        options = getattr(self, "_options", {})
+        children = getattr(self, "_children", {})
+        bits = []
+        line = options.get("line_num")
+        if line is not None:
+            bits.append("line=%s" % line)
+        actual_type = options.get("actual_type")
+        if actual_type is not None:
+            bits.append("type=%s" % actual_type)
+        for name, value in sorted(options.items()):
+            if name in ("line_num", "formal_type", "actual_type"):
+                continue
+            if isinstance(value, (str, int, float, bool)) and value != "":
+                bits.append("%s=%r" % (underscoresToCamelCase(name), value))
+        present = [underscoresToCamelCase(n) for n, c in children.items()
+                   if c not in (None, [])]
+        if present:
+            bits.append("{%s}" % ", ".join(present))
+        return "%s(%s)" % (type(self).__name__, " ".join(bits))
     
     def setProperty(self, value, property_name, index=None):
         if index is not None:

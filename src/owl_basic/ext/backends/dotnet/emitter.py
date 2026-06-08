@@ -646,6 +646,10 @@ class _MethodEmitter:
                 else:
                     self.lower_expression(item.yCoord)
                     self.emit(_runtime("TabXY", "int32", "int32"))
+            elif kind == "Spc":
+                # PRINT SPC(n): print n spaces (a void call).
+                self.lower_expression(item.spaces)
+                self.emit(_runtime("Spc", "int32"))
             else:
                 self.lower_expression(item)
                 self.emit(self._print_call(item))
