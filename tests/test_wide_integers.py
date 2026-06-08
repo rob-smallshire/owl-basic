@@ -52,6 +52,31 @@ def test_long_integer_widens_from_int(compile_and_run):
     assert out.splitlines() == ["4000000005"]
 
 
+@requires_dotnet_toolchain
+def test_runtime_product_overflows_to_wide(compile_and_run):
+    # A product of two *variables* exceeding int32 is evaluated in 64 bits and
+    # does not wrap (issue #6 runtime widening).
+    out = compile_and_run(analyse(
+        "B% = 100000\nC% = 80500\nA%% = B% * C%\nPRINT A%%\nEND\n", name="rt1"))
+    assert out.splitlines() == ["8050000000"]
+
+
+@requires_dotnet_toolchain
+def test_runtime_sum_stays_in_range(compile_and_run):
+    # The common case: wide evaluation narrows cleanly back to a 32-bit var.
+    out = compile_and_run(analyse(
+        "B% = 2\nC% = 3\nA% = B% + C%\nPRINT A%\nEND\n", name="rt2"))
+    assert out.splitlines() == ["5"]
+
+
+@requires_dotnet_toolchain
+def test_runtime_overflow_into_int_var_errors(compile_expecting_error):
+    # Dynamic narrowing that overflows int32 fails loudly at runtime rather
+    # than silently wrapping.
+    compile_expecting_error(analyse(
+        "B% = 100000\nC% = 80500\nA% = B% * C%\nPRINT A%\nEND\n", name="rt3"))
+
+
 def test_emit_il_uses_int64_for_long_integer(dotnet_backend):
     # The %% variable lowers to a CIL int64 static field, loaded with ldc.i8.
     il = dotnet_backend.emit_il(analyse("A%% = 5000000000\nPRINT A%%\nEND\n", name="ll7"))

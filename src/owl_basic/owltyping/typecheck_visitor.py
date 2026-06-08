@@ -37,6 +37,12 @@ _FOLD_OPS = {
     "Minus": lambda a, b: a - b,
     "Multiply": lambda a, b: a * b,
 }
+
+# Additive/multiplicative operators on two 32-bit integers are evaluated in 64
+# bits so they cannot overflow at 32; the result narrows (checked) only when
+# stored to a 32-bit variable. These are exactly the operators that can grow a
+# value beyond its operands' width.
+_WIDENING_OPS = frozenset(_FOLD_OPS)
 from owl_basic import sigil
 
 logger = logging.getLogger('owltyping.typecheck_visitor')
@@ -396,6 +402,13 @@ class TypecheckVisitor(Visitor):
         def opTypes(lhs_type, rhs_type):
             return operator.lhs.actualType.isA(lhs_type) and operator.rhs.actualType.isA(rhs_type)
 
+        # +, -, * of two 32-bit integers are evaluated in 64 bits so they do not
+        # wrap; the result narrows back (checked) only on store to a 32-bit var.
+        if (type(operator).__name__ in _WIDENING_OPS
+                and opTypes(IntegerOwlType(), IntegerOwlType())):
+            operator.actualType = LongIntegerOwlType()
+            return
+
         if   opTypes(ObjectOwlType(),  NumericOwlType()) : operator.actualType = FloatOwlType()
         elif opTypes(NumericOwlType(), ObjectOwlType())  : operator.actualType = FloatOwlType()
         elif opTypes(IntegerOwlType(), FloatOwlType())   : operator.actualType = FloatOwlType()
@@ -433,6 +446,14 @@ class TypecheckVisitor(Visitor):
         '''
         def opTypes(lhs_type, rhs_type):
             return operator.lhs.actualType.isA(lhs_type) and operator.rhs.actualType.isA(rhs_type)
+
+        # A widening +, -, * over two 32-bit integers: widen both to 64 bits so
+        # the operation is computed without wrapping (cf. determineNumericResultType).
+        if (type(operator).__name__ in _WIDENING_OPS
+                and opTypes(IntegerOwlType(), IntegerOwlType())):
+            self.insertCast(operator.lhs, source=IntegerOwlType(), target=LongIntegerOwlType())
+            self.insertCast(operator.rhs, source=IntegerOwlType(), target=LongIntegerOwlType())
+            return
 
         if opTypes(IntegerOwlType(), FloatOwlType()):
             self.insertCast(operator.lhs, source=IntegerOwlType(), target=FloatOwlType())

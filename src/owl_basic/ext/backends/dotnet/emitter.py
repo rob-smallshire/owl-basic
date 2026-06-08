@@ -1484,8 +1484,13 @@ class _MethodEmitter:
             self.emit("conv.i8")
         elif isinstance(target, (IntegerOwlType, ByteOwlType, AddressOwlType)):
             # Addresses and bytes are int32-sized on the CIL stack. Narrowing a
-            # 64-bit value here truncates for now; checked narrowing is issue #6.
-            self.emit("conv.i4")
+            # 64-bit value to 32 bits is checked: an out-of-range value is a
+            # runtime overflow rather than a silent truncation. Float->int stays
+            # a plain (truncating) conversion, matching BBC INT semantics.
+            if isinstance(getattr(node, "sourceType", None), LongIntegerOwlType):
+                self.emit("conv.ovf.i4")
+            else:
+                self.emit("conv.i4")
         else:
             raise CodeGenerationError(
                 "Cannot lower cast to %r" % type(target).__name__
