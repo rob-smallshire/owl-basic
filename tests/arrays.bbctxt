@@ -1,0 +1,11 @@
+DIM A%(3)
+A%(1) = 42
+A%(2) = A%(1) * 2
+PRINT A%(2)
+DIM B%(2,2)
+B%(1,2) = 7
+PRINT B%(1,2)
+DIM F(2)
+F(1) = 2.5
+PRINT F(1)
+END

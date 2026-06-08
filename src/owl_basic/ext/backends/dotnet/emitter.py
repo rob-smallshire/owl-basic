@@ -22,6 +22,7 @@ from owl_basic.owltyping.type_system import (
     StringOwlType,
 )
 from owl_basic.symbol_tables import SymbolInfo
+from owl_basic.sigil import identifierToType
 
 # Symbol modifiers that mean the variable is stored in a method (not globally).
 _METHOD_SCOPED_MODIFIERS = frozenset(
@@ -118,6 +119,11 @@ _IL_TYPES = [
     (ByteOwlType, "int32"),
     (IntegerOwlType, "int32"),
 ]
+
+# Element load/store opcodes for a 1-D array (vector), keyed by the element's
+# CIL type. Multidimensional arrays use Get/Set method calls instead.
+_LDELEM = {"int32": "ldelem.i4", "float64": "ldelem.r8", "string": "ldelem.ref"}
+_STELEM = {"int32": "stelem.i4", "float64": "stelem.r8", "string": "stelem.ref"}
 
 
 def _il_type(owl_type):
@@ -243,7 +249,9 @@ def _emit_reset_method(globals_registry, has_data):
     """A method that resets all globals (and the DATA pointer) for RUN."""
     lines = []
     for name, il_type in globals_registry.items():
-        if il_type == "string":
+        if il_type.endswith("]"):
+            lines.append("ldnull")          # an array reference: unallocated until DIM
+        elif il_type == "string":
             lines.append('ldstr ""')
         elif il_type == "float64":
             lines.append("ldc.r8 0.0")
@@ -621,8 +629,12 @@ class _MethodEmitter:
             self.lower_expression(node.rValue)
             self.emit("call void %s::set_Lomem(int32)" % _RUNTIME)
             return
+        if name == "Indexer":
+            # A(i) = v : store into an array element.
+            self._store_element(target, node.rValue)
+            return
         if name != "Variable":
-            # Indexed / pseudo-variable l-values come later.
+            # Other pseudo-variable l-values come later.
             raise CodeGenerationError(
                 "Cannot lower assignment to %r l-value" % name
             )
@@ -1028,6 +1040,76 @@ class _MethodEmitter:
 
     def _expr_Variable(self, node):
         self._load_variable(node)
+
+    # -- arrays -------------------------------------------------------------
+
+    def _array_field(self, identifier, rank):
+        """The static field, array CIL type and element CIL type for an array
+        reference. ``identifier`` includes the open paren (e.g. ``A%(``); the
+        sigil before it gives the element type. The ``arr_`` prefix keeps the
+        array variable distinct from the scalar of the same name (``A%``)."""
+        base = identifier[:-1] if identifier.endswith("(") else identifier
+        element_il = _il_type(identifierToType(base))
+        array_il = element_il + "[" + "," * (rank - 1) + "]"
+        field = "arr_" + _global_field_name(base)
+        self._globals.setdefault(field, array_il)
+        return field, array_il, element_il
+
+    def _push_indices(self, indices):
+        """Push each (integer) subscript onto the stack."""
+        for index in indices:
+            self.lower_expression(index)
+            if isinstance(getattr(index, "actualType", None), FloatOwlType):
+                self.emit("conv.i4")     # BBC subscripts are integers
+
+    def _stmt_AllocateArray(self, node):
+        """DIM A(n[,m...]): allocate an array of n+1 (by m+1...) elements.
+
+        One dimension is a CIL vector (``newarr``); more use the rectangular
+        array type's ``.ctor``, which takes a length per dimension."""
+        dimensions = node.dimensions
+        rank = len(dimensions)
+        field, array_il, element_il = self._array_field(node.identifier, rank)
+        for dimension in dimensions:
+            self.lower_expression(dimension)
+            if isinstance(getattr(dimension, "actualType", None), FloatOwlType):
+                self.emit("conv.i4")
+            self.emit("ldc.i4.1")
+            self.emit("add")             # DIM A(n) -> 0..n -> n+1 elements
+        if rank == 1:
+            self.emit("newarr %s" % element_il)
+        else:
+            args = ", ".join(["int32"] * rank)
+            self.emit("newobj instance void %s::.ctor(%s)" % (array_il, args))
+        self.emit("stsfld %s %s" % (array_il, field))
+
+    def _expr_Indexer(self, node):
+        """A(i[,j...]) as an r-value: load the element."""
+        indices = node.indices
+        rank = len(indices)
+        field, array_il, element_il = self._array_field(node.identifier, rank)
+        self.emit("ldsfld %s %s" % (array_il, field))
+        self._push_indices(indices)
+        if rank == 1:
+            self.emit(_LDELEM[element_il])
+        else:
+            args = ", ".join(["int32"] * rank)
+            self.emit("call instance %s %s::Get(%s)" % (element_il, array_il, args))
+
+    def _store_element(self, node, rvalue):
+        """A(i[,j...]) = v: store into an array element."""
+        indices = node.indices
+        rank = len(indices)
+        field, array_il, element_il = self._array_field(node.identifier, rank)
+        self.emit("ldsfld %s %s" % (array_il, field))
+        self._push_indices(indices)
+        self.lower_expression(rvalue)
+        if rank == 1:
+            self.emit(_STELEM[element_il])
+        else:
+            args = ", ".join(["int32"] * rank)
+            self.emit("call instance void %s::Set(%s, %s)"
+                      % (array_il, args, element_il))
 
     def _push_memory_index(self, indirection):
         """Push the OwlRuntime address-space byte array and the target index.
