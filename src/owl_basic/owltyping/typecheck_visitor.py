@@ -273,11 +273,20 @@ class TypecheckVisitor(Visitor):
         self.visit(operator.rhs)
         if not self.checkSignature(operator):
             return
-        # TODO: Pull this out into a function
-        if operator.lhs.actualType != IntegerOwlType():
-            self.insertCast(operator.lhs, source=operator.lhs.actualType, target=IntegerOwlType())
-        if operator.rhs.actualType != IntegerOwlType():
-            self.insertCast(operator.rhs, source=operator.rhs.actualType, target=IntegerOwlType())
+        # DIV/MOD, the bitwise operators and shifts operate at the width of the
+        # wider operand: 64-bit if either operand is a LongInteger, else 32-bit.
+        # The narrower operand widens to match (lossless); the polymorphic CIL
+        # opcodes (div/rem/and/or/xor) then compute at that width.
+        if (isinstance(operator.lhs.actualType, LongIntegerOwlType)
+                or isinstance(operator.rhs.actualType, LongIntegerOwlType)):
+            target = LongIntegerOwlType()
+        else:
+            target = IntegerOwlType()
+        if operator.lhs.actualType != target:
+            self.insertCast(operator.lhs, source=operator.lhs.actualType, target=target)
+        if operator.rhs.actualType != target:
+            self.insertCast(operator.rhs, source=operator.rhs.actualType, target=target)
+        operator.actualType = target
     
     def visitDyadicIndirection(self, dyadic):
         self.visit(dyadic.base)
