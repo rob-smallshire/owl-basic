@@ -54,3 +54,28 @@ def compile_and_run(dotnet_backend, tmp_path):
         return result.stdout
 
     return run
+
+
+@pytest.fixture
+def compile_expecting_error(dotnet_backend, tmp_path):
+    """Compile and run a program that is expected to fail at runtime.
+
+    Asserts a non-zero exit and returns the combined stdout+stderr, so a test
+    can check the program errored cleanly (rather than corrupting state) and,
+    where relevant, name the error.
+    """
+
+    def run(program, stdin=None):
+        dll_filepath = dotnet_backend.generate(program, tmp_path)
+        shutil.copy(find_owlruntime_dll(), tmp_path)
+        result = subprocess.run(
+            ["dotnet", str(dll_filepath)],
+            input=stdin, capture_output=True, text=True
+        )
+        assert result.returncode != 0, (
+            "expected a runtime error but the program exited cleanly:\n"
+            + result.stdout
+        )
+        return result.stdout + result.stderr
+
+    return run

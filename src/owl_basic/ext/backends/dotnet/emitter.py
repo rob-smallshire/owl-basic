@@ -258,6 +258,9 @@ def _emit_reset_method(globals_registry, has_data):
         else:
             lines.append("ldc.i4.0")
         lines.append("stsfld %s %s" % (il_type, name))
+    # RUN clears variables; also release any DIM byte blocks so re-running DIM
+    # re-allocates from the start of the heap rather than leaking it.
+    lines.append("call void [OwlRuntime]OwlRuntime.MemoryMap::ResetHeap()")
     if has_data:
         lines += ["ldc.i4.m1", "stsfld int32 %s" % _DATA_INDEX_FIELD]
     lines.append("ret")
@@ -1062,14 +1065,30 @@ class _MethodEmitter:
             if isinstance(getattr(index, "actualType", None), FloatOwlType):
                 self.emit("conv.i4")     # BBC subscripts are integers
 
+    def _throw_bad_dim(self, node):
+        """Throw BadDimException carrying the source line."""
+        logical = 0
+        if self._line_mapper is not None:
+            logical = self._line_mapper.physicalToLogical(node.lineNum) or 0
+        self.emit("ldc.i4 %d" % logical)
+        self.emit("newobj instance void "
+                  "[OwlRuntime]OwlRuntime.BadDimException::.ctor(int32)")
+        self.emit("throw")
+
     def _stmt_AllocateArray(self, node):
         """DIM A(n[,m...]): allocate an array of n+1 (by m+1...) elements.
 
         One dimension is a CIL vector (``newarr``); more use the rectangular
-        array type's ``.ctor``, which takes a length per dimension."""
+        array type's ``.ctor``, which takes a length per dimension. BBC forbids
+        re-DIMing, so an already-allocated (non-null) array is a Bad DIM."""
         dimensions = node.dimensions
         rank = len(dimensions)
         field, array_il, element_il = self._array_field(node.identifier, rank)
+        already = self._new_label("dim_ok")
+        self.emit("ldsfld %s %s" % (array_il, field))
+        self.emit("brfalse %s" % already)        # null -> not yet allocated -> OK
+        self._throw_bad_dim(node)
+        self.emit("%s:" % already)
         for dimension in dimensions:
             self.lower_expression(dimension)
             if isinstance(getattr(dimension, "actualType", None), FloatOwlType):
@@ -1082,6 +1101,20 @@ class _MethodEmitter:
             args = ", ".join(["int32"] * rank)
             self.emit("newobj instance void %s::.ctor(%s)" % (array_il, args))
         self.emit("stsfld %s %s" % (array_il, field))
+
+    def _stmt_AllocateBlock(self, node):
+        """DIM b n: reserve n+1 bytes of the address space and store the base
+        address in b. The block is then read/written through ?/!/$ indirection,
+        which index the same MemoryMap byte array, so the address must come from
+        it (not an independent array). BadDimException on a negative size or an
+        exhausted heap is raised by MemoryMap.Allocate."""
+        self.lower_expression(node.size)
+        if isinstance(getattr(node.size, "actualType", None), FloatOwlType):
+            self.emit("conv.i4")
+        self.emit("ldc.i4.1")
+        self.emit("add")                 # DIM b n -> n+1 bytes (b?0 .. b?n)
+        self.emit("call int32 [OwlRuntime]OwlRuntime.MemoryMap::Allocate(int32)")
+        self._store_variable(node.identifier)
 
     def _expr_Indexer(self, node):
         """A(i[,j...]) as an r-value: load the element."""

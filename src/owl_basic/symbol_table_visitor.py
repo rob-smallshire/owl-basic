@@ -184,10 +184,11 @@ class SymbolTableVisitor(Visitor):
         self.followSuccessors(statement)
         
     def visitAllocateBlock(self, statement):
-        #logger.debug("SymbolTableVisitor.allocateBlock")
-        statement.symbolTable = self.checkPredecessorsAndRefer(statement)    
+        # DIM b n reserves a byte block and stores its base address in b, which
+        # is therefore an ordinary (integer) variable holding a pointer.
+        statement.symbolTable = self.checkPredecessorsAndRefer(statement)
         assert statement.symbolTable is not None
-        symbol_info = SymbolInfo(statement.identifier, PtrType)
+        self.tryAddVariable(statement.symbolTable, statement.identifier)
         self.followSuccessors(statement)
     
     def visitForToStep(self, statement):
