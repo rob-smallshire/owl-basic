@@ -24,9 +24,9 @@ def test_emit_il_lowers_print_and_arithmetic(dotnet_backend):
     il = dotnet_backend.emit_il(analyse_fixture("six_times_seven.bbctxt"))
     assert 'ldstr "Bah!"' in il
     assert "[OwlRuntime]OwlRuntime.BasicCommands::Print(string)" in il
-    assert "ldc.i4 6" in il
-    assert "ldc.i4 7" in il
-    assert "\n        mul" in il
+    # The constant 6*7 is folded to 42 at compile time, so no `mul` remains.
+    assert "ldc.i4 42" in il
+    assert "\n        mul" not in il
     assert "[OwlRuntime]OwlRuntime.BasicCommands::Print(int32)" in il
     assert ".entrypoint" in il
 

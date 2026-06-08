@@ -5,7 +5,7 @@ import logging
 from owl_basic.visitor import Visitor
 from owl_basic.errors import *
 from owl_basic.utility import underscoresToCamelCase
-from owl_basic.syntax.ast import Cast, Concatenate
+from owl_basic.syntax.ast import Cast, Concatenate, LiteralInteger
 from owl_basic.ast_utils import elideNode
 from owl_basic.owltyping.type_system import (NumericOwlType, ObjectOwlType, IntegerOwlType,
                                 LongIntegerOwlType, FloatOwlType, ByteOwlType, PendingOwlType,
@@ -13,6 +13,15 @@ from owl_basic.owltyping.type_system import (NumericOwlType, ObjectOwlType, Inte
 
 _INT32_MIN = -2147483648
 _INT32_MAX = 2147483647
+
+# Integer arithmetic that is safe to fold at compile time. DIV/MOD are left to
+# the runtime so their truncate-toward-zero sign behaviour is defined in exactly
+# one place; only the overflow-prone additive/multiplicative ops fold here.
+_FOLD_OPS = {
+    "Plus": lambda a, b: a + b,
+    "Minus": lambda a, b: a - b,
+    "Multiply": lambda a, b: a * b,
+}
 from owl_basic import sigil
 
 logger = logging.getLogger('owltyping.typecheck_visitor')
@@ -91,9 +100,36 @@ class TypecheckVisitor(Visitor):
         '''
         self.visit(operator.lhs)
         self.visit(operator.rhs)
+        if self._foldConstant(operator):
+            return
         # TODO: Propagate pending types
         self.determineNumericResultType(operator)
         self.promoteNumericOperands(operator)
+
+    def _foldConstant(self, operator):
+        '''
+        If an additive/multiplicative operator has two integer-literal operands,
+        replace it with the folded constant. The fold is done in arbitrary
+        precision and typed by magnitude, so a product that overflows 32 bits
+        becomes a 64-bit literal (e.g. 100000*80500 -> 8050000000) rather than
+        wrapping. Returns True if the node was folded and replaced.
+        '''
+        fold = _FOLD_OPS.get(type(operator).__name__)
+        if fold is None:
+            return False
+        lhs, rhs = operator.lhs, operator.rhs
+        if not (isinstance(lhs, LiteralInteger) and isinstance(rhs, LiteralInteger)):
+            return False
+        value = fold(lhs.value, rhs.value)
+        literal = LiteralInteger(value=value)
+        literal.lineNum = operator.lineNum
+        literal.actualType = (IntegerOwlType() if _INT32_MIN <= value <= _INT32_MAX
+                              else LongIntegerOwlType())
+        literal.parent = operator.parent
+        literal.parent_property = operator.parent_property
+        literal.parent_index = operator.parent_index
+        operator.parent.setProperty(literal, operator.parent_property, operator.parent_index)
+        return True
                 
     def visitDivide(self, divide):
         '''
@@ -136,7 +172,9 @@ class TypecheckVisitor(Visitor):
             plus.parent.setProperty(concat, plus.parent_property, plus.parent_index)
             self.visit(concat)
             return
-        
+
+        if self._foldConstant(plus):
+            return
         self.determineNumericResultType(plus)
         self.promoteNumericOperands(plus)
             
@@ -168,9 +206,11 @@ class TypecheckVisitor(Visitor):
         # Decode the variable name sigil into the actual type
         # The sigils are one of [$%&~]
         indexer.actualType = sigil.identifierToType(indexer.identifier[:-1])
-        for index in indexer.indices:
-            self.visit(index)
-            self.checkAndInsertRValueCast(index, IntegerOwlType())
+        # Re-read each index from the list after visiting: constant folding may
+        # have replaced the index node in place (e.g. A%(2+3) -> A%(5)).
+        for i in range(len(indexer.indices)):
+            self.visit(indexer.indices[i])
+            self.checkAndInsertRValueCast(indexer.indices[i], IntegerOwlType())
     
     def visitIf(self, iff):
         # TODO: Does this do anything that visitAstNode doesn't do?
