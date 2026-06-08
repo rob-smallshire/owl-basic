@@ -121,6 +121,12 @@ namespace OwlRuntime
             return 0.0;
         }
 
+        public static string StrString(double n)
+        {
+            // BBC STR$: the string a number would PRINT as (the inverse of VAL).
+            return printManager.NumberToString(n);
+        }
+
         public static void Bput(int channel, byte value)
         {
             if (channels.ContainsKey(channel))

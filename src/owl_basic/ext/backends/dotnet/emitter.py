@@ -76,11 +76,23 @@ _DATA_ARRAY_TYPE = "string[]"
 _DATA_INDEX_FIELD = "__dataIndex"
 
 # Map a textual CIL operator mnemonic onto each binary arithmetic AST node.
+# DIV/MOD operate on integer operands (the front-end types them so), so the same
+# div/rem opcodes give BBC's integer division (truncating) and remainder.
 _BINARY_OPS = {
     "Plus": "add",
     "Minus": "sub",
     "Multiply": "mul",
     "Divide": "div",
+    "IntegerDivide": "div",
+    "IntegerModulus": "rem",
+}
+
+# BBC transcendental functions -> the [System.Runtime]System.Math method. The
+# argument and result are float64; LOG is base 10, LN is natural.
+_MATH_UNARY = {
+    "SinFunc": "Sin", "CosFunc": "Cos", "TanFunc": "Tan",
+    "AtnFunc": "Atan", "AsnFunc": "Asin", "AcsFunc": "Acos",
+    "ExpFunc": "Exp", "LnFunc": "Log", "LogFunc": "Log10",
 }
 
 # BBC BASIC's AND/OR/EOR are bitwise; with OWL booleans (0 / -1) they double as
@@ -619,12 +631,21 @@ class _MethodEmitter:
         suppress_newline = False
         for index, print_item in enumerate(items):
             item = print_item.item
-            if type(item).__name__ == "FormatManipulator":
+            kind = type(item).__name__
+            if kind == "FormatManipulator":
                 last = index == len(items) - 1
                 self._emit_print_manipulator(item)
                 # A trailing ';' (or ',') suppresses PRINT's end-of-line newline.
                 if last and item.manipulator in (";", ","):
                     suppress_newline = True
+            elif kind in ("TabH", "TabXY"):
+                # PRINT TAB(x) / TAB(x,y): move the cursor (a void call).
+                self.lower_expression(item.xCoord)
+                if kind == "TabH":
+                    self.emit(_runtime("TabH", "int32"))
+                else:
+                    self.lower_expression(item.yCoord)
+                    self.emit(_runtime("TabXY", "int32", "int32"))
             else:
                 self.lower_expression(item)
                 self.emit(self._print_call(item))
@@ -659,6 +680,11 @@ class _MethodEmitter:
             # LOMEM = v : the runtime models the BBC memory boundary as a property.
             self.lower_expression(node.rValue)
             self.emit(_runtime("set_Lomem", "int32"))
+            return
+        if name == "TimeValue":
+            # TIME = v : reset the centisecond clock.
+            self.lower_expression(node.rValue)
+            self.emit(_runtime("set_Time", "int32"))
             return
         if name == "Indexer":
             # A(i) = v : store into an array element.
@@ -1036,6 +1062,12 @@ class _MethodEmitter:
         if name in _RELATIONAL_OPS:
             self._lower_relational(node)
             return
+        if name in _MATH_UNARY:
+            self.lower_expression(node.factor)
+            if not isinstance(node.factor.actualType, FloatOwlType):
+                self.emit("conv.r8")
+            self.emit("call float64 %s::%s(float64)" % (_MATH, _MATH_UNARY[name]))
+            return
         handler = getattr(self, "_expr_" + name, None)
         if handler is None:
             raise CodeGenerationError("Cannot lower expression node %r" % name)
@@ -1402,6 +1434,19 @@ class _MethodEmitter:
         self.lower_expression(node.factor)
         self.emit("call float64 %s::Floor(float64)" % _MATH)
         self.emit("conv.ovf.i4")
+
+    def _expr_TimeValue(self, node):
+        # TIME: the elapsed centisecond clock.
+        self.emit(_runtime("get_Time"))
+
+    def _expr_StrStringFunc(self, node):
+        # STR$: format a number as PRINT would. (STR$~ hex base not yet handled.)
+        if getattr(node, "base", 10) != 10:
+            raise CodeGenerationError("STR$ with a non-decimal base is not supported yet")
+        self.lower_expression(node.factor)
+        if not isinstance(getattr(node.factor, "actualType", None), FloatOwlType):
+            self.emit("conv.r8")          # StrString takes a float64
+        self.emit(_runtime("StrString", "float64"))
 
     def _expr_UnaryMinus(self, node):
         self.lower_expression(node.factor)

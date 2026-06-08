@@ -512,6 +512,14 @@
       []
     ]
   ],
+  "BasicCommands::StrString": [
+    [
+      "string",
+      [
+        "float64"
+      ]
+    ]
+  ],
   "BasicCommands::TabH": [
     [
       "void",

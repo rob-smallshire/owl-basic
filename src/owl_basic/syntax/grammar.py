@@ -1703,7 +1703,7 @@ def p_len_func(p):
     
 def p_ln_func(p):
     '''ln_func : LN factor %prec FUNCTION'''
-    p[0] = LnFunc(factpr = p[2])
+    p[0] = LnFunc(factor = p[2])
     p[0].lineNum = p.lineno(1) - 1
     
 def p_log_func(p):

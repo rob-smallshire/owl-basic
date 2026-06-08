@@ -342,6 +342,19 @@ namespace OwlRuntime
             Print(s);
         }
 
+        /// <summary>
+        /// The string a number would PRINT as (honouring @%), without any field
+        /// justification -- used by both Print(double) and STR$.
+        /// </summary>
+        public string NumberToString(double d)
+        {
+            if (numberBase == NumberBase.Hexadecimal)
+            {
+                return ((int) d).ToString("X");
+            }
+            return d.ToString(FormatChar + precision.ToString());
+        }
+
         public void Print(double d)
         {
             if (numberBase == NumberBase.Hexadecimal)
@@ -350,8 +363,7 @@ namespace OwlRuntime
             }
             else
             {
-                string format = FormatChar + precision.ToString();
-                string s = d.ToString(format);
+                string s = NumberToString(d);
                 if (numberJustification == Justification.Right)
                 {
                     Spc(fieldWidth - s.Length);
