@@ -900,8 +900,9 @@ def t_LITERAL_STRING(t):
 def t_LITERAL_FLOAT(t):
     # Digits optional on both sides of the point, so '.5', '5.' and a lone '.'
     # are all accepted; in BBC BASIC a bare '.' is the number 0 (e.g. the
-    # deliberate infinite loop REPEAT UNTIL .).
-    r'\d*\.\d*(E([+-]?\d+))?'
+    # deliberate infinite loop REPEAT UNTIL .). The second alternative accepts
+    # E-notation with no decimal point, as BBC BASIC does (70E9, 1E10, 10E3).
+    r'\d*\.\d*(?:E[+-]?\d+)?|\d+E[+-]?\d+'
     try:
         t.value = float(t.value)
     except ValueError:

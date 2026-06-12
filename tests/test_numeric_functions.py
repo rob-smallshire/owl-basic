@@ -28,6 +28,15 @@ def test_transcendental_functions(compile_and_run):
 
 
 @requires_dotnet_toolchain
+def test_scientific_notation_without_decimal_point(compile_and_run):
+    # BBC BASIC accepts E-notation reals with no decimal point (70E9, 1E10),
+    # not just the dotted form (7.0E10).
+    out = compile_and_run(analyse(
+        "PRINT 1E3\nPRINT 2.5E3\nA = 70E9\nPRINT A / 1E9\nEND\n", name="sci"))
+    assert out.splitlines() == ["1000", "2500", "70"]
+
+
+@requires_dotnet_toolchain
 def test_division_is_always_real(compile_and_run):
     # BBC BASIC '/' is always real division, even for integer operands,
     # unlike DIV. 1/10 == 0.1 (not 0), 7/2 == 3.5 (not 3).
