@@ -487,6 +487,14 @@
       ]
     ]
   ],
+  "BasicCommands::SetAtPercentFormat": [
+    [
+      "void",
+      [
+        "string"
+      ]
+    ]
+  ],
   "BasicCommands::SetPtr": [
     [
       "void",
@@ -577,6 +585,12 @@
       []
     ]
   ],
+  "BasicCommands::get_AtPercent": [
+    [
+      "int32",
+      []
+    ]
+  ],
   "BasicCommands::get_CurrentDateTime": [
     [
       "string",
@@ -617,6 +631,14 @@
     [
       "int32",
       []
+    ]
+  ],
+  "BasicCommands::set_AtPercent": [
+    [
+      "void",
+      [
+        "int32"
+      ]
     ]
   ],
   "BasicCommands::set_CurrentDateTime": [

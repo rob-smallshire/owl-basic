@@ -127,6 +127,25 @@ namespace OwlRuntime
             return printManager.NumberToString(n);
         }
 
+        /// <summary>
+        /// The @% print-format control word: the 4-byte BBC packing of STR$
+        /// switch, G/E/F format, precision and field width. Driving PRINT, STR$.
+        /// </summary>
+        public static int AtPercent
+        {
+            get { return printManager.FormatNumber; }
+            set { printManager.FormatNumber = value; }
+        }
+
+        /// <summary>
+        /// The printf-style string form of @% in later BBC BASIC, e.g.
+        /// @%="G10.5" or @%="+F2.4".
+        /// </summary>
+        public static void SetAtPercentFormat(string format)
+        {
+            printManager.FormatString = format;
+        }
+
         public static void Bput(int channel, byte value)
         {
             if (channels.ContainsKey(channel))

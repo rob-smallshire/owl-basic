@@ -731,6 +731,17 @@ class _MethodEmitter:
             # A(i) = v : store into an array element.
             self._store_element(target, node.rValue)
             return
+        if name == "Variable" and target.identifier == "@%":
+            # @% = v : the print/STR$ format control word. Route it to the
+            # runtime's format state rather than storing a plain global. A string
+            # r-value uses the printf-style form (@% = "G10.5"); else the packed
+            # 32-bit control word.
+            self.lower_expression(node.rValue)
+            if isinstance(node.rValue.actualType, StringOwlType):
+                self.emit(_runtime("SetAtPercentFormat", "string"))
+            else:
+                self.emit(_runtime("set_AtPercent", "int32"))
+            return
         if name != "Variable":
             # Other pseudo-variable l-values come later.
             raise CodeGenerationError(
@@ -1145,6 +1156,10 @@ class _MethodEmitter:
         self.emit("ldc.r8 %r" % float(node.value))
 
     def _load_variable(self, variable):
+        if variable.identifier == "@%":
+            # @% reads back the current print/STR$ format control word.
+            self.emit(_runtime("get_AtPercent"))
+            return
         field = self._variable_field(variable)
         self.emit("ldsfld %s %s" % (self._globals[field], field))
 

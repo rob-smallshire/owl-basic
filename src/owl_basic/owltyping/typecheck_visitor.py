@@ -84,6 +84,12 @@ class TypecheckVisitor(Visitor):
         
         self.visit(assignment.lValue)
         self.visit(assignment.rValue)
+        # @% takes either the packed integer control word or a printf-style
+        # format string (later BBC BASIC); the backend routes each form, so no
+        # scalar cast to the variable's nominal integer type is wanted here.
+        if (type(assignment.lValue).__name__ == "Variable"
+                and getattr(assignment.lValue, "identifier", None) == "@%"):
+            return
         if isinstance(assignment.rValue, list):
             # A whole-array assignment: A() = <expr-list>. Scalar operands are
             # cast to the element type (fill/init); a whole-array operand (e.g.

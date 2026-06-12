@@ -123,7 +123,9 @@ namespace OwlRuntime
 
             set
             {
-                Match match = Regex.Match(value, @"^(\+?)([GEF]?)(\d*)(\.\d+)?");
+                // [+]A x.y : A is the format letter; the dot group captures only
+                // the digits after the point (not the '.').
+                Match match = Regex.Match(value, @"^(\+?)([GEF]?)(\d*)(?:\.(\d+))?$");
                 if (match.Success)
                 {
                     affectStr = match.Groups[1].ToString() == "+";
@@ -145,8 +147,22 @@ namespace OwlRuntime
                         }
                     }
 
-                    Byte.TryParse(match.Groups[3].ToString(), out fieldWidth);
-                    Byte.TryParse(match.Groups[4].ToString(), out precision);
+                    byte x, y;
+                    Byte.TryParse(match.Groups[3].ToString(), out x);
+                    Byte.TryParse(match.Groups[4].ToString(), out y);
+                    // In G and E, x is the field width and y the digit count; in
+                    // F the two are swapped (x is the decimal places, y the
+                    // field width).
+                    if (numberFormat == NumberFormat.Fixed)
+                    {
+                        precision = x;
+                        fieldWidth = y;
+                    }
+                    else
+                    {
+                        fieldWidth = x;
+                        precision = y;
+                    }
                 }
             }
         }
