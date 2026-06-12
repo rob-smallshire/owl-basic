@@ -985,6 +985,18 @@ class _MethodEmitter:
         self.lower_expression(node.number)
         self.emit(_runtime("Mode", "int32"))
 
+    def _stmt_Cls(self, node):
+        # CLS: clear the text screen and home the cursor.
+        self.emit(_runtime("Cls"))
+
+    def _stmt_Colour(self, node):
+        # COLOUR n: set the text foreground (n < 128) or background colour. The
+        # RISC OS TINT form is not modelled by the runtime yet.
+        if node.tint is not None:
+            raise CodeGenerationError("COLOUR ... TINT not yet supported")
+        self.lower_expression(node.colour)
+        self.emit(_runtime("Colour", "int32"))
+
     def _stmt_Data(self, node):
         # DATA is compiled to a static array (built in Main); no inline code.
         pass
