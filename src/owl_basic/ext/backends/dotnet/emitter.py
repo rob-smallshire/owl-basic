@@ -1032,6 +1032,21 @@ class _MethodEmitter:
         self.lower_expression(node)
         self._coerce("int32", node.actualType)
 
+    def _stmt_Vdu(self, node):
+        # VDU sends raw bytes to the VDU driver. Each item is a byte (',' form,
+        # length 1) or a 16-bit word ('; form', length 2, low byte then high).
+        items = node.bytes
+        if not isinstance(items, list):     # VduList not elided to a plain list
+            items = items.items
+        for vdu_item in items:
+            self.lower_expression(vdu_item.item)
+            if vdu_item.length == 2:
+                self.emit("conv.i2")
+                self.emit(_runtime("Vdu", "int16"))
+            else:
+                self.emit("conv.u1")
+                self.emit(_runtime("Vdu", "uint8"))
+
     def _stmt_Data(self, node):
         # DATA is compiled to a static array (built in Main); no inline code.
         pass

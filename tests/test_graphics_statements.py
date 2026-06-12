@@ -57,3 +57,23 @@ def test_emit_il_lowers_graphics_primitives(dotnet_backend):
     assert "Plot(int32, int32, int32)" in il
     assert "ldc.i4 4" in il      # MOVE -> PLOT 4
     assert "ldc.i4 5" in il      # DRAW -> PLOT 5
+
+
+@requires_dotnet_toolchain
+def test_vdu_control_sequence_runs(compile_and_run):
+    # VDU 23,1,0;0;0;0; (cursor off): bytes via ',' and 16-bit words via ';'.
+    out = compile_and_run(analyse('VDU 23,1,0;0;0;0;\nPRINT "ok"\nEND\n', name="vdu"))
+    assert out.splitlines() == ["ok"]
+
+
+@requires_dotnet_toolchain
+def test_vdu_prints_characters(compile_and_capture_screen):
+    # VDU n (n >= 32) sends the character to the screen.
+    screen = compile_and_capture_screen(analyse('VDU 65,66,67\nEND\n', name="vduc"))
+    assert screen.split("\n")[0] == "ABC"
+
+
+def test_emit_il_lowers_vdu_bytes_and_words(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse('VDU 23,1,0;0;0;0;\nEND\n', name="vduil"))
+    assert "Vdu(uint8)" in il     # the ',' byte items (23, 1)
+    assert "Vdu(int16)" in il      # the ';' word items (0;0;0;0;)

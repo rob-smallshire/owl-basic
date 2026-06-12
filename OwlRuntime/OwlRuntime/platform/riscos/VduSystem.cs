@@ -1217,9 +1217,11 @@ namespace OwlRuntime.platform.riscos
         /// 2 - makes the cursor steady
         /// 3 - makes the cursor flash
         /// </param>
-        private void CursorDisplay(byte mode )
+        private void CursorDisplay(byte mode)
         {
-            throw new NotImplementedException();
+            // VDU 23,1,mode controls the text cursor's visibility (0 = off,
+            // 1 = on). There is no visible cursor in the headless screen modes,
+            // so this is a no-op rather than an error.
         }
 
         /// <summary>
@@ -1662,11 +1664,14 @@ namespace OwlRuntime.platform.riscos
                 ResetGraphicsWindow();
                 ResetTextCursor();
             }
-            catch (PlatformNotSupportedException)
+            catch (NotSupportedException)
             {
-                // Headless / non-Windows: the requested mode's screen operations
-                // are unavailable, so fall back to the raw console text mode and
-                // keep text output working regardless of the MODE requested.
+                // The requested mode is unavailable in this build: either a
+                // graphics mode (CreateScreenMode throws NotSupportedException
+                // while the GDI+/WinForms renderer is unported) or a managed text
+                // mode whose console operations throw when output is redirected
+                // (PlatformNotSupportedException). Either way, fall back to the
+                // raw console text mode so text output keeps working.
                 modeNumber = rawConsoleMode;
                 screenMode = AbstractScreenMode.CreateScreenMode(this, rawConsoleMode);
             }
