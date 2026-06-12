@@ -37,7 +37,13 @@ namespace OwlRuntime.platform.riscos
                 case 3: return new PalettedTextScreenMode(vdu, 1, 80, 25); // 1280, 1000 checked by using mouse co-ords in this mode
                 case 6: return new PalettedTextScreenMode(vdu, 1, 40, 25); // 1280, 1000
                 case 7: return new TeletextScreenMode(vdu); // 1280, 1000
-                case 47: return new RawConsoleScreenMode(vdu);
+                case 47:
+                    // The headless console mode either streams characters or, when
+                    // OWL_CAPTURE_SCREEN is set, captures the laid-out screen into
+                    // a grid (an inspection/testing aid for text formatting).
+                    return string.IsNullOrEmpty(Environment.GetEnvironmentVariable("OWL_CAPTURE_SCREEN"))
+                        ? (AbstractScreenMode) new RawConsoleScreenMode(vdu)
+                        : new GridTextScreenMode(vdu);
 
                 // Graphics modes (0-2, 4, 5, 8-46) are temporarily unavailable: the
                 // GDI+/WinForms graphics layer that implemented them is excluded

@@ -5,6 +5,7 @@ Pure helper functions live in the ``helpers`` package; this module wires the
 tests.
 """
 
+import os
 import shutil
 import subprocess
 
@@ -75,6 +76,29 @@ def compile_and_run(dotnet_backend, tmp_path):
         result = subprocess.run(
             ["dotnet", str(dll_filepath)],
             input=stdin, capture_output=True, text=True, timeout=timeout
+        )
+        assert result.returncode == 0, result.stderr
+        return result.stdout
+
+    return run
+
+
+@pytest.fixture
+def compile_and_capture_screen(dotnet_backend, tmp_path):
+    """Like ``compile_and_run``, but runs with the grid-capturing screen mode
+    (OWL_CAPTURE_SCREEN), so the returned string is the laid-out 80x25 text
+    screen -- TAB(x,y) positioning and scrolling honoured -- rather than the
+    streamed output. Useful for checking text formatting/layout.
+    """
+
+    def run(program, stdin=None, timeout=None):
+        dll_filepath = dotnet_backend.generate(program, tmp_path)
+        shutil.copy(find_owlruntime_dll(), tmp_path)
+        env = dict(os.environ)
+        env["OWL_CAPTURE_SCREEN"] = "1"
+        result = subprocess.run(
+            ["dotnet", str(dll_filepath)],
+            input=stdin, capture_output=True, text=True, timeout=timeout, env=env
         )
         assert result.returncode == 0, result.stderr
         return result.stdout
