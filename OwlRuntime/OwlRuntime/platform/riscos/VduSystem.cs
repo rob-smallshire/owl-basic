@@ -1666,14 +1666,14 @@ namespace OwlRuntime.platform.riscos
             }
             catch (NotSupportedException)
             {
-                // The requested mode is unavailable in this build: either a
-                // graphics mode (CreateScreenMode throws NotSupportedException
-                // while the GDI+/WinForms renderer is unported) or a managed text
-                // mode whose console operations throw when output is redirected
-                // (PlatformNotSupportedException). Either way, fall back to the
-                // raw console text mode so text output keeps working.
+                // A managed text mode whose console operations throw when output
+                // is redirected (PlatformNotSupportedException). Fall back to a
+                // headless text mode sized to the requested mode's text geometry,
+                // so its layout is preserved.
+                int[] dims = AbstractScreenMode.ModeTextSize(ModeNumber)
+                             ?? AbstractScreenMode.InitialTextSize();
                 modeNumber = rawConsoleMode;
-                screenMode = AbstractScreenMode.CreateScreenMode(this, rawConsoleMode);
+                screenMode = AbstractScreenMode.CreateHeadlessText(this, dims[0], dims[1]);
             }
             // TODO: Set default colours
             switch (ScreenMode.BitsPerPixel)

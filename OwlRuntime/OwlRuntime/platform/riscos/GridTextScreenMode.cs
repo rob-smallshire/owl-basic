@@ -18,8 +18,8 @@ namespace OwlRuntime.platform.riscos
         private readonly char[,] grid;
         private bool dumped;
 
-        public GridTextScreenMode(VduSystem vdu) :
-            base(vdu)
+        public GridTextScreenMode(VduSystem vdu, int width, int height) :
+            base(vdu, width, height)
         {
             grid = new char[TextHeight, TextWidth];
             for (int y = 0; y < TextHeight; ++y)

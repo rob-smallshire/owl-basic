@@ -38,24 +38,87 @@ namespace OwlRuntime.platform.riscos
                 case 6: return new PalettedTextScreenMode(vdu, 1, 40, 25); // 1280, 1000
                 case 7: return new TeletextScreenMode(vdu); // 1280, 1000
                 case 47:
-                    // The headless console mode either streams characters or, when
-                    // OWL_CAPTURE_SCREEN is set, captures the laid-out screen into
-                    // a grid (an inspection/testing aid for text formatting).
-                    return string.IsNullOrEmpty(Environment.GetEnvironmentVariable("OWL_CAPTURE_SCREEN"))
-                        ? (AbstractScreenMode) new RawConsoleScreenMode(vdu)
-                        : new GridTextScreenMode(vdu);
+                    // The headless console (and the fallback target). Its initial
+                    // size comes from OWL_SCREEN_SIZE, defaulting to MODE 7.
+                    int[] init = InitialTextSize();
+                    return CreateHeadlessText(vdu, init[0], init[1]);
 
-                // Graphics modes (0-2, 4, 5, 8-46) are temporarily unavailable: the
-                // GDI+/WinForms graphics layer that implemented them is excluded
-                // from this build pending a SkiaSharp/Avalonia port. The full mode
-                // table is preserved in version control.
+                // Graphics modes (0-2, 4, 5, 8-46) have no renderer in this build
+                // (the GDI+/WinForms graphics layer is excluded pending a
+                // SkiaSharp/Avalonia port). Fall back to a headless text mode
+                // sized to the requested mode's text geometry, so a program
+                // written for that mode lays its text out correctly.
                 default:
+                    int[] dims = ModeTextSize(number);
+                    if (dims != null)
+                    {
+                        return CreateHeadlessText(vdu, dims[0], dims[1]);
+                    }
                     throw new NotSupportedException(
-                        "Screen mode " + number + " is not available in this build. " +
-                        "Graphics modes are temporarily disabled while the GDI+/WinForms " +
-                        "renderer is ported to SkiaSharp/Avalonia; use a text mode (3, 6, 7) " +
-                        "or the raw console mode (47).");
+                        "Screen mode " + number + " is not available in this build.");
             }
+        }
+
+        /// <summary>
+        /// A headless text screen mode of the given size: the raw streaming mode,
+        /// or -- when OWL_CAPTURE_SCREEN is set -- the grid-capturing mode.
+        /// </summary>
+        internal static AbstractScreenMode CreateHeadlessText(VduSystem vdu, int width, int height)
+        {
+            return string.IsNullOrEmpty(Environment.GetEnvironmentVariable("OWL_CAPTURE_SCREEN"))
+                ? (AbstractScreenMode) new RawConsoleScreenMode(vdu, width, height)
+                : new GridTextScreenMode(vdu, width, height);
+        }
+
+        /// <summary>The text columns x rows of a BBC screen mode, or null if the
+        /// mode's geometry is unknown.</summary>
+        internal static int[] ModeTextSize(int mode)
+        {
+            switch (mode & 127)
+            {
+                case 0: return new int[] { 80, 32 };
+                case 1: return new int[] { 40, 32 };
+                case 2: return new int[] { 20, 32 };
+                case 3: return new int[] { 80, 25 };
+                case 4: return new int[] { 40, 32 };
+                case 5: return new int[] { 20, 32 };
+                case 6: return new int[] { 40, 25 };
+                case 7: return new int[] { 40, 25 };
+                default: return null;
+            }
+        }
+
+        /// <summary>
+        /// The initial headless console size: OWL_SCREEN_SIZE if set, as "WxH"
+        /// (e.g. "40x32") or a mode ("MODE1"); otherwise MODE 7 (40x25), the
+        /// BBC's power-on mode. A MODE command then resizes from here.
+        /// </summary>
+        internal static int[] InitialTextSize()
+        {
+            string spec = Environment.GetEnvironmentVariable("OWL_SCREEN_SIZE");
+            if (!string.IsNullOrEmpty(spec))
+            {
+                spec = spec.Trim().ToUpperInvariant();
+                if (spec.StartsWith("MODE") && int.TryParse(spec.Substring(4), out int mode))
+                {
+                    int[] md = ModeTextSize(mode);
+                    if (md != null)
+                    {
+                        return md;
+                    }
+                }
+                else
+                {
+                    string[] parts = spec.Split('X');
+                    if (parts.Length == 2
+                        && int.TryParse(parts[0], out int w) && w > 0
+                        && int.TryParse(parts[1], out int h) && h > 0)
+                    {
+                        return new int[] { w, h };
+                    }
+                }
+            }
+            return ModeTextSize(7);
         }
 
         protected AbstractScreenMode(VduSystem vdu, int textWidth, int textHeight, int unitsWidth, int unitsHeight, byte bitsPerPixel)

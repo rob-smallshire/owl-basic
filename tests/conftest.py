@@ -91,11 +91,13 @@ def compile_and_capture_screen(dotnet_backend, tmp_path):
     streamed output. Useful for checking text formatting/layout.
     """
 
-    def run(program, stdin=None, timeout=None):
+    def run(program, stdin=None, timeout=None, screen_size=None):
         dll_filepath = dotnet_backend.generate(program, tmp_path)
         shutil.copy(find_owlruntime_dll(), tmp_path)
         env = dict(os.environ)
         env["OWL_CAPTURE_SCREEN"] = "1"
+        if screen_size is not None:
+            env["OWL_SCREEN_SIZE"] = screen_size      # initial geometry
         result = subprocess.run(
             ["dotnet", str(dll_filepath)],
             input=stdin, capture_output=True, text=True, timeout=timeout, env=env

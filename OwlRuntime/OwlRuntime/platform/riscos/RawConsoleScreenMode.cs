@@ -14,8 +14,8 @@ namespace OwlRuntime.platform.riscos
     /// </summary>
     public class RawConsoleScreenMode : HeadlessTextScreenMode
     {
-        public RawConsoleScreenMode(VduSystem vdu) :
-            base(vdu)
+        public RawConsoleScreenMode(VduSystem vdu, int width, int height) :
+            base(vdu, width, height)
         {
         }
 

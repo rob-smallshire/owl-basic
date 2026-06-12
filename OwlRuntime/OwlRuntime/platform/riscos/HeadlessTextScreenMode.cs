@@ -1,7 +1,7 @@
 namespace OwlRuntime.platform.riscos
 {
     /// <summary>
-    /// Shared behaviour for the headless 80x25 text screen modes: those that run
+    /// Shared behaviour for the headless text screen modes: those that run
     /// cross-platform without the managed console's window and cursor APIs
     /// (Console.SetWindowSize / SetCursorPosition / MoveBufferArea), which throw
     /// when output is redirected or piped.
@@ -12,11 +12,16 @@ namespace OwlRuntime.platform.riscos
     /// host terminal); <see cref="GridTextScreenMode"/> places it on an in-memory
     /// grid so the laid-out screen can be captured. Colour and scrolling are
     /// no-ops for both.
+    ///
+    /// The columns x rows are supplied by the factory
+    /// (<see cref="AbstractScreenMode.CreateScreenMode"/>): the initial console
+    /// size comes from OWL_SCREEN_SIZE (default 80x25), and a MODE command then
+    /// resizes to that mode's text geometry.
     /// </summary>
     public abstract class HeadlessTextScreenMode : BaseTextScreenMode
     {
-        protected HeadlessTextScreenMode(VduSystem vdu) :
-            base(vdu, 80, 25, 1)
+        protected HeadlessTextScreenMode(VduSystem vdu, int width, int height) :
+            base(vdu, width, height, 1)
         {
             // Unlike the managed text modes we do NOT call SetConsoleSize(): a
             // headless stream has no window to size, and doing so fails when
