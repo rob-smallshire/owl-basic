@@ -997,6 +997,41 @@ class _MethodEmitter:
         self.lower_expression(node.colour)
         self.emit(_runtime("Colour", "int32"))
 
+    def _stmt_Gcol(self, node):
+        # GCOL mode, colour: set the graphics colour and plot action.
+        if node.tint is not None:
+            raise CodeGenerationError("GCOL ... TINT not yet supported")
+        self.lower_expression(node.mode)
+        self.lower_expression(node.logicalColour)
+        self.emit(_runtime("Gcol", "int32", "int32"))
+
+    def _stmt_Move(self, node):
+        # MOVE x,y is PLOT 4 (absolute) / PLOT 0 (relative) -- move, no draw.
+        self._emit_plot(0 if node.relative else 4, node.xCoord, node.yCoord)
+
+    def _stmt_Draw(self, node):
+        # DRAW x,y is PLOT 5 (absolute) / PLOT 1 (relative) -- draw a line.
+        self._emit_plot(1 if node.relative else 5, node.xCoord, node.yCoord)
+
+    def _stmt_Plot(self, node):
+        # PLOT mode,x,y: the mode carries the absolute/relative and draw action.
+        self.lower_expression(node.mode)
+        self._push_plot_coord(node.xCoord)
+        self._push_plot_coord(node.yCoord)
+        self.emit(_runtime("Plot", "int32", "int32", "int32"))
+
+    def _emit_plot(self, plot_mode, x_node, y_node):
+        self.emit("ldc.i4 %d" % plot_mode)
+        self._push_plot_coord(x_node)
+        self._push_plot_coord(y_node)
+        self.emit(_runtime("Plot", "int32", "int32", "int32"))
+
+    def _push_plot_coord(self, node):
+        # Plot coordinates are int32; a real-valued expression (e.g. i%*dx with a
+        # real dx) narrows to integer.
+        self.lower_expression(node)
+        self._coerce("int32", node.actualType)
+
     def _stmt_Data(self, node):
         # DATA is compiled to a static array (built in Main); no inline code.
         pass

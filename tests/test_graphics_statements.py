@@ -30,3 +30,30 @@ def test_emit_il_lowers_colour_and_cls(dotnet_backend):
     il = dotnet_backend.emit_il(analyse('COLOUR 2\nCLS\nEND\n', name="colil"))
     assert "Colour(int32)" in il
     assert "::Cls()" in il
+
+
+@requires_dotnet_toolchain
+def test_graphics_primitives_run(compile_and_run):
+    # GCOL/MOVE/DRAW/PLOT lower and run in the headless path (drawing is a no-op
+    # in the text screen modes, but the statements execute cleanly).
+    out = compile_and_run(analyse(
+        'GCOL 0,2\nMOVE 100,100\nDRAW 200,200\nPLOT 21,300,150\nPRINT "ok"\nEND\n',
+        name="gfx"))
+    assert out.splitlines() == ["ok"]
+
+
+@requires_dotnet_toolchain
+def test_draw_with_real_coordinates(compile_and_run):
+    # DRAW with a real-valued coordinate (i%*dx style) narrows to integer.
+    out = compile_and_run(analyse(
+        'DX = 12.5\nMOVE 0,0\nDRAW 3*DX, 50\nPRINT "drawn"\nEND\n', name="gfxf"))
+    assert out.splitlines() == ["drawn"]
+
+
+def test_emit_il_lowers_graphics_primitives(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse(
+        'GCOL 0,2\nMOVE 100,100\nDRAW 200,200\nPLOT 21,300,150\nEND\n', name="gfxil"))
+    assert "Gcol(int32, int32)" in il
+    assert "Plot(int32, int32, int32)" in il
+    assert "ldc.i4 4" in il      # MOVE -> PLOT 4
+    assert "ldc.i4 5" in il      # DRAW -> PLOT 5
