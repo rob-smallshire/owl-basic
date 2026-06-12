@@ -1124,6 +1124,13 @@ class _MethodEmitter:
         for opcode in opcodes:
             self.emit(opcode)
 
+    def _expr_Power(self, node):
+        # BBC '^' is exponentiation; the type checker has coerced both operands
+        # to float, so this is a straight System.Math.Pow(double, double).
+        self.lower_expression(node.lhs)
+        self.lower_expression(node.rhs)
+        self.emit("call float64 %s::Pow(float64, float64)" % _MATH)
+
     def _expr_LiteralString(self, node):
         self.emit("ldstr " + _il_string(node.value))
 

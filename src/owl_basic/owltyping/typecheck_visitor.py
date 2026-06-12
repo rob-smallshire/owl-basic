@@ -167,6 +167,21 @@ class TypecheckVisitor(Visitor):
         self.insertCast(divide.rhs, source=divide.rhs.actualType, target=FloatOwlType())
         divide.actualType = FloatOwlType()
 
+    def visitPower(self, power):
+        '''
+        Specialization of visitBinaryNumericOperator: BBC BASIC '^'
+        (exponentiation) always yields a real, even for integer operands
+        (2^3 == 8.0). Promote both operands to float; the result is float.
+        '''
+        self.visit(power.lhs)
+        self.visit(power.rhs)
+        if power.lhs.actualType == PendingOwlType() or power.rhs.actualType == PendingOwlType():
+            power.actualType = PendingOwlType()
+            return
+        self.insertCast(power.lhs, source=power.lhs.actualType, target=FloatOwlType())
+        self.insertCast(power.rhs, source=power.rhs.actualType, target=FloatOwlType())
+        power.actualType = FloatOwlType()
+
     def visitLiteralInteger(self, node):
         '''
         An integer literal too large for the 32-bit range is a 64-bit integer

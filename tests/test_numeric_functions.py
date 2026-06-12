@@ -28,6 +28,20 @@ def test_transcendental_functions(compile_and_run):
 
 
 @requires_dotnet_toolchain
+def test_power_operator(compile_and_run):
+    # ^ is exponentiation and always yields a real, even for integer operands
+    # (2^3 == 8). Fractional exponents work too (sqrt 2 via 2^0.5).
+    out = compile_and_run(analyse(
+        "PRINT 2^3\nPRINT 10^3\nPRINT 2^10\nPRINT INT(2^0.5*1000)\nEND\n", name="pow"))
+    assert out.splitlines() == ["8", "1000", "1024", "1414"]
+
+
+def test_emit_il_lowers_power_to_math_pow(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse("A = 2 ^ 3\nEND\n", name="powil"))
+    assert "Pow(float64, float64)" in il
+
+
+@requires_dotnet_toolchain
 def test_scientific_notation_without_decimal_point(compile_and_run):
     # BBC BASIC accepts E-notation reals with no decimal point (70E9, 1E10),
     # not just the dotted form (7.0E10).
