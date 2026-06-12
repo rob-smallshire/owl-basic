@@ -48,6 +48,11 @@ namespace OwlRuntime.platform.riscos
             movementYEOL = 1;
             multiplier = 1;
             transposed = false;
+            // The default (flags == 0) cursor direction is +1 on both axes;
+            // without this, DirectionX/Y default to 0 and TAB(x,y) positioning
+            // collapses every coordinate to the home position.
+            directionX = 1;
+            directionY = 1;
 
         }
 
