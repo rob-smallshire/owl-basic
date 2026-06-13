@@ -872,6 +872,13 @@ namespace OwlRuntime.platform.riscos
         {
             //prm pdf1-580
             // TODO: can also clear the current graphics window in in vdu5 mode
+            // A streaming mode has no addressable grid to fill cell-by-cell; let
+            // it clear itself rather than spraying a screenful of spaces.
+            if (screenMode.TryClearScreen())
+            {
+                ResetTextCursor();
+                return;
+            }
             for (textCursorY = textWindowTopRow; textCursorY <= textWindowBottomRow; ++textCursorY)
             {
                 for (textCursorX = textWindowLeftCol; textCursorX <= textWindowRightCol; ++textCursorX)

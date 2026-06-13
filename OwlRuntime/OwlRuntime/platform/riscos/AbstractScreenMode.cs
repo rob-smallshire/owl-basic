@@ -418,6 +418,17 @@ namespace OwlRuntime.platform.riscos
         public abstract void PrintCharAtText(char c);
 
         /// <summary>
+        /// Clear the text screen. Return true if the mode handled it; false to
+        /// fall back to filling the text window with spaces (the default, used by
+        /// the grid and pixel modes). Lets a streaming console clear differently
+        /// rather than emitting a screenful of spaces.
+        /// </summary>
+        public virtual bool TryClearScreen()
+        {
+            return false;
+        }
+
+        /// <summary>
         /// Destructively delete the character to the left of the text cursor
         /// (VDU 127). The default does nothing; text modes that drive a host
         /// terminal override it.

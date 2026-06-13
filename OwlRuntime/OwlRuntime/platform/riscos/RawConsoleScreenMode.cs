@@ -24,6 +24,19 @@ namespace OwlRuntime.platform.riscos
             Console.Out.Write(c);
         }
 
+        public override bool TryClearScreen()
+        {
+            // A stream has no 2-D screen to fill cell-by-cell. Clear an
+            // interactive terminal with an ANSI clear-and-home; emit nothing
+            // when output is redirected or piped, so CLS does not spray a
+            // screenful of spaces into the captured output.
+            if (!Console.IsOutputRedirected)
+            {
+                Console.Out.Write("[2J[H");
+            }
+            return true;
+        }
+
         public override void DeleteCharacterAtText()
         {
             // Destructive backspace on a host terminal: step back, overwrite the

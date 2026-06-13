@@ -26,6 +26,14 @@ def test_cls_clears_the_screen(compile_and_capture_screen):
     assert "before" not in screen
 
 
+@requires_dotnet_toolchain
+def test_cls_streamed_emits_no_spaces(compile_and_run):
+    # In the raw streaming console (output redirected/piped) CLS must not spray
+    # a screenful of spaces -- it clears the terminal only when interactive.
+    out = compile_and_run(analyse('PRINT "a"\nCLS\nPRINT "b"\nEND\n', name="cls_stream"))
+    assert out == "a\nb\n"
+
+
 def test_emit_il_lowers_colour_and_cls(dotnet_backend):
     il = dotnet_backend.emit_il(analyse('COLOUR 2\nCLS\nEND\n', name="colil"))
     assert "Colour(int32)" in il
