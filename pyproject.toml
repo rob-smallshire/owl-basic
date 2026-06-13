@@ -51,6 +51,11 @@ version = { attr = "owl_basic.__version__" }
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+# The dotnet emitter loads this committed signature manifest at compile time;
+# it must ship inside the wheel, not just the source tree.
+"owl_basic.ext.backends.dotnet" = ["*.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
