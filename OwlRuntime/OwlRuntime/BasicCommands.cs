@@ -1164,10 +1164,12 @@ namespace OwlRuntime
 
         public static int Pos()
         {
-            // The text cursor column is tracked by the print manager (it advances
-            // as characters are written and resets to 0 on a newline); the VDU's
-            // TextCursorX is only meaningful under a full graphical screen mode.
-            return printManager.Count;
+            // The text cursor column, advanced by all character output and reset
+            // to 0 on a newline. The VDU system tracks it for every path (PRINT
+            // and VDU alike), whereas the print manager's count follows only
+            // PRINT -- so a program that emits text with VDU (as ragged-num does)
+            // and then reads POS needs the VDU's column.
+            return vdu.TextCursorX;
         }
 
         public static int VPos()

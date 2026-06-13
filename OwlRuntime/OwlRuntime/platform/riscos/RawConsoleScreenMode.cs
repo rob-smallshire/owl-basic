@@ -37,8 +37,11 @@ namespace OwlRuntime.platform.riscos
         {
             // The base implementation enqueues VDU 10/13, which the VDU system
             // turns into text-cursor movements that a raw stream cannot honour.
-            // Emit a newline directly instead.
+            // Emit a newline directly instead -- but still return the text cursor
+            // to column 0, so POS (and any subsequent VDU output) tracks the
+            // start of the new line.
             Console.Out.Write('\n');
+            Vdu.TextCursorX = 0;
         }
 
         public override void Dispose()
