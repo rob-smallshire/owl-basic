@@ -1,9 +1,14 @@
 import logging
 from owl_basic import errors
 from collections import deque
-from owl_basic.syntax.ast import Repeat, While, ForToStep
+from owl_basic.syntax.ast import (Repeat, While, ForToStep,
+    ReturnFromProcedure, ReturnFromFunction, End, Stop)
 from owl_basic.flow.connectors import connectLoop
 from owl_basic.visitor import Visitor
+
+# Statements that legitimately leave a procedure or the program -- so reaching
+# them with loops still open is an early exit, not an unbalanced loop.
+_EARLY_EXITS = (ReturnFromProcedure, ReturnFromFunction, End, Stop)
 
 class CorrelationVisitor(Visitor):
     """
@@ -42,7 +47,10 @@ class CorrelationVisitor(Visitor):
             if v not in self.visited:
                 self.visited.add(v)
                 v.accept(self)
-                if len(v.outEdges) == 0 and len(self.loops) != 0:
+                if (len(v.outEdges) == 0 and len(self.loops) != 0
+                        and not isinstance(v, _EARLY_EXITS)):
+                    # A terminal that is not a legitimate early exit (ENDPROC /
+                    # END / =<expr> / STOP) means a loop was left unclosed.
                     # TODO: Improve this error message by printing an
                     # abstract stack trace
                     errors.fatalError("In loops at terminal statement at line %s" % v.lineNum)
