@@ -828,7 +828,7 @@ def p_plot_stmt(p):
     elif len(p) == 6:
         p[0] = Plot(mode = LiteralInteger(value=65), xCoord = p[3], yCoord = p[5], relative=True)
     elif len(p) == 7:
-        p[0] = Plot(mode = p[4], xCoord = p[6], yCoord = p[2])
+        p[0] = Plot(mode = p[2], xCoord = p[4], yCoord = p[6])
     p[0].lineNum = p.lineno(1) - 1
     
 def p_point_stmt(p):

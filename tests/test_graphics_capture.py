@@ -22,6 +22,11 @@ def _whitish(pixel):
     return r > 200 and g > 200 and b > 200
 
 
+def _yellowish(pixel):
+    r, g, b, _ = pixel
+    return r > 200 and g > 200 and b < 70
+
+
 @requires_dotnet_toolchain
 def test_capture_is_the_logical_size(compile_and_capture_graphics):
     image = compile_and_capture_graphics(analyse(
@@ -51,3 +56,22 @@ def test_gcol_selects_the_palette_colour(compile_and_capture_graphics):
         'END\n', name="gpal"))
     assert _reddish(image.getpixel((640, 1024 - 100)))     # red line, low
     assert _whitish(image.getpixel((640, 1024 - 900)))     # white line, high
+
+
+@requires_dotnet_toolchain
+def test_plot_three_argument_form(compile_and_capture_graphics):
+    # PLOT mode,x,y: a horizontal yellow datum line across the middle. Regression
+    # for the grammar that scrambled the three PLOT arguments.
+    image = compile_and_capture_graphics(analyse(
+        'MODE 1\nGCOL 0,2\nMOVE 0,512\nPLOT 21,1280,512\nEND\n', name="gplot3"))
+    assert _yellowish(image.getpixel((640, 512)))
+
+
+@requires_dotnet_toolchain
+def test_text_renders_in_a_graphics_mode(compile_and_capture_graphics):
+    # PRINT in a graphics mode draws the text in the current text colour
+    # (COLOUR 2 is yellow); look for a yellow glyph pixel in the cell band.
+    image = compile_and_capture_graphics(analyse(
+        'MODE 1\nCOLOUR 2\nPRINT TAB(2,2);"HI"\nEND\n', name="gtext"))
+    band = [image.getpixel((x, y)) for y in range(64, 96) for x in range(64, 160)]
+    assert any(_yellowish(p) for p in band)

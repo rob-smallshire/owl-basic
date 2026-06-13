@@ -26,7 +26,11 @@ namespace OwlRuntime.platform.riscos
         private readonly SKCanvas canvas;
         private readonly float lineWidth;
         private readonly SKColor[] palette;
+        private readonly SKTypeface typeface;
+        private readonly float cellWidth;
+        private readonly float cellHeight;
         private SKColor foreground;
+        private SKColor textForeground;
         private bool written;
 
         public SkiaGraphicsScreenMode(VduSystem vdu, int textWidth, int textHeight, int pixelWidth, int pixelHeight, byte bitsPerPixel) :
@@ -45,6 +49,13 @@ namespace OwlRuntime.platform.riscos
 
             palette = DefaultPalette(LogicalColourCount);
             foreground = palette.Length > 0 ? palette[palette.Length - 1] : SKColors.White;
+            textForeground = foreground;
+
+            // Text is placed by character cell; render glyphs in a monospace
+            // face sized to the cell.
+            typeface = SKTypeface.FromFamilyName("monospace") ?? SKTypeface.Default;
+            cellWidth = (float) UnitsW / textWidth;
+            cellHeight = (float) UnitsH / textHeight;
 
             AppDomain.CurrentDomain.ProcessExit += (sender, e) => WritePng();
         }
@@ -95,7 +106,11 @@ namespace OwlRuntime.platform.riscos
             // Background colour is used by CLG / background plots, not yet drawn.
         }
 
-        public override void UpdateTextForegroundColour(int logicalColour, int tint) { }
+        public override void UpdateTextForegroundColour(int logicalColour, int tint)
+        {
+            textForeground = ColourOf(logicalColour);
+        }
+
         public override void UpdateTextBackgroundColour(int logicalColour, int tint) { }
 
         private SKColor ColourOf(int logicalColour)
@@ -108,9 +123,29 @@ namespace OwlRuntime.platform.riscos
             return palette[index];
         }
 
-        // --- text in a graphics mode (deferred to a later phase) --------------
+        // --- text in a graphics mode ------------------------------------------
 
-        public override void PrintCharAtText(char c) { }
+        public override void PrintCharAtText(char c)
+        {
+            // The VDU system has set the text cursor to this character's cell.
+            // Text rows count from the top, but the canvas has y flipped for
+            // graphics, so draw the glyph with the matrix reset (image space).
+            float x = Vdu.TextCursorX * cellWidth;
+            float topY = Vdu.TextCursorY * cellHeight;
+            using var paint = new SKPaint
+            {
+                Color = textForeground,
+                IsAntialias = true,
+                Typeface = typeface,
+                TextSize = cellHeight,
+            };
+            canvas.Save();
+            canvas.ResetMatrix();
+            // Baseline near the bottom of the cell (leave room for descenders).
+            canvas.DrawText(c.ToString(), x, topY + cellHeight * 0.78f, paint);
+            canvas.Restore();
+        }
+
         public override void PrintCharAtGraphics(char c) { }
         public override void ScrollTextArea(int left, int bottom, int right, int top, Direction direction, ScrollMovement movement) { }
 
