@@ -1,0 +1,204 @@
+10 REM ===============================
+20 REM OPTIMAL LINE BREAKING THROUGH
+30 REM DYNAMIC PROGRAMMING TO MINIMISE
+40 REM RAGGEDNESS OF THE LEFT MARGIN
+50 REM ===============================
+60 
+70 at_least_centiseconds% = 2000
+80 
+90 maxwidth% = 40
+100 max_num_characters% = 4096
+110 max_num_words% = 512
+120 
+130 REM ---- Allocate buffers ----
+140 
+150 DIM text% max_num_characters%
+160 
+170 DIM wordstart%(max_num_words%)
+180 DIM wordlen%(max_num_words%)
+190 DIM next%(max_num_words%)
+200 DIM cost%(max_num_words%)
+210 
+220 cr% = 13
+230 spc% = ASC(" ")
+240 
+250 REM ---- Load text into buffer ----
+260 PROCloadtext
+270 words% = words_count%
+280 
+290 REM ---- Tokenise buffer into word pointers ----
+300 PROCtokenise
+310 words% = words_count%
+320 
+330 REM ---- Run dynamic programming ----
+340 REM Repeat until at least limit centiseconds have elapsed
+350 num_runs% = 0
+360 start% = TIME
+370 REPEAT
+380   PROCdp
+390   elapsed% = TIME - start%
+400   num_runs% = num_runs% + 1
+410 UNTIL elapsed% >= at_least_centiseconds%
+420 
+430 REM ---- Reconstruct output ----
+440 PROCoutput
+450 @%=&0002020A : REM Two decimal places
+460 PRINT
+470 PRINT "Mean: ";elapsed% / 100 / num_runs%;" seconds over ";
+480 @%=&0000000A : REM General format
+490 PRINT ;num_runs%;" runs"
+500 END
+510 
+520 
+530 REM ===============================
+540 REM LOAD TEXT (DATA -> BUFFER)
+550 REM ===============================
+560 DEF PROCloadtext
+570 LOCAL p%, A$, i%, done%
+580 
+590 p% = 0
+600 words_count% = 0
+610 
+620 RESTORE
+630 
+640 done% = FALSE
+650 REPEAT
+660 READ A$
+670 IF A$ = "" THEN done% = TRUE : GOTO 740
+680 
+690 FOR i% = 1 TO LEN(A$)
+700 ?(text% + p%) = ASC(MID$(A$, i%, 1))
+710 p% = p% + 1
+720 NEXT i%
+730 
+740 REM space between lines
+750 ?(text% + p%) = 32
+760 p% = p% + 1
+770 
+780 UNTIL done%
+790 
+800 REM terminate
+810 ?(text% + p%) = 13
+820 ENDPROC
+830 
+840 
+850 REM ===============================
+860 REM TOKENISATION
+870 REM ===============================
+880 DEF PROCtokenise
+890 LOCAL p%, l%
+900 
+910 p% = 0
+920 words_count% = 0
+930 
+940 REPEAT
+950 
+960 REM skip spaces
+970 IF ?(text% + p%) <> spc% THEN GOTO 1020
+980 REPEAT
+990 p% = p% + 1
+1000 UNTIL ?(text% + p%) <> spc%
+1010 
+1020 IF ?(text% + p%) = 13 THEN ENDPROC
+1030 
+1040 wordstart%(words_count%) = p%
+1050 l% = 0
+1060 
+1070 IF ?(text% + p% + l%) <= spc% GOTO 1120
+1080 REPEAT
+1090 l% = l% + 1
+1100 UNTIL ?(text% + p% + l%) <= 32
+1110 
+1120 wordlen%(words_count%) = l%
+1130 
+1140 words_count% = words_count% + 1
+1150 p% = p% + l%
+1160 
+1170 UNTIL FALSE
+1180 ENDPROC
+1190 
+1200 
+1210 REM ===============================
+1220 REM DYNAMIC PROGRAMMING
+1230 REM ===============================
+1240 DEF PROCdp
+1250 LOCAL i%, j%, k%, width%, best%, cost%
+1260 
+1270 REM Reinitialise to allow multiple runs
+1280 FOR i% = 0 TO max_num_words% - 1
+1290   cost%(i%) = 0
+1300   next%(i%) = 0
+1310 NEXT
+1320 
+1330 FOR i% = words_count% - 1 TO 0 STEP -1
+1340 
+1350 best% = 1000000
+1360 width% = 0
+1370 
+1380 FOR j% = i% TO words_count% - 1
+1390 
+1400 REM add word length
+1410 IF j% > i% width% = width% + 1
+1420 width% = width% + wordlen%(j%)
+1430 
+1440 IF width% > maxwidth% THEN GOTO 1540
+1450 
+1460 REM cost = raggedness + future cost
+1470 spare% = maxwidth% - width%
+1480 cost% = spare% * spare% + cost%(j% + 1)
+1490 
+1500 IF cost% < best% THEN best% = cost% : next%(i%) = j% + 1
+1510 
+1520 NEXT j%
+1530 
+1540 cost%(i%) = best%
+1550 
+1560 NEXT i%
+1570 ENDPROC
+1580 
+1590 
+1600 REM ===============================
+1610 REM OUTPUT RECONSTRUCTION
+1620 REM ===============================
+1630 DEF PROCoutput
+1640 LOCAL i%, j%, k%, c%
+1650 CLS
+1660 i% = 0
+1670 
+1680 REPEAT
+1690 
+1700 j% = next%(i%)
+1710 
+1720 REM build line in-place
+1730 FOR k% = i% TO j% - 1
+1740 
+1750 IF k% > i% THEN VDU spc%
+1760 
+1770 FOR c% = 0 TO wordlen%(k%) - 1
+1780 VDU ?(text% + wordstart%(k%) + c%)
+1790 NEXT c%
+1800 
+1810 NEXT k%
+1820 IF POS <> 0: PRINT
+1830 
+1840 i% = j%
+1850 
+1860 UNTIL i% = words_count%
+1870 ENDPROC
+1880 
+1890 
+1900 REM ===============================
+1910 REM SAMPLE TEXT (HHGTTG)
+1920 REM ===============================
+1930 DATA "In the beginning the Universe was created."
+1940 
+1950 DATA "This has made a lot of people very angry and been widely regarded as a bad move."
+1960 
+1970 DATA "Many races believe that it was created by some sort of god, though the Jatravartid people of Viltvodle VI believe that the entire Universe was in fact sneezed out of the nose of a being called the Great Green Arkleseizure."
+1980 
+1990 DATA "The Jatravartids, who live in perpetual fear of the time they call the Coming of the Great White Handkerchief, are small blue creatures with more than fifty arms each, "
+2000 DATA "who are therefore unique in being the only race in history to have invented the aerosol deodorant before the wheel."
+2010 
+2020 DATA "However, the Great Green Arkleseizure Theory is not widely accepted outside Viltvodle VI and so, the Universe being the puzzling place it is, other explanations are constantly being sought."
+2030 
+2040 DATA ""
