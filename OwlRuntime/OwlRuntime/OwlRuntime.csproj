@@ -28,6 +28,10 @@
     <!-- 2-D rendering for the graphics screen modes: windowless PNG capture
          first, an interactive window host later. -->
     <PackageReference Include="SkiaSharp" Version="2.88.9" />
+    <!-- The SkiaSharp metapackage bundles native libraries for Windows and
+         macOS only; Linux needs its native asset added explicitly, or
+         libSkiaSharp fails to load there (e.g. on CI runners). -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="2.88.9" />
   </ItemGroup>
 
   <ItemGroup>
