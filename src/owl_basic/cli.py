@@ -107,12 +107,32 @@ def _compile(source: Path, output_dir: Path, backend_name: str, encoding: str) -
     runtime = _find_owlruntime_dll()
     if runtime is not None:
         shutil.copy(runtime, output_dir)
+        _copy_runtime_dependencies(runtime.parent, output_dir)
     else:
         _status(
             "warning: OwlRuntime.dll not found; place it next to the assembly to run it.",
             fg="yellow",
         )
     return artifact
+
+
+def _copy_runtime_dependencies(runtime_dir: Path, output_dir: Path) -> None:
+    """Copy SkiaSharp (used by graphics modes) and its native library beside the
+    program, so a graphics program can run. SkiaSharp loads lazily, so non
+    -graphics programs work without these, but copying them is cheap and makes
+    every compiled program graphics-capable."""
+    skia = runtime_dir / "SkiaSharp.dll"
+    if skia.exists():
+        shutil.copy(skia, output_dir)
+    if sys.platform == "darwin":
+        native = "runtimes/osx*/native/libSkiaSharp.dylib"
+    elif sys.platform.startswith("linux"):
+        native = "runtimes/linux*/native/libSkiaSharp.so"
+    else:
+        native = "runtimes/win*/native/libSkiaSharp.dll"
+    for path in runtime_dir.glob(native):
+        shutil.copy(path, output_dir)
+        break
 
 
 _source_argument = click.argument(

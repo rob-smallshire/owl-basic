@@ -60,6 +60,7 @@ pythonpath = ["tests"]
 test = [
     "pytest>=8",
     "approvaltests>=14",
+    "pillow>=10",
 ]
 dev = [
     "bump-my-version>=0.28",

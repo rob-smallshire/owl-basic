@@ -19,7 +19,16 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <!-- Copy NuGet dependencies (SkiaSharp + its native library) into the build
+         output, so a compiled program can run with the runtime beside it. -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 2-D rendering for the graphics screen modes: windowless PNG capture
+         first, an interactive window host later. -->
+    <PackageReference Include="SkiaSharp" Version="2.88.9" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- GDI+/WinForms graphics layer: excluded until the SkiaSharp/Avalonia port. -->

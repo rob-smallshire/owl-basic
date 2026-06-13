@@ -14,7 +14,7 @@ import pytest
 from owl_basic.ext.backends.dotnet.backend import Backend as DotnetBackend
 from owl_basic.extension import create_extension
 
-from helpers import find_owlruntime_dll
+from helpers import copy_skia_deps, find_owlruntime_dll
 
 TOOLCHAIN_READY = (
     shutil.which("dotnet") is not None
@@ -104,6 +104,30 @@ def compile_and_capture_screen(dotnet_backend, tmp_path):
         )
         assert result.returncode == 0, result.stderr
         return result.stdout
+
+    return run
+
+
+@pytest.fixture
+def compile_and_capture_graphics(dotnet_backend, tmp_path):
+    """Compile and run a program with windowless SkiaSharp graphics capture
+    (OWL_CAPTURE_GRAPHICS), returning the rendered screen as a PIL RGBA image."""
+
+    def run(program, stdin=None, timeout=None):
+        from PIL import Image
+
+        dll_filepath = dotnet_backend.generate(program, tmp_path)
+        shutil.copy(find_owlruntime_dll(), tmp_path)
+        copy_skia_deps(tmp_path)
+        png_filepath = tmp_path / "capture.png"
+        env = dict(os.environ)
+        env["OWL_CAPTURE_GRAPHICS"] = str(png_filepath)
+        result = subprocess.run(
+            ["dotnet", str(dll_filepath)],
+            input=stdin, capture_output=True, text=True, timeout=timeout, env=env
+        )
+        assert result.returncode == 0, result.stderr
+        return Image.open(png_filepath).convert("RGBA")
 
     return run
 

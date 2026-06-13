@@ -43,12 +43,20 @@ namespace OwlRuntime.platform.riscos
                     int[] init = InitialTextSize();
                     return CreateHeadlessText(vdu, init[0], init[1]);
 
-                // Graphics modes (0-2, 4, 5, 8-46) have no renderer in this build
-                // (the GDI+/WinForms graphics layer is excluded pending a
-                // SkiaSharp/Avalonia port). Fall back to a headless text mode
+                // Graphics modes have no live (windowed) renderer in this build.
+                // When capturing to a PNG (OWL_CAPTURE_GRAPHICS) they render with
+                // SkiaSharp; otherwise they fall back to a headless text mode
                 // sized to the requested mode's text geometry, so a program
-                // written for that mode lays its text out correctly.
+                // written for that mode at least lays its text out correctly.
                 default:
+                    if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("OWL_CAPTURE_GRAPHICS")))
+                    {
+                        int[] g = GraphicsModeParams(number);
+                        if (g != null)
+                        {
+                            return CreateSkiaGraphics(vdu, g);
+                        }
+                    }
                     int[] dims = ModeTextSize(number);
                     if (dims != null)
                     {
@@ -56,6 +64,31 @@ namespace OwlRuntime.platform.riscos
                     }
                     throw new NotSupportedException(
                         "Screen mode " + number + " is not available in this build.");
+            }
+        }
+
+        // Kept in its own method (not inlined into CreateScreenMode) so that the
+        // SkiaSharp reference is only resolved -- and SkiaSharp.dll only loaded --
+        // when graphics capture is actually used. Programs that never enter a
+        // graphics capture mode run without the SkiaSharp dependency present.
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static AbstractScreenMode CreateSkiaGraphics(VduSystem vdu, int[] g)
+        {
+            return new SkiaGraphicsScreenMode(vdu, g[0], g[1], g[2], g[3], (byte) g[4]);
+        }
+
+        /// <summary>The text cols/rows, pixel width/height and bits-per-pixel of
+        /// a BBC graphics mode, or null if it is not a (known) graphics mode.</summary>
+        private static int[] GraphicsModeParams(int mode)
+        {
+            switch (mode & 127)
+            {
+                case 0: return new[] { 80, 32, 640, 256, 1 };
+                case 1: return new[] { 40, 32, 320, 256, 2 };
+                case 2: return new[] { 20, 32, 160, 256, 4 };
+                case 4: return new[] { 40, 32, 320, 256, 1 };
+                case 5: return new[] { 20, 32, 160, 256, 2 };
+                default: return null;
             }
         }
 

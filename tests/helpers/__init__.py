@@ -7,6 +7,8 @@ pytest ``pythonpath`` (see ``pyproject.toml``).
 
 import glob
 import os
+import shutil
+import sys
 
 from owl_basic.analysis import analyse
 from owl_basic.syntax import parser as _parser
@@ -101,3 +103,22 @@ def find_owlruntime_dll():
     )
     matches = glob.glob(pattern, recursive=True)
     return max(matches, key=os.path.getmtime) if matches else None
+
+
+def copy_skia_deps(dest_dirpath):
+    """Copy SkiaSharp's managed assembly and this platform's native library
+    (flat, beside the program) into *dest_dirpath*, so a graphics-capture
+    program can load SkiaSharp. A no-op if the build output lacks them."""
+    runtime_dirpath = os.path.dirname(find_owlruntime_dll())
+    skia = os.path.join(runtime_dirpath, "SkiaSharp.dll")
+    if os.path.exists(skia):
+        shutil.copy(skia, dest_dirpath)
+    if sys.platform == "darwin":
+        native = "runtimes/osx*/native/libSkiaSharp.dylib"
+    elif sys.platform.startswith("linux"):
+        native = "runtimes/linux*/native/libSkiaSharp.so"
+    else:
+        native = "runtimes/win*/native/libSkiaSharp.dll"
+    for path in glob.glob(os.path.join(runtime_dirpath, native)):
+        shutil.copy(path, dest_dirpath)
+        break
