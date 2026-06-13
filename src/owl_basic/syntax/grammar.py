@@ -1192,6 +1192,7 @@ def p_factor(p):
               | expr_group
               | expr_function
               | indexer
+              | unary_indirection
               | PLUS factor %prec UPLUS
               | MINUS factor %prec UMINUS'''
     if len(p) == 2:
