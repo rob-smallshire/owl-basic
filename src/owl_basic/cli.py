@@ -8,6 +8,13 @@ via a code-generation backend (``dotnet`` by default) and optionally runs it::
     owl-basic run hello.bbc          # compile and run in one step
     owl-basic backends               # list available backends
 
+It can also visualise a program as a graph, decoupled from compilation::
+
+    owl-basic visualise cfg hello.bbc            # -> hello.cfg.graphml (for yEd)
+    owl-basic visualise blocks hello.bbc -f dot  # -> hello.blocks.dot (GraphViz)
+    owl-basic graph-sources                      # list views (cfg, blocks, ...)
+    owl-basic graph-writers                      # list formats (graphml, dot)
+
 Status and diagnostics are written to stderr; stdout is reserved for the
 compiled program's own output, so ``owl-basic run prog.bbc | ...`` stays clean.
 """
@@ -31,6 +38,9 @@ from owl_basic.exceptions import OwlBasicError
 from owl_basic.extension import create_extension, list_extensions
 
 _BACKEND_NAMESPACE = "owl_basic.backend"
+_GRAPH_SOURCE_NAMESPACE = "owl_basic.graph_source"
+_GRAPH_WRITER_NAMESPACE = "owl_basic.graph_writer"
+_DEFAULT_GRAPH_FORMAT = "graphml"
 
 
 def _colour_enabled() -> bool:
@@ -194,6 +204,110 @@ def run_command(source: Path, backend: str, output_dir: Path, encoding: str) -> 
 def backends_command() -> None:
     """List the available code-generation backends."""
     for name in list_extensions(_BACKEND_NAMESPACE):
+        click.echo(name)
+
+
+def _writer_for_extension(suffix: str):
+    """The graph-writer name whose file extension is *suffix*, or ``None``."""
+    for name in list_extensions(_GRAPH_WRITER_NAMESPACE):
+        writer = create_extension("graph_writer", _GRAPH_WRITER_NAMESPACE, name)
+        if writer.file_extension() == suffix:
+            return name
+    return None
+
+
+def _resolve_format(fmt: str | None, output: str | None) -> str:
+    """Choose the graph-writer name from the ``-f`` flag and/or output path.
+
+    An explicit ``-f`` wins; otherwise the writer is inferred from the output
+    file's extension; failing that the default (graphml) is used.
+    """
+    if fmt is not None:
+        return fmt
+    if output not in (None, "-"):
+        inferred = _writer_for_extension(Path(output).suffix)
+        if inferred is not None:
+            return inferred
+    return _DEFAULT_GRAPH_FORMAT
+
+
+@cli.command("visualise")
+@click.argument("view")
+@_source_argument
+@click.option(
+    "-f", "--format", "fmt", default=None,
+    help="Output format (graph writer). Default: inferred from -o, else graphml.",
+)
+@click.option(
+    "-o", "--output", default=None,
+    help="Output file, or '-' for stdout. Default: <source>.<view><ext>.",
+)
+@click.option(
+    "-r", "--routine", default=None,
+    help="Scope the graph to one routine (e.g. MAIN, PROCdraw). Default: whole program.",
+)
+@_encoding_option
+def visualise_command(view: str, source: Path, fmt: str | None, output: str | None,
+                      routine: str | None, encoding: str) -> None:
+    """Visualise a BBC BASIC SOURCE file as a graph.
+
+    VIEW selects what to draw (see 'owl-basic graph-sources'); the format is
+    chosen with -f (see 'owl-basic graph-writers'). Use -r to scope a large
+    program to a single routine. For example:
+
+        owl-basic visualise cfg prog.bbc
+        owl-basic visualise blocks prog.bbc -f dot -o prog.dot
+        owl-basic visualise cfg prog.bbc -r PROCdraw
+        owl-basic visualise callgraph prog.bbc -r MAIN -f dot -o - | dot -Tsvg -o m.svg
+    """
+    try:
+        program = _analyse_source(source, encoding)
+        graph_source = create_extension("graph_source", _GRAPH_SOURCE_NAMESPACE, view)
+        writer_name = _resolve_format(fmt, output)
+        writer = create_extension("graph_writer", _GRAPH_WRITER_NAMESPACE, writer_name)
+        graph = graph_source.build(program, {"routine": routine})
+    except OwlBasicError as error:
+        _fail(str(error))
+
+    if output == "-":
+        writer.write(graph, sys.stdout)
+        return
+
+    if output is not None:
+        destination = Path(output)
+    else:
+        suffix = "." + routine if routine else ""
+        destination = Path(source.stem + "." + view + suffix + writer.file_extension())
+    with open(destination, "w", encoding="utf-8") as stream:
+        writer.write(graph, stream)
+    _status("Wrote %s graph of %s -> %s" % (view, source, destination))
+
+
+@cli.command("graph-sources")
+def graph_sources_command() -> None:
+    """List the available graph sources (visualisation views)."""
+    for name in list_extensions(_GRAPH_SOURCE_NAMESPACE):
+        click.echo(name)
+
+
+@cli.command("graph-writers")
+def graph_writers_command() -> None:
+    """List the available graph writers (visualisation output formats)."""
+    for name in list_extensions(_GRAPH_WRITER_NAMESPACE):
+        click.echo(name)
+
+
+@cli.command("routines")
+@_source_argument
+@_encoding_option
+def routines_command(source: Path, encoding: str) -> None:
+    """List the routines of a SOURCE file (for 'visualise --routine')."""
+    from owl_basic.ext.graph_sources._routines import display_name
+    try:
+        program = _analyse_source(source, encoding)
+    except OwlBasicError as error:
+        _fail(str(error))
+    for name in sorted(display_name(key) for key in program.entry_points):
         click.echo(name)
 
 

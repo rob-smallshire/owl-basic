@@ -42,6 +42,11 @@ class Program:
     global_symbols: Any
     data: Any
     line_mapper: Any
+    # The root AST node. Backends lower from the basic blocks and do not need
+    # it; it is carried for whole-tree consumers such as visualisation (the
+    # ``cfg`` and ``ast`` graph sources walk it). Optional so existing
+    # constructions stay valid.
+    parse_tree: Any = None
 
 
 class Backend(Extension):

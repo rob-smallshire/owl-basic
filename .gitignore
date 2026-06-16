@@ -45,3 +45,6 @@ htmlcov/
 # Editors / IDEs
 .vscode/
 .idea/
+
+# Scratch / generated visualisations
+tmp/

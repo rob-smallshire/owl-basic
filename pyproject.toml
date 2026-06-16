@@ -42,6 +42,18 @@ owl-basic = "owl_basic.cli:cli"
 [project.entry-points."owl_basic.backend"]
 dotnet = "owl_basic.ext.backends.dotnet:Backend"
 
+# Graph sources: views of an analysed program, rendered by the visualise
+# command. Discovered by name via stevedore. See owl_basic.visualise.
+[project.entry-points."owl_basic.graph_source"]
+cfg = "owl_basic.ext.graph_sources.cfg:CfgSource"
+blocks = "owl_basic.ext.graph_sources.blocks:BlocksSource"
+callgraph = "owl_basic.ext.graph_sources.callgraph:CallGraphSource"
+
+# Graph writers: output formats for the visualise command.
+[project.entry-points."owl_basic.graph_writer"]
+graphml = "owl_basic.ext.graph_writers.graphml:GraphMLWriter"
+dot = "owl_basic.ext.graph_writers.dot:DotWriter"
+
 [tool.setuptools]
 package-dir = { "" = "src" }
 

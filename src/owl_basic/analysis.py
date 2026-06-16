@@ -183,4 +183,5 @@ def _run_pipeline(data, physical_to_logical_map, line_offsets, line_number_prefi
         global_symbols=stv.globalSymbols,
         data=dv,
         line_mapper=line_mapper,
+        parse_tree=parse_tree,
     )
