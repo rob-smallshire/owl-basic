@@ -85,6 +85,14 @@ dev = [
     "oaknut-disc>=12.6.1",
 ]
 
+# Resolve and install exclusively from PyPI. Overrides any private default
+# index (e.g. an artifactory configured globally in ~/.config/uv/uv.toml) for
+# this project, so locking and syncing here only ever touch PyPI.
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true
+
 [tool.bumpversion]
 # Single source of truth for the version is owl_basic.__version__, which
 # pyproject reads dynamically. `bump-my-version bump {patch,minor,major}`
