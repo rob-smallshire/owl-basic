@@ -1,0 +1,142 @@
+REM Elastic Plate Flexure of the Lithosphere
+REM ========================================
+
+REM Elastic Plate Flexure of the Lithosphere
+
+REM The lithosphere is the outer part of the solid Earth comprising
+REM the crust and the upper brittle part of the mantle.
+REM When you put a load on the lithosphere such a large volcano
+REM like Mount Fuji, or an ice sheet like the one covering Greenland,
+REM it is pushed downward, under its weight. The strength of the
+REM lithosphere means that is also bends down away from the load.
+REM The stiffness of the lithosphere means that this bending down in
+REM one area can cause bending up even further way, and so decaying
+REM waves of bending down and up surround the load.
+REM These effects are known as lithospheric flexure and are simulated
+REM by this program.
+
+MODE 1
+W = 128000: REM Width of model (m)
+N% = 2550: REM Number of grid points
+DX = W / (N% - 1) : REM Grid spacing (m)
+RHO_LOAD = 2200.0 : REM Density of load (kg/m^3)
+RHO_MANTLE = 3300.0 : REM Upper mantle
+
+REM LITHOSPHERE PROPERTIES
+E = 70E9: REM Young's modulus (Pa)
+NU = 0.25: REM Poisson ratio
+TE = 10E3: REM Effective elastic thickness (m)
+G = 9.81: REM Gravity (9.81 m/s^2)
+
+REM Flexural rigidity
+D = E * TE^3 / (12 * (1 - NU*NU))
+
+REM Flexural parameter
+ALPHA = (4 * D / ((RHO_MANTLE - RHO_LOAD) * G))^(0.25)
+
+DIM h(N%) : REM Load thickness (m)
+DIM q(N%) : REM Load per unit area (Pa)
+DIM w(N%) : REM Vertical deflection (m)
+
+VE = 3.0 : REM Vertical exaggeration
+CLS
+VDU 23,1,0;0;0;0;
+PROCdisplay_params
+start% = TIME
+PROCplace_volcano(W / 2, 3776, 15000, 2000)
+PROCcompute_load
+PROCcompute_deflection
+elapsed% = TIME - start%
+PROCreport
+PROCplot
+VDU 23,1,1;0;0;0;
+END
+
+DEFPROCdisplay_params
+PRINT TAB(0,0);"Elastic Plate Flexure of the Lithosphere";
+COLOUR 2
+PRINT TAB(0,2);"Width : ";W;" m";
+PRINT TAB(20,2);"Num points : ";N%;
+PRINT TAB(0,3);"Load density   : ";RHO_LOAD;" kg/m^3";
+PRINT TAB(0,4);"Mantle density : ";RHO_MANTLE;" kg/m^3";
+PRINT TAB(0,5);"Young's Modulus : ";E;" Pa"
+PRINT TAB(0,6);"Poisson's Ratio : ";NU;
+PRINT TAB(0,7);"Effective Elastic Thickness : ";TE;" m"
+PRINT TAB(0,8);"Gravity : ";G;" m/s^2"
+PRINT TAB(0,23);"Vertical scale : x";VE;
+ENDPROC
+
+DEFPROCplace_volcano(centre_x, height, base_radius, crater_radius)
+LOCAL i%, x
+FOR i%=0 TO N%-1
+x = ABS(i%*DX - centre_x)
+IF x <= crater_radius THEN h = height ELSE IF x < base_radius THEN t = (x - crater_radius) / (base_radius - crater_radius) : h = height * (1 - (t^0.6)) ELSE h = 0
+h(i%) = h
+NEXT
+ENDPROC
+
+DEFPROCcompute_load
+LOCAL i%
+FOR i% = 0 TO N% - 1
+q(i%) = RHO_LOAD * G * h(i%)
+NEXT
+ENDPROC
+
+DEFPROCcompute_deflection
+PRINT TAB(0, 10);"Processing "
+FOR i% = 0 TO N% - 1
+PRINT TAB(11,10);i%+1;"/";N%;"        ";
+sum = 0
+FOR j% = 0 TO N% - 1
+r = ABS(i% - j%) * DX
+t = r / ALPHA
+kernel = EXP(-t) * (COS(t) + SIN(t))
+sum = sum + q(j%)*kernel * DX
+NEXT j%
+w(i%) = sum * ALPHA^3 / (8 * D)
+NEXT i%
+PRINT TAB(0,10);SPC(20);
+ENDPROC
+
+DEFPROCreport
+LOCAL i%
+COLOUR 3
+@% = &0000000A
+max_u = 0
+max_s = 0
+FOR i% = 0 TO N%-1
+IF -w(i%) > max_u THEN max_u = -w(i%)
+IF w(i%) > max_s THEN max_s = w(i%)
+NEXT
+COLOUR 1
+IF max_u <> 0 THEN PRINT TAB(0,25);"Max uplift     : ";INT(max_u);" m"
+IF max_s <> 0 THEN PRINT TAB(0,26);"Max subsidence : ";INT(max_s);" m"
+COLOUR 2
+@% = &0002020A
+PRINT TAB(0,28)"Duration: ";elapsed%/100;" s"
+COLOUR 3
+ENDPROC
+
+DEFPROCplot
+LOCAL i%, datum_y%, scale_x, scale_y
+datum_y% = 512
+scale_x = 1280 / W
+scale_y = scale_x * VE
+dx = 1280 / (N% - 1)
+
+GCOL 0, 2
+MOVE 0, datum_y%
+PLOT 21,1280, datum_y%
+
+GCOL 0, 3
+MOVE 0, datum_y% + (h(0)-w(0))*scale_y
+FOR i% = 1 TO N% - 1
+DRAW i%*dx, datum_y% + (h(i%)- w(i%))*scale_y
+NEXT
+
+GCOL 0, 1
+MOVE 0, datum_y% - w(0)*scale_y
+FOR i% = 1 TO N% - 1
+DRAW i%*dx, datum_y% - w(i%)*scale_y
+NEXT
+ENDPROC
