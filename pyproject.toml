@@ -48,6 +48,7 @@ dotnet = "owl_basic.ext.backends.dotnet:Backend"
 cfg = "owl_basic.ext.graph_sources.cfg:CfgSource"
 blocks = "owl_basic.ext.graph_sources.blocks:BlocksSource"
 callgraph = "owl_basic.ext.graph_sources.callgraph:CallGraphSource"
+ast = "owl_basic.ext.graph_sources.ast:AstSource"
 
 # Graph writers: output formats for the visualise command.
 [project.entry-points."owl_basic.graph_writer"]

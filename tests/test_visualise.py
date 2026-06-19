@@ -198,7 +198,7 @@ def test_graph_sources_and_writers_are_listed():
 
 
 def test_registered_extension_names():
-    assert set(list_extensions(_GRAPH_SOURCE_NS)) == {"cfg", "blocks", "callgraph"}
+    assert set(list_extensions(_GRAPH_SOURCE_NS)) == {"cfg", "blocks", "callgraph", "ast"}
     assert set(list_extensions(_GRAPH_WRITER_NS)) == {"graphml", "dot"}
 
 
@@ -302,6 +302,33 @@ def test_visualise_callgraph_via_cli(tmp_path):
 
 def test_callgraph_is_registered():
     assert "callgraph" in list_extensions(_GRAPH_SOURCE_NS)
+
+
+# -- ast view --------------------------------------------------------------
+
+def test_ast_source_is_a_tree_of_parent_child_edges():
+    # The AST view draws every node (expressions included) with parent->child
+    # edges labelled by slot. The whole program is one connected tree, so it
+    # has exactly one fewer edge than nodes.
+    graph = _source("ast").build(_analyse_proc())
+    assert len(graph.nodes) > len(_source("cfg").build(_analyse_proc()).nodes)
+    assert len(graph.edges) == len(graph.nodes) - 1
+    assert all(e.kind == "child" and e.label for e in graph.edges)
+    labels = {n.label for n in graph.nodes}
+    assert any(label.startswith("CallProcedure") for label in labels)
+
+
+def test_ast_scope_is_the_routines_statement_forest():
+    full = _source("ast").build(_analyse_proc())
+    scoped = _source("ast").build(_analyse_proc(), {"routine": "PROCgreet"})
+    assert 0 < len(scoped.nodes) < len(full.nodes)
+
+
+def test_ast_forest_is_emitted_in_source_order():
+    # Nodes are declared left-to-right in source order, so the statement forest
+    # reads naturally: the routine's DEF PROC (its first statement) comes first.
+    scoped = _source("ast").build(_analyse_proc(), {"routine": "PROCgreet"})
+    assert scoped.nodes[0].label.startswith("DefineProcedure")
 
 
 # -- per-routine scoping ---------------------------------------------------
