@@ -48,3 +48,13 @@ htmlcov/
 
 # Scratch / generated visualisations
 tmp/
+
+# Local-only documents: design notes and scratch write-ups kept in the working
+# tree for transient use but deliberately not committed.
+local-*.md
+
+# Local-only corpus sandbox: the BBC Micro Bot / Owlet fetcher, its hand-pasted
+# token manifest, the downloaded programs cache, and the parse harness that runs
+# them. Entirely local and never committed (the programs are community-authored
+# and not redistributed); CI and a bare `pytest` never see it.
+local-corpus/

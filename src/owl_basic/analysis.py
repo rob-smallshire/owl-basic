@@ -21,6 +21,7 @@ from owl_basic import (
     simplify_visitor,
     symbol_table_visitor,
 )
+from owl_basic.abbreviations import expand_numbered_lines, expand_unnumbered
 from owl_basic.algorithms import all_indices
 from owl_basic.codegen.backend import Program
 from owl_basic.flow import (
@@ -80,6 +81,7 @@ def analyse(source, name, source_filepath=None, options=None):
     options = options or _DefaultOptions()
     if not source.endswith("\n"):
         source += "\n"
+    source = expand_unnumbered(source)  # MO.->MODE, P.->PRINT, ... (no-op if none)
     data, physical_to_logical_map, line_offsets, line_number_prefixes = (
         _synthesize_line_numbers(source)
     )
@@ -105,7 +107,7 @@ def analyse_numbered_lines(numbered_lines, name, source_filepath=None, options=N
     at run time.
     """
     options = options or _DefaultOptions()
-    numbered_lines = list(numbered_lines)
+    numbered_lines = expand_numbered_lines(numbered_lines)  # expand abbreviations
 
     unparseable = [
         number for number, text in numbered_lines
