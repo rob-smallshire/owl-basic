@@ -49,7 +49,14 @@ def p_statement_list(p):
 # A single line statement list - use in single-line IF THEN ELSE construct
 def p_compound_statement(p):
     '''compound_statement : lone_stmt_body stmt_terminator
-                          | multi_statement stmt_terminator'''
+                          | multi_statement stmt_terminator
+                          | multi_statement star_command stmt_terminator'''
+    # A star command (e.g. *FX19) passes the rest of the line to the OS, so it
+    # consumes to end-of-line and can only be the final statement -- but BBC
+    # BASIC allows it after other statements, with or without a separating colon
+    # (REPEAT*FX19, A=1:*FX19). An empty multi_statement covers a lone *FX19.
+    if len(p) == 4:
+        p[1].append(p[2])
     p[0] = p[1]
         
 def p_multi_statement(p):
@@ -91,10 +98,10 @@ def p_statement(p):
                  | trace_stmt'''
     
 # Statements which must appear alone on
-# their own line
+# their own line. (A star command is handled by compound_statement instead, as
+# it may end a multi-statement line.)
 def p_lone_stmt_body(p):
-    '''lone_stmt_body : case_stmt
-                      | star_command'''
+    '''lone_stmt_body : case_stmt'''
     p[0] = StatementList()
     p[0].append(p[1])
 
