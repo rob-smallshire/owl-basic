@@ -39,8 +39,9 @@ def test_string_indirection_parameter(compile_and_run):
 
 @requires_dotnet_toolchain
 @pytest.mark.xfail(
-    reason="&AABBCCDD (> int32 max) overflows OWL's integer store -- a separate "
-    "numeric-model gap (a ! store should wrap to 4 bytes), not l-value binding",
+    reason="the ! store of &AABBCCDD now succeeds (hex is a signed pattern), but "
+    "~ hex print pads a leading zero (0AABBCCDD vs AABBCCDD) -- a separate, "
+    "pre-existing OwlRuntime print-format bug, not l-value binding",
     strict=True,
 )
 def test_word_indirection_parameter(compile_and_run):

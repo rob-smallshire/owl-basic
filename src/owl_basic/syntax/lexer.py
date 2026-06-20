@@ -920,12 +920,19 @@ def t_LITERAL_INTEGER(t):
 
 def t_LITERAL_HEX_INTEGER(t):
     r'&[\dA-F]+'
-    try:
-        t.value = int(t.value[1:], 16)
-        t.type = 'LITERAL_INTEGER'
-    except ValueError:
-        print("Number %s is too large!" % t.value)
-        t.value = 0
+    # A BBC BASIC hex constant is a bit pattern in a signed integer cell, not a
+    # magnitude: an 8-hex-digit value with the top bit set is negative
+    # (&AABBCCDD = -1430532899). The ROM folds digits into a 32-bit cell with no
+    # overflow check (factor_hex). We size by digit count so OWL's 64-bit
+    # integers are writable too: up to 8 digits -> signed 32-bit pattern, 9-16 ->
+    # signed 64-bit pattern.
+    digits = t.value[1:]
+    width = 64 if len(digits) > 8 else 32
+    value = int(digits, 16) & ((1 << width) - 1)
+    if value >> (width - 1):           # top bit set -> negative
+        value -= 1 << width
+    t.value = value
+    t.type = 'LITERAL_INTEGER'
     return t
 
 def t_LITERAL_BINARY_INTEGER(t):
