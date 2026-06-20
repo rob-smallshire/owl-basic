@@ -867,6 +867,7 @@ class GetStrFunc(AstNode):
 
 class GetStrFileFunc(AstNode):
     formal_type = TypeOption(StringOwlType())
+    actual_type = formal_type
     channel = Node(formalType=ChannelOwlType())
 
 class InkeyFunc(AstNode):
@@ -919,17 +920,21 @@ class MidStrFunc(AstNode):
     
 class ModeFunc(AstNode):
     formal_type = TypeOption(IntegerOwlType())
+    actual_type = formal_type
 
 class OpeninFunc(AstNode):
     formal_type = TypeOption(ChannelOwlType())
+    actual_type = formal_type
     filename = Node(formalType=StringOwlType())
 
 class OpenoutFunc(AstNode):
     formal_type = TypeOption(ChannelOwlType())
+    actual_type = formal_type
     filename = Node(formalType=StringOwlType())
 
 class OpenupFunc(AstNode):
     formal_type = TypeOption(ChannelOwlType())
+    actual_type = formal_type
     filename = Node(formalType=StringOwlType())
 
 class PosFunc(AstNode):
@@ -942,6 +947,7 @@ class PiFunc(AstNode):
 
 class PointFunc(AstNode):
     formal_type = TypeOption(IntegerOwlType())
+    actual_type = formal_type
     x_coord = Node(formalType=IntegerOwlType())
     y_coord = Node(formalType=IntegerOwlType())
 
@@ -1004,10 +1010,12 @@ class StrStringFunc(AstNode):
 
 class Sum(AstNode):
     formal_type = TypeOption(IntegerOwlType())
+    actual_type = formal_type
     array = Node(formalType=ArrayOwlType())
 
 class SumLenFunc(AstNode):
     formal_type = TypeOption(IntegerOwlType())
+    actual_type = formal_type
     array = Node(formalType=ArrayOwlType())
 
 class TanFunc(UnaryNumericFunc):
