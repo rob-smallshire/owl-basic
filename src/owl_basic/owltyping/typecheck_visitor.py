@@ -51,12 +51,17 @@ class TypecheckVisitor(Visitor):
     """
     AST visitor for determining the actual type of each node
     """
-    def __init__(self, entry_points):
+    def __init__(self, entry_points, report_diagnostics=True):
         '''
         :param entry_points: A dictionary of entry_point names to AstStatements.
+        :param report_diagnostics: Whether to emit type errors/warnings. The
+            first of the two typecheck passes synthesises types with every
+            user-function call still Pending, so any mismatch it sees may be an
+            artifact of inference not having run yet; it runs with this False and
+            stays silent. The second, authoritative pass (types resolved) reports.
         '''
         self.__entry_points = entry_points
-        pass
+        self.__report_diagnostics = report_diagnostics
     
     def visit(self, node):
         "Override visit to allow safe traversal of lists"
@@ -659,14 +664,20 @@ class TypecheckVisitor(Visitor):
                 % (r_value.value, target_type.__doc__, r_value.lineNum))
 
     def typeError(self, node, message):
+        if not self.__report_diagnostics:
+            return  # first (synthesis) pass: types not yet resolved, stay silent
         message = "%s at line %d" % (message, node.lineNum)
         internal(message)
-            
+
     def typeMismatch(self, node, message):
+        if not self.__report_diagnostics:
+            return  # first (synthesis) pass: a Pending call is not a real mismatch
         message = "Type mismatch: %s at line %s" % (message, node.lineNum)
         error(message)
-        
+
     def castWarning(self, node, message):
+        if not self.__report_diagnostics:
+            return  # first (synthesis) pass: defer to the authoritative second pass
         message = "Implicit conversion %s at line %s" % (message, node.lineNum)
         warning(message)
         

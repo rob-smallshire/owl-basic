@@ -84,7 +84,16 @@ class VoidOwlType(OwlType, metaclass=OwlTypeSingleton):
     
 class ScalarOwlType(OwlType, metaclass=OwlTypeSingleton):
     "Scalar"
-    
+
+    def isAssignableFrom(self, other):
+        # Scalar is the supertype of every concrete scalar (Integer, Float,
+        # String, Object, ...), so a Scalar formal -- e.g. a DEF FN's return
+        # value, which may be any scalar -- accepts any of them. Without this it
+        # fell back to the base exact-type match and rejected every return value.
+        assert not isinstance(other, type)
+        return isinstance(other, ScalarOwlType)
+
+
 class ObjectOwlType(ScalarOwlType, metaclass=OwlTypeSingleton):
     "Object"
     # OWL BASIC only - object reference

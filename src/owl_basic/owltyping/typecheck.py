@@ -27,8 +27,11 @@ def typecheck(parse_tree, entry_points, options):
     :param options: Command-line options.
     """
     logger.debug("Type checking...")
-    # First pass: synthesise types; user-function calls are left Pending.
-    parse_tree.accept(TypecheckVisitor(entry_points))
+    # First pass: synthesise types; user-function calls are left Pending. It runs
+    # silently -- a Pending call assigned to a typed variable, or a return value
+    # checked against the not-yet-inferred return type, is not a real error -- so
+    # only the second pass reports diagnostics.
+    parse_tree.accept(TypecheckVisitor(entry_points, report_diagnostics=False))
     # Resolve each DEF FN's return type (handles recursion and promotion).
     inferUserFunctionReturnTypes(entry_points)
     # Second pass: with return types known, calls and operators over them type.
