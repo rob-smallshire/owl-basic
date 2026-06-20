@@ -16,6 +16,11 @@ _DYNAMIC_STACK_NOTE = (
     "loop is opened and closed unconditionally on the same control-flow path."
 )
 
+
+def _same_loops(a, b):
+    """Two loop stacks are equal iff they hold the same opener nodes in order."""
+    return len(a) == len(b) and all(x is y for x, y in zip(a, b))
+
 # Statements that legitimately end a procedure (ENDPROC / =<expr>). Reaching one
 # with FOR/REPEAT loops still open is an early exit that the BBC interpreter does
 # not unwind: a procedure call saves and restores the hardware and value stacks
@@ -95,15 +100,30 @@ class CorrelationVisitor(Visitor):
                         raise CompileError(
                             "Execution reaches the end of line %s with a loop still "
                             "open.%s" % (v.lineNum, _DYNAMIC_STACK_NOTE))
-                # If execution splits, take a copy of the current loop stack
-                # and store a reference to it on each of the target nodes of
-                # the out edges of the current node, so the state can be
-                # restored later in the traversal
-                if len(v.outEdges) > 1:
-                    loop_stack = self.loops[:]
-                    for target in v.outEdges:
-                        target.loop_stack = loop_stack
+                # Propagate the loop stack as it stands *after* this statement
+                # (accept() above pushed/popped it) to every successor, recording
+                # it on the target so the state is restored when that target is
+                # later visited. outEdges is an unordered set, so to keep the
+                # verdict independent of traversal order we compare against any
+                # stack a prior path already recorded for the same target: if two
+                # paths reach a join with different loop nesting, the program
+                # relies on the dynamic loop stack and cannot be compiled.
+                outgoing = self.loops[:]
+                for target in v.outEdges:
+                    self._propagateLoopStack(v, target, outgoing)
                 self.to_visit.extend(v.outEdges)
+
+    def _propagateLoopStack(self, source, target, loops):
+        """Record *loops* as target's entry stack, or reject a join that disagrees."""
+        existing = getattr(target, "loop_stack", None)
+        if existing is None:
+            target.loop_stack = loops
+        elif not _same_loops(existing, loops):
+            raise CompileError(
+                "Control flow reaching line %s is inside different loops "
+                "depending on the path taken to get there, so a loop is opened on "
+                "one path but not another.%s"
+                % (target.lineNum, _DYNAMIC_STACK_NOTE))
 
     def _warnUnceremoniousExit(self, exit_stmt):
         """Warn that *exit_stmt* leaves one or more loops open as it returns.
