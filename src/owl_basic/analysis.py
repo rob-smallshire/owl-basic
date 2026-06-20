@@ -194,4 +194,7 @@ def _run_pipeline(data, physical_to_logical_map, line_offsets, line_number_prefi
         data=dv,
         line_mapper=line_mapper,
         parse_tree=parse_tree,
+        # Carry any reported type errors so a backend can refuse to lower a
+        # program that did not type-check (rather than emit nonsense IL).
+        diagnostics=errors.reported_errors(),
     )

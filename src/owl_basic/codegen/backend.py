@@ -19,7 +19,7 @@ Backends are stevedore extensions of kind ``"backend"`` (entry-point namespace
 """
 
 from abc import abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -47,6 +47,11 @@ class Program:
     # ``cfg`` and ``ast`` graph sources walk it). Optional so existing
     # constructions stay valid.
     parse_tree: Any = None
+    # Type errors reported while analysing this program. Non-empty means it did
+    # not type-check, so a backend must refuse to lower it (analysis recovers to
+    # collect every diagnostic, not to license generating code for a broken
+    # program). Default empty so hand-built Programs stay valid.
+    diagnostics: Any = field(default_factory=list)
 
 
 class Backend(Extension):

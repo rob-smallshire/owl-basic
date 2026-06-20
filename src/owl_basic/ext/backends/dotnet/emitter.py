@@ -13,7 +13,7 @@ writes mnemonics as text instead of driving ``System.Reflection.Emit``.
 
 import re
 
-from owl_basic.exceptions import OwlBasicError
+from owl_basic.exceptions import CompileError, OwlBasicError
 from owl_basic.owltyping.type_system import (
     AddressOwlType,
     ArrayOwlType,
@@ -212,6 +212,14 @@ def emit_program(program, assembly_name):
     Each entry point (the main program and every PROC) becomes its own static
     method; ``PROC`` calls become ``call`` instructions between them.
     """
+    diagnostics = getattr(program, "diagnostics", None) or []
+    if diagnostics:
+        # The program did not type-check. Lowering it would emit nonsense IL
+        # (e.g. a string reinterpreted as a number), so refuse before assembly.
+        raise CompileError(
+            "cannot generate code: %d type error(s) -- %s"
+            % (len(diagnostics), "; ".join(diagnostics))
+        )
     blocks_by_entry = program.ordered_basic_blocks or {}
     signatures = _collect_signatures(blocks_by_entry)
     longjump_targets = _collect_longjump_targets(blocks_by_entry)
