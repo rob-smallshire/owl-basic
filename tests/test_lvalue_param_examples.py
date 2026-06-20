@@ -7,8 +7,6 @@ parameter *is* that location, observes the argument inside the body, then sees
 the location restored afterwards. They double as committed corpus fixtures
 (lvalue_param_*.bbctxt), to be cross-checked against an emulator in due course.
 """
-import pytest
-
 from conftest import requires_dotnet_toolchain
 from helpers import analyse_fixture
 
@@ -38,12 +36,6 @@ def test_string_indirection_parameter(compile_and_run):
 
 
 @requires_dotnet_toolchain
-@pytest.mark.xfail(
-    reason="the ! store of &AABBCCDD now succeeds (hex is a signed pattern), but "
-    "~ hex print pads a leading zero (0AABBCCDD vs AABBCCDD) -- a separate, "
-    "pre-existing OwlRuntime print-format bug, not l-value binding",
-    strict=True,
-)
 def test_word_indirection_parameter(compile_and_run):
     out = compile_and_run(analyse_fixture("lvalue_param_word_indirection.bbctxt"))
     assert out.split("\n")[:2] == ["inside !buf% = AABBCCDD", "after  !buf% = 12345678"]

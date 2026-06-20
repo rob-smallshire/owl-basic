@@ -346,11 +346,12 @@ namespace OwlRuntime
 
         public void Print(int i)
         {
-            string format = numberBase == NumberBase.Decimal
-                            ? FormatChar + precision.ToString()
-                            : "X" + precision;
-
-            string s = i.ToString(format);
+            // An integer prints in full: minimal hex digits (~255 -> FF; a
+            // negative value gives its 32-bit two's-complement pattern), or plain
+            // decimal. The real-number "G"+precision format would push a 10-digit
+            // integer into scientific notation (2000000000 -> 2E+09); @% governs
+            // field width via justification below, not the integer's digits.
+            string s = numberBase == NumberBase.Hexadecimal ? i.ToString("X") : i.ToString();
             if (numberJustification == Justification.Right)
             {
                 Spc(fieldWidth - s.Length);

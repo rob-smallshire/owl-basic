@@ -10,8 +10,6 @@ These assert the *value* via comparisons (which yield small -1/0 results),
 avoiding two unrelated pre-existing print-format bugs this surfaced: ~ pads hex
 with a leading zero, and PRINT shows a large integer in float form.
 """
-import pytest
-
 from conftest import requires_dotnet_toolchain
 from owl_basic.analysis import analyse
 
@@ -39,13 +37,3 @@ def test_all_ones_hex_is_minus_one(compile_and_run):
 def test_stored_hex_round_trips_through_word_indirection(compile_and_run):
     # !addr store of a top-bit-set hex now succeeds (was "out of range").
     assert _out(compile_and_run, "DIM b% 8:!b%=&AABBCCDD:PRINT !b% = -1430532899\n") == "-1"
-
-
-@requires_dotnet_toolchain
-@pytest.mark.xfail(
-    reason="~ hex print pads with a leading zero (0AABBCCDD vs AABBCCDD) -- a "
-    "separate, pre-existing OwlRuntime print-format bug, not the hex value",
-    strict=True,
-)
-def test_tilde_hex_prints_minimal_digits(compile_and_run):
-    assert _out(compile_and_run, "PRINT ~&AABBCCDD\n") == "AABBCCDD"
