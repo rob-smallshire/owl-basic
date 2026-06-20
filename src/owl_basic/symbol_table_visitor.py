@@ -6,7 +6,19 @@ from functools import partial
 from owl_basic.visitor import Visitor
 from owl_basic.errors import *
 from owl_basic.symbol_tables import *
-from owl_basic.syntax.ast import FormalArgument, FormalReferenceArgument, Variable, AstStatement
+from owl_basic.syntax.ast import FormalArgument, FormalReferenceArgument, Variable, Array, AstStatement
+
+
+def _names_a_variable(node):
+    """Does this formal parameter or LOCAL/PRIVATE item introduce a named symbol?
+
+    A scalar (``Variable``) or whole array (``Array``) is a named, dynamically
+    scoped location, so it gets a symbol-table entry. An array element or a
+    ``?``/``!``/``$`` indirection is an l-value onto *existing* storage -- it has
+    no name to localise, and codegen saves/restores the cell directly -- so it
+    contributes no symbol.
+    """
+    return isinstance(node, (Variable, Array))
 from owl_basic.ast_utils import findNode
 from owl_basic import sigil
 
@@ -105,6 +117,8 @@ class SymbolTableVisitor(Visitor):
                 symbol_infos = []
                 
                 for formal_argument in defproc.formalParameters.arguments:
+                    if not _names_a_variable(formal_argument.argument):
+                        continue  # l-value formal: no named symbol (see helper)
                     name = formal_argument.argument.identifier
                     type = formal_argument.argument.actualType
                     if isinstance(formal_argument.argument, FormalArgument):
@@ -128,6 +142,8 @@ class SymbolTableVisitor(Visitor):
         if local.symbolTable is None:
             symbol_infos = []
             for variable in local.variables:
+                if not _names_a_variable(variable):
+                    continue  # l-value LOCAL: no named symbol (see helper)
                 name = variable.identifier
                 type = variable.actualType
                 symbol_info = SymbolInfo(name, type, SymbolInfo.modifier_local)
@@ -149,6 +165,8 @@ class SymbolTableVisitor(Visitor):
         if private.symbolTable is None:
             symbol_infos = []
             for variable in private.variables:
+                if not _names_a_variable(variable):
+                    continue  # l-value PRIVATE: no named symbol (see helper)
                 name = variable.identifier
                 type = variable.actualType
                 symbol_info = SymbolInfo(name, type, SymbolInfo.modifier_private)

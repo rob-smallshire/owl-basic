@@ -249,10 +249,13 @@ class TypecheckVisitor(Visitor):
         # The sigils are one of [$%&~]
         indexer.actualType = sigil.identifierToType(indexer.identifier[:-1])
         # Re-read each index from the list after visiting: constant folding may
-        # have replaced the index node in place (e.g. A%(2+3) -> A%(5)).
-        for i in range(len(indexer.indices)):
-            self.visit(indexer.indices[i])
-            self.checkAndInsertRValueCast(indexer.indices[i], IntegerOwlType())
+        # have replaced the index node in place (e.g. A%(2+3) -> A%(5)). The
+        # indices may be a bare list or an ExpressionList (an array-element
+        # l-value formal/LOCAL keeps the ExpressionList); use its element list.
+        indices = getattr(indexer.indices, "expressions", indexer.indices)
+        for i in range(len(indices)):
+            self.visit(indices[i])
+            self.checkAndInsertRValueCast(indices[i], IntegerOwlType())
     
     def visitIf(self, iff):
         # TODO: Does this do anything that visitAstNode doesn't do?
