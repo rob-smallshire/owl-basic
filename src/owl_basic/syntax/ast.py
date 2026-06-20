@@ -969,6 +969,13 @@ class RightStrFunc(AstNode):
     source = Node(formalType=StringOwlType())
     length = Node(formalType=IntegerOwlType())
 
+class StringStrFunc(AstNode):
+    "STRING$(count, source) -- source repeated count times."
+    formal_type = TypeOption(StringOwlType())
+    actual_type = formal_type
+    count  = Node(formalType=IntegerOwlType())
+    source = Node(formalType=StringOwlType())
+
 class RndFunc(AstNode):
     "RND"
     # A minor change from BBC BASIC. In BBC BASIC RND(x) can return

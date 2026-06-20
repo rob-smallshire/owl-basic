@@ -1513,6 +1513,7 @@ def p_expr_function(p):
                      | ln_func
                      | log_func
                      | mid_str_func
+                     | string_str_func
                      | mod_func
                      | mode_func
                      | not_func
@@ -1708,6 +1709,12 @@ def p_left_str_func(p):
         p[0] = LeftStrFunc(source = p[2])
     elif len(p) == 6:
         p[0] = LeftStrFunc(source = p[2], length = p[4])
+    p[0].lineNum = p.lineno(1) - 1
+
+def p_string_str_func(p):
+    '''string_str_func : STRING_STR_LPAREN expr COMMA expr RPAREN'''
+    # STRING$(count, source) -- source repeated count times.
+    p[0] = StringStrFunc(count = p[2], source = p[4])
     p[0].lineNum = p.lineno(1) - 1
 
 def p_len_func(p):
