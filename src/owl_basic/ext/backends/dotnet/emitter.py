@@ -22,6 +22,7 @@ from owl_basic.owltyping.type_system import (
     IntegerOwlType,
     LongIntegerOwlType,
     StringOwlType,
+    SumOwlType,
 )
 from owl_basic.symbol_tables import SymbolInfo
 from owl_basic.sigil import identifierToType
@@ -64,7 +65,12 @@ _CLR_TYPE_TOKEN = {
     "string": "[System.Runtime]System.String",
     "float64": "[System.Runtime]System.Double",
     "int32": "[System.Runtime]System.Int32",
+    "int64": "[System.Runtime]System.Int64",
 }
+
+# CIL value types that must be boxed to reach an `object` slot (a sum/Object
+# return). Reference types (string) are already assignable to object.
+_BOXABLE_IL = frozenset(("int32", "int64", "float64"))
 
 # OwlRuntime models BBC BASIC's address space as a byte array for ? indirection.
 _MEMORY_ARRAY = _runtime("get_Memory", cls="MemoryMap")
@@ -158,6 +164,11 @@ def _il_type(owl_type):
         element_il = _il_type(element) if element is not None else "int32"
         rank = owl_type.arrayRank() or 1     # rank is often unspecified -> 1-D
         return element_il + "[" + "," * (rank - 1) + "]"
+    if isinstance(owl_type, SumOwlType):
+        # A union of differing kinds (e.g. Integer|String) has no single CIL
+        # primitive: erase it to object and box each value-typed arm at the
+        # return site, tag-dispatching at the use site (see _print_call).
+        return "object"
     for cls, il in _IL_TYPES:
         if isinstance(owl_type, cls):
             return il
@@ -1190,6 +1201,13 @@ class _MethodEmitter:
         value_il = _il_type(value_type)
         if value_il == target_il:
             return
+        if target_il == "object":
+            # A sum/Object return: box a value-typed arm so it becomes an object
+            # reference (a string arm is already one). The boxed cell carries the
+            # runtime type, which the use site tag-dispatches on.
+            if value_il in _BOXABLE_IL:
+                self.emit("box %s" % _CLR_TYPE_TOKEN[value_il])
+            return
         conversions = {"float64": "conv.r8", "int64": "conv.i8", "int32": "conv.i4"}
         if target_il in conversions and value_il in conversions:
             self.emit(conversions[target_il])
@@ -1806,6 +1824,10 @@ class _MethodEmitter:
             arg = "int32"
         elif isinstance(owl_type, FloatOwlType):
             arg = "float64"
+        elif isinstance(owl_type, SumOwlType):
+            # A union: the value arrives already boxed (the function returns
+            # object). Print(object) tag-dispatches on its runtime type.
+            arg = "object"
         else:
             # Fall back to the static node shape when the type is unresolved.
             arg = _arg_from_node(item)

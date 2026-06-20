@@ -408,6 +408,10 @@ namespace OwlRuntime
             {
                 Print((int) o);
             }
+            else if(o is long)
+            {
+                Print((long) o);
+            }
             else if(o is double)
             {
                 Print((double) o);
