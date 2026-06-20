@@ -70,6 +70,7 @@ _CLR_TYPE_TOKEN = {
 _MEMORY_ARRAY = _runtime("get_Memory", cls="MemoryMap")
 
 _BYTE_INDIRECTIONS = frozenset({"UnaryByteIndirection", "DyadicByteIndirection"})
+_INTEGER_INDIRECTIONS = frozenset({"UnaryIntegerIndirection", "DyadicIntegerIndirection"})
 
 # DATA is compiled to a static string array read sequentially by READ.
 _DATA_FIELD = "__data"
@@ -716,6 +717,24 @@ class _MethodEmitter:
             self._push_memory_index(target)
             self.lower_expression(node.rValue)
             self.emit("stelem.i1")
+            return
+        if name in _INTEGER_INDIRECTIONS:
+            # !addr = v / base!offset = v : write a 4-byte integer.
+            self._push_indirection_address(target)
+            self.lower_expression(node.rValue)
+            self.emit(_runtime("WriteInteger", "int32", "int32", cls="MemoryMap"))
+            return
+        if name == "UnaryStringIndirection":
+            # $addr = s$ : write the string and a CR terminator.
+            self._push_indirection_address(target)
+            self.lower_expression(node.rValue)
+            self.emit(_runtime("WriteString", "int32", "string", cls="MemoryMap"))
+            return
+        if name == "UnaryFloatIndirection":
+            # |addr = v : write an 8-byte float.
+            self._push_indirection_address(target)
+            self.lower_expression(node.rValue)
+            self.emit(_runtime("WriteFloat", "int32", "float64", cls="MemoryMap"))
             return
         if name == "LomemValue":
             # LOMEM = v : the runtime models the BBC memory boundary as a property.
@@ -1426,6 +1445,35 @@ class _MethodEmitter:
     def _expr_DyadicByteIndirection(self, node):
         self._push_memory_index(node)
         self.emit("ldelem.u1")
+
+    def _push_indirection_address(self, node):
+        """Push the integer target address of an indirection.
+
+        ``!addr``/``$addr``/``|addr`` -> ``addr``; ``base!offset`` -> ``base +
+        offset``. (Byte ``?`` uses :meth:`_push_memory_index` and inline ldelem.)
+        """
+        if type(node).__name__.startswith("Unary"):
+            self.lower_expression(node.expression)
+        else:  # dyadic
+            self.lower_expression(node.base)
+            self.lower_expression(node.offset)
+            self.emit("add")
+
+    def _expr_UnaryIntegerIndirection(self, node):
+        self._push_indirection_address(node)
+        self.emit(_runtime("ReadInteger", "int32", cls="MemoryMap"))
+
+    def _expr_DyadicIntegerIndirection(self, node):
+        self._push_indirection_address(node)
+        self.emit(_runtime("ReadInteger", "int32", cls="MemoryMap"))
+
+    def _expr_UnaryStringIndirection(self, node):
+        self._push_indirection_address(node)
+        self.emit(_runtime("ReadString", "int32", cls="MemoryMap"))
+
+    def _expr_UnaryFloatIndirection(self, node):
+        self._push_indirection_address(node)
+        self.emit(_runtime("ReadFloat", "int32", cls="MemoryMap"))
 
     def _expr_UserFunc(self, node):
         # FN call: push the arguments, call the function method, value left on stack.

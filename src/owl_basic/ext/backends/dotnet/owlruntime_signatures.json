@@ -705,10 +705,61 @@
       ]
     ]
   ],
+  "MemoryMap::ReadFloat": [
+    [
+      "float64",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "MemoryMap::ReadInteger": [
+    [
+      "int32",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "MemoryMap::ReadString": [
+    [
+      "string",
+      [
+        "int32"
+      ]
+    ]
+  ],
   "MemoryMap::ResetHeap": [
     [
       "void",
       []
+    ]
+  ],
+  "MemoryMap::WriteFloat": [
+    [
+      "void",
+      [
+        "int32",
+        "float64"
+      ]
+    ]
+  ],
+  "MemoryMap::WriteInteger": [
+    [
+      "void",
+      [
+        "int32",
+        "int32"
+      ]
+    ]
+  ],
+  "MemoryMap::WriteString": [
+    [
+      "void",
+      [
+        "int32",
+        "string"
+      ]
     ]
   ],
   "MemoryMap::get_Memory": [
