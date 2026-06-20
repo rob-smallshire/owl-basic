@@ -55,10 +55,16 @@ def _line_parse_errors(text, options):
 
 
 def _synthesize_line_numbers(source):
-    """Assign sequential logical line numbers to un-numbered plain-text source."""
+    """Assign AUTO line numbers to un-numbered plain-text source.
+
+    BBC BASIC numbers un-numbered source as if typed under AUTO -- start 10,
+    step 10 -- and GOTO/GOSUB target those numbers (the decoder.py path numbers
+    the same way). Using 1-based numbers instead left a GOSUB110 with no line
+    110 to resolve against.
+    """
     bodies = source.split("\n")
     data = "\n".join(bodies)
-    physical_to_logical_map = [i + 1 for i in range(len(bodies))]
+    physical_to_logical_map = [(i + 1) * 10 for i in range(len(bodies))]
     cr_indices = all_indices(data, "\n")
     line_offsets = [0] + [i + 1 for i in cr_indices]
     line_number_prefixes = [0] * len(bodies)
