@@ -201,8 +201,17 @@ tokens = (
     'NOT',
     'MANDEL',
     'COMMENT',
-    'STAR_COMMAND'
+    'STAR_COMMAND',
+    'ASSEMBLER'
 )
+
+def t_ASSEMBLER(t):
+    # An inline 6502 assembler block: [ ... ]. Grab it whole (to the first ']')
+    # as raw text -- its contents are machine mnemonics, not BASIC -- so it is one
+    # token the front end can recognise and reject (OWL targets .NET, not 6502).
+    r'\[[^\]]*\]'
+    t.lexer.lineno += t.value.count('\n')
+    return t
 
 def t_COMMENT(t):
     r'REM[^\n]*'
