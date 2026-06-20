@@ -162,7 +162,21 @@ class FloatOwlType(NumericOwlType, metaclass=OwlTypeSingleton):
     
 class StringOwlType(ObjectOwlType, metaclass=OwlTypeSingleton):
     "String"
-    # TODO: Assigning StringOwlType to ObjectOwlType should be possible
+
+    # String is a reference type, so it sits under Object in the hierarchy -- but
+    # unlike a bare Object it must NOT silently interconvert with numbers. A
+    # string is assignable only from another string, and (overriding Object's
+    # permissive "convertible to anything") convertible only to the types that
+    # genuinely accept it: itself and its supertypes Object/Scalar. That keeps
+    # A$="x" and string-to-object boxing legal while making A$=5 and A=B$ the
+    # Type mismatches BBC BASIC reports.
+    def isAssignableFrom(self, other):
+        assert not isinstance(other, type)
+        return isinstance(other, StringOwlType)
+
+    def isConvertibleTo(self, other):
+        assert not isinstance(other, type)
+        return other.isAssignableFrom(self)
     
 class ByteOwlType(NumericOwlType, metaclass=OwlTypeSingleton):
     "Byte"

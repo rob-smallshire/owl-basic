@@ -34,6 +34,7 @@ from owl_basic.owltyping.type_system import (
     LongIntegerOwlType,
     NumericOwlType,
     ObjectOwlType,
+    PendingOwlType,
     StringOwlType,
 )
 from owl_basic.sigil import identifierToType
@@ -206,6 +207,15 @@ def infer_return_types(returns_by_name):
             if lhs is _BOTTOM or rhs is _BOTTOM:
                 return _BOTTOM
             return IntegerOwlType()
+        # No explicit rule: fall back to the type the first typecheck pass already
+        # synthesised on this node. That covers the many builtins (MID$, CHR$,
+        # SIN, ...) without enumerating them here. A Pending fallback means the
+        # node transitively depends on a not-yet-resolved user function, so report
+        # BOTTOM and let the fixpoint retry. (Operators and UserFunc are handled
+        # above precisely because their pass-1 type can be a stale Pending.)
+        synthesised = getattr(expr, "actualType", None)
+        if synthesised is not None and not isinstance(synthesised, PendingOwlType):
+            return synthesised
         return _BOTTOM
 
     changed = True

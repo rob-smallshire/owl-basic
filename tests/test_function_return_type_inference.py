@@ -22,7 +22,6 @@ from owl_basic.owltyping.type_system import (
     ByteOwlType,
     FloatOwlType,
     IntegerOwlType,
-    ObjectOwlType,
     StringOwlType,
 )
 
@@ -95,10 +94,12 @@ def test_string_concatenation_stays_string():
     assert _clean('A$=FNc("x")\nEND\nDEFFNc(S$)=S$+"!"\n')["FNc"] is StringOwlType()
 
 
-def test_numeric_plus_string_boxes_to_object():
-    # BBC BASIC would Type-mismatch at run time; OWL models the mixed result as
-    # Object rather than crashing the compiler.
-    assert _clean('A=FNm\nEND\nDEFFNm=1+"x"\n')["FNm"] is ObjectOwlType()
+def test_numeric_plus_string_is_reported_not_silently_boxed():
+    # `1 + "x"` mixes a number and a string in one operator -- a Type mismatch in
+    # BBC BASIC. Under strict typing OWL reports it (rather than silently boxing),
+    # while still giving the node a fallback Object type so it does not crash.
+    _program, errors = _analyse_capturing_errors('A=FNm\nEND\nDEFFNm=1+"x"\n')
+    assert errors, "1+\"x\" should be reported as a type mismatch"
 
 
 def test_multiple_return_paths_promote_to_the_wider_type():
@@ -145,11 +146,12 @@ def test_nested_function_call_argument():
     ("=$p%", StringOwlType),     # string indirection
 ])
 def test_indirection_return_types(body, expected):
-    # The return value is read through an indirection operator; the inferencer
-    # used to leave these unmodelled (Pending), which leaked an error.
-    formal = body[1] + "p%"  # ?p% / !p% / $p%
+    # The return value is read through an indirection operator on a global
+    # buffer; the inferencer used to leave these unmodelled (Pending), which
+    # leaked an error. (The address comes from a DIM'd global, not an
+    # indirection formal, to keep the focus on the return type.)
     assign = "A$=" if expected is StringOwlType else "A="
-    src = "%sFNr(0)\nEND\nDEFFNr(%s)%s\n" % (assign, formal, body)
+    src = "DIM p%% 8\n%sFNr\nEND\nDEFFNr%s\n" % (assign, body)
     assert _clean(src)["FNr"] is expected()
 
 

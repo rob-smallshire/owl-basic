@@ -436,9 +436,13 @@ class TypecheckVisitor(Visitor):
         if operator.lhs.actualType == PendingOwlType() or operator.rhs.actualType == PendingOwlType():
             operator.actualType = PendingOwlType()
             return
-        
+
         if not self.checkSignature(operator):
-            # TODO: Error?
+            # An operand is the wrong kind (e.g. 1 + "x"). checkSignature has
+            # already reported the mismatch; give the result the boxed Object
+            # type so it is not left untyped -- an untyped node cascades into a
+            # "no type information" internal error and crashes the compiler.
+            operator.actualType = ObjectOwlType()
             return
         
         def opTypes(lhs_type, rhs_type):
@@ -474,7 +478,8 @@ class TypecheckVisitor(Visitor):
             operator.actualType = operator.lhs.actualType
         else:
             message = "Cannot apply operator %s to operands of type of %s and %s" % (operator.__doc__, operator.lhs.actualType.__doc__, operator.rhs.actualType.__doc__)
-            self.typeMismatch(operator, message)    
+            self.typeMismatch(operator, message)
+            operator.actualType = ObjectOwlType()  # boxed fallback; do not leave untyped
                        
     def promoteNumericOperands(self, operator):
         '''
