@@ -39,6 +39,36 @@ def test_byte_indirection_local_saves_and_restores(compile_and_run):
 
 
 @requires_dotnet_toolchain
+def test_array_element_formal_binds_and_restores(compile_and_run):
+    # An array element is an l-value like any other (doc Example 2).
+    src = (
+        "DIM a(2):a(1)=20:dummy=FNpoke(99):PRINT a(1):END\n"
+        "DEF FNpoke(a(1)):PRINT a(1):=0\n"
+    )
+    assert compile_and_run(analyse(src, name="t")).split("\n")[:2] == ["99", "20"]
+
+
+@requires_dotnet_toolchain
+def test_multidim_array_element_formal_binds_and_restores(compile_and_run):
+    # A multi-dimensional array element is an l-value too.
+    src = (
+        "DIM a(2,2):a(1,1)=20:dummy=FNpoke(99):PRINT a(1,1):END\n"
+        "DEF FNpoke(a(1,1)):PRINT a(1,1):=0\n"
+    )
+    assert compile_and_run(analyse(src, name="t")).split("\n")[:2] == ["99", "20"]
+
+
+@requires_dotnet_toolchain
+def test_multidim_array_element_formal_variable_indices(compile_and_run):
+    # Subscripts are variables, captured once on entry.
+    src = (
+        "DIM a(2,2):i%=1:j%=2:a(i%,j%)=7:dummy=FNq(88):PRINT a(1,2):END\n"
+        "DEF FNq(a(i%,j%)):PRINT a(i%,j%):=0\n"
+    )
+    assert compile_and_run(analyse(src, name="t")).split("\n")[:2] == ["88", "7"]
+
+
+@requires_dotnet_toolchain
 def test_simple_variable_formal_still_works(compile_and_run):
     # Regression: the cheap field path is unchanged.
     src = "PROCd(21):END\nDEFPROCd(N):PRINTN*2:ENDPROC\n"

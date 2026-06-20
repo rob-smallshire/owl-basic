@@ -1549,25 +1549,68 @@ class _MethodEmitter:
         )
 
     def _bind_lvalue(self, node, owl_type, il_type, init_line):
-        """Save / assign / restore an indirection l-value formal or LOCAL.
+        """Save / assign / restore an l-value formal or LOCAL.
 
-        The target address is captured once (so the restore writes back the same
-        cell even if the body mutates the address expression), the cell's
-        contents saved, the incoming argument/default assigned, and a restore
-        registered. Returns the entry (save + assign) CIL lines.
+        Handles ?/!/$/| indirection and array elements. The *locator* (the
+        address, or the element's subscripts) is captured once on entry, so the
+        restore writes back the same cell even if the body mutates the locator
+        expression; the cell's contents are saved, the incoming argument/default
+        assigned, and a restore registered. Returns the entry (save+assign) CIL.
         """
-        addr_slot = self._local_slot("__addr_%d" % id(node), AddressOwlType())
         save_slot = self._local_slot("__save_%d" % id(node), owl_type)
-        address = self._capture(lambda: self._push_indirection_address(node))
+        if type(node).__name__ == "Indexer":
+            capture, load, store = self._array_element_accessors(node)
+        else:
+            capture, load, store = self._indirection_accessors(node)
         entry = (
-            address + ["stloc V_%d" % addr_slot]                       # capture address
-            + self._lvalue_load(node, addr_slot) + ["stloc V_%d" % save_slot]  # save cell
-            + self._lvalue_store(node, addr_slot, [init_line])         # assign argument
+            capture
+            + load + ["stloc V_%d" % save_slot]      # save the cell's current value
+            + store([init_line])                     # assign the argument / default
         )
-        self.local_restores.append(
-            self._lvalue_store(node, addr_slot, ["ldloc V_%d" % save_slot])
-        )
+        self.local_restores.append(store(["ldloc V_%d" % save_slot]))
         return entry
+
+    def _indirection_accessors(self, node):
+        """``(capture, load, store)`` for a ?/!/$/| indirection l-value, where
+        *capture* stores the address in a slot and *load*/``store(value_lines)``
+        read/write through it."""
+        addr_slot = self._local_slot("__addr_%d" % id(node), AddressOwlType())
+        capture = self._capture(lambda: self._push_indirection_address(node)) + [
+            "stloc V_%d" % addr_slot
+        ]
+        load = self._lvalue_load(node, addr_slot)
+        store = lambda value_lines: self._lvalue_store(node, addr_slot, value_lines)
+        return capture, load, store
+
+    def _array_element_accessors(self, node):
+        """``(capture, load, store)`` for an array-element l-value, A(i[,j...]).
+
+        The subscripts are captured into slots so the same element is restored
+        even if the body changes the index variables."""
+        indices = getattr(node.indices, "expressions", node.indices)
+        rank = len(indices)
+        field, array_il, element_il = self._array_field(node.identifier, rank)
+        capture = []
+        index_slots = []
+        for k, index_expr in enumerate(indices):
+            slot = self._local_slot("__idx_%d_%d" % (id(node), k), IntegerOwlType())
+            capture += self._capture(lambda e=index_expr: self.lower_expression(e))
+            capture += ["stloc V_%d" % slot]
+            index_slots.append(slot)
+        locator = ["ldsfld %s %s" % (array_il, field)] + [
+            "ldloc V_%d" % slot for slot in index_slots
+        ]
+        if rank == 1:
+            load = locator + [_LDELEM[element_il]]
+            store = lambda value_lines: locator + value_lines + [_STELEM[element_il]]
+        else:
+            args = ", ".join(["int32"] * rank)
+            load = locator + ["call instance %s %s::Get(%s)" % (element_il, array_il, args)]
+            store = lambda value_lines: (
+                locator + value_lines
+                + ["call instance void %s::Set(%s, %s)" % (array_il, args, element_il)]
+            )
+        return capture, load, store
 
     def _expr_UserFunc(self, node):
         # FN call: push the arguments, call the function method, value left on stack.
