@@ -27,23 +27,35 @@ def test_loop_opened_and_closed_within_a_branch_still_compiles():
     analyse(src, name="t")  # no exception
 
 
-def test_loop_left_open_past_a_join_is_rejected():
-    # FOR J is opened only on the THEN branch and is still open where the branches
-    # re-join, so the nesting differs by path: reject, not a crash.
+def test_conditionally_opened_loop_closed_by_named_next_leaks_and_compiles():
+    # FOR J% is opened only on the THEN branch and never gets its own NEXT, but
+    # the outer NEXT I% names I%, so it unambiguously closes up to I%, discarding
+    # the leaked J% frame -- exactly what BBC BASIC does. This is the same
+    # early-exit-leak shape as a GOTO out of a FOR (cf. ragged-num), so it must
+    # compile, not be mis-rejected as dynamic-stack reliance.
     src = ('FOR I%=1 TO 2\n'
            'IF I%=1 THEN FOR J%=1 TO 3\n'
            'PRINT "after"\n'
            'NEXT I%\n')
+    analyse(src, name="t")  # no exception
+
+
+def test_bare_next_closing_a_conditional_loop_is_rejected():
+    # With a bare NEXT (no index) the loop to close is "the innermost", which
+    # differs by path (J% on the THEN branch, I% otherwise) -- genuinely
+    # ambiguous, so reject. Distinguishes the unnamed case from the named one.
+    src = ('FOR I=1 TO 2:IF I FOR J=1 TO 3:PRINT J\n'
+           'NEXT,\n')
     with pytest.raises(CompileError):
         analyse(src, name="t")
 
 
-def test_rejection_is_deterministic_across_repeated_analyses():
-    # The verdict must not depend on set iteration order: same answer every time.
+def test_leak_verdict_is_deterministic_across_repeated_analyses():
+    # The verdict (compile, with a leaked frame) must not depend on CFG traversal
+    # order: the same source analyses cleanly every time.
     src = ('FOR I%=1 TO 2\n'
            'IF I%=1 THEN FOR J%=1 TO 3\n'
            'PRINT "after"\n'
            'NEXT I%\n')
     for _ in range(8):
-        with pytest.raises(CompileError):
-            analyse(src, name="t")
+        analyse(src, name="t")

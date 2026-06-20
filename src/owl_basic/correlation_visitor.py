@@ -1,8 +1,8 @@
 import logging
 from owl_basic import errors
 from collections import deque
-from owl_basic.syntax.ast import (Repeat, While, ForToStep,
-    ReturnFromProcedure, ReturnFromFunction, End, Stop)
+from owl_basic.syntax.ast import (Repeat, While, ForToStep, Next, Until,
+    Endwhile, ReturnFromProcedure, ReturnFromFunction, End, Stop)
 from owl_basic.exceptions import CompileError
 from owl_basic.flow.connectors import connectLoop
 from owl_basic.visitor import Visitor
@@ -20,6 +20,16 @@ _DYNAMIC_STACK_NOTE = (
 def _same_loops(a, b):
     """Two loop stacks are equal iff they hold the same opener nodes in order."""
     return len(a) == len(b) and all(x is y for x, y in zip(a, b))
+
+
+def _common_prefix(a, b):
+    """The longest leading run of opener nodes shared by both loop stacks."""
+    prefix = []
+    for x, y in zip(a, b):
+        if x is not y:
+            break
+        prefix.append(x)
+    return prefix
 
 # Statements that legitimately end a procedure (ENDPROC / =<expr>). Reaching one
 # with FOR/REPEAT loops still open is an early exit that the BBC interpreter does
@@ -114,16 +124,35 @@ class CorrelationVisitor(Visitor):
                 self.to_visit.extend(v.outEdges)
 
     def _propagateLoopStack(self, source, target, loops):
-        """Record *loops* as target's entry stack, or reject a join that disagrees."""
+        """Record *loops* as target's entry stack, resolving benign leaks.
+
+        Two paths may reach a join with different loop nesting. When one stack is
+        a prefix of the other and the join is not itself a loop-closing statement,
+        the extra inner loop(s) were left via an early forward exit (e.g. GOTO out
+        of a FOR): their frames leak, but each loop is still correlated by its own
+        NEXT on the path that does not jump out. Continue with the loops open on
+        *every* path (the common prefix). A genuine divergence -- a loop opened on
+        only some paths and then *closed* at this join (NEXT/UNTIL/ENDWHILE), or
+        stacks that are not prefix-related -- relies on the dynamic loop stack and
+        cannot be compiled.
+        """
         existing = getattr(target, "loop_stack", None)
         if existing is None:
             target.loop_stack = loops
-        elif not _same_loops(existing, loops):
-            raise CompileError(
-                "Control flow reaching line %s is inside different loops "
-                "depending on the path taken to get there, so a loop is opened on "
-                "one path but not another.%s"
-                % (target.lineNum, _DYNAMIC_STACK_NOTE))
+            return
+        if _same_loops(existing, loops):
+            return
+        common = _common_prefix(existing, loops)
+        prefix_related = len(common) == min(len(existing), len(loops))
+        closes_a_loop = isinstance(target, (Next, Until, Endwhile))
+        if prefix_related and not closes_a_loop:
+            target.loop_stack = common  # the loops open on all paths; extras leak
+            return
+        raise CompileError(
+            "Control flow reaching line %s is inside different loops "
+            "depending on the path taken to get there, so a loop is opened on "
+            "one path but not another.%s"
+            % (target.lineNum, _DYNAMIC_STACK_NOTE))
 
     def _warnUnceremoniousExit(self, exit_stmt):
         """Warn that *exit_stmt* leaves one or more loops open as it returns.
