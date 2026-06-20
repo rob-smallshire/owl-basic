@@ -65,8 +65,14 @@ def assignBlockAndContinue(vertex, block=None):
             current.block.statements.append(current)
             reached.append(current)
             logger.debug("%s with in-degree %s and out-degree %s at %s in %s", current, str(current.inDegree), str(current.outDegree), str(current.lineNum), current.block)
+            # A successor continues the current block only on a straight-line
+            # chain. An IF is a conditional branch even when one side falls off
+            # the end of the program (out-degree 1: its only edge is the taken
+            # clause) -- so its successor must start a fresh block, or codegen
+            # would branch into the IF's own block and loop.
+            chains = current.outDegree == 1 and type(current).__name__ != "If"
             for target in current.outEdges:
-                stack.append((target, current.block if current.outDegree == 1 else None))
+                stack.append((target, current.block if chains else None))
     for current in reached:
         for target in current.outEdges:
             if current.block is not target.block:

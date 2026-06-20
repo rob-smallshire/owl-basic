@@ -34,42 +34,50 @@ class FlowgraphForwardVisitor(Visitor):
         Connect the If to the initial statements of the true and false
         clauses.  Process each statement in both clauses.
         """
+        # `following` may be None: when the IF is the last statement, a branch
+        # that would fall through to "the next statement" instead runs off the
+        # end of the program -- a terminal node, not an error.
         following = findFollowingStatement(iff)
-        if not following:
-            errors.internal("Following statement to IF not found at line %d" % iff.lineNum)
+
+        def connect_fall_through():
+            # The condition-true (no THEN body) or condition-false (no ELSE body)
+            # path continues at the following statement, or terminates if none.
+            if following is not None:
+                connect(iff, following)
+
         if iff.trueClause is not None:
             if isinstance(iff.trueClause, list):
                 if len(iff.trueClause) > 0:
                     # Connect to the beginning of the true clause
                     first_true_statement = iff.trueClause[0]
                     connect(iff, first_true_statement)
-                    
+
                     for statement in iff.trueClause:
                         self.visit(statement)
                 else:
-                    connect(iff.following) # TODO: Error!
+                    connect_fall_through()
             else:
                 connect(iff, iff.trueClause)
-                self.visit(iff.trueClause)                
+                self.visit(iff.trueClause)
         else:
-            connect(iff, following)
-                
+            connect_fall_through()
+
         if iff.falseClause is not None:
             if isinstance(iff.falseClause, list):
                 if len(iff.falseClause) > 0:
                     # Connect to the beginning of the false clause
                     first_false_statement = iff.falseClause[0]
                     connect(iff, first_false_statement)
-                    
+
                     for statement in iff.falseClause:
                         self.visit(statement)
                 else:
-                    connect(iff.following) # TODO: Error!
+                    connect_fall_through()
             else:
                 connect(iff, iff.falseClause)
                 self.visit(iff.falseClause)
         else:
-            connect(iff, following)       
+            connect_fall_through()
             
     def visitGoto(self, goto):
         """

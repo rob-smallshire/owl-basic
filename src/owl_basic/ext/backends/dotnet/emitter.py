@@ -614,6 +614,7 @@ class _MethodEmitter:
         self.landed_longjumps = set()  # target lines that have an L_<line>: here
         self._input_queue_slot = None  # reused local for the INPUT result queue
         self.local_restores = []       # per formal/LOCAL: CIL lines that restore it
+        self._end_label_used = False   # a branch (terminal IF) targets the method end
 
     def emit(self, text):
         self.lines.append(text)
@@ -691,9 +692,16 @@ class _MethodEmitter:
             if self._block_index.get(id(successor)) != index + 1:
                 self.emit("br " + self._block_label(successor))
 
+    def _method_end_label(self):
+        """Label for the method's end, where a terminal IF branch lands."""
+        self._end_label_used = True
+        return "IF_END"
+
     def finish(self):
-        # The assembly template appends the trailing `ret`; nothing to do yet.
-        pass
+        # Emit the method-end label if a terminal IF branch targets it; the
+        # trailing `ret` (added by _emit_method) then follows it.
+        if self._end_label_used:
+            self.emit("IF_END:")
 
     # -- statements ---------------------------------------------------------
 
@@ -817,27 +825,37 @@ class _MethodEmitter:
         # Identify the true/false successor statements. One clause may be empty
         # (e.g. IF c THEN ELSE foo); whichever clause is present names its target,
         # and the remaining out-edge is the other branch.
+        # The branch this clause does not name is the other out-edge -- or, when
+        # the IF is the last statement, that fall-through path runs off the end of
+        # the program (a terminal branch with no out-edge; see flowgraph_visitor).
         edges = set(node.outEdges)
         if node.trueClause:
             true_statement = node.trueClause[0]
             others = edges - {true_statement}
-            if len(others) != 1:
+            false_statement = next(iter(others)) if others else None
+            if len(others) > 1:
                 raise CodeGenerationError("IF with %d false targets" % len(others))
-            false_statement = next(iter(others))
         elif node.falseClause:
             false_statement = node.falseClause[0]
             others = edges - {false_statement}
-            if len(others) != 1:
+            true_statement = next(iter(others)) if others else None
+            if len(others) > 1:
                 raise CodeGenerationError("IF with %d true targets" % len(others))
-            true_statement = next(iter(others))
         else:
             raise CodeGenerationError("IF with no clauses")
 
         this_index = self._block_index[id(node.block)]
-        true_index = self._block_index[id(true_statement.block)]
-        false_index = self._block_index[id(false_statement.block)]
-        true_label = self._block_label(true_statement.block)
-        false_label = self._block_label(false_statement.block)
+
+        def target(statement):
+            # (label, block index) for a branch target; the method-end label and
+            # None index for a terminal branch (one that falls off the end).
+            if statement is None:
+                return self._method_end_label(), None
+            return (self._block_label(statement.block),
+                    self._block_index[id(statement.block)])
+
+        true_label, true_index = target(true_statement)
+        false_label, false_index = target(false_statement)
 
         if true_index == this_index + 1:
             self.emit("brfalse " + false_label)          # fall through to true
