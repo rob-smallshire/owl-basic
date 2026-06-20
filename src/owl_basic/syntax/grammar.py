@@ -722,9 +722,12 @@ def p_local_var_list(p):
         p[0].append(p[3])
 
 def p_local_var(p):
-    # A LOCAL/PRIVATE item is a scalar (variable) or a whole array (array),
-    # e.g. LOCAL i%, a%() -- the array is dynamic-scoped like a scalar.
-    '''local_var : variable
+    # A LOCAL/PRIVATE item is any assignable location (an lvalue): a scalar, a
+    # whole array (LOCAL a%()), an array element, or ?/!/$ indirection. The ROM
+    # parses each with the same parse_lvalue routine used for LET, FOR and DEF
+    # FN/PROC formals -- making an indirection cell local saves its contents on
+    # entry and restores them on return.
+    '''local_var : writable
                  | array'''
     p[0] = p[1]
 
