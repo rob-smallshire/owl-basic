@@ -10,8 +10,9 @@ visitor, at which point calls resolve and operators over them type correctly.
 
 import logging
 
+from owl_basic.exceptions import CompileError
 from owl_basic.flow.traversal import depthFirstSearch
-from owl_basic.syntax.ast import DefineFunction, ReturnFromFunction
+from owl_basic.syntax.ast import DefineFunction, ReturnFromFunction, UserFunc
 
 from .hm_bridge import infer_return_types
 from .typecheck_visitor import TypecheckVisitor
@@ -60,3 +61,27 @@ def inferUserFunctionReturnTypes(entry_points):
     inferred = infer_return_types(returns_by_name)
     for function in define_functions:
         function.returnType = inferred.get(function.name)
+
+    # Two unresolvable shapes are real, diagnosable program errors rather than
+    # mere gaps in the inferencer, so name the function and reject gracefully:
+    #   * a DEF FN with no '= <expr>' at all -- it never returns a value;
+    #   * a function all of whose returns are calls to (mutually) recursive
+    #     functions with no concrete base case, so no type can ever ground out.
+    # A None that arises only because a return expression is not yet modelled by
+    # the inferencer is left lenient (it falls through as Pending) so we do not
+    # reject programs the back end can still handle.
+    details = []
+    for function in define_functions:
+        if function.returnType is not None:
+            continue
+        returns = returns_by_name[function.name]
+        if not returns:
+            details.append("%s has no '= <expr>' to return a value" % function.name)
+        elif all(isinstance(r, UserFunc) for r in returns):
+            details.append(
+                "%s's return type could not be inferred -- every return is a call "
+                "to another function and the recursion has no base case that "
+                "yields a concrete value" % function.name)
+    if details:
+        raise CompileError("Cannot infer function return type(s): "
+                           + "; ".join(details))

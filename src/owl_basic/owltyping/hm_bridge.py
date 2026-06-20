@@ -31,6 +31,7 @@ from owl_basic.owltyping.type_system import (
     ByteOwlType,
     FloatOwlType,
     IntegerOwlType,
+    LongIntegerOwlType,
     NumericOwlType,
     ObjectOwlType,
     StringOwlType,
@@ -39,7 +40,10 @@ from owl_basic.sigil import identifierToType
 from owl_basic.syntax.ast import (
     BinaryIntegerOperator,
     Cast,
+    Concatenate,
     Divide,
+    DyadicByteIndirection,
+    DyadicIntegerIndirection,
     FalseFunc,
     LiteralFloat,
     LiteralInteger,
@@ -50,13 +54,22 @@ from owl_basic.syntax.ast import (
     Power,
     ReturnFromFunction,
     TrueFunc,
+    UnaryByteIndirection,
+    UnaryFloatIndirection,
+    UnaryIntegerIndirection,
+    UnaryStringIndirection,
     UserFunc,
     Variable,
 )
 
-# Promotion ranks for the numeric sub-lattice: byte < integer < float.
-_NUMERIC_RANK = [(FloatOwlType, 3), (IntegerOwlType, 2), (ByteOwlType, 1)]
-_RANK_TYPE = {3: FloatOwlType, 2: IntegerOwlType, 1: ByteOwlType}
+# Promotion ranks for the numeric sub-lattice: byte < integer < long < float.
+# LongInteger matters because the type checker evaluates int32*int32 (and other
+# widening ops) in 64 bits, so a function returning such an expression sees its
+# operands cast to LongInteger; omitting it here mis-joined those to Object.
+_NUMERIC_RANK = [(FloatOwlType, 4), (LongIntegerOwlType, 3),
+                 (IntegerOwlType, 2), (ByteOwlType, 1)]
+_RANK_TYPE = {4: FloatOwlType, 3: LongIntegerOwlType,
+              2: IntegerOwlType, 1: ByteOwlType}
 
 # BOTTOM (unknown / not yet constrained) is represented as None.
 _BOTTOM = None
@@ -147,15 +160,34 @@ def infer_return_types(returns_by_name):
             # TRUE (-1) and FALSE (0) are integers in BBC BASIC.
             return IntegerOwlType()
         if isinstance(expr, Cast):
-            # The type checker inserts casts (e.g. integer->float) during the
-            # first pass; a cast's value already has the target type.
+            # The type checker inserts casts during the first pass. A cast to
+            # LongInteger is just the overflow-safe widening of int32 arithmetic
+            # (int32*int32 is evaluated in 64 bits); it is transparent to the
+            # logical return type, so look through it -- FNd(n%)=n%*2 returns
+            # Integer, not LongInteger. Genuine %% operands are LongInteger
+            # variables (not casts) and so are unaffected. Other casts (e.g.
+            # integer->float for division) carry a real type, so keep the target.
+            if isinstance(expr.targetType, LongIntegerOwlType):
+                return type_of(expr.value)
             return expr.targetType
         if isinstance(expr, Variable):
             return identifierToType(expr.identifier)
+        if isinstance(expr, (UnaryByteIndirection, DyadicByteIndirection)):
+            # ?addr / a?b read a byte; the type checker types these Byte.
+            return ByteOwlType()
+        if isinstance(expr, (UnaryIntegerIndirection, DyadicIntegerIndirection)):
+            return IntegerOwlType()  # !addr / a!b read a 32-bit integer
+        if isinstance(expr, UnaryStringIndirection):
+            return StringOwlType()  # $addr reads a CR-terminated string
+        if isinstance(expr, UnaryFloatIndirection):
+            return FloatOwlType()  # |addr reads a float
         if isinstance(expr, UserFunc):
             # Recursion/forward references read the callee's current estimate;
             # unknown (builtin) callees stay BOTTOM for now.
             return estimates.get(expr.name, _BOTTOM)
+        if isinstance(expr, Concatenate):
+            # The simplifier rewrites string '+' to Concatenate; it is a string.
+            return StringOwlType()
         if isinstance(expr, Plus):
             # '+' is numeric add or string concatenation; _join handles both.
             return _join(type_of(expr.lhs), type_of(expr.rhs))
