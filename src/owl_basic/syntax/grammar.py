@@ -525,7 +525,10 @@ def p_install_stmt(p):
     
 # GOTO statement
 def p_goto_stmt(p):
-    '''goto_stmt : GOTO factor'''
+    '''goto_stmt : GOTO expr'''
+    # BBC BASIC allows a computed target (GOTO E%+1); accept any expression here
+    # and leave it to a later pass to reject a non-constant target, which a
+    # compiler (unlike the interpreter) cannot resolve.
     p[0] = Goto(targetLogicalLine = p[2])
     p[0].lineNum = p.lineno(1) - 1
 
@@ -541,7 +544,8 @@ def p_on_goto_stmt(p):
     
 # GOSUB statement
 def p_gosub(p):
-    '''gosub_stmt : GOSUB factor'''
+    '''gosub_stmt : GOSUB expr'''
+    # As for GOTO: accept a computed target and defer the non-constant check.
     p[0] = Gosub(targetLogicalLine = p[2])
     p[0].lineNum = p.lineno(1) - 1
     
