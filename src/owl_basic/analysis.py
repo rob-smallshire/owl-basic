@@ -149,11 +149,31 @@ def analyse_numbered_lines(numbered_lines, name, source_filepath=None, options=N
     )
 
 
+def _reject_unsupported_constructs(parse_tree):
+    """Reject constructs OWL cannot compile, up front, with a clear message.
+
+    EVAL interprets a string as a BASIC expression at run time, so its type and
+    behaviour are unknowable to a static compiler; compiling even a restricted
+    subset is a project of its own. Reject it here -- naming EVAL -- rather than
+    let it surface later as an opaque type or code-generation error.
+    """
+    def walk(node):
+        if type(node).__name__ == "EvalFunc":
+            raise CompileError(
+                "EVAL is not supported: it evaluates a string as BASIC at run "
+                "time, which a static compiler cannot reproduce."
+            )
+        node.forEachChild(lambda child: child is not None and walk(child))
+
+    walk(parse_tree)
+
+
 def _run_pipeline(data, physical_to_logical_map, line_offsets, line_number_prefixes,
                   name, source_filepath, options):
     """Run the front-end pipeline and bundle the result as a :class:`Program`."""
     errors.reset()  # fresh per-compilation diagnostic dedup (no cross-pollution)
     parse_tree = syntax_parser.parse(data, options)
+    _reject_unsupported_constructs(parse_tree)
     parse_tree.accept(SourceDebuggingVisitor(data, line_offsets, line_number_prefixes))
     parse_tree.accept(parent_visitor.ParentVisitor())
     parse_tree.accept(separation_visitor.SeparationVisitor())
