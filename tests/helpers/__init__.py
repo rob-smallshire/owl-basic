@@ -10,7 +10,10 @@ import os
 import shutil
 import sys
 
+from pathlib import Path
+
 from owl_basic.analysis import analyse
+from owl_basic.cli import _analyse_source
 from owl_basic.syntax import parser as _parser
 from owl_basic.syntax.ast import DefineFunction, ReturnFromFunction
 
@@ -36,12 +39,15 @@ def parse(source):
 
 
 def analyse_fixture(filename, name=None):
-    """Analyse a ``.bbctxt`` fixture from the tests directory."""
-    with open(os.path.join(FIXTURES_DIRPATH, filename), encoding="latin-1") as f:
-        source = f.read()
-    if name is None:
-        name = os.path.splitext(os.path.basename(filename))[0]
-    return analyse(source, name=name)
+    """Analyse a ``.bbctxt`` fixture, dispatching on its form like the CLI.
+
+    A numbered listing (e.g. ragged-num) is analysed by its real line numbers and
+    an un-numbered snippet with synthesised ones -- the same dispatch
+    ``_analyse_source`` does -- so a numbered fixture is not mis-parsed as if its
+    line numbers were part of the first statement.
+    """
+    return _analyse_source(
+        Path(os.path.join(FIXTURES_DIRPATH, filename)), "latin-1")
 
 
 def define_functions(source):
