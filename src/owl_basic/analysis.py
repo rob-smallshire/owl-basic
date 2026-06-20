@@ -158,12 +158,14 @@ def _reject_unsupported_constructs(parse_tree):
     let it surface later as an opaque type or code-generation error.
     """
     def walk(node):
+        if node is None:
+            return
         if type(node).__name__ == "EvalFunc":
             raise CompileError(
                 "EVAL is not supported: it evaluates a string as BASIC at run "
                 "time, which a static compiler cannot reproduce."
             )
-        node.forEachChild(lambda child: child is not None and walk(child))
+        node.forEachChild(walk)
 
     walk(parse_tree)
 

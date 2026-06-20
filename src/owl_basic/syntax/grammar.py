@@ -106,8 +106,7 @@ def p_lone_stmt_body(p):
     p[0].append(p[1])
 
 def p_star_command(p):
-    '''star_command : STAR_FX
-                    | STAR_CAT'''
+    '''star_command : STAR_COMMAND'''
     p[0] = StarCommand(command = p[1])
     p[0].lineNum = p.lineno(1) - 1
     setDebuggingPositions(p)

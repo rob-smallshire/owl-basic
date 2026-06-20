@@ -19,6 +19,19 @@ def buildLexer(options):
     if options.verbose:
         sys.stderr.write("done\n")
 
+    # Track the previously emitted token type so t_STAR_COMMAND can tell a star
+    # command (no value before '*') from multiplication. A fresh lexer is built
+    # per parse, so this starts as None (statement start).
+    lx.last_token_type = None
+    _emit = lx.token
+
+    def _tracking_token():
+        tok = _emit()
+        if tok is not None:
+            lx.last_token_type = tok.type
+        return tok
+
+    lx.token = _tracking_token
     return lx
 
 def tokenize(data, lexer):

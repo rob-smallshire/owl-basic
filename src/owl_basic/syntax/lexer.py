@@ -201,8 +201,7 @@ tokens = (
     'NOT',
     'MANDEL',
     'COMMENT',
-    'STAR_FX',
-    'STAR_CAT'
+    'STAR_COMMAND'
 )
 
 def t_COMMENT(t):
@@ -215,12 +214,28 @@ def t_COMMENT(t):
     t.value = m.group(1)
     return t
 
-def t_STAR_FX(t):
-    r'\*+\s*FX[^\n]*'
-    return t
+# A star command (*HELP, *FX19, *CAT, ...) passes the rest of its line to the OS.
+# '*' is only ever a *binary* multiply, so a '*' with no value before it is a star
+# command: at the start of a line/program, after ':' or end-of-line, or after a
+# keyword that takes no operand (REPEAT/THEN/ELSE -- the REPEAT*FX19 byte-saver).
+# It consumes to end of line. Anywhere a value precedes it, it is multiplication
+# (or '*='), so rewind the lexer to just the operator. Tried before t_TIMES (a
+# function token), so it sees every '*' and decides.
+_STAR_COMMAND_PRECEDERS = frozenset(
+    (None, 'EOL', 'COLON', 'REPEAT', 'THEN', 'ELSE'))
 
-def t_STAR_CAT(t):
-    r'\*+\s*CAT[^\n]*'
+def t_STAR_COMMAND(t):
+    r'\*[^\n]*'
+    if getattr(t.lexer, 'last_token_type', None) in _STAR_COMMAND_PRECEDERS:
+        return t
+    if t.value.startswith('*='):
+        t.type = 'TIMES_ASSIGN'
+        t.value = '*='
+        t.lexer.lexpos = t.lexpos + 2
+    else:
+        t.type = 'TIMES'
+        t.value = '*'
+        t.lexer.lexpos = t.lexpos + 1
     return t
 
 # Define a rule so we can split lines with a trailing backslash and leading backslash
