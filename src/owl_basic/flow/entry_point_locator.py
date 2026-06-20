@@ -4,6 +4,7 @@ import logging
 from owl_basic.syntax import ast
 from owl_basic import ast_utils
 from owl_basic import errors
+from owl_basic.exceptions import CompileError
 from . import flow_analysis
 
 from .entry_point_visitor import EntryPointVisitor
@@ -23,6 +24,8 @@ def locateEntryPoints(parse_tree, line_mapper, options):
     epv = EntryPointVisitor(line_mapper)
     parse_tree.accept(epv)
     first_statement = line_mapper.firstStatement()
+    if first_statement is None:
+        raise CompileError("the source contains no BBC BASIC statements to compile")
     epv.mainEntryPoint(first_statement)
     entry_points = epv.entryPoints
     # Tag each statement with its predecessor entry point
