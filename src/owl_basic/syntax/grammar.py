@@ -608,9 +608,13 @@ def p_clause(p):
     p[0] = p[1]
 
 def p_implicit_goto(p):
-    '''implicit_goto : factor'''
+    # BBC BASIC's `IF cond THEN <line>` jumps to a *constant* line number. Match
+    # only a literal integer here (not any factor): otherwise `IF C-O` would read
+    # `-O` as a bare unary-minus implicit GOTO instead of continuing the
+    # condition `C-O`, and a computed target cannot be a line number anyway.
+    '''implicit_goto : LITERAL_INTEGER'''
     stmt_list = StatementList()
-    goto = Goto(targetLogicalLine = p[1])
+    goto = Goto(targetLogicalLine = LiteralInteger(value = p[1]))
     goto.lineNum = p.lineno(1) - 1
     goto.startLine = p.lineno(1)
     goto.endLine = p.lineno(1)
