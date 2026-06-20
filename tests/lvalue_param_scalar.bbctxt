@@ -1,0 +1,3 @@
+PRINT FNsquare(7)
+END
+DEF FNsquare(x) = x*x

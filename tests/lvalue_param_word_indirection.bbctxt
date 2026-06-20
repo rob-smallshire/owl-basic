@@ -1,0 +1,8 @@
+DIM buf% 8
+!buf% = &12345678
+dummy = FNword(&AABBCCDD)
+PRINT "after  !buf% = ";~!buf%
+END
+DEF FNword(!buf%)
+PRINT "inside !buf% = ";~!buf%
+= 0

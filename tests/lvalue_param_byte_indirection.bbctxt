@@ -1,0 +1,8 @@
+DIM buf% 8
+?buf% = 99
+dummy = FNbyte(65)
+PRINT "after  ?buf% = ";?buf%
+END
+DEF FNbyte(?buf%)
+PRINT "inside ?buf% = ";?buf%
+= ?buf%

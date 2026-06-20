@@ -1,0 +1,9 @@
+DIM buf% 32
+$buf% = "hello"
+dummy = FNstr("WORLD")
+PRINT "after  = ";$buf%
+END
+DEF FNstr($buf%)
+PRINT "inside = ";$buf%
+PRINT "length = ";LEN $buf%
+= 0
