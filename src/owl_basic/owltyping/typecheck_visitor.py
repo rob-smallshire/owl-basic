@@ -422,11 +422,15 @@ class TypecheckVisitor(Visitor):
                     message = "Cannot pass actual parameter number %d of type %s to formal parameter type of %s" % (n, actual.actualType.__doc__, formal.argument.actualType.__doc__)
                     self.typeMismatch(call, message)
                 n += 1 
-        else:
-            error("Did not find entry point for %s" % call.name)
-        
-        # Check each formal parameter against an actual parameter
-        pass
+        elif self.__report_diagnostics:
+            # An unknown callable: name a function FNx / procedure PROCx clearly,
+            # and only from the authoritative second pass (the first may not have
+            # walked the definition yet).
+            kind, bare = (("function", call.name[2:]) if call.name.startswith("FN")
+                          else ("procedure", call.name[4:])
+                          if call.name.startswith("PROC") else ("routine", call.name))
+            error("Call to undefined %s '%s': no DEF %s is defined"
+                  % (kind, bare, call.name))
     
     def determineNumericResultType(self, operator):    
         if operator.lhs.actualType == PendingOwlType() or operator.rhs.actualType == PendingOwlType():

@@ -177,3 +177,11 @@ def test_rejection_is_not_a_sys_exit():
     # take down the compiler host through internal()/sys.exit.
     with pytest.raises(CompileError):
         analyse("A=FNa(1)\nEND\nDEFFNa(N)=FNa(N-1)\n", name="t")
+
+
+def test_call_to_undefined_function_names_it_meaningfully():
+    # No DEF FNnope: the diagnostic should name the function plainly, not talk
+    # about internal "entry points".
+    _, errors = _analyse_capturing_errors("A=FNnope(1)\nEND\n")
+    assert any("undefined function 'nope'" in m for m in errors), errors
+    assert not any("entry point" in m for m in errors), errors
