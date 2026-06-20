@@ -14,7 +14,6 @@ import logging
 
 from conftest import requires_dotnet_toolchain
 
-from owl_basic import errors
 from owl_basic.analysis import analyse
 
 
@@ -40,7 +39,6 @@ def test_end_inside_a_loop(compile_and_run):
 def test_endproc_inside_repeat_warns_naming_the_loop(caplog):
     # ENDPROC out of an open REPEAT leaks the loop frame in the interpreter:
     # the warning must name ENDPROC and the REPEAT it abandons.
-    errors.error_log.clear()
     with caplog.at_level(logging.WARNING):
         analyse(
             'PROCf\nEND\n'
@@ -53,7 +51,6 @@ def test_endproc_inside_repeat_warns_naming_the_loop(caplog):
 def test_endproc_inside_for_names_the_index(caplog):
     # The warning names the FOR control variable so the offending loop is
     # identifiable in a procedure that opens several.
-    errors.error_log.clear()
     with caplog.at_level(logging.WARNING):
         analyse(
             'PROCf\nEND\n'
@@ -66,7 +63,6 @@ def test_endproc_inside_for_names_the_index(caplog):
 def test_end_inside_loop_emits_no_leak_warning(caplog):
     # END returns to the prompt, which resets the loop stacks: no leak, so no
     # warning about an unceremonious exit.
-    errors.error_log.clear()
     with caplog.at_level(logging.WARNING):
         analyse(
             'REPEAT\nIF TRUE THEN END\nUNTIL FALSE\n',

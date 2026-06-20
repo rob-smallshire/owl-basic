@@ -15,6 +15,7 @@ import logging
 from owl_basic import (
     correlation_visitor,
     data_visitor,
+    errors,
     line_number_visitor,
     parent_visitor,
     separation_visitor,
@@ -151,6 +152,7 @@ def analyse_numbered_lines(numbered_lines, name, source_filepath=None, options=N
 def _run_pipeline(data, physical_to_logical_map, line_offsets, line_number_prefixes,
                   name, source_filepath, options):
     """Run the front-end pipeline and bundle the result as a :class:`Program`."""
+    errors.reset()  # fresh per-compilation diagnostic dedup (no cross-pollution)
     parse_tree = syntax_parser.parse(data, options)
     parse_tree.accept(SourceDebuggingVisitor(data, line_offsets, line_number_prefixes))
     parse_tree.accept(parent_visitor.ParentVisitor())
