@@ -186,7 +186,66 @@ class ByteOwlType(NumericOwlType, metaclass=OwlTypeSingleton):
     
     def isDefined(self):
         return True
-    
+
+
+class _SumInterningMeta(OwlTypeSingleton):
+    """Metaclass for SumOwlType: intern by member set instead of one singleton.
+
+    OwlTypeSingleton caches a single instance per class (every other OwlType is a
+    singleton). A sum carries data -- its member set -- so it needs one canonical
+    instance *per distinct set* (and identity-equal so the inference fixpoint,
+    which compares estimates with ``is``, converges).
+    """
+    def __call__(cls, members):
+        key = frozenset(members)
+        cache = cls.__dict__.get("_intern")
+        if cache is None:
+            cache = {}
+            cls._intern = cache
+        if key not in cache:
+            cache[key] = type.__call__(cls, key)  # bypass the singleton __call__
+        return cache[key]
+
+
+class SumOwlType(ScalarOwlType, metaclass=_SumInterningMeta):
+    "Sum"
+    # A union of several concrete scalar types: the return type of a DEF FN that
+    # yields different types on different paths (e.g. Integer on one, String on
+    # another). Assignment is structural -- a value that might be any member is
+    # assignable to a target only if EVERY member is -- so int|string fits no
+    # numeric or string variable, while int|float promotes (the numeric join
+    # collapses those before a sum is ever formed). It is a scalar, so PRINT and
+    # other scalar-accepting contexts take it.
+
+    def __init__(self, members):
+        self.members = frozenset(members)
+        # __doc__ drives the type name in diagnostics.
+        self.__doc__ = " | ".join(sorted(m.__doc__ for m in self.members))
+
+    def isConvertibleTo(self, other):
+        assert not isinstance(other, type)
+        return all(member.isConvertibleTo(other) for member in self.members)
+
+    def isAssignableFrom(self, other):
+        assert not isinstance(other, type)
+        return any(member.isAssignableFrom(other) for member in self.members)
+
+    def isDefined(self):
+        return all(member.isDefined() for member in self.members)
+
+    def __eq__(self, other):
+        return isinstance(other, SumOwlType) and other.members == self.members
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash(self.members)
+
+    def __str__(self):
+        return self.__doc__
+
+
 class ArrayOwlType(ObjectOwlType):
     
     def __init__(self, element_type=None, rank=None):

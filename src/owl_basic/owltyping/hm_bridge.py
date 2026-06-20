@@ -36,6 +36,7 @@ from owl_basic.owltyping.type_system import (
     ObjectOwlType,
     PendingOwlType,
     StringOwlType,
+    SumOwlType,
 )
 from owl_basic.sigil import identifierToType
 from owl_basic.syntax.ast import (
@@ -84,12 +85,20 @@ def _numeric_rank(owl_type):
     return 0
 
 
+def _members(owl_type):
+    """The concrete members of a type: a sum's set, else the type itself."""
+    if isinstance(owl_type, SumOwlType):
+        return owl_type.members
+    return frozenset([owl_type])
+
+
 def _join(left, right):
-    """Least upper bound over the promotion lattice (used to combine returns).
+    """Least upper bound *within one expression* (e.g. the operands of ``+``).
 
     BOTTOM is the identity. Equal types join to themselves (so string+string is
-    string). Two numerics promote to the wider one. Anything else — notably a
-    numeric mixed with a string — boxes to object.
+    string). Two numerics promote to the wider one. A genuine mix inside a single
+    operator -- a number and a string -- is ill-typed in BBC BASIC; it boxes to
+    Object (the type checker reports the mismatch separately).
     """
     if left is _BOTTOM:
         return right
@@ -101,6 +110,30 @@ def _join(left, right):
     if rank[0] and rank[1]:
         return _RANK_TYPE[max(rank)]()
     return ObjectOwlType()
+
+
+def _path_join(left, right):
+    """Combine the types of two *return paths* of a function.
+
+    Like :func:`_join` for BOTTOM/equality/numeric promotion, but where the paths
+    are of genuinely different kinds (a number on one, a string on another) the
+    result is a *sum* type (Integer|String) rather than a boxed Object, so the
+    call site's assignment check stays structural: assignable to T only if every
+    member is. Sums flatten, so three-way joins accumulate cleanly.
+    """
+    if left is _BOTTOM:
+        return right
+    if right is _BOTTOM:
+        return left
+    if left is right:
+        return left
+    rank = max(_numeric_rank(left), 0), max(_numeric_rank(right), 0)
+    if rank[0] and rank[1]:
+        return _RANK_TYPE[max(rank)]()
+    members = _members(left) | _members(right)
+    if len(members) == 1:
+        return next(iter(members))
+    return SumOwlType(members)
 
 
 def _numeric_join(left, right):
@@ -225,7 +258,8 @@ def infer_return_types(returns_by_name):
             joined = _BOTTOM
             for name in members:
                 for expression in returns[name]:
-                    joined = _join(joined, type_of(expression))
+                    # Combine return *paths*: a number/string split forms a sum.
+                    joined = _path_join(joined, type_of(expression))
             for name in members:
                 if estimates[name] is not joined:
                     estimates[name] = joined
