@@ -92,6 +92,23 @@ def _members(owl_type):
     return frozenset([owl_type])
 
 
+def _normalise_members(members):
+    """Canonicalise a sum's members so the result is independent of join order.
+
+    All numeric members collapse to their single promoted type (byte<int<long<
+    float), because numerics auto-coerce; non-numerics (e.g. String) are kept.
+    Without this, joining Integer, Float and String in the order Integer, String,
+    Float would leave {Integer, Float, String} -- the String stops the numerics
+    promoting -- while a different path order gives {Float, String}. Return paths
+    are walked from a set, so the order is not fixed; normalise to one answer.
+    """
+    numeric = [m for m in members if _numeric_rank(m)]
+    result = set(m for m in members if not _numeric_rank(m))
+    if numeric:
+        result.add(_RANK_TYPE[max(_numeric_rank(m) for m in numeric)]())
+    return frozenset(result)
+
+
 def _join(left, right):
     """Least upper bound *within one expression* (e.g. the operands of ``+``).
 
@@ -130,7 +147,7 @@ def _path_join(left, right):
     rank = max(_numeric_rank(left), 0), max(_numeric_rank(right), 0)
     if rank[0] and rank[1]:
         return _RANK_TYPE[max(rank)]()
-    members = _members(left) | _members(right)
+    members = _normalise_members(_members(left) | _members(right))
     if len(members) == 1:
         return next(iter(members))
     return SumOwlType(members)

@@ -67,3 +67,20 @@ def test_int_or_float_rejected_by_string_assignment():
     # Neither numeric branch is a string.
     assert _errors("A$=FNn(1)\nEND\n" + _INT_OR_FLOAT), \
         "A$ = (int|float) should be a type mismatch"
+
+
+# FNt returns Integer, Float and String across three paths.
+_INT_FLOAT_STR = 'DEFFNt(N)IF N>2 THEN=1\nIF N>1 THEN=2.5\n="x"\n'
+
+
+def test_three_way_sum_collapses_numerics_canonically():
+    # The numeric members (Integer, Float) must collapse to Float regardless of
+    # the order the return paths are walked, leaving a stable Float|String. The
+    # message naming the type proves the canonical form.
+    errors = _errors("A=FNt(1)\nEND\n" + _INT_FLOAT_STR)
+    assert errors, "A = (int|float|string) should be a type mismatch"
+    assert "Float | String" in errors[0], errors
+
+
+def test_three_way_sum_still_prints():
+    assert _errors("PRINT FNt(1)\nEND\n" + _INT_FLOAT_STR) == []
