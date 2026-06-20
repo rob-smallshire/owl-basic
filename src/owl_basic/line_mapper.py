@@ -1,3 +1,6 @@
+from owl_basic.exceptions import CompileError
+
+
 class LineMapper(object):
     def __init__(self, physical_to_logical_map, line_to_stmt_map):
         self.physical_to_logical_map = physical_to_logical_map
@@ -37,6 +40,16 @@ class LineMapper(object):
         :param integer_node: A LiteralInteger node containing a logical line number
         :returns: The first AstStatement node on that logical source code line
         '''
+        # GOTO/GOSUB/ON GOTO accept a general expression in the grammar, but a
+        # static compiler must know the target at compile time. A non-constant
+        # target (GOTO X, GOSUB -X) cannot be resolved, so reject it gracefully
+        # rather than crash dereferencing a .value the node does not have.
+        if type(integer_node).__name__ != "LiteralInteger":
+            raise CompileError(
+                "the target of GOTO/GOSUB must be a constant line number; a "
+                "computed target (%s) cannot be compiled"
+                % type(integer_node).__name__
+            )
         logical_line_number = integer_node.value
         statement = self.logicalStatement(logical_line_number)
         #print "logical_line_number = %d, statement = %s" % (logical_line_number, statement)
