@@ -71,7 +71,11 @@ def _find_owlruntime_dll() -> Path | None:
     return max(matches, key=lambda path: path.stat().st_mtime)
 
 
-_LINE_NUMBERED = re.compile(r"\s*\d")
+# A line-numbered listing line: leading digits (the line number), then the body.
+# BBC BASIC does not require a space after the number (10PRINT is as valid as
+# 10 PRINT), so the number is the leading run of digits, not "up to the first
+# space"; an optional single space between them is consumed.
+_LINE_NUMBERED = re.compile(r"\s*(\d+)\s?(.*)", re.DOTALL)
 
 
 def _analyse_source(source: Path, encoding: str):
@@ -94,10 +98,11 @@ def _analyse_source(source: Path, encoding: str):
 
     text = data.decode(encoding)
     non_blank = [line for line in text.splitlines() if line.strip()]
-    if non_blank and all(_LINE_NUMBERED.match(line) for line in non_blank):
+    matches = [_LINE_NUMBERED.match(line) for line in non_blank]
+    if non_blank and all(matches):
         numbered = []
-        for line in non_blank:
-            number, _, body = line.strip().partition(" ")
+        for match in matches:
+            number, body = match.group(1), match.group(2)
             numbered.append((int(number), " " + body if body else body))
         return analyse_numbered_lines(
             numbered, name=source.stem, source_filepath=str(source)
