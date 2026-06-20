@@ -3,8 +3,18 @@ from owl_basic import errors
 from collections import deque
 from owl_basic.syntax.ast import (Repeat, While, ForToStep,
     ReturnFromProcedure, ReturnFromFunction, End, Stop)
+from owl_basic.exceptions import CompileError
 from owl_basic.flow.connectors import connectLoop
 from owl_basic.visitor import Visitor
+
+# Why a loop close that the static correlator cannot pair is rejected. Appended to
+# the specific diagnostics below so the message says *why* it cannot be compiled.
+_DYNAMIC_STACK_NOTE = (
+    " BBC BASIC matches loops on a dynamic stack at run time, so a loop opened on "
+    "only some paths (e.g. a FOR inside an IF) and closed on another is legal there "
+    "but cannot be correlated statically; OWL cannot compile it. Restructure so each "
+    "loop is opened and closed unconditionally on the same control-flow path."
+)
 
 # Statements that legitimately end a procedure (ENDPROC / =<expr>). Reaching one
 # with FOR/REPEAT loops still open is an early exit that the BBC interpreter does
@@ -81,10 +91,10 @@ class CorrelationVisitor(Visitor):
                         self._warnUnceremoniousExit(v)
                     elif not isinstance(v, _PROGRAM_EXITS):
                         # A terminal that is neither a procedure nor a program
-                        # exit means a loop was genuinely left unclosed.
-                        # TODO: Improve this error message by printing an
-                        # abstract stack trace
-                        errors.fatalError("In loops at terminal statement at line %s" % v.lineNum)
+                        # exit means a loop was left open on this path.
+                        raise CompileError(
+                            "Execution reaches the end of line %s with a loop still "
+                            "open.%s" % (v.lineNum, _DYNAMIC_STACK_NOTE))
                 # If execution splits, take a copy of the current loop stack
                 # and store a reference to it on each of the target nodes of
                 # the out edges of the current node, so the state can be
@@ -125,10 +135,15 @@ class CorrelationVisitor(Visitor):
         
     def visitUntil(self, until_stmt):
         if len(self.loops) == 0:
-            errors.fatalError("Not in a REPEAT loop at line %d." % until_stmt.lineNum)
+            raise CompileError(
+                "UNTIL at line %d has no REPEAT loop to close.%s"
+                % (until_stmt.lineNum, _DYNAMIC_STACK_NOTE))
         peek = self.loops[-1]
         if not isinstance(peek, Repeat):
-            errors.fatalError("Not in a REPEAT loop at line %d; currently in %s loop opened at line %d" % (until_stmt.lineNum, peek.description, peek.lineNum))
+            raise CompileError(
+                "UNTIL at line %d does not match the innermost open loop (a %s "
+                "opened at line %d).%s"
+                % (until_stmt.lineNum, peek.description, peek.lineNum, _DYNAMIC_STACK_NOTE))
         repeat_stmt = self.loops.pop()
         connectLoop(until_stmt, repeat_stmt)
         
@@ -137,10 +152,15 @@ class CorrelationVisitor(Visitor):
         
     def visitEndwhile(self, endwhile_stmt):
         if len(self.loops) == 0:
-            errors.fatalError("Not in a WHILE loop at line %d." % endwhile_stmt.lineNum)
+            raise CompileError(
+                "ENDWHILE at line %d has no WHILE loop to close.%s"
+                % (endwhile_stmt.lineNum, _DYNAMIC_STACK_NOTE))
         peek = self.loops[-1]
         if not isinstance(peek, While):
-            errors.fatalError("Not in a WHILE loop at line %d; currently in %s loop opened at line %d" % (endwhile_stmt.lineNum, peek.description, peek.lineNum))
+            raise CompileError(
+                "ENDWHILE at line %d does not match the innermost open loop (a %s "
+                "opened at line %d).%s"
+                % (endwhile_stmt.lineNum, peek.description, peek.lineNum, _DYNAMIC_STACK_NOTE))
         while_stmt = self.loops.pop()
         connectLoop(endwhile_stmt, while_stmt)
         
@@ -152,10 +172,15 @@ class CorrelationVisitor(Visitor):
         #logging.debug("NEXT identifiers = %s", next_stmt.identifiers[0].identifier)
         while True:
             if len(self.loops) == 0:
-                errors.fatalError("Not in a FOR loop at line %d." % next_stmt.lineNum)
+                raise CompileError(
+                    "NEXT at line %d has no FOR loop to close.%s"
+                    % (next_stmt.lineNum, _DYNAMIC_STACK_NOTE))
             peek = self.loops[-1]
             if not isinstance(peek, ForToStep):
-                errors.fatalError("Not in a FOR loop at line %d; currently in %s loop opened at line %d" % (next_stmt.lineNum, peek.description, peek.lineNum))
+                raise CompileError(
+                    "NEXT at line %d does not match the innermost open loop (a %s "
+                    "opened at line %d).%s"
+                    % (next_stmt.lineNum, peek.description, peek.lineNum, _DYNAMIC_STACK_NOTE))
             
             for_stmt = self.loops.pop()
             # If the next_stmt has no attached identifiers, it applies to the
