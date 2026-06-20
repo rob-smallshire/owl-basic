@@ -762,7 +762,12 @@ def t_TAN(t):
     return t
 
 def t_TOP(t):
-    r'TOP'
+    # TOP (top-of-program pseudo-variable) only as a COMPLETE word: it is not a
+    # ROM keyword at all -- the BBC II tokeniser has only TO, and matches by
+    # first-prefix at a name-run start, so 0TOPI is 0 TO PI, never 0 TOP I. The
+    # negative lookahead reproduces that observable result (TOP-100 stays TOP, but
+    # TOPI falls through to TO PI) without OWL needing the full first-prefix model.
+    r'TOP(?![A-Za-z0-9_])'
     return t
 
 def t_USR(t):
