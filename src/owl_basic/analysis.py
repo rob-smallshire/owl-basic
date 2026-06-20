@@ -194,6 +194,13 @@ def _run_pipeline(data, physical_to_logical_map, line_offsets, line_number_prefi
     errors.reset()  # fresh per-compilation diagnostic dedup (no cross-pollution)
     _reject_inline_assembler(data, options)
     parse_tree = syntax_parser.parse(data, options)
+    if _grammar.syntax_errors:
+        # The parser logs each syntax error and recovers a partial tree so it can
+        # report more, but that tree must not be analysed as a real program
+        # (garbage toots -- keyword soup, stray operators -- would mis-compile).
+        # Reject, naming the first error.
+        raise CompileError("could not parse the source: %s"
+                           % _grammar.syntax_errors[0])
     _reject_unsupported_constructs(parse_tree)
     parse_tree.accept(SourceDebuggingVisitor(data, line_offsets, line_number_prefixes))
     parse_tree.accept(parent_visitor.ParentVisitor())
