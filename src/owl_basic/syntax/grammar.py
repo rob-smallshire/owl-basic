@@ -1180,10 +1180,16 @@ def p_formal_arg_list(p):
         p[0] = p[1]
     
 def p_formal_arg(p):
-    '''formal_arg : variable
+    '''formal_arg : writable
                   | array
-                  | RETURN variable
+                  | RETURN writable
                   | RETURN array'''
+    # A formal parameter is any assignable location (an lvalue), mirroring the
+    # BBC BASIC II ROM, which parses each formal with the same routine it uses
+    # for the LHS of LET/FOR. ``writable`` is variables, array elements and
+    # ?/!/$ indirection; ``array`` adds a whole-array parameter. Binding is
+    # by-value into the lvalue (prior contents saved and restored across the
+    # call); RETURN makes it a by-reference parameter.
     if len(p) == 2:
         p[0] = FormalArgument(argument = p[1])
     elif len(p) == 3:
