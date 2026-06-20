@@ -274,14 +274,23 @@ def _default_value(il_type):
 
 
 def _collect_locals(blocks):
-    """Return ``[(identifier, owl_type)]`` for LOCAL/PRIVATE vars in a routine."""
-    locals_by_name = {}
+    """Return ``[(node, owl_type)]`` for LOCAL/PRIVATE items in a routine.
+
+    Each node is the l-value made local -- usually a ``Variable`` (or whole
+    ``Array``), but possibly a ``?``/``!``/``$`` indirection. Named items are
+    de-duplicated by identifier; l-value items are kept as they appear.
+    """
+    named = {}
+    others = []
     for block in blocks:
         for statement in block.statements:
             if type(statement).__name__ in ("Local", "Private"):
                 for variable in (statement.variables or []):
-                    locals_by_name.setdefault(variable.identifier, variable.actualType)
-    return list(locals_by_name.items())
+                    if type(variable).__name__ in ("Variable", "Array"):
+                        named.setdefault(variable.identifier, variable)
+                    else:
+                        others.append(variable)
+    return [(node, node.actualType) for node in list(named.values()) + others]
 
 
 _DEFINITIONS = frozenset({"DefineProcedure", "DefineFunction"})
@@ -370,7 +379,7 @@ def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
     parameters = []
     if not is_main and blocks and type(blocks[0].statements[0]).__name__ in _DEFINITIONS:
         for index, argument in enumerate(_formal_arguments(blocks[0].statements[0])):
-            formal_params.append((argument.identifier, argument.actualType, index))
+            formal_params.append((argument, argument.actualType, index))
             parameters.append("%s A%d" % (_il_type(argument.actualType), index))
 
     emitter = _MethodEmitter(
@@ -388,28 +397,40 @@ def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
     # parameter is then initialised from its incoming argument; a LOCAL to the
     # default. Set up before lowering so ENDPROC/=expr emit the restores.
     save_prologue = []
-    param_names = {identifier for identifier, _, _ in formal_params}
+    param_names = {
+        node.identifier for node, _, _ in formal_params
+        if type(node).__name__ in ("Variable", "Array")
+    }
     inits = (
         [] if is_main else
-        [(identifier, owl_type, ("arg", arg_index))
-         for identifier, owl_type, arg_index in formal_params]
-        + [(identifier, owl_type, ("default", None))
-           for identifier, owl_type in _collect_locals(blocks)
-           if identifier not in param_names]
+        [(node, owl_type, ("arg", arg_index))
+         for node, owl_type, arg_index in formal_params]
+        + [(node, owl_type, ("default", None))
+           for node, owl_type in _collect_locals(blocks)
+           if not (type(node).__name__ in ("Variable", "Array")
+                   and node.identifier in param_names)]
     )
-    for identifier, owl_type, (init_kind, init_arg) in inits:
-        field = _field_name(identifier)
+    for node, owl_type, (init_kind, init_arg) in inits:
         il_type = _il_type(owl_type)
-        globals_registry[field] = il_type
-        save_slot = emitter._local_slot("__save_%s" % field, owl_type)
-        emitter.local_restores.append((field, il_type, save_slot))
         init_line = _ldarg(init_arg) if init_kind == "arg" else _default_value(il_type)
-        save_prologue += [
-            "ldsfld %s %s" % (il_type, field),     # save the caller's value
-            "stloc V_%d" % save_slot,
-            init_line,                             # arg value, or the default
-            "stsfld %s %s" % (il_type, field),
-        ]
+        if type(node).__name__ in ("Variable", "Array"):
+            # Cheap path (the common case): the global field of that name, saved
+            # on entry and restored on exit. Unchanged from before.
+            field = _field_name(node.identifier)
+            globals_registry[field] = il_type
+            save_slot = emitter._local_slot("__save_%s" % field, owl_type)
+            emitter.local_restores.append(
+                ["ldloc V_%d" % save_slot, "stsfld %s %s" % (il_type, field)]
+            )
+            save_prologue += [
+                "ldsfld %s %s" % (il_type, field),     # save the caller's value
+                "stloc V_%d" % save_slot,
+                init_line,                             # arg value, or the default
+                "stsfld %s %s" % (il_type, field),
+            ]
+        else:
+            # L-value formal/LOCAL (?A, $@%, ...): save/assign/restore the cell.
+            save_prologue += emitter._bind_lvalue(node, owl_type, il_type, init_line)
 
     emitter.lower_blocks(blocks)
     emitter.finish()
@@ -573,7 +594,7 @@ class _MethodEmitter:
         self._line_mapper = line_mapper
         self.landed_longjumps = set()  # target lines that have an L_<line>: here
         self._input_queue_slot = None  # reused local for the INPUT result queue
-        self.local_restores = []       # (field, il_type, save_slot) for LOCAL vars
+        self.local_restores = []       # per formal/LOCAL: CIL lines that restore it
 
     def emit(self, text):
         self.lines.append(text)
@@ -1141,10 +1162,15 @@ class _MethodEmitter:
         self.emit("call void %s(%s)" % (_method_name(node.name), ", ".join(params)))
 
     def _local_restore_lines(self):
-        """Restore each LOCAL/PRIVATE global from its saved value (BBC LOCAL)."""
+        """Restore each formal/LOCAL on routine exit (BBC dynamic scoping).
+
+        Each entry is the ready-made CIL line list that writes the saved value
+        back -- to a global field for a simple variable, or to a memory cell for
+        an l-value formal/LOCAL.
+        """
         lines = []
-        for field, il_type, save_slot in self.local_restores:
-            lines += ["ldloc V_%d" % save_slot, "stsfld %s %s" % (il_type, field)]
+        for restore in self.local_restores:
+            lines += restore
         return lines
 
     def _stmt_ReturnFromProcedure(self, node):
@@ -1474,6 +1500,74 @@ class _MethodEmitter:
     def _expr_UnaryFloatIndirection(self, node):
         self._push_indirection_address(node)
         self.emit(_runtime("ReadFloat", "int32", cls="MemoryMap"))
+
+    # -- l-value formal/LOCAL binding ---------------------------------------
+
+    def _capture(self, thunk):
+        """Run *thunk* (which emits) and return only the lines it emitted,
+        leaving the main buffer untouched. Lets us lower an expression into a
+        separately-built prologue."""
+        saved, self.lines = self.lines, []
+        try:
+            thunk()
+            return self.lines
+        finally:
+            self.lines = saved
+
+    def _lvalue_load(self, node, addr_slot):
+        """Lines pushing the value currently at an indirection l-value (address
+        held in *addr_slot*)."""
+        name = type(node).__name__
+        addr = "ldloc V_%d" % addr_slot
+        if name in _BYTE_INDIRECTIONS:
+            return [_MEMORY_ARRAY, addr, "ldelem.u1"]
+        if name in _INTEGER_INDIRECTIONS:
+            return [addr, _runtime("ReadInteger", "int32", cls="MemoryMap")]
+        if name == "UnaryStringIndirection":
+            return [addr, _runtime("ReadString", "int32", cls="MemoryMap")]
+        if name == "UnaryFloatIndirection":
+            return [addr, _runtime("ReadFloat", "int32", cls="MemoryMap")]
+        raise CodeGenerationError(
+            "Cannot bind l-value formal/LOCAL of kind %r" % name
+        )
+
+    def _lvalue_store(self, node, addr_slot, value_lines):
+        """Lines storing *value_lines*' value into an indirection l-value
+        (address held in *addr_slot*)."""
+        name = type(node).__name__
+        addr = "ldloc V_%d" % addr_slot
+        if name in _BYTE_INDIRECTIONS:
+            return [_MEMORY_ARRAY, addr] + value_lines + ["stelem.i1"]
+        if name in _INTEGER_INDIRECTIONS:
+            return [addr] + value_lines + [_runtime("WriteInteger", "int32", "int32", cls="MemoryMap")]
+        if name == "UnaryStringIndirection":
+            return [addr] + value_lines + [_runtime("WriteString", "int32", "string", cls="MemoryMap")]
+        if name == "UnaryFloatIndirection":
+            return [addr] + value_lines + [_runtime("WriteFloat", "int32", "float64", cls="MemoryMap")]
+        raise CodeGenerationError(
+            "Cannot bind l-value formal/LOCAL of kind %r" % name
+        )
+
+    def _bind_lvalue(self, node, owl_type, il_type, init_line):
+        """Save / assign / restore an indirection l-value formal or LOCAL.
+
+        The target address is captured once (so the restore writes back the same
+        cell even if the body mutates the address expression), the cell's
+        contents saved, the incoming argument/default assigned, and a restore
+        registered. Returns the entry (save + assign) CIL lines.
+        """
+        addr_slot = self._local_slot("__addr_%d" % id(node), AddressOwlType())
+        save_slot = self._local_slot("__save_%d" % id(node), owl_type)
+        address = self._capture(lambda: self._push_indirection_address(node))
+        entry = (
+            address + ["stloc V_%d" % addr_slot]                       # capture address
+            + self._lvalue_load(node, addr_slot) + ["stloc V_%d" % save_slot]  # save cell
+            + self._lvalue_store(node, addr_slot, [init_line])         # assign argument
+        )
+        self.local_restores.append(
+            self._lvalue_store(node, addr_slot, ["ldloc V_%d" % save_slot])
+        )
+        return entry
 
     def _expr_UserFunc(self, node):
         # FN call: push the arguments, call the function method, value left on stack.
