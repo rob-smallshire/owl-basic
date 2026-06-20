@@ -377,6 +377,14 @@
       ]
     ]
   ],
+  "BasicCommands::Oscli": [
+    [
+      "void",
+      [
+        "string"
+      ]
+    ]
+  ],
   "BasicCommands::Plot": [
     [
       "void",

@@ -3,6 +3,7 @@ consumes to end-of-line and is always the *final* statement on a line. BBC BASIC
 lets it follow other statements, with or without a separating colon -- the
 no-colon form (``REPEAT*FX19``) is a common byte-saver in tweet-sized programs.
 """
+from conftest import requires_dotnet_toolchain
 from helpers import parse
 from owl_basic.syntax.ast import StarCommand
 
@@ -56,3 +57,26 @@ def test_times_assign_still_parses():
 def test_star_help_analyses_cleanly():
     from owl_basic.analysis import analyse
     analyse("*HELP\n", name="t")
+
+
+def test_star_command_lowers_to_oscli(dotnet_backend):
+    from owl_basic.analysis import analyse
+    il = dotnet_backend.emit_il(analyse("*HELP\n", name="t"))
+    assert 'ldstr "HELP"' in il
+    assert "BasicCommands::Oscli(string)" in il
+
+
+@requires_dotnet_toolchain
+def test_star_command_runs_as_a_no_op(compile_and_run):
+    # *HELP is not modelled on this host, so it runs harmlessly; the program
+    # continues and prints.
+    from owl_basic.analysis import analyse
+    out = compile_and_run(analyse('*HELP\nPRINT "after"\n', name="t"))
+    assert out.strip() == "after"
+
+
+@requires_dotnet_toolchain
+def test_oscli_statement_runs(compile_and_run):
+    from owl_basic.analysis import analyse
+    out = compile_and_run(analyse('OSCLI "FX 4,1"\nPRINT "ok"\n', name="t"))
+    assert out.strip() == "ok"

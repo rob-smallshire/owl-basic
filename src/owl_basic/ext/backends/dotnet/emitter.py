@@ -1238,6 +1238,17 @@ class _MethodEmitter:
         if target_il in conversions and value_il in conversions:
             self.emit(conversions[target_il])
 
+    def _stmt_StarCommand(self, node):
+        # *HELP / *FX19 / ... : hand the text after the leading '*' to the OS
+        # command interpreter (OSCLI). Every star command is treated alike.
+        self.emit("ldstr " + _il_string(node.command.lstrip("*")))
+        self.emit(_runtime("Oscli", "string"))
+
+    def _stmt_Oscli(self, node):
+        # OSCLI <string> : evaluate the command string and hand it to the OS.
+        self.lower_expression(node.command)
+        self.emit(_runtime("Oscli", "string"))
+
     def _stmt_Rem(self, node):
         # A comment generates no code.
         pass

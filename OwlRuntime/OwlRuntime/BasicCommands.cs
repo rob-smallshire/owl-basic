@@ -146,6 +146,22 @@ namespace OwlRuntime
             printManager.FormatString = format;
         }
 
+        // OSCLI / a star command: hand the command line to the host OS command
+        // interpreter. BBC BASIC's `*HELP`, `*FX n,m`, ... all arrive here (with
+        // the leading '*' already stripped) as the text after the star. There is
+        // no RISC OS underneath, so commands that are not modelled are ignored
+        // rather than failing the program; specific commands can be recognised
+        // here as the runtime grows.
+        public static void Oscli(string command)
+        {
+            if (command == null)
+            {
+                return;
+            }
+            command = command.Trim();
+            // Unmodelled OS commands (e.g. *HELP) are no-ops on this host.
+        }
+
         public static void Bput(int channel, byte value)
         {
             if (channels.ContainsKey(channel))
