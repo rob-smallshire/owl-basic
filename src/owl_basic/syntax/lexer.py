@@ -917,7 +917,11 @@ t_DOT = r'\.'
 t_ignore  = ' \t'
 
 def t_LITERAL_STRING(t):
-    r'"((?:[^"]+|"")*)"(?!")'
+    # A string body is any run of non-quote characters, with "" an escaped quote.
+    # The inner alternative is a SINGLE character ([^"], not [^"]+): a nested
+    # quantifier ([^"]+ inside *) backtracks catastrophically on an unterminated
+    # string ("abc... with no closing quote), hanging the lexer.
+    r'"((?:[^"]|"")*)"(?!")'
     t.value = t.value[1:-1].replace('""', '"')
     return t
 
