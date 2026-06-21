@@ -395,6 +395,15 @@
       ]
     ]
   ],
+  "BasicCommands::Point": [
+    [
+      "int32",
+      [
+        "int32",
+        "int32"
+      ]
+    ]
+  ],
   "BasicCommands::Pos": [
     [
       "int32",

@@ -1725,6 +1725,15 @@ class _MethodEmitter:
         self.lower_expression(node.factor)
         self.emit(_runtime("Chr", "int32"))
 
+    def _expr_PointFunc(self, node):
+        # POINT(x, y): the logical colour at a graphics coordinate. The runtime
+        # method is a stub that raises at run time (reading the screen back is
+        # not yet implemented), so a program using POINT compiles but does not
+        # run -- rather than failing to compile at all.
+        self.lower_expression(node.xCoord)
+        self.lower_expression(node.yCoord)
+        self.emit(_runtime("Point", "int32", "int32"))
+
     def _expr_InstrFunc(self, node):
         self.lower_expression(node.source)
         self.lower_expression(node.subString)

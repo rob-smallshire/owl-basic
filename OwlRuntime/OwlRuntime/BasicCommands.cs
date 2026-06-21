@@ -553,6 +553,18 @@ namespace OwlRuntime
             vdu.Enqueue((short) yCoord);
         }
 
+        /// <summary>
+        /// POINT(x, y): the logical colour of the pixel at a graphics
+        /// coordinate (or -1 if off-screen). Reading the screen back is not yet
+        /// implemented, so this is a stub: a program using POINT compiles, but
+        /// raises at run time if it actually evaluates one.
+        /// </summary>
+        public static int Point(int xCoord, int yCoord)
+        {
+            throw new NotImplementedException(
+                "POINT (reading a pixel's colour) is not yet implemented");
+        }
+
         public static int Himem { get; set; }
         public static int Lomem { get; set; }
         public static int End { get; set; }
