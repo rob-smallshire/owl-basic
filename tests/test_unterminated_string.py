@@ -6,7 +6,7 @@ quote, as produced by a corrupted/garbage line) the regex tried exponentially ma
 ways to find a closing quote that was not there, hanging the lexer. The fix makes
 the inner alternation single-character so matching stays linear.
 """
-import signal
+import threading
 
 import pytest
 
@@ -28,15 +28,26 @@ def _warm_parser():
 
 
 def _with_timeout(seconds, fn):
-    def _raise(_s, _f):
+    # Run fn on a worker thread and wait at most `seconds`. A thread (not
+    # signal.alarm, which is Unix-only) keeps this cross-platform: catastrophic
+    # backtracking makes the worker miss the deadline, so the join returns while
+    # it is still alive and we fail. The daemon worker dies with the process.
+    result = {}
+
+    def _run():
+        try:
+            result["value"] = fn()
+        except BaseException as exc:  # marshalled to the caller and re-raised
+            result["error"] = exc
+
+    worker = threading.Thread(target=_run, daemon=True)
+    worker.start()
+    worker.join(seconds)
+    if worker.is_alive():
         raise TimeoutError("took too long -- likely catastrophic backtracking")
-    old = signal.signal(signal.SIGALRM, _raise)
-    signal.alarm(seconds)
-    try:
-        return fn()
-    finally:
-        signal.alarm(0)
-        signal.signal(signal.SIGALRM, old)
+    if "error" in result:
+        raise result["error"]
+    return result.get("value")
 
 
 def test_long_unterminated_string_lexes_quickly():
