@@ -166,11 +166,16 @@ class CorrelationVisitor(Visitor):
                         # but it leaks those loop frames in the BBC interpreter.
                         self._warnUnceremoniousExit(v)
                     elif not isinstance(v, _PROGRAM_EXITS):
-                        # A terminal that is neither a procedure nor a program
-                        # exit means a loop was left open on this path.
-                        raise CompileError(
-                            "Execution reaches the end of line %s with a loop still "
-                            "open.%s" % (v.lineNum, _DYNAMIC_STACK_NOTE))
+                        # Falls off the end of the program (or routine) with loops
+                        # still open -- an early exit from a loop (e.g. a
+                        # conditional NEXT/UNTIL not taken on this path). The loop
+                        # is still correlated by its own NEXT/UNTIL on the path
+                        # that closes it; this path simply leaves it open. In BBC
+                        # BASIC the frame leaks until control returns to the
+                        # prompt; OWL's compiled code has no such frame. This is
+                        # the same benign leak as an ENDPROC/= exiting a loop, not
+                        # a dynamic-stack error, so warn rather than reject.
+                        self._warnLeakedLoopsAtEnd(v)
                 # Propagate the loop stack as it stands *after* this statement
                 # (accept() above pushed/popped it) to every successor, recording
                 # it on the target so the state is restored when that target is
@@ -234,6 +239,22 @@ class CorrelationVisitor(Visitor):
             "is poor form: restructure so the loop terminates normally -- fold "
             "the early-exit test into the UNTIL, or set the FOR index to its "
             "limit." % (exit_kind, exit_stmt.lineNum, open_loops))
+
+    def _warnLeakedLoopsAtEnd(self, terminal):
+        """Warn that control falls off the end with one or more loops still open.
+
+        Listed innermost-first, matching the order the BBC interpreter would have
+        unwound them. Each loop is correlated by its own NEXT/UNTIL on the path
+        that closes it; this path just leaves it open (a benign leaked frame).
+        """
+        open_loops = ", ".join(_describe_open_loop(loop)
+                               for loop in reversed(self.loops))
+        errors.warning(
+            "execution falls off the end at line %s while still inside the %s. "
+            "The loop is closed by its NEXT/UNTIL on the path that takes it; on "
+            "this path it is left open, which leaks the loop's stack frame in BBC "
+            "BASIC (OWL's compiled code does not leak)."
+            % (terminal.lineNum, open_loops))
 
     def visitAstStatement(self, statement):
         """
