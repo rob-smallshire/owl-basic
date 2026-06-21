@@ -3,7 +3,23 @@
 from owl_basic.visitor import Visitor
 from owl_basic.syntax.ast import StatementList, ScalarAssignment, Next, VariableList, Read, ReadFunc, WritableList
 from owl_basic.ast_utils import replaceStatement, insertStatementBefore, removeStatement
-    
+
+
+def _replace_in_parent(node, replacement):
+    """Put *replacement* where *node* sits in its parent.
+
+    A statement may live in a list property (a StatementList's ``statements``,
+    parent_index set) or in a single-node property (a marker's
+    ``followingStatement``, e.g. the body of ``REPEAT READ X:...``, parent_index
+    None). Handle both, rather than assuming the list form.
+    """
+    target = getattr(node.parent, node.parent_property)
+    if isinstance(target, list):
+        target[node.parent_index] = replacement
+    else:
+        setattr(node.parent, node.parent_property, replacement)
+
+
 class SeparationVisitor(Visitor):
     """
     AST visitor for separating complex nodes into multiple simpler nodes
@@ -31,7 +47,7 @@ class SeparationVisitor(Visitor):
             allocator.lineNum = dim.lineNum
             statement_list.append(allocator)
             
-        getattr(dim.parent, dim.parent_property)[dim.parent_index] = statement_list
+        _replace_in_parent(dim, statement_list)
     
     def visitNext(self, next):
         """
@@ -59,7 +75,7 @@ class SeparationVisitor(Visitor):
             
             variable_list.variables = [identifier] if identifier is not None else []
             
-        getattr(next.parent, next.parent_property)[next.parent_index] = statement_list
+        _replace_in_parent(next, statement_list)
     
     # TODO: Much of this code can be factored out of this method and the above one    
     def visitRead(self, read):
@@ -95,4 +111,4 @@ class SeparationVisitor(Visitor):
             
             statement_list.append(new_assignment)
          
-        getattr(read.parent, read.parent_property)[read.parent_index] = statement_list
+        _replace_in_parent(read, statement_list)

@@ -149,9 +149,18 @@ class SimplificationVisitor(Visitor):
         if marker.followingStatement is not None:
             following = marker.followingStatement
             marker.followingStatement = None
-            insertStatementAfter(marker, following)
-            # TODO: Does the moved statement node ever get visited? Are we inserting into a sequence during iteration?
-            #self.visit(following)
+            # Separation may have replaced the following statement with a
+            # StatementList (e.g. REPEAT READ X -> REPEAT (X=READ:...), or a
+            # multi-variable READ/NEXT/DIM). Splice its statements in one by one
+            # so none reaches the flow graph as an un-flattened StatementList --
+            # this move happens after the list-flattening pass above.
+            if isinstance(following, StatementList):
+                previous = marker
+                for statement in list(following.statements):
+                    insertStatementAfter(previous, statement)
+                    previous = statement
+            else:
+                insertStatementAfter(marker, following)
                    
     def visitExpressionList(self, expr_list):
         """
