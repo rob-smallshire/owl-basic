@@ -33,7 +33,7 @@ from owl_basic.flow import (
     locateEntryPoints,
     orderBasicBlocks,
 )
-from owl_basic.exceptions import CompileError
+from owl_basic.exceptions import CompileError, OwlBasicError
 from owl_basic.line_mapper import LineMapper
 from owl_basic.owltyping.typecheck import typecheck
 from owl_basic.source_debugging import SourceDebuggingVisitor
@@ -72,7 +72,7 @@ def _synthesize_line_numbers(source):
     return data, physical_to_logical_map, line_offsets, line_number_prefixes
 
 
-def analyse(source, name, source_filepath=None, options=None):
+def analyse(source, name, source_filepath=None, options=None, tolerant=False):
     """Analyse plain-text BASIC *source* and return a :class:`Program`.
 
     Args:
@@ -94,12 +94,12 @@ def analyse(source, name, source_filepath=None, options=None):
     )
     return _run_pipeline(
         data, physical_to_logical_map, line_offsets, line_number_prefixes,
-        name, source_filepath, options,
+        name, source_filepath, options, tolerant=tolerant,
     )
 
 
 def analyse_numbered_lines(numbered_lines, name, source_filepath=None, options=None,
-                           strict=True):
+                           strict=True, tolerant=False):
     """Analyse line-numbered BASIC source given as ``(line_number, text)`` pairs.
 
     Real programs carry explicit line numbers (e.g. detokenised Sphinx, whose
@@ -145,7 +145,7 @@ def analyse_numbered_lines(numbered_lines, name, source_filepath=None, options=N
         )
     return _run_pipeline(
         data, physical_to_logical_map, line_offsets, line_number_prefixes,
-        name, source_filepath, options,
+        name, source_filepath, options, tolerant=tolerant,
     )
 
 
@@ -203,8 +203,19 @@ def _reject_unsupported_constructs(parse_tree):
 
 
 def _run_pipeline(data, physical_to_logical_map, line_offsets, line_number_prefixes,
-                  name, source_filepath, options):
-    """Run the front-end pipeline and bundle the result as a :class:`Program`."""
+                  name, source_filepath, options, tolerant=False):
+    """Run the front-end pipeline and bundle the result as a :class:`Program`.
+
+    When *tolerant*, a failure in the passes *after* the forward control-flow
+    graph is built (loop correlation, basic blocks, type check, symbols) is
+    caught and a *partial* Program is returned -- with the parse tree, entry
+    points and forward CFG intact, but no basic blocks or symbols. This lets the
+    ``cfg`` and ``ast`` visualisations render a program that does not fully
+    analyse (e.g. one OWL rejects at loop correlation), which is exactly when
+    seeing its graph is most useful. Only an :class:`OwlBasicError` is tolerated;
+    an unexpected crash still propagates, so tolerant mode never hides a real
+    bug. The default (non-tolerant) path is unchanged: any failure raises.
+    """
     errors.reset()  # fresh per-compilation diagnostic dedup (no cross-pollution)
     _reject_machine_code(data, options)
     parse_tree = syntax_parser.parse(data, options)
@@ -233,26 +244,41 @@ def _run_pipeline(data, physical_to_logical_map, line_offsets, line_number_prefi
     convertLongjumpsToExceptions(parse_tree, line_mapper, options)
     convertSubroutinesToProcedures(parse_tree, entry_points, line_mapper, options)
 
-    for entry_point in entry_points.values():
-        correlation_visitor.CorrelationVisitor().start(entry_point)
+    # Everything from loop correlation onward may reject a pathological program.
+    # In tolerant mode we keep the partial program built so far (forward CFG) for
+    # visualisation; otherwise the failure propagates as before.
+    ordered_basic_blocks = []
+    global_symbols = None
+    try:
+        for entry_point in entry_points.values():
+            correlation_visitor.CorrelationVisitor().start(entry_point)
 
-    basic_blocks = identifyBasicBlocks(entry_points, options)
-    ordered_basic_blocks = orderBasicBlocks(basic_blocks, options)
+        basic_blocks = identifyBasicBlocks(entry_points, options)
+        ordered_basic_blocks = orderBasicBlocks(basic_blocks, options)
 
-    typecheck(parse_tree, entry_points, options)
+        typecheck(parse_tree, entry_points, options)
 
-    stv = symbol_table_visitor.SymbolTableVisitor()
-    if "__owl__main" in entry_points:
-        entry_points["__owl__main"].symbolTable = stv.globalSymbols
-    for entry_point in entry_points.values():
-        stv.start(entry_point)
+        stv = symbol_table_visitor.SymbolTableVisitor()
+        if "__owl__main" in entry_points:
+            entry_points["__owl__main"].symbolTable = stv.globalSymbols
+        for entry_point in entry_points.values():
+            stv.start(entry_point)
+        global_symbols = stv.globalSymbols
+    except OwlBasicError:
+        if not tolerant:
+            raise
+        logger.warning(
+            "tolerant analysis of %s: a post-CFG pass failed, returning a "
+            "partial program (forward CFG only -- no basic blocks or symbols)",
+            name,
+        )
 
     return Program(
         name=name,
         source_filepath=source_filepath,
         entry_points=entry_points,
         ordered_basic_blocks=ordered_basic_blocks,
-        global_symbols=stv.globalSymbols,
+        global_symbols=global_symbols,
         data=dv,
         line_mapper=line_mapper,
         parse_tree=parse_tree,

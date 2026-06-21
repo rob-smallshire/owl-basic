@@ -78,7 +78,7 @@ def _find_owlruntime_dll() -> Path | None:
 _LINE_NUMBERED = re.compile(r"\s*(\d+)\s?(.*)", re.DOTALL)
 
 
-def _analyse_source(source: Path, encoding: str):
+def _analyse_source(source: Path, encoding: str, tolerant: bool = False):
     """Analyse a BASIC *source* file, picking the right front end for its form.
 
     Three forms are accepted transparently:
@@ -89,11 +89,16 @@ def _analyse_source(source: Path, encoding: str):
     * a plain-text *listing* whose lines carry explicit BBC line numbers (as
       LISTed or detokenised programs do) -- likewise analysed by line number;
     * a number-free snippet -- analysed with synthesised line numbers.
+
+    When *tolerant*, a program that fails a pass after the control-flow graph is
+    built still returns a partial :class:`Program` (forward CFG only) instead of
+    raising -- for visualisation. Compilation never passes this.
     """
     data = source.read_bytes()
     if data[:1] == bytes((LINE_RECORD_MARKER,)):
         return analyse_numbered_lines(
-            detokenize_lines(data), name=source.stem, source_filepath=str(source)
+            detokenize_lines(data), name=source.stem, source_filepath=str(source),
+            tolerant=tolerant,
         )
 
     text = data.decode(encoding)
@@ -105,10 +110,12 @@ def _analyse_source(source: Path, encoding: str):
             number, body = match.group(1), match.group(2)
             numbered.append((int(number), " " + body if body else body))
         return analyse_numbered_lines(
-            numbered, name=source.stem, source_filepath=str(source)
+            numbered, name=source.stem, source_filepath=str(source),
+            tolerant=tolerant,
         )
 
-    return analyse(text, name=source.stem, source_filepath=str(source))
+    return analyse(text, name=source.stem, source_filepath=str(source),
+                   tolerant=tolerant)
 
 
 def _compile(source: Path, output_dir: Path, backend_name: str, encoding: str) -> Path:
@@ -266,7 +273,10 @@ def visualise_command(view: str, source: Path, fmt: str | None, output: str | No
         owl-basic visualise callgraph prog.bbc -r MAIN -f dot -o - | dot -Tsvg -o m.svg
     """
     try:
-        program = _analyse_source(source, encoding)
+        # Tolerant: render the graph even for a program that does not fully
+        # analyse (e.g. one rejected at loop correlation) -- the forward CFG is
+        # built before those passes, and seeing it is most useful precisely then.
+        program = _analyse_source(source, encoding, tolerant=True)
         graph_source = create_extension("graph_source", _GRAPH_SOURCE_NAMESPACE, view)
         writer_name = _resolve_format(fmt, output)
         writer = create_extension("graph_writer", _GRAPH_WRITER_NAMESPACE, writer_name)

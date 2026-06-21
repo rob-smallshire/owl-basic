@@ -108,6 +108,44 @@ def test_block_statements_are_a_subset_of_the_cfg():
     assert block_statements <= cfg_statements
 
 
+# -- tolerant analysis (render programs that do not fully analyse) ----------
+
+# A program OWL rejects at loop correlation: an UNTIL with no REPEAT to close.
+# It can never correlate, so it is a stable stand-in for "fails a post-CFG pass".
+_UNCORRELATABLE = 'PRINT 1\nUNTIL TRUE\nPRINT 2\n'
+
+
+def test_strict_analysis_still_raises_on_a_post_cfg_failure():
+    from owl_basic.exceptions import CompileError
+    with pytest.raises(CompileError):
+        analyse(_UNCORRELATABLE, name="t")
+
+
+def test_tolerant_analysis_returns_a_partial_program():
+    # The forward CFG is built before correlation, so tolerant mode keeps it and
+    # returns a Program with no basic blocks or symbols rather than raising.
+    program = analyse(_UNCORRELATABLE, name="t", tolerant=True)
+    assert program is not None
+    assert program.parse_tree is not None
+    assert program.ordered_basic_blocks == []
+    assert program.global_symbols is None
+
+
+def test_cfg_source_renders_a_partial_program():
+    program = analyse(_UNCORRELATABLE, name="t", tolerant=True)
+    graph = _source("cfg").build(program)
+    assert graph.nodes  # the statements still draw
+
+def test_visualise_cfg_renders_a_correlation_failure_via_cli(tmp_path):
+    source = tmp_path / "bad.bas"
+    source.write_text(_UNCORRELATABLE)
+    result = CliRunner().invoke(
+        cli, ["visualise", "cfg", str(source), "-f", "dot", "-o", "-"]
+    )
+    assert result.exit_code == 0, result.output
+    assert result.output.startswith("digraph")
+
+
 # -- writers ---------------------------------------------------------------
 
 def _render(source_name, writer_name):
