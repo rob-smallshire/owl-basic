@@ -89,7 +89,7 @@ def test_FORM_is_FOR_M():
 
 @pytest.mark.parametrize("word", [
     "TIMER", "PAGES", "PTRX", "LOMEMORY", "HIMEMORY", "RNDOM", "VPOSITION",
-    "ERLANG", "ERROL",
+    "ERLANG", "ERROL", "RETURNED",
 ])
 def test_conditional_keyword_followed_by_letters_is_an_identifier(word):
     assert _token_pairs(word) == [("ID", word)]
@@ -98,7 +98,7 @@ def test_conditional_keyword_followed_by_letters_is_an_identifier(word):
 @pytest.mark.parametrize("word,kind", [
     ("TIME", "TIME"), ("PAGE", "PAGE"), ("PTR", "PTR"), ("LOMEM", "LOMEM"),
     ("HIMEM", "HIMEM"), ("RND", "RND"), ("VPOS", "VPOS"), ("ERL", "ERL"),
-    ("ERR", "ERR"),
+    ("ERR", "ERR"), ("RETURN", "RETURN"),
 ])
 def test_conditional_keyword_alone_still_tokenises(word, kind):
     assert _token_pairs(word) == [(kind, word)]
@@ -118,3 +118,11 @@ def test_keyword_with_paren_or_dollar_suffix_still_works():
 
 def test_ERROR_is_not_ERR_plus_OR():
     assert _token_pairs("ERROR") == [("ERROR", "ERROR")]
+
+
+def test_RETURN_by_reference_parameter_keeps_keyword():
+    # RETURN is CONDITIONAL (ROM bit-0): glued to a name char (RETURNX) it is the
+    # variable RETURNX, but the by-reference formal `RETURN x` -- a space between --
+    # must keep the RETURN keyword.
+    assert _token_pairs("RETURNX") == [("ID", "RETURNX")]
+    assert _token_pairs("RETURN x") == [("RETURN", "RETURN"), ("ID", "x")]

@@ -381,7 +381,9 @@ def t_REPEAT(t):
     return t
 
 def t_RETURN(t):
-    r'RETURN'
+    # CONDITIONAL keyword: suppressed before a name char, so RETURNX stays a
+    # variable (ROM keyword-table bit-0 flag). Same shape as the TIME fix.
+    r'RETURN(?![A-Za-z0-9_])'
     return t
 
 def t_SUMLEN(t):

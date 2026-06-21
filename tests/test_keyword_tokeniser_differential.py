@@ -40,13 +40,13 @@ _NON_KEYWORD = {
 #  * editor/immediate-mode commands a compiler does not run as statements;
 #  * REM/DATA captured as a single line-literal token (content folded into value),
 #    and FN/PROC names bundled into FN_ID/PROC_ID -- both faithful to the ROM's
-#    own name-skipping, just a different token shape;
-#  * RETURN: oaknut's table flags it CONDITIONAL but OWL's tokens.py flag is NONE
-#    -- an unresolved ROM-table conflict (see test below), parked here meanwhile.
+#    own name-skipping, just a different token shape.
+# (RETURN was here as an unresolved ROM-table conflict; the BASIC II disassembly
+# settled it -- RETURN's keyword-table flag byte is &01, CONDITIONAL -- so OWL's
+# lexer and tokens.py now both agree with the ROM and it is no longer divergent.)
 DIVERGENCES = {
     "AUTO", "DELETE", "LIST", "LOAD", "NEW", "OLD", "RENUMBER", "SAVE",
     "FN", "PROC", "REM", "DATA",
-    "RETURN",
 }
 
 
@@ -79,6 +79,31 @@ def test_owl_matches_rom_tokeniser(keyword):
         assert _owl_keywords(probe) == _oaknut_keywords(probe), probe
 
 
+def _oaknut_conditional_keywords():
+    """The keywords oaknut flags CONDITIONAL (ROM keyword-table bit 0)."""
+    for value in vars(_ob.tokens).values():
+        if (isinstance(value, (list, tuple)) and value
+                and isinstance(value[0], tuple) and len(value[0]) == 3
+                and isinstance(value[0][0], str)):
+            return {name for (name, _byte, flags) in value
+                    if flags & _ob.FLAG_CONDITIONAL}
+    raise AssertionError("could not locate oaknut's keyword table")
+
+
+def _owl_conditional_keywords():
+    """The keywords OWL's tokens.py table flags CONDITIONAL."""
+    from owl_basic.bbc_basic import tokens as owl_tokens
+    return {spec.name for spec in owl_tokens.BBC_BASIC_II.tokens
+            if owl_tokens.Flag.CONDITIONAL in spec.flags}
+
+
+def test_conditional_flag_column_matches_rom():
+    # tokens.py's CONDITIONAL column must equal the ROM's (oaknut is ROM-faithful).
+    # This caught 13 stragglers (RETURN, END, ENDPROC, STOP, RUN, CLS, ...) whose
+    # bit-0 flag was missing; it guards the whole column against future drift.
+    assert _owl_conditional_keywords() == _oaknut_conditional_keywords()
+
+
 def test_divergence_set_is_still_divergent():
     # If a "known divergence" silently starts agreeing, drop it from DIVERGENCES.
     still = [k for k in sorted(DIVERGENCES)
@@ -89,5 +114,5 @@ def test_divergence_set_is_still_divergent():
     # on this coarse comparison; only flag the command keywords + RETURN.
     unexpected = [k for k in still
                   if k in {"AUTO", "DELETE", "LIST", "LOAD", "NEW", "OLD",
-                           "RENUMBER", "SAVE", "RETURN"}]
+                           "RENUMBER", "SAVE"}]
     assert not unexpected, f"no longer divergent (remove from DIVERGENCES): {unexpected}"
