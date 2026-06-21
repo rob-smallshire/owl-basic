@@ -149,13 +149,21 @@ def analyse_numbered_lines(numbered_lines, name, source_filepath=None, options=N
     )
 
 
-def _reject_inline_assembler(data, options):
-    """Reject inline 6502 assembly before parsing, naming it clearly.
+def _reject_machine_code(data, options):
+    """Reject native-machine-code constructs before parsing, naming them clearly.
 
-    A ``[ ... ]`` block is 6502 machine code, which OWL (targeting .NET) cannot
-    run. Detected at the token level -- so the rejection is reported even when
-    the surrounding line would not otherwise parse -- rather than as an opaque
-    "Syntax error at '['".
+    Two BBC BASIC features drop into 6502 machine code, which OWL (targeting
+    .NET) cannot run:
+
+    * an inline assembler block ``[ ... ]``; and
+    * the ``USR`` function, which enters a machine-code routine at an address and
+      returns the CPU registers.
+
+    Both are detected at the token level -- so the rejection is reported even
+    when the surrounding line would not otherwise parse (USR has no grammar
+    production, so it would otherwise surface as an opaque "Syntax error at
+    'USR'") -- rather than as a bare syntax error. ``USR`` is non-conditional in
+    the ROM, so a ``USR`` token is always the keyword, never part of a variable.
     """
     lexer = syntax_parser.buildLexer(options)
     lexer.input(data)
@@ -164,6 +172,12 @@ def _reject_inline_assembler(data, options):
             raise CompileError(
                 "inline 6502 assembly ([ ... ]) is not supported: OWL targets "
                 ".NET, which cannot run 6502 machine code."
+            )
+        if token.type == "USR":
+            raise CompileError(
+                "USR is not supported: it enters a 6502 machine-code routine at "
+                "an address, which OWL targets .NET and cannot run as machine "
+                "code."
             )
 
 
@@ -192,7 +206,7 @@ def _run_pipeline(data, physical_to_logical_map, line_offsets, line_number_prefi
                   name, source_filepath, options):
     """Run the front-end pipeline and bundle the result as a :class:`Program`."""
     errors.reset()  # fresh per-compilation diagnostic dedup (no cross-pollution)
-    _reject_inline_assembler(data, options)
+    _reject_machine_code(data, options)
     parse_tree = syntax_parser.parse(data, options)
     if _grammar.syntax_errors:
         # The parser logs each syntax error and recovers a partial tree so it can
