@@ -691,6 +691,14 @@ class _MethodEmitter:
             successor = successors[0]
             if self._block_index.get(id(successor)) != index + 1:
                 self.emit("br " + self._block_label(successor))
+        elif len(successors) == 0:
+            # A terminal block (no forward successor) ends the routine. Falling
+            # through is only correct when it is physically last; emit an
+            # explicit ret so a block ordered after it -- e.g. a back-edge-only
+            # `UNTIL FALSE`, which the constant-loop correlation leaves with no
+            # forward edge -- is not entered by fall-through. The method wrapper
+            # rewrites ret -> leave inside the overflow/longjump regions.
+            self.emit("ret")
 
     def _method_end_label(self):
         """Label for the method's end, where a terminal IF branch lands."""

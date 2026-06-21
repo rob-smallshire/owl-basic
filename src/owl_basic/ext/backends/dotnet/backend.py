@@ -109,4 +109,10 @@ class Backend(BackendBase):
 
     @staticmethod
     def _assembly_name(program: Program) -> str:
-        return _NON_IDENT.sub("_", program.name) or "owl_program"
+        name = _NON_IDENT.sub("_", program.name) or "owl_program"
+        # An IL identifier may not start with a digit (the corpus names programs
+        # by share id, e.g. "5df6cac4d936"); prefix one that does so .assembly /
+        # .module names stay valid without quoting.
+        if name[0].isdigit():
+            name = "_" + name
+        return name

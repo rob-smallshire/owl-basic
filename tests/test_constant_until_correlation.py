@@ -69,3 +69,37 @@ def test_genuine_unmatched_until_is_still_rejected():
     import pytest
     with pytest.raises(CompileError):
         _analyses("PRINT 1\nUNTIL FALSE\nPRINT 2\n")
+
+
+# -- codegen: the correlated loop must lower to correct, terminating code ----
+
+from conftest import requires_dotnet_toolchain  # noqa: E402
+
+
+@requires_dotnet_toolchain
+def test_constant_until_loop_lowers_and_terminates(compile_and_run):
+    # One REPEAT, an UNTIL FALSE loop-back inside an IF and an UNTIL TRUE exit:
+    # the counter must run to C%=5 and stop (not spin forever). This is the
+    # end-to-end guard that the multi-UNTIL loop lowers correctly.
+    out = compile_and_run(
+        analyse(
+            "C%=0\n"
+            "REPEAT\n"
+            "C%=C%+1\n"
+            "IF C%<5 UNTIL FALSE\n"   # loop back while C%<5
+            "UNTIL TRUE\n"            # then exit
+            "PRINT C%\n",
+            name="t",
+        ),
+        timeout=30,
+    )
+    assert out == "5\n"
+
+
+@requires_dotnet_toolchain
+def test_program_named_with_a_leading_digit_assembles(compile_and_run):
+    # Corpus programs are named by share id (e.g. "5df6cac4d936"); a leading
+    # digit is an invalid IL identifier for .assembly/.module and must be made
+    # valid, or ilasm rejects the whole module.
+    out = compile_and_run(analyse("PRINT 6*7\n", name="5df6cac4d936"), timeout=30)
+    assert out == "42\n"
