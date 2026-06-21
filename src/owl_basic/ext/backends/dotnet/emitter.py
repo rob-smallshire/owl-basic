@@ -796,10 +796,13 @@ class _MethodEmitter:
             self.lower_expression(node.rValue)
             self.emit(_runtime("WriteFloat", "int32", "float64", cls="MemoryMap"))
             return
-        if name == "LomemValue":
-            # LOMEM = v : the runtime models the BBC memory boundary as a property.
+        if name in ("LomemValue", "HimemValue", "PageValue"):
+            # LOMEM/HIMEM/PAGE = v : the runtime models each BBC memory boundary
+            # as a property. (TOP is read-only; PTR is a file operation.)
+            setter = {"LomemValue": "set_Lomem", "HimemValue": "set_Himem",
+                      "PageValue": "set_Page"}[name]
             self.lower_expression(node.rValue)
-            self.emit(_runtime("set_Lomem", "int32"))
+            self.emit(_runtime(setter, "int32"))
             return
         if name == "TimeValue":
             # TIME = v : reset the centisecond clock.
@@ -1851,6 +1854,19 @@ class _MethodEmitter:
 
     def _expr_LomemValue(self, node):
         self.emit(_runtime("get_Lomem"))
+
+    # HIMEM/LOMEM/PAGE/TOP introspect the BBC memory map of the BASIC program
+    # itself -- meaningless on .NET, but the runtime returns ordered, plausible
+    # values for compatibility (see docs/local-semantics.md siblings; the runtime
+    # owns the numbers). PTR is a file operation, handled elsewhere.
+    def _expr_HimemValue(self, node):
+        self.emit(_runtime("get_Himem"))
+
+    def _expr_PageValue(self, node):
+        self.emit(_runtime("get_Page"))
+
+    def _expr_TopFunc(self, node):
+        self.emit(_runtime("get_Top"))
 
     def _expr_GetFunc(self, node):
         # GET: read one keypress, returning its code.

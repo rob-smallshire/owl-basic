@@ -565,11 +565,17 @@ namespace OwlRuntime
                 "POINT (reading a pixel's colour) is not yet implemented");
         }
 
-        public static int Himem { get; set; }
-        public static int Lomem { get; set; }
-        public static int End { get; set; }
-        public static int Page { get; set; }
-        public static int Top { get; set; }
+        // HIMEM/LOMEM/PAGE/TOP/END introspect the BBC memory map of the BASIC
+        // program. OWL targets .NET, where there is no such map, so these are
+        // ultimately meaningless -- but programs read and compare them, so we
+        // hand back fixed, plausible values in the correct relative order
+        // (PAGE <= TOP <= LOMEM <= HIMEM, with END the top of variable space).
+        // A program may still assign them; the arithmetic just works on numbers.
+        public static int Page { get; set; } = 0x1900;   // start of program text
+        public static int Top { get; set; } = 0x2000;    // end of program text
+        public static int Lomem { get; set; } = 0x2000;  // start of variables (= TOP)
+        public static int End { get; set; } = 0x2000;    // top of variables in use
+        public static int Himem { get; set; } = 0x8000;  // top of BASIC's memory
 
         public static void TabH(int x)
         {
