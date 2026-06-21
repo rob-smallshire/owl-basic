@@ -18,6 +18,18 @@ _DYNAMIC_STACK_NOTE = (
 )
 
 
+def _in_id_order(vertices):
+    """A deterministic ordering of CFG vertices, by their stable creation id.
+
+    Edges are held in sets of CfgVertex objects, whose iteration order follows
+    object identity and so varies from run to run. The loop-correlation verdict
+    must not depend on that, so every walk over a vertex's successors goes in id
+    order. Ids are assigned at construction, which is deterministic for a given
+    parse, so the order -- and the verdict -- is reproducible.
+    """
+    return sorted(vertices, key=lambda vertex: vertex.id)
+
+
 def _constant_truth(condition):
     """Whether *condition* is a compile-time constant, and its truth.
 
@@ -162,15 +174,16 @@ class CorrelationVisitor(Visitor):
                 # Propagate the loop stack as it stands *after* this statement
                 # (accept() above pushed/popped it) to every successor, recording
                 # it on the target so the state is restored when that target is
-                # later visited. outEdges is an unordered set, so to keep the
-                # verdict independent of traversal order we compare against any
-                # stack a prior path already recorded for the same target: if two
-                # paths reach a join with different loop nesting, the program
-                # relies on the dynamic loop stack and cannot be compiled.
+                # later visited. outEdges is an unordered set, so walk it in a
+                # deterministic (id) order: the first path to reach a join records
+                # its stack there, and which path that is must not vary run to run.
+                # If two paths reach a join with different loop nesting, the
+                # program relies on the dynamic loop stack and cannot be compiled.
                 outgoing = self.loops[:]
-                for target in v.outEdges:
+                ordered_targets = _in_id_order(v.outEdges)
+                for target in ordered_targets:
                     self._propagateLoopStack(v, target, outgoing)
-                self.to_visit.extend(v.outEdges)
+                self.to_visit.extend(ordered_targets)
 
     def _propagateLoopStack(self, source, target, loops):
         """Record *loops* as target's entry stack, resolving benign leaks.

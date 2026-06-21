@@ -7,6 +7,16 @@ from itertools import chain
 
 logger = logging.getLogger('flow.traversal')
 
+
+def _ordered(vertices):
+    """CFG vertices in a deterministic order, by their stable creation id.
+
+    Edges are sets of vertices, whose iteration order varies run to run; the
+    block ordering (and so the emitted layout) must not. Ids are assigned at
+    construction, which is deterministic for a given parse.
+    """
+    return sorted(vertices, key=lambda vertex: vertex.id)
+
 def depthFirstSearch(vertex, visited = None):
     '''
     A generator which performs depth first search from the supplied vertex through
@@ -41,7 +51,7 @@ class ApproximateToplogicalOrderer(object):
             
         # Special case the start vertex to prevent infinite recursion
         self.index[vertex] = "Done"
-        for successor in chain(vertex.outEdges, vertex.loopBackEdges):
+        for successor in _ordered(chain(vertex.outEdges, vertex.loopBackEdges)):
             if successor in self.vertices_to_consider:
                 if self.index[successor] == "To be done":
                     self.visit(successor)
@@ -52,8 +62,8 @@ class ApproximateToplogicalOrderer(object):
         self.low[cur_vertex] = self.cur_dfsnum
         self.cur_dfsnum += 1
         self.stack.append(cur_vertex)
-        
-        for successor in chain(cur_vertex.outEdges, cur_vertex.loopBackEdges):
+
+        for successor in _ordered(chain(cur_vertex.outEdges, cur_vertex.loopBackEdges)):
             if successor in self.vertices_to_consider:
                 if self.index[successor] == "To be done":
                     self.visit(successor)

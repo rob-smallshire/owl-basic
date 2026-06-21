@@ -71,7 +71,10 @@ def assignBlockAndContinue(vertex, block=None):
             # clause) -- so its successor must start a fresh block, or codegen
             # would branch into the IF's own block and loop.
             chains = current.outDegree == 1 and type(current).__name__ != "If"
-            for target in current.outEdges:
+            # outEdges is a set of vertices, whose iteration order varies run to
+            # run; visit in stable id order so block membership -- and hence the
+            # emitted block layout -- is reproducible.
+            for target in sorted(current.outEdges, key=lambda vertex: vertex.id):
                 stack.append((target, current.block if chains else None))
     for current in reached:
         for target in current.outEdges:
