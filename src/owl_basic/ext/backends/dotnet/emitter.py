@@ -53,6 +53,10 @@ _PRINT_NEWLINE = _runtime("NewLine")
 
 _MATH = "[System.Runtime]System.Math"
 
+# math.pi as an IEEE-754 double literal -- identical to System.Math.PI (which is
+# a const, so it cannot be loaded as a field in IL). Backs PI, RAD and DEG.
+_PI = "3.141592653589793"
+
 # INPUT reads a queue of typed values via the runtime, then dequeues each.
 _TYPE_ARRAY = "class [System.Runtime]System.Type[]"
 _QUEUE_OBJECT = "class [System.Collections]System.Collections.Generic.Queue`1<object>"
@@ -1793,6 +1797,31 @@ class _MethodEmitter:
     def _expr_SqrFunc(self, node):
         self.lower_expression(node.factor)
         self.emit(_runtime("Sqr", "float64"))
+
+    def _lower_factor_as_float(self, factor):
+        """Lower *factor* and coerce an integer result to float64."""
+        self.lower_expression(factor)
+        if not isinstance(factor.actualType, FloatOwlType):
+            self.emit("conv.r8")
+
+    def _expr_PiFunc(self, node):
+        self.emit("ldc.r8 " + _PI)
+
+    def _expr_RadFunc(self, node):
+        # RAD: degrees -> radians, x * PI / 180 (left-to-right, as BBC computes).
+        self._lower_factor_as_float(node.factor)
+        self.emit("ldc.r8 " + _PI)
+        self.emit("mul")
+        self.emit("ldc.r8 180.0")
+        self.emit("div")
+
+    def _expr_DegFunc(self, node):
+        # DEG: radians -> degrees, x * 180 / PI.
+        self._lower_factor_as_float(node.factor)
+        self.emit("ldc.r8 180.0")
+        self.emit("mul")
+        self.emit("ldc.r8 " + _PI)
+        self.emit("div")
 
     def _expr_RndFunc(self, node):
         if node.option is not None:
