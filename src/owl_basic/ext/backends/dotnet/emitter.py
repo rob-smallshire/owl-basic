@@ -854,7 +854,20 @@ class _MethodEmitter:
             if len(others) > 1:
                 raise CodeGenerationError("IF with %d true targets" % len(others))
         else:
-            raise CodeGenerationError("IF with no clauses")
+            # IF with neither clause, e.g. `IF GET` to wait for a keypress: the
+            # condition was lowered above for its side effects only. Discard its
+            # value and continue to the single successor (both arms fall through
+            # to the same place), or end the routine if the IF is terminal.
+            self.emit("pop")
+            this_index = self._block_index[id(node.block)]
+            successor_blocks = {id(s.block): s.block for s in node.outEdges}
+            if not successor_blocks:
+                self.emit("ret")  # terminal IF (wrapper rewrites to leave)
+            else:
+                block = next(iter(successor_blocks.values()))
+                if self._block_index[id(block)] != this_index + 1:
+                    self.emit("br " + self._block_label(block))
+            return
 
         this_index = self._block_index[id(node.block)]
 
