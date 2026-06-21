@@ -50,8 +50,10 @@ htmlcov/
 tmp/
 
 # Local-only documents: design notes and scratch write-ups kept in the working
-# tree for transient use but deliberately not committed.
-local-*.md
+# tree for transient use but deliberately not committed. Anchored to the repo
+# root so committed docs in subdirectories (e.g. docs/local-semantics.md) are
+# not swept up.
+/local-*.md
 
 # Local-only corpus sandbox: the BBC Micro Bot / Owlet fetcher, its hand-pasted
 # token manifest, the downloaded programs cache, and the parse harness that runs

@@ -5,7 +5,6 @@ from functools import partial
 
 from owl_basic.visitor import Visitor
 from owl_basic.errors import *
-from owl_basic.exceptions import CompileError
 from owl_basic.symbol_tables import *
 from owl_basic.syntax.ast import FormalArgument, FormalReferenceArgument, Variable, Array, AstStatement
 
@@ -73,22 +72,20 @@ class SymbolTableVisitor(Visitor):
                 if in_edge.symbolTable is not None:
                     if symbol_table is None:
                         symbol_table = in_edge.symbolTable
-                    else:
-                        if in_edge.symbolTable is not symbol_table:
-                            # The same statement is reached with different
-                            # variable scopes on different paths (e.g. shared by
-                            # MAIN and a PROC via a GOTO into/out of the PROC).
-                            # BBC BASIC resolves scope dynamically; a static
-                            # compiler cannot, so reject -- gracefully, not by
-                            # exiting the process.
-                            raise CompileError(
-                                "the variable scope at line %s depends on the "
-                                "path taken to reach it (the statement is shared "
-                                "between the main program and a procedure), which "
-                                "a static compiler cannot resolve."
-                                % statement.lineNum)
-            assert symbol_table is not None                
-            return symbol_table
+                    elif in_edge.symbolTable is not symbol_table:
+                        # The statement is reached with different scopes on
+                        # different paths (e.g. shared by MAIN and a PROC via an
+                        # unstructured GOTO). Every BBC variable is a global that
+                        # a LOCAL merely save/restores within a frame, so where
+                        # the frame is path-dependent the safe, consistent scope
+                        # is the global one -- the no-op (see docs/local-
+                        # semantics.md). The per-routine save/restore is driven
+                        # by block membership, not this chain, so resolving the
+                        # name here to the global table does not lose a local.
+                        return self.globalSymbols
+            # No predecessor carries a scope yet (an unstructured entry, or the
+            # routine's first statement): fall back to the global scope.
+            return symbol_table if symbol_table is not None else self.globalSymbols
         return statement.symbolTable
     
     def tryAddVariable(self, symbol_table, variable):
@@ -149,69 +146,53 @@ class SymbolTableVisitor(Visitor):
         # TODO: We should have a warning if LOCAL and PRIVATE are not the first
         #       statements in a definition
         # TODO: REFACTOR This is almost identical to visitPrivate
-        # LOCAL is only valid inside a DEF FN/PROC. A LOCAL lexically in the main
-        # program can only ever be reached from MAIN, so MAIN being its *sole*
-        # entry point identifies a genuine top-level LOCAL. (A LOCAL inside a PROC
-        # may also list MAIN -- e.g. when a GOTO out of the PROC shares its code
-        # with the main program -- and is legal: it is still in a procedure.)
-        if local.entryPoints == {'MAIN'}:
-            raise CompileError(
-                "LOCAL is only valid inside a function or procedure (line %s)"
-                % local.lineNum)
+        # A LOCAL save/restores its variables within each PROC/FN frame that owns
+        # it (the frame whose ENDPROC/= restores them). The main program has no
+        # such frame, so a LOCAL reached only from MAIN -- or, via unstructured
+        # flow, *also* from MAIN -- is simply a no-op there: the variable stays
+        # global. We therefore never reject on attribution; we name the scope
+        # after a PROC/FN owner when there is one. See docs/local-semantics.md.
         if local.symbolTable is None:
-            symbol_infos = []
-            for variable in local.variables:
-                if not _names_a_variable(variable):
-                    continue  # l-value LOCAL: no named symbol (see helper)
-                name = variable.identifier
-                type = variable.actualType
-                symbol_info = SymbolInfo(name, type, SymbolInfo.modifier_local)
-                symbol_infos.append(symbol_info)
-            if len(local.entryPoints) != 1:
-                # Reachable from more than one routine (e.g. a PROC whose body is
-                # also entered from the main program by an unstructured GOTO): the
-                # LOCAL's scope is path-dependent, which a static compiler cannot
-                # resolve. Reject gracefully rather than assert.
-                raise CompileError(
-                    "the scope of the LOCAL at line %s depends on the path taken "
-                    "to reach it (its routine is shared with another via an "
-                    "unstructured GOTO), which a static compiler cannot resolve."
-                    % local.lineNum)
-            procedure = next(iter(local.entryPoints))
-            symbol_table = LocalSymbolTable(symbol_infos, procedure, self.checkPredecessorsAndRefer(local))
-            assert symbol_table is not None  
-            local.symbolTable = symbol_table
+            symbol_infos = self._local_symbol_infos(
+                local.variables, SymbolInfo.modifier_local)
+            local.symbolTable = LocalSymbolTable(
+                symbol_infos, self._owning_routine(local),
+                self.checkPredecessorsAndRefer(local))
         self.followSuccessors(local)
     
     def visitPrivate(self, private):
         #logger.debug("SymbolTableVisitor.visitPrivate")
         # TODO: We should have a warning if LOCAL and PRIVATE are not the first
         #       statements in a definition
-        # TODO: REFACTOR This is almost identical to visitLocal
-        if private.entryPoints == {'MAIN'}:
-            raise CompileError(
-                "PRIVATE is only valid inside a function or procedure (line %s)"
-                % private.lineNum)
+        # PRIVATE shares LOCAL's scoping rule (see visitLocal): owned by each
+        # PROC/FN frame that reaches it, a no-op where there is none.
         if private.symbolTable is None:
-            symbol_infos = []
-            for variable in private.variables:
-                if not _names_a_variable(variable):
-                    continue  # l-value PRIVATE: no named symbol (see helper)
-                name = variable.identifier
-                type = variable.actualType
-                symbol_info = SymbolInfo(name, type, SymbolInfo.modifier_private)
-                symbol_infos.append(symbol_info)
-            if len(private.entryPoints) != 1:
-                raise CompileError(
-                    "the scope of the PRIVATE at line %s depends on the path "
-                    "taken to reach it (its routine is shared with another via an "
-                    "unstructured GOTO), which a static compiler cannot resolve."
-                    % private.lineNum)
-            procedure = next(iter(private.entryPoints))
-            symbol_table = PrivateSymbolTable(symbol_infos, procedure, self.checkPredecessorsAndRefer(private))
-            assert symbol_table is not None  
-            private.symbolTable = symbol_table
+            symbol_infos = self._local_symbol_infos(
+                private.variables, SymbolInfo.modifier_private)
+            private.symbolTable = PrivateSymbolTable(
+                symbol_infos, self._owning_routine(private),
+                self.checkPredecessorsAndRefer(private))
         self.followSuccessors(private)
+
+    def _local_symbol_infos(self, variables, modifier):
+        """Symbol infos for the named items of a LOCAL/PRIVATE statement.
+
+        l-value items (array elements, ?/!/$ indirection) name no symbol -- they
+        save/restore an existing cell directly -- so they are skipped here.
+        """
+        infos = []
+        for variable in variables:
+            if _names_a_variable(variable):
+                infos.append(SymbolInfo(variable.identifier,
+                                        variable.actualType, modifier))
+        return infos
+
+    def _owning_routine(self, statement):
+        """A PROC/FN that owns *statement*'s LOCAL/PRIVATE frame, for the scope
+        table's name. The main program owns no LOCAL frame, so it is only the
+        owner when nothing else reaches the statement (a no-op LOCAL)."""
+        owners = sorted(statement.entryPoints - {'MAIN'})
+        return owners[0] if owners else 'MAIN'
     
     def visitAssignment(self, statement):
         logger.debug("SymbolTableVisitor.visitAssignment")
