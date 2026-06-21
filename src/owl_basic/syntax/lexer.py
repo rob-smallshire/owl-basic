@@ -419,7 +419,9 @@ def t_GOSUB(t):
     return t
 
 def t_HIMEM(t):
-    r'HIMEM'
+    # CONDITIONAL keyword: suppressed before a name char, so HIMEMX stays a
+    # variable (ROM bit-0 flag). Same shape as the TOP fix.
+    r'HIMEM(?![A-Za-z0-9_])'
     return t
 
 def t_INKEY(t):
@@ -435,7 +437,9 @@ def t_LOCAL(t):
     return t
 
 def t_LOMEM(t):
-    r'LOMEM'
+    # CONDITIONAL keyword: suppressed before a name char, so LOMEMX stays a
+    # variable (ROM bit-0 flag). Same shape as the TOP fix.
+    r'LOMEM(?![A-Za-z0-9_])'
     return t
 
 def t_MID_STR_LPAREN(t):
@@ -564,7 +568,9 @@ def t_PLOT(t):
     return t
 
 def t_PAGE(t):
-    r'PAGE'
+    # CONDITIONAL keyword: suppressed before a name char, so PAGEX stays a
+    # variable (ROM bit-0 flag). Same shape as the TOP fix.
+    r'PAGE(?![A-Za-z0-9_])'
     return t
 
 def t_QUIT(t):
@@ -600,7 +606,9 @@ def t_THEN(t):
     return t
 
 def t_TIME(t):
-    r'TIME'
+    # CONDITIONAL keyword: suppressed before a name char, so TIMEX stays a
+    # variable (ROM bit-0 flag). Same shape as the TOP fix.
+    r'TIME(?![A-Za-z0-9_])'
     return t
 
 def t_TINT(t):
@@ -608,7 +616,9 @@ def t_TINT(t):
     return t
 
 def t_VPOS(t):
-    r'VPOS'
+    # CONDITIONAL keyword: suppressed before a name char, so VPOSX stays a
+    # variable (ROM bit-0 flag). Same shape as the TOP fix.
+    r'VPOS(?![A-Za-z0-9_])'
     return t
 
 def t_WAIT(t):
@@ -674,11 +684,15 @@ def t_EOR(t):
     return t
 
 def t_ERL(t):
-    r'ERL'
+    # CONDITIONAL keyword: suppressed before a name char, so ERLX stays a
+    # variable (ROM bit-0 flag). Same shape as the TOP fix.
+    r'ERL(?![A-Za-z0-9_])'
     return t
 
 def t_ERR(t):
-    r'ERR'
+    # CONDITIONAL keyword: suppressed before a name char, so ERRX stays a
+    # variable (ROM bit-0 flag). Same shape as the TOP fix.
+    r'ERR(?![A-Za-z0-9_])'
     return t
 
 def t_EXP(t):
@@ -722,7 +736,9 @@ def t_OFF(t):
     return t
 
 def t_PTR(t):
-    r'PTR'
+    # CONDITIONAL keyword: suppressed before a name char, so PTRX stays a
+    # variable (ROM bit-0 flag). Same shape as the TOP fix.
+    r'PTR(?![A-Za-z0-9_])'
     return t
 
 def t_RAD(t):
@@ -730,7 +746,9 @@ def t_RAD(t):
     return t
 
 def t_RND(t):
-    r'RND'
+    # CONDITIONAL keyword: suppressed before a name char, so RNDX stays a
+    # variable (ROM bit-0 flag). Same shape as the TOP fix.
+    r'RND(?![A-Za-z0-9_])'
     return t
 
 def t_SGN(t):

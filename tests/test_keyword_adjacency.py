@@ -82,13 +82,39 @@ def test_FORM_is_FOR_M():
     assert _token_pairs("FORM") == [("FOR", "FOR"), ("ID", "M")]
 
 
-# --- a known remaining gap: conditional-flag keywords -----------------------
+# --- conditional-flag keywords: not tokenised before a name char -----------
+# The ROM gives these the CONDITIONAL flag (bit 0): a name char immediately after
+# suppresses the keyword, so TIMER/PAGES/HIMEMORY stay variables. OWL's pseudo-
+# variable rules (TIME/PAGE/PTR/LOMEM/HIMEM and RND/VPOS/ERL/ERR) were greedy.
 
-@pytest.mark.xfail(reason="conditional-flag keywords (TIME etc.) not suppressed "
-                          "before a name char: TIMER mis-lexes as TIME+R "
-                          "(ROM keeps TIMER a variable). Separate from TOP.",
-                   strict=True)
-def test_TIMER_stays_an_identifier():
-    # TIME carries the ROM 'conditional' flag: not tokenised before a letter, so
-    # TIMER is the variable TIMER, not TIME + R.
-    assert _token_pairs("TIMER") == [("ID", "TIMER")]
+@pytest.mark.parametrize("word", [
+    "TIMER", "PAGES", "PTRX", "LOMEMORY", "HIMEMORY", "RNDOM", "VPOSITION",
+    "ERLANG", "ERROL",
+])
+def test_conditional_keyword_followed_by_letters_is_an_identifier(word):
+    assert _token_pairs(word) == [("ID", word)]
+
+
+@pytest.mark.parametrize("word,kind", [
+    ("TIME", "TIME"), ("PAGE", "PAGE"), ("PTR", "PTR"), ("LOMEM", "LOMEM"),
+    ("HIMEM", "HIMEM"), ("RND", "RND"), ("VPOS", "VPOS"), ("ERL", "ERL"),
+    ("ERR", "ERR"),
+])
+def test_conditional_keyword_alone_still_tokenises(word, kind):
+    assert _token_pairs(word) == [(kind, word)]
+
+
+def test_pseudo_var_assignment_and_function_forms_still_work():
+    # PAGE=... (assignment) and PRINT PAGE (function) both keep the keyword.
+    assert _token_pairs("PAGE=&1900")[0] == ("PAGE", "PAGE")
+    assert ("TIME", "TIME") in _token_pairs("PRINT TIME")
+
+
+def test_keyword_with_paren_or_dollar_suffix_still_works():
+    # The RND( and TIME$ variants must not be disturbed.
+    assert _token_pairs("RND(5)")[0] == ("RND_LPAREN", "RND(")
+    assert _token_pairs("TIME$") == [("TIME_STR", "TIME$")]
+
+
+def test_ERROR_is_not_ERR_plus_OR():
+    assert _token_pairs("ERROR") == [("ERROR", "ERROR")]
