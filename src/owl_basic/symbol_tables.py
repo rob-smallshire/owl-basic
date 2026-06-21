@@ -190,6 +190,6 @@ class PrivateSymbolTable(ScopedSymbolTable):
     """
     def __init__(self, symbol_infos, procedure, parent):
         super(PrivateSymbolTable, self).__init__("PRIVATE symbols for %s" % procedure, SymbolTable.writethrough, parent)
-        for symbol, type in symbol_types:
-            self._symbols.update(symbol_types)
+        for symbol_info in symbol_infos:
+            self._symbols[symbol_info.name] = symbol_info
 

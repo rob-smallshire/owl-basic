@@ -5,6 +5,7 @@ from functools import partial
 
 from owl_basic.visitor import Visitor
 from owl_basic.errors import *
+from owl_basic.exceptions import CompileError
 from owl_basic.symbol_tables import *
 from owl_basic.syntax.ast import FormalArgument, FormalReferenceArgument, Variable, Array, AstStatement
 
@@ -74,7 +75,18 @@ class SymbolTableVisitor(Visitor):
                         symbol_table = in_edge.symbolTable
                     else:
                         if in_edge.symbolTable is not symbol_table:
-                            errors.fatalError("Inconsistent variable scopes for %s at line %s" % statement, statement.lineNum)
+                            # The same statement is reached with different
+                            # variable scopes on different paths (e.g. shared by
+                            # MAIN and a PROC via a GOTO into/out of the PROC).
+                            # BBC BASIC resolves scope dynamically; a static
+                            # compiler cannot, so reject -- gracefully, not by
+                            # exiting the process.
+                            raise CompileError(
+                                "the variable scope at line %s depends on the "
+                                "path taken to reach it (the statement is shared "
+                                "between the main program and a procedure), which "
+                                "a static compiler cannot resolve."
+                                % statement.lineNum)
             assert symbol_table is not None                
             return symbol_table
         return statement.symbolTable
@@ -137,8 +149,15 @@ class SymbolTableVisitor(Visitor):
         # TODO: We should have a warning if LOCAL and PRIVATE are not the first
         #       statements in a definition
         # TODO: REFACTOR This is almost identical to visitPrivate
-        if 'MAIN' in local.entryPoints:
-            errors.fatalError("Items can only be made local in a function or procedure at line %s" % local.lineNum)
+        # LOCAL is only valid inside a DEF FN/PROC. A LOCAL lexically in the main
+        # program can only ever be reached from MAIN, so MAIN being its *sole*
+        # entry point identifies a genuine top-level LOCAL. (A LOCAL inside a PROC
+        # may also list MAIN -- e.g. when a GOTO out of the PROC shares its code
+        # with the main program -- and is legal: it is still in a procedure.)
+        if local.entryPoints == {'MAIN'}:
+            raise CompileError(
+                "LOCAL is only valid inside a function or procedure (line %s)"
+                % local.lineNum)
         if local.symbolTable is None:
             symbol_infos = []
             for variable in local.variables:
@@ -148,7 +167,16 @@ class SymbolTableVisitor(Visitor):
                 type = variable.actualType
                 symbol_info = SymbolInfo(name, type, SymbolInfo.modifier_local)
                 symbol_infos.append(symbol_info)
-            assert len(local.entryPoints) == 1
+            if len(local.entryPoints) != 1:
+                # Reachable from more than one routine (e.g. a PROC whose body is
+                # also entered from the main program by an unstructured GOTO): the
+                # LOCAL's scope is path-dependent, which a static compiler cannot
+                # resolve. Reject gracefully rather than assert.
+                raise CompileError(
+                    "the scope of the LOCAL at line %s depends on the path taken "
+                    "to reach it (its routine is shared with another via an "
+                    "unstructured GOTO), which a static compiler cannot resolve."
+                    % local.lineNum)
             procedure = next(iter(local.entryPoints))
             symbol_table = LocalSymbolTable(symbol_infos, procedure, self.checkPredecessorsAndRefer(local))
             assert symbol_table is not None  
@@ -160,8 +188,10 @@ class SymbolTableVisitor(Visitor):
         # TODO: We should have a warning if LOCAL and PRIVATE are not the first
         #       statements in a definition
         # TODO: REFACTOR This is almost identical to visitLocal
-        if 'MAIN' in private.entryPoints:
-            errors.fatalError("Items can only be made local in a function or procedure at line %s" % local.lineNum)
+        if private.entryPoints == {'MAIN'}:
+            raise CompileError(
+                "PRIVATE is only valid inside a function or procedure (line %s)"
+                % private.lineNum)
         if private.symbolTable is None:
             symbol_infos = []
             for variable in private.variables:
@@ -171,7 +201,12 @@ class SymbolTableVisitor(Visitor):
                 type = variable.actualType
                 symbol_info = SymbolInfo(name, type, SymbolInfo.modifier_private)
                 symbol_infos.append(symbol_info)
-            assert len(private.entryPoints) == 1
+            if len(private.entryPoints) != 1:
+                raise CompileError(
+                    "the scope of the PRIVATE at line %s depends on the path "
+                    "taken to reach it (its routine is shared with another via an "
+                    "unstructured GOTO), which a static compiler cannot resolve."
+                    % private.lineNum)
             procedure = next(iter(private.entryPoints))
             symbol_table = PrivateSymbolTable(symbol_infos, procedure, self.checkPredecessorsAndRefer(private))
             assert symbol_table is not None  
