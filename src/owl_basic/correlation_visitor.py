@@ -2,7 +2,8 @@ import logging
 from owl_basic import errors
 from collections import deque
 from owl_basic.syntax.ast import (Repeat, While, ForToStep, Next, Until,
-    Endwhile, ReturnFromProcedure, ReturnFromFunction, End, Stop)
+    Endwhile, ReturnFromProcedure, ReturnFromFunction, End, Stop,
+    TrueFunc, FalseFunc, LiteralInteger, LiteralFloat)
 from owl_basic.exceptions import CompileError
 from owl_basic.flow.connectors import connectLoop
 from owl_basic.visitor import Visitor
@@ -15,6 +16,21 @@ _DYNAMIC_STACK_NOTE = (
     "but cannot be correlated statically; OWL cannot compile it. Restructure so each "
     "loop is opened and closed unconditionally on the same control-flow path."
 )
+
+
+def _constant_truth(condition):
+    """Whether *condition* is a compile-time constant, and its truth.
+
+    Returns True/False for a constant condition (BBC BASIC: FALSE is 0, TRUE is
+    -1, and any non-zero value is true), or None when it is not constant.
+    """
+    if isinstance(condition, FalseFunc):
+        return False
+    if isinstance(condition, TrueFunc):
+        return True
+    if isinstance(condition, (LiteralInteger, LiteralFloat)):
+        return condition.value != 0
+    return None
 
 
 def _same_loops(a, b):
@@ -84,10 +100,42 @@ class CorrelationVisitor(Visitor):
         """
         The entry-point from which loop correlation should start
         """
+        self._pruneNeverTakenLoopExits(entry_point)
         self.depthFirstSearch(entry_point)
         for v in self.visited:
             if hasattr(v, "loop_stack"):
                 del v.loop_stack
+
+    def _pruneNeverTakenLoopExits(self, entry_point):
+        """Remove the fall-through (loop-exit) edge of an `UNTIL FALSE`.
+
+        `UNTIL FALSE` always loops back -- its exit edge is dead. Left in place,
+        the correlation DFS propagates a 'loop already closed' stack down that
+        dead edge, which corrupts the loop stack for the rest of a loop body that
+        has several conditional UNTILs for one REPEAT (the IFS-fractal idiom: an
+        inner REPEAT with `IF c ...:UNTIL FALSE` loop-backs and a final `UNTIL
+        TRUE` exit). Pruning the dead edge lets each UNTIL correlate to its one
+        REPEAT. A genuinely unmatched UNTIL is still reached and still rejected.
+
+        Only a *constant*-false condition is pruned; a non-constant UNTIL can
+        exit, so both its edges stay and a real dynamic-stack join still rejects.
+        """
+        # Collect reachable vertices first; mutating edges mid-walk is unsafe.
+        seen = set()
+        stack = [entry_point]
+        vertices = []
+        while stack:
+            v = stack.pop()
+            if v is None or id(v) in seen:
+                continue
+            seen.add(id(v))
+            vertices.append(v)
+            stack.extend(v.outEdges)
+        for v in vertices:
+            if isinstance(v, Until) and _constant_truth(v.condition) is False:
+                for target in list(v.outEdges):
+                    v.outEdges.discard(target)
+                    target.inEdges.discard(v)
 
     def depthFirstSearch(self, entry_point):
         self.to_visit.append(entry_point)
@@ -99,7 +147,8 @@ class CorrelationVisitor(Visitor):
             if v not in self.visited:
                 self.visited.add(v)
                 v.accept(self)
-                if len(v.outEdges) == 0 and len(self.loops) != 0:
+                if (len(v.outEdges) == 0 and len(v.loopBackEdges) == 0
+                        and len(self.loops) != 0):
                     if isinstance(v, _PROCEDURE_EXITS):
                         # ENDPROC / =<expr> reached with loops still open: legal,
                         # but it leaks those loop frames in the BBC interpreter.
