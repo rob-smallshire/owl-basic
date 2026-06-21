@@ -506,13 +506,9 @@ def t_CHR_STR(t):
 
 def t_DATA(t):
     r'DATA[^\n]*'
-    # Note: Data captures everything until the
-    #       end of the line. The data items are
-    #       not tokenized at this point.
-    m = re.match(r'DATA([^\n]+)', t.value)
-    if m is None:
-        fatalError("No DATA in %s" % t.value)
-    t.value = m.group(1)
+    # DATA captures the rest of the line as raw items (not tokenised here). An
+    # empty DATA -- a bare `DATA` -- is valid; its content is the empty string.
+    t.value = t.value[len('DATA'):]
     return t
 
 def t_DIM_LPAREN(t):
