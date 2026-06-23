@@ -149,36 +149,58 @@ def analyse_numbered_lines(numbered_lines, name, source_filepath=None, options=N
     )
 
 
-def _reject_machine_code(data, options):
-    """Reject native-machine-code constructs before parsing, naming them clearly.
+def _diagnose_parse_failure(data, options):
+    """Raise the most specific reason a source did not parse. Always raises.
 
-    Two BBC BASIC features drop into 6502 machine code, which OWL (targeting
-    .NET) cannot run:
+    Only called once the parser has already failed, so a program that parses is
+    never mistaken for any of these. A single token pass distinguishes, in
+    priority order:
 
-    * an inline assembler block ``[ ... ]``; and
-    * the ``USR`` function, which enters a machine-code routine at an address and
-      returns the CPU registers.
+    * *binary / non-text input* -- a tokenised image, embedded graphics or
+      machine-code data, or a garbage toot. The lexer cannot tokenise such bytes
+      (it counts them), so rather than a misleading "Syntax error at <some token
+      the skipped bytes happened to form>" -- or, worse, claiming an unsupported
+      feature because the garbage contained a USR/[ token -- we say plainly that
+      it is not a text BASIC listing. Checked first, so binary that happens to
+      contain a USR or assembler token is reported as binary.
 
-    Both are detected at the token level -- so the rejection is reported even
-    when the surrounding line would not otherwise parse (USR has no grammar
-    production, so it would otherwise surface as an opaque "Syntax error at
-    'USR'") -- rather than as a bare syntax error. ``USR`` is non-conditional in
-    the ROM, so a ``USR`` token is always the keyword, never part of a variable.
+    * native machine code -- an inline assembler block ``[ ... ]`` or the ``USR``
+      function (enter a 6502 routine at an address). OWL targets .NET and cannot
+      run 6502, so these are named explicitly rather than surfacing as an opaque
+      "Syntax error at 'USR'" (USR has no grammar production). ``USR`` is
+      non-conditional in the ROM, so a ``USR`` token is always the keyword.
+
+    * otherwise -- a genuine syntax error in an otherwise-text listing; name the
+      first one the parser reported.
     """
     lexer = syntax_parser.buildLexer(options)
     lexer.input(data)
+    has_assembler = has_usr = False
     for token in lexer:
         if token.type == "ASSEMBLER":
-            raise CompileError(
-                "inline 6502 assembly ([ ... ]) is not supported: OWL targets "
-                ".NET, which cannot run 6502 machine code."
-            )
-        if token.type == "USR":
-            raise CompileError(
-                "USR is not supported: it enters a 6502 machine-code routine at "
-                "an address, which OWL targets .NET and cannot run as machine "
-                "code."
-            )
+            has_assembler = True
+        elif token.type == "USR":
+            has_usr = True
+    if lexer.num_illegal_characters:
+        raise CompileError(
+            "the source contains %d character(s) that are not valid BASIC text "
+            "(binary or control bytes outside a string), so it cannot be parsed "
+            "as a text BASIC listing."
+            % lexer.num_illegal_characters
+        )
+    if has_assembler:
+        raise CompileError(
+            "inline 6502 assembly ([ ... ]) is not supported: OWL targets "
+            ".NET, which cannot run 6502 machine code."
+        )
+    if has_usr:
+        raise CompileError(
+            "USR is not supported: it enters a 6502 machine-code routine at "
+            "an address, which OWL targets .NET and cannot run as machine "
+            "code."
+        )
+    raise CompileError("could not parse the source: %s"
+                       % _grammar.syntax_errors[0])
 
 
 def _reject_unsupported_constructs(parse_tree):
@@ -217,15 +239,16 @@ def _run_pipeline(data, physical_to_logical_map, line_offsets, line_number_prefi
     bug. The default (non-tolerant) path is unchanged: any failure raises.
     """
     errors.reset()  # fresh per-compilation diagnostic dedup (no cross-pollution)
-    _reject_machine_code(data, options)
     parse_tree = syntax_parser.parse(data, options)
     if _grammar.syntax_errors:
         # The parser logs each syntax error and recovers a partial tree so it can
         # report more, but that tree must not be analysed as a real program
         # (garbage toots -- keyword soup, stray operators -- would mis-compile).
-        # Reject, naming the first error.
-        raise CompileError("could not parse the source: %s"
-                           % _grammar.syntax_errors[0])
+        # Diagnose *why* it did not parse, as specifically as we can. A program
+        # that parses is never diagnosed here, so a valid listing that merely
+        # contains a few stray bytes (Sphinx) or an unterminated string is not
+        # mistaken for binary.
+        _diagnose_parse_failure(data, options)
     _reject_unsupported_constructs(parse_tree)
     parse_tree.accept(SourceDebuggingVisitor(data, line_offsets, line_number_prefixes))
     parse_tree.accept(parent_visitor.ParentVisitor())

@@ -23,6 +23,12 @@ def buildLexer(options):
     # command (no value before '*') from multiplication. A fresh lexer is built
     # per parse, so this starts as None (statement start).
     lx.last_token_type = None
+    # Count characters the lexer cannot tokenise (t_error). Binary/non-text
+    # input -- a tokenised image, embedded graphics/machine-code bytes, garbage
+    # toots -- trips this; a clean text listing never does. Used to give an
+    # accurate "not a text BASIC program" diagnosis rather than a misleading
+    # syntax error at whatever token the skipped bytes happened to form.
+    lx.num_illegal_characters = 0
     _emit = lx.token
 
     def _tracking_token():

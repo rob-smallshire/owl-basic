@@ -996,7 +996,11 @@ def t_LITERAL_BINARY_INTEGER(t):
 
 # Error handling rule
 def t_error(t):
-    print("Illegal character '%s'" % t.value[0])
+    # Count characters that cannot be tokenised so the front end can tell
+    # binary/non-text input (a tokenised image, embedded data, garbage) from a
+    # genuine syntax error in a text listing. buildLexer initialises the counter.
+    count = getattr(t.lexer, "num_illegal_characters", 0)
+    t.lexer.num_illegal_characters = count + 1
     t.lexer.skip(1)
 
 
