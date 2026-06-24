@@ -1216,6 +1216,7 @@ def p_factor(p):
               | expr_function
               | indexer
               | unary_indirection
+              | dyadic_indirection
               | PLUS factor %prec UPLUS
               | MINUS factor %prec UMINUS'''
     if len(p) == 2:
@@ -1305,8 +1306,7 @@ def p_arith(p):
              | arith MOD arith
              | arith DIV arith
              | arith DOT arith
-             | arith CARET arith
-             | dyadic_indirection'''
+             | arith CARET arith'''
     _build_binary(p)
 
 
