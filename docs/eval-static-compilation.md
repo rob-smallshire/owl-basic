@@ -222,13 +222,113 @@ is already LOCAL-correct). A lifted helper is invoked synchronously at the
 
 ## Increments (TDD)
 
-1. **Constant folder** (task #6). General `fold(node)`; fold pure functions of
-   constants, int+float arithmetic. Folds `SIN(RAD(30))` whether or not `EVAL`
-   is involved. Re-base `_foldConstant` on it.
-2. **Constant-string EVAL** (task #7). Parse + splice + fold. `EVAL("1+2")`,
+1. **Constant folder** (task #6) -- DONE. General `fold_constant(node)` in
+   `owl_basic/constant_folding.py`; folds pure functions of constants and
+   int+float arithmetic, so `SIN(RAD(30))` reduces whether or not `EVAL` is
+   involved. The type-checker's `_foldConstant` is re-based on it.
+2. **Constant-string EVAL** (task #7) -- DONE. The lowering pass
+   `owl_basic/eval_lowering.py` parses + splices + folds: `EVAL("1+2")`,
    `EVAL("SIN(RAD(30))")`, nested `EVAL`.
-3. **Value-hole templates** (task #8). `EVAL(STR$(n%)+"+1")`, the digit idiom.
-4. **Function-by-name dispatch** (task #9). `EVAL("FN"+cmd$+"(arg)")`.
+3. **Value-hole digit idiom** (task #8) -- DONE. `EVAL(MID$(digit-literal,...))`
+   -> `VAL(...)`. The `STR$` concatenation template was investigated and dropped
+   as unsound (`STR$` formats per the runtime `@%` variable; see above).
+4. **Function-by-name dispatch** (task #9) -- NEXT. `EVAL("FN"+cmd$+"(arg)")`.
+   Designed in the next section.
 
 Each increment keeps every prior corpus program compiling-or-gracefully-rejected
 and ends green. Category 6 keeps the honest rejection throughout.
+
+## Increment #9 in detail: function-by-name dispatch
+
+### Target
+
+An `EVAL` whose argument is statically a *function call* -- its template begins
+with the literal `"FN"` -- with a runtime function *name* and already-staged
+arguments:
+
+```basic
+result = EVAL("FN" + cmd$ + "(arg)")         REM cmd$ runtime, arg an ambient var
+y = EVAL("FN" + op$ + "(" + CHR$34 + s$ + CHR$34 + ")")   REM string-value arg
+```
+
+Unlike #6-#8 this cannot splice an expression, because the choice of callee is a
+*runtime value selecting code*, and a dispatch is a statement. So #9
+**synthesises a function**: enumerate the program's `DEF FN`s, and replace the
+`EVAL` with a call to a generated helper whose body dispatches on the runtime
+name string to the matching `FN`, `OTHERWISE` faulting at run time exactly as the
+interpreter's `EVAL` would on an unknown name.
+
+```basic
+REM  EVAL("FN" + cmd$ + "(arg)")  lowers to  FN_eval_dispatch_N(cmd$, arg)
+DEF FN_eval_dispatch_N(name$, a)
+  CASE name$ OF
+    WHEN "area"  : = FNarea(a)
+    WHEN "perim" : = FNperim(a)
+    ... one arm per DEF FN of compatible signature ...
+    OTHERWISE    : <raise the EVAL "no such function" / "Mistake" fault>
+  ENDCASE
+```
+
+### Template reduction this needs
+
+#9 needs the literal-parts + holes reduction deferred from #8 (it was the `STR$`
+hole that was unsound, not the machinery). Reduce the `EVAL` argument to:
+
+- a **skeleton** string (literal text verbatim) with placeholder identifiers
+  where holes go, and
+- a **hole map** placeholder -> the runtime sub-expression.
+
+Sound hole kinds:
+
+- `CHR$34 + e$ + CHR$34` (or `CHR$(34)`) -- a **string-value hole**: EVAL parses
+  the quoted literal back to `e$`, so it reduces to `e$`. Sound *only when `e$`
+  contains no `"`* (an embedded quote unbalances the literal -- the static form
+  must either prove no quote or leave it as residue).
+- a bare numeric value spliced as a number -- but note the only sound numeric
+  string-builder is *not* `STR$` (see the `@%` discussion); a numeric hole has to
+  come from something exact. In practice the common case is the function *name*
+  and string args, so numeric-arg holes can wait.
+
+Then: parse `"FN" + skeleton + ...` as a function call to recover (name-hole,
+arg-holes). The `"FN"` literal prefix is the static evidence that licenses the
+dispatch; the name hole is what `CASE` switches on; the arg holes become the
+helper's value parameters.
+
+### Substitution is AST-level (precedence-safe)
+
+Placeholders parse as ordinary variable references; substituting the hole's AST
+subtree for the placeholder node preserves precedence automatically (the AST is
+already structured -- no string-flattening reparenthesisation hazard). Choose
+placeholder names that lex as plain identifiers and do not start with a keyword
+(e.g. avoid an `EVAL...` prefix); collisions are harmless since the node is
+replaced immediately.
+
+### Soundness constraints
+
+- **Arguments must be staged.** `EVAL("FN"+cmd$+"(arg)")` is clean. `EVAL("FN" +
+  cmd$ + "(" + argexpr$ + ")")` with a runtime *argument structure* is residue --
+  selecting the function is not enough; evaluating `argexpr$` is general `EVAL`.
+- **Signature match.** The `CASE` assumes the candidate `DEF FN`s share the
+  arity/return type at the use site. Check it; reject (or per-arm coerce) where
+  candidates diverge rather than emit a call that will not type.
+- **LOCAL / dynamic scope** is automatic (see above): the helper reads ambient
+  globals; `RETURN`/reference args are *not* in scope (see the frontier below).
+
+### Explicitly out of scope: variable-by-name and reflective writes
+
+Distinct from callee-by-name. Consider (a real idiom):
+
+```basic
+DEF PROCassign(a$, b$)
+  unused = EVAL("FNassign2(" + a$ + "," + CHR$34 + b$ + CHR$34 + ")")
+ENDPROC
+DEF FNassign2(RETURN a$, b$)   : a$ = b$ : = 0
+```
+
+Here the callee `FNassign2` is *constant*; the runtime thing is an **argument
+that is an l-value selected by the string `a$`**, passed by `RETURN` (reference).
+This is the reflective-*write* counterpart of read-by-name. It is compilable in
+principle -- dispatch over the program's statically-known string variables, each
+arm passing one by reference -- but it is a bigger hammer (a `CASE` over
+*variables*, with reference semantics), so it is a separate later frontier, not
+part of #9. #9 handles the function *name* being runtime, with value arguments.
