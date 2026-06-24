@@ -777,13 +777,39 @@ def t_TAN(t):
     r'TAN'
     return t
 
+# Token types that complete a value/operand. A TOP whose TO would land right
+# after one of these is the FOR byte-saver's separator glued onto the loop limit
+# -- TO + P, not the pseudo-variable -- because two values cannot abut. The BBC II
+# ROM has no TOP token: "TOP" always crunches to the TO token plus a literal 'P',
+# and the top-of-program pseudo-variable is reconstructed at runtime (fn_to) only
+# when that TO lands in *operand* position. We approximate operand position with
+# the previous token: anything NOT in this set (an operator, '(', ',', a statement
+# keyword, TO/STEP, or line start -> last_token_type None) is operand position, so
+# TOP stands as the pseudo-variable. Keying on the previous token, not the
+# preceding character, is what tells `P+2 TOP` (a value, so TO P) from `PRINT TOP`
+# (operand, so the pseudo-variable) -- both have a space before TOP. See
+# docs/bbc-tokeniser-to-top.md.
+_TOP_VALUE_ENDERS = frozenset([
+    'LITERAL_INTEGER', 'LITERAL_FLOAT', 'LITERAL_STRING',
+    'ID', 'RPAREN', 'RBRAC',
+    # nullary value keywords / pseudo-variables that complete an operand
+    'COUNT', 'ERL', 'ERR', 'FALSE', 'GET', 'POS', 'PI', 'RND', 'TOP', 'TRUE',
+    'VPOS', 'END', 'HIMEM', 'LOMEM', 'PTR', 'TIME', 'TIME_STR', 'PAGE',
+])
+
 def t_TOP(t):
-    # TOP (top-of-program pseudo-variable) only as a COMPLETE word: it is not a
-    # ROM keyword at all -- the BBC II tokeniser has only TO, and matches by
-    # first-prefix at a name-run start, so 0TOPI is 0 TO PI, never 0 TOP I. The
-    # negative lookahead reproduces that observable result (TOP-100 stays TOP, but
-    # TOPI falls through to TO PI) without OWL needing the full first-prefix model.
+    # TOP only as a COMPLETE word (negative lookahead): TOPI falls through to
+    # TO + PI, matching the ROM's name-run rule. When the previous token ends a
+    # value, this TOP is the FOR byte-saver -- glued (P+2TOP+98) or spaced
+    # (P+2 TOP+98), after a number, variable, ), ], or value keyword: emit TO and
+    # leave the P to re-lex. Verified on the ROM: PRINT TOP prints an address, but
+    # FORI=P+2TOP+98 runs as FOR I=P+2 TO P+98. (STOP is unaffected: its own rule
+    # consumes the whole word before this one is tried.)
     r'TOP(?![A-Za-z0-9_])'
+    if t.lexer.last_token_type in _TOP_VALUE_ENDERS:
+        t.type = 'TO'
+        t.value = 'TO'
+        t.lexer.lexpos = t.lexpos + 2  # consumed only 'TO'; 'P...' re-lexes next
     return t
 
 def t_USR(t):
