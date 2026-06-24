@@ -73,7 +73,10 @@ namespace OwlRuntime.Tests
         [InlineData("1.2E10", 1.2E10)]         // ...like the rest of BBC BASIC
         [InlineData("-2.5E-2", -0.025)]        // signed mantissa and signed exponent
         [InlineData("1E3+1", 1000.0)]          // stops at the operator, as VAL does
-        [InlineData("1E", 1.0)]                // a bare E is not an exponent: ends the number
+        [InlineData("123ABC", 123.0)]          // stops at the first non-numeric
+        [InlineData("123E", 123.0)]            // a bare E is not an exponent: backtrack
+        [InlineData("123E2", 12300.0)]         // ...but E2 is consumed
+        [InlineData("123E2ABC", 12300.0)]      // exponent then stops at the letters
         [InlineData("1EX", 1.0)]               // malformed exponent: E is not consumed
         public void Val_scans_the_leading_numeric_literal_including_exponents(string s, double expected)
         {

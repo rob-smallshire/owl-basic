@@ -256,9 +256,11 @@ def test_emit_il_lowers_val(dotnet_backend):
 
 @requires_dotnet_toolchain
 def test_val_compiles_and_runs(compile_and_run):
-    # VAL("42")=42, VAL("3.5x")=3.5 (leading number), VAL("abc")=0
+    # VAL reads the leading numeric literal: 42; 3.5 (stops at x); 0 (no number).
+    # It scans an E exponent too, and must backtrack when the E has no exponent
+    # digits -- VAL("123E") is 123, not an error and not 123*10^something.
     stdout = compile_and_run(analyse_fixture("val_function.bbctxt"))
-    assert stdout.split() == ["42", "3.5", "0"]
+    assert stdout.split() == ["42", "3.5", "0", "123", "123", "12300", "12300"]
 
 
 def test_emit_il_lowers_string_functions(dotnet_backend):
