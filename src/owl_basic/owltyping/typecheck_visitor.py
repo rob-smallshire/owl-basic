@@ -626,6 +626,12 @@ class TypecheckVisitor(Visitor):
             logger.debug("actual_type = %s" % actual_type)
             if formal_type is not None: # None types do not need to be checked
                 if actual_type is not None:
+                    if actual_type == PendingOwlType():
+                        # The argument is a user-function call whose return type is
+                        # not yet inferred (first typecheck pass). Defer: validating
+                        # it now would wrongly fail and leave the parent untyped.
+                        # The authoritative second pass checks it once resolved.
+                        return True
                     if not actual_type.isConvertibleTo(formal_type):
                         message = "%s of %s is incompatible with supplied parameter of type %s at line %s" % (info.description, node.description, actual_type.__doc__, node.lineNum)
                         self.typeMismatch(node, message)

@@ -187,3 +187,14 @@ def test_call_to_undefined_function_names_it_meaningfully():
     _, errors = _analyse_capturing_errors("A=FNnope(1)\nEND\n")
     assert any("undefined function 'nope'" in m for m in errors), errors
     assert not any("entry point" in m for m in errors), errors
+
+
+def test_user_function_inside_a_numeric_builtin_argument_compiles():
+    # ABS (and other built-ins that type-check their argument) applied to a
+    # DEF FN call: on the first typecheck pass the FN return type is Pending, so
+    # the built-in's signature check must DEFER on a Pending argument rather than
+    # bail and leave the node untyped -- which crashed promoteNumericOperands of
+    # the enclosing operator with "'NoneType' object has no attribute 'isA'".
+    # FNf returns COS(x), a Float (corpus program 0b0713893381).
+    types = _clean("A=2*ABS(FNf(1))\nPRINT A\nEND\nDEFFNf(x)=COS(x)\n")
+    assert types["FNf"] == FloatOwlType()
