@@ -158,6 +158,11 @@ class FlowgraphForwardVisitor(Visitor):
         # Do not connect to following statement
         logger.debug("visitReturnFromProcedure")
     
+    def visitRaise(self, raise_stmt):
+        # A raised exception transfers control out of the routine; like a return,
+        # it does not fall through to the following statement.
+        logger.debug("visitRaise")
+
     def visitGenerateError(self, generator_error):
         # Do not connect to following statement
         logger.debug("visitGenerateError")

@@ -1087,6 +1087,7 @@ class Cast(AstNode):
 class Raise(AstStatement):
     "Raise exception"
     type = StringOption()
+    argument = Node()   # Optional value passed to the exception constructor
     
 class LongJump(AstStatement):
     "Long jump"

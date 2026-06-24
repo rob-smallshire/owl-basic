@@ -942,8 +942,17 @@ class _MethodEmitter:
         self.emit("throw")
 
     def _stmt_Raise(self, node):
-        # Throw a named OwlRuntime exception carrying the source line (e.g.
-        # ExecutedDefinitionException when control reaches a DEF line).
+        # Throw a named OwlRuntime exception. Most carry the source line (e.g.
+        # ExecutedDefinitionException when control reaches a DEF line); a Raise
+        # carrying an argument expression instead constructs the exception from
+        # that value (NoSuchFnProcException(string), the unknown-function fault a
+        # statically-compiled EVAL dispatch raises when no candidate matches).
+        if node.argument is not None:
+            self.lower_expression(node.argument)
+            self.emit("newobj instance void [OwlRuntime]OwlRuntime.%s::.ctor(string)"
+                      % node.type)
+            self.emit("throw")
+            return
         logical = 0
         if self._line_mapper is not None:
             logical = self._line_mapper.physicalToLogical(node.lineNum) or 0

@@ -232,8 +232,22 @@ is already LOCAL-correct). A lifted helper is invoked synchronously at the
 3. **Value-hole digit idiom** (task #8) -- DONE. `EVAL(MID$(digit-literal,...))`
    -> `VAL(...)`. The `STR$` concatenation template was investigated and dropped
    as unsound (`STR$` formats per the runtime `@%` variable; see above).
-4. **Function-by-name dispatch** (task #9) -- NEXT. `EVAL("FN"+cmd$+"(arg)")`.
-   Designed in the next section.
+4. **Function-by-name dispatch** (task #9) -- DONE. `EVAL("FN"+cmd$+"(arg)")` and
+   the `CHR$34 + s$ + CHR$34` string-value hole. `eval_lowering._lower_dispatch`
+   reduces the operand to a skeleton + holes, recovers the call, and appends a
+   synthesised helper `FN_eval_dispatch_N` invoked in place of the `EVAL`. Notes:
+   - The helper dispatches with an **IF-chain, not a `CASE`**: the .NET backend
+     lowers `IF` but not `CASE`. Each arm `IF name$="x" THEN =FNx(...)` returns
+     when the runtime name matches; falling past all arms raises
+     `NoSuchFnProcException` -- the interpreter's "No such FN/PROC" fault.
+   - **Value holes become parameters** (string-typed -- `CHR$34` wraps strings);
+     **named free-variable arguments are left verbatim** and read the ambient
+     backing field (LOCAL-correct -- the helper is called synchronously).
+   - `fold_constant` learned `CHR$` so `CHR$34` folds to `"` for hole detection.
+   - Signature match is by arity + per-argument sigil vs each DEF FN's formals; a
+     RETURN (by-reference) formal disqualifies a candidate (reflective write, out
+     of scope). No compatible DEF FN is a clear rejection; a runtime *argument
+     structure* or a compound argument expression stays the honest residual.
 
 Each increment keeps every prior corpus program compiling-or-gracefully-rejected
 and ends green. Category 6 keeps the honest rejection throughout.
@@ -258,16 +272,28 @@ Unlike #6-#8 this cannot splice an expression, because the choice of callee is a
 name string to the matching `FN`, `OTHERWISE` faulting at run time exactly as the
 interpreter's `EVAL` would on an unknown name.
 
+The dispatch is shown below as a `CASE` for clarity, but it is realised as an
+`IF`-chain: the .NET backend lowers `IF`, not `CASE`. And `arg` is *not* passed
+-- it is a named free-variable referent (literal text in the skeleton), so by the
+dynamic-scoping rule above it reads the ambient backing field; only value holes
+become parameters. So the realised lowering of the first example is
+`FN_eval_dispatch_N(cmd$)` with arms `= FNarea(arg)` reading ambient `arg`:
+
 ```basic
-REM  EVAL("FN" + cmd$ + "(arg)")  lowers to  FN_eval_dispatch_N(cmd$, arg)
-DEF FN_eval_dispatch_N(name$, a)
+REM  EVAL("FN" + cmd$ + "(arg)")  lowers to  FN_eval_dispatch_N(cmd$)
+DEF FN_eval_dispatch_N(name$)
+  REM realised as: IF name$ = "area" THEN = FNarea(arg)  : etc.
   CASE name$ OF
-    WHEN "area"  : = FNarea(a)
-    WHEN "perim" : = FNperim(a)
+    WHEN "area"  : = FNarea(arg)     REM arg read from the ambient field
+    WHEN "perim" : = FNperim(arg)
     ... one arm per DEF FN of compatible signature ...
-    OTHERWISE    : <raise the EVAL "no such function" / "Mistake" fault>
+    OTHERWISE    : <raise NoSuchFnProcException -- the "No such FN/PROC" fault>
   ENDCASE
 ```
+
+A *value-hole* argument (the `CHR$34 + s$ + CHR$34` form) *does* become a
+parameter: `EVAL("FN" + op$ + "(" + CHR$34 + s$ + CHR$34 + ")")` lowers to
+`FN_eval_dispatch_N(op$, s$)` with arms `= FNsize(s$)`.
 
 ### Template reduction this needs
 

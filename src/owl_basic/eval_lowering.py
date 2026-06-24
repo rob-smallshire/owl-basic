@@ -13,26 +13,41 @@ those, the honest "needs a run-time evaluator" rejection.
 
 See docs/eval-static-compilation.md.
 """
+import itertools
+import re
+
 from owl_basic.constant_folding import fold_constant
 from owl_basic.exceptions import CompileError
 from owl_basic.parent_visitor import ParentVisitor
 from owl_basic.syntax import parser as syntax_parser
 from owl_basic.syntax import grammar as _grammar
-from owl_basic.syntax.ast import ValFunc
+from owl_basic.syntax.ast import (ActualArgList, Raise, UserFunc, ValFunc,
+                                  Variable)
 
 
 def lower_eval(parse_tree, options):
-    """Splice every constant-string EVAL in *parse_tree* with its parsed expression.
+    """Lower every statically determinable EVAL in *parse_tree*.
+
+    Three mechanisms, by what is runtime (see docs/eval-static-compilation.md):
+
+    * a *constant-string* EVAL is re-parsed and spliced in place (its skeleton is
+      code, there are no inputs);
+    * the *digit idiom* (EVAL of a slice of a digit-only literal) becomes VAL;
+    * a *function-by-name dispatch* -- EVAL of a call whose skeleton begins with
+      the literal ``"FN"`` with a runtime name and staged value arguments -- is
+      replaced by a call to a synthesised helper that dispatches on the runtime
+      name string over the program's DEF FNs of compatible signature.
 
     Iterates to a fixpoint so a nested EVAL exposed by lowering an outer one is
     lowered too. Parent references on the spliced subtrees are re-established as we
     go, so a freshly exposed inner EVAL can itself be spliced.
     """
-    while _lower_once(parse_tree, options):
+    helper_serial = itertools.count()
+    while _lower_once(parse_tree, options, helper_serial):
         pass
 
 
-def _lower_once(parse_tree, options):
+def _lower_once(parse_tree, options, helper_serial):
     progressed = False
     for eval_node in _collect_evals(parse_tree):
         source = _constant_string(eval_node.factor)
@@ -47,6 +62,12 @@ def _lower_once(parse_tree, options):
             # VAL of the same argument -- no run-time evaluator needed.
             _splice(eval_node, ValFunc(factor=eval_node.factor))
             progressed = True
+        elif _lower_dispatch(eval_node, parse_tree, options, helper_serial):
+            # Function-by-name dispatch: replaced by a call to a synthesised
+            # helper appended to the program (see _lower_dispatch).
+            progressed = True
+        # Anything else stays an EvalFunc for _reject_unsupported_constructs to
+        # reject honestly -- only Category 6 (open structure/referents) reaches it.
     return progressed
 
 
@@ -129,3 +150,272 @@ def _splice(eval_node, expression):
 def _set_line_num(node, line_num):
     node.lineNum = line_num
     node.forEachChild(lambda child: _set_line_num(child, line_num) if child else None)
+
+
+# --- function-by-name dispatch -------------------------------------------
+# EVAL("FN" + cmd$ + "(arg)") selects a function by a runtime name from a set the
+# compiler can fully enumerate -- every DEF FN in the program. That is not "pass
+# a value" but "select code by value", so it lowers not to a spliced expression
+# but to a synthesised helper that CASEs (here, an IF-chain the backend supports)
+# on the runtime name over the DEF FNs of compatible signature. See the "Increment
+# #9 in detail" section of docs/eval-static-compilation.md.
+
+_STRING_CONCAT = ("Plus", "Concatenate")
+
+
+def _lower_dispatch(eval_node, parse_tree, options, helper_serial):
+    """Lower a function-by-name-dispatch EVAL, or return False to leave it.
+
+    Returns True (and replaces *eval_node* with a call to a freshly appended
+    helper) when the EVAL argument is statically a function call whose name is a
+    runtime string and whose arguments are staged; otherwise returns False so the
+    EVAL stays for the honest residual rejection. Raises CompileError only when
+    the construct *is* a by-name dispatch but no DEF FN can serve it.
+    """
+    segments = _string_segments(eval_node.factor)
+    if segments is None or not any(kind == "hole" for kind, _ in segments):
+        return False
+    skeleton, holes = _skeleton(segments)
+    call = _parse_skeleton(skeleton, options)
+    if call is None or type(call).__name__ != "UserFunc":
+        return False    # the skeleton is not statically a function call: residue
+
+    # The "FN" literal prefix names the dispatch: the callee must be exactly
+    # "FN" + one bare hole (the runtime name). A constant or partially-runtime
+    # name is not this increment's case.
+    name_hole = next((h for h in holes
+                      if h["kind"] == "bare" and call.name == "FN" + h["placeholder"]),
+                     None)
+    if name_hole is None:
+        return False
+    # A bare hole anywhere else is a runtime *argument structure* (general EVAL
+    # again): selecting the function is not enough, you would have to evaluate it.
+    if any(h["kind"] == "bare" and h is not name_hole for h in holes):
+        return False
+    value_holes = [h for h in holes if h["kind"] == "value"]
+
+    # The argument template: the skeleton beyond the callee name, with each value
+    # hole rewritten to its (string) helper parameter. Named free variables are
+    # left verbatim and read the ambient backing field -- LOCAL-correct, since the
+    # helper is invoked synchronously at the EVAL site (doc: dynamic scoping).
+    rest = skeleton[len(call.name):]
+    param_names = []
+    for index, hole in enumerate(value_holes):
+        hole["param"] = "owlarg%d$" % index
+        param_names.append(hole["param"])
+        rest = re.sub(r"\b%s\b" % re.escape(hole["placeholder"]), hole["param"], rest)
+
+    arg_sigils = _argument_sigils(call.actualParameters, value_holes)
+    if arg_sigils is None:
+        return False    # a compound argument expression: cannot match signatures
+
+    candidates = _dispatch_candidates(parse_tree, arg_sigils)
+    if not candidates:
+        raise CompileError(
+            "EVAL at line %d dispatches on a runtime function name, but the program "
+            "has no DEF FN with a matching signature (%s) to dispatch to." % (
+                eval_node.lineNum,
+                "%d argument(s): %s" % (len(arg_sigils),
+                                        ", ".join(s or "<real>" for s in arg_sigils))
+                if arg_sigils else "no arguments"))
+
+    helper_name = "FN_eval_dispatch_%d" % next(helper_serial)
+    for statement in _build_helper(helper_name, param_names, rest, candidates,
+                                   eval_node.lineNum, options):
+        parse_tree.statements.append(statement)
+
+    # The EVAL becomes a synchronous call to the helper: the runtime name first,
+    # then each staged value argument (captured by value at the EVAL site).
+    arguments = ActualArgList()
+    arguments.append(name_hole["node"])
+    for hole in value_holes:
+        arguments.append(hole["node"])
+    _splice(eval_node, UserFunc(name=helper_name, actualParameters=arguments))
+    return True
+
+
+def _flatten_concat(node):
+    """The left-to-right leaf operands of a string-concatenation tree."""
+    if type(node).__name__ in _STRING_CONCAT:
+        return _flatten_concat(node.lhs) + _flatten_concat(node.rhs)
+    return [node]
+
+
+def _string_segments(node):
+    """Reduce a concatenation tree to literal-text and runtime-hole segments.
+
+    Each segment is ``("lit", text)`` for a part that folds to a constant string
+    or ``("hole", subtree)`` for a runtime part. Returns None if any part folds to
+    a non-string constant -- then it is not a string template at all.
+    """
+    segments = []
+    for part in _flatten_concat(node):
+        value = fold_constant(part)
+        if value is None:
+            segments.append(("hole", part))
+        elif isinstance(value, str):
+            if segments and segments[-1][0] == "lit":
+                segments[-1] = ("lit", segments[-1][1] + value)
+            else:
+                segments.append(("lit", value))
+        else:
+            return None     # a numeric constant spliced as text: not our template
+    return segments
+
+
+def _skeleton(segments):
+    """Build the skeleton string and classify each hole.
+
+    A hole flanked by ``"`` characters in the skeleton is a string-VALUE hole
+    (the ``CHR$34 + e$ + CHR$34`` idiom): EVAL parses the quoted literal straight
+    back to ``e$``, so it reduces to ``e$`` passed by value. The flanking quotes
+    are dropped so the placeholder lexes as the bare argument identifier it
+    becomes. (This is exact for any quote-free ``e$`` -- the only sound case the
+    doc admits; an embedded ``"`` would unbalance the literal and make the real
+    EVAL fault, where passing by value instead delivers the whole string. We
+    accept that divergence on the pathological input rather than reject the idiom
+    its quote-free uses depend on.) Every other hole is BARE -- the callee name,
+    or (in argument position) a runtime argument structure that the caller rejects
+    as residue.
+
+    Placeholders lex as plain identifiers and do not begin with a keyword, so
+    substituting them is precedence-safe; collisions are harmless as the parse is
+    used only to recover structure.
+    """
+    holes = []
+    pieces = []
+    for index, (kind, payload) in enumerate(segments):
+        if kind == "lit":
+            pieces.append(payload)
+            continue
+        before = segments[index - 1][1] if index > 0 and segments[index - 1][0] == "lit" else ""
+        after = segments[index + 1][1] if index + 1 < len(segments) and segments[index + 1][0] == "lit" else ""
+        quoted = before.endswith('"') and after.startswith('"')
+        placeholder = "owlhole%d" % len(holes)
+        holes.append({"placeholder": placeholder, "node": payload,
+                      "kind": "value" if quoted else "bare"})
+        pieces.append(placeholder)
+    skeleton = "".join(pieces)
+    for hole in holes:
+        if hole["kind"] == "value":
+            skeleton = skeleton.replace('"%s"' % hole["placeholder"],
+                                        hole["placeholder"], 1)
+    return skeleton, holes
+
+
+def _parse_skeleton(source, options):
+    """Parse the skeleton as an expression, or None if it does not parse."""
+    del _grammar.syntax_errors[:]
+    tree = syntax_parser.parse("X=" + source + "\n", options)
+    if _grammar.syntax_errors or tree is None:
+        return None
+    found = []
+
+    def visit(node):
+        if node is None:
+            return
+        if type(node).__name__ == "ScalarAssignment":
+            found.append(node.rValue)
+        node.forEachChild(visit)
+
+    visit(tree)
+    return found[0] if found else None
+
+
+def _sigil(identifier):
+    """The BBC type suffix of *identifier* ("" for a real)."""
+    if identifier.endswith("%%"):
+        return "%%"
+    if identifier and identifier[-1] in "$%&~":
+        return identifier[-1]
+    return ""
+
+
+def _argument_sigils(actual_arg_list, value_holes):
+    """The per-argument type sigils of the recovered call, or None if undecidable.
+
+    A value hole is a string (it came through ``CHR$34``); a named free-variable
+    argument takes its identifier's sigil; a staged literal takes its own type. A
+    compound argument expression has no single static sigil, so signatures cannot
+    be matched soundly -- return None.
+    """
+    value_placeholders = {hole["placeholder"] for hole in value_holes}
+    sigils = []
+    arguments = actual_arg_list.arguments if actual_arg_list is not None else []
+    for arg in arguments:
+        kind = type(arg).__name__
+        if kind == "Variable":
+            sigils.append("$" if arg.identifier in value_placeholders
+                          else _sigil(arg.identifier))
+        elif kind == "LiteralString":
+            sigils.append("$")
+        elif kind in ("LiteralInteger", "LiteralFloat"):
+            sigils.append("")       # a numeric literal binds to a real parameter
+        else:
+            return None             # a compound argument expression: undecidable
+    return sigils
+
+
+def _dispatch_candidates(parse_tree, arg_sigils):
+    """Every DEF FN whose formal-parameter signature matches *arg_sigils*."""
+    candidates = []
+
+    def visit(node):
+        if node is None:
+            return
+        if type(node).__name__ == "DefineFunction" and _formal_sigils(node) == arg_sigils:
+            candidates.append(node)
+        node.forEachChild(visit)
+
+    visit(parse_tree)
+    return candidates
+
+
+def _formal_sigils(define_function):
+    """The formal-parameter sigils of a DEF FN, or None if it cannot be a target.
+
+    A RETURN (by-reference) parameter is reflective-write territory, out of scope
+    for #9, so such a function is never a dispatch candidate.
+    """
+    formal_list = define_function.formalParameters
+    sigils = []
+    arguments = formal_list.arguments if formal_list is not None else []
+    for formal in arguments:
+        if type(formal).__name__ != "FormalArgument":
+            return None
+        variable = formal.argument
+        if type(variable).__name__ != "Variable":
+            return None
+        sigils.append(_sigil(variable.identifier))
+    return sigils
+
+
+def _build_helper(helper_name, param_names, rest, candidates, line_num, options):
+    """Synthesise the dispatch helper's statements (DEF FN, IF arms, fault).
+
+    The body is an IF-chain (the backend lowers IF, not CASE): one arm per
+    candidate returns ``FN<name>`` applied to the same argument template, guarded
+    by the runtime name. Falling past every arm raises "No such FN/PROC" -- the
+    same fault the interpreter's EVAL raises on an unknown name.
+    """
+    params = ",".join(["owlname$"] + param_names)
+    lines = ["DEF %s(%s)" % (helper_name, params)]
+    for candidate in candidates:
+        runtime_name = candidate.name[2:]      # the name string minus the "FN"
+        lines.append('IF owlname$="%s" THEN =%s%s'
+                     % (runtime_name, candidate.name, rest))
+    helper_source = "\n".join(lines) + "\n"
+
+    del _grammar.syntax_errors[:]
+    helper_tree = syntax_parser.parse(helper_source, options)
+    if _grammar.syntax_errors or helper_tree is None:
+        raise CompileError(
+            "EVAL at line %d: could not synthesise a dispatch helper from %r."
+            % (line_num, helper_source))
+
+    statements = list(helper_tree.statements.statements)
+    statements.append(Raise(type="NoSuchFnProcException",
+                            argument=Variable(identifier="owlname$")))
+    for statement in statements:
+        _set_line_num(statement, line_num)
+    return statements

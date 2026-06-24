@@ -107,3 +107,108 @@ def test_eval_of_runtime_string_still_rejected():
     with pytest.raises(CompileError) as excinfo:
         analyse('A$="1+2"\nPRINT EVAL(A$)\n', name="t")
     assert "EVAL" in str(excinfo.value)
+
+
+# --- function-by-name dispatch -------------------------------------------
+# EVAL("FN" + cmd$ + "(arg)") selects a function by a runtime name from the
+# program's DEF FNs. It lowers to a synthesised helper that dispatches on the
+# name string; no run-time evaluator is needed.
+
+_AREA_PERIM = ('END\n'
+               'DEF FNarea(r)=r*r\n'
+               'DEF FNperim(r)=4*r\n')
+
+
+def test_dispatch_with_named_argument_compiles():
+    assert _compiles('arg=3\ncmd$="area"\nPRINT EVAL("FN"+cmd$+"(arg)")\n'
+                     + _AREA_PERIM)
+
+
+def test_dispatch_leaves_no_eval_node(dotnet_backend):
+    # The EVAL is gone: the emitted IL calls the synthesised dispatch helper, not
+    # any run-time evaluator.
+    il = dotnet_backend.emit_il(analyse(
+        'arg=3\ncmd$="area"\nPRINT EVAL("FN"+cmd$+"(arg)")\n' + _AREA_PERIM,
+        name="t"))
+    assert "FN_eval_dispatch_0" in il
+
+
+@requires_dotnet_toolchain
+def test_dispatch_with_named_argument_runs(compile_and_run):
+    # cmd$ selects FNarea then FNperim at run time; arg is read from the ambient
+    # (here global) variable.
+    out = compile_and_run(analyse(
+        'arg=3\n'
+        'cmd$="area"\nPRINT EVAL("FN"+cmd$+"(arg)")\n'
+        'cmd$="perim"\nPRINT EVAL("FN"+cmd$+"(arg)")\n'
+        + _AREA_PERIM, name="t"))
+    assert out.split() == ["9", "12"]
+
+
+@requires_dotnet_toolchain
+def test_dispatch_reads_local_argument_dynamically(compile_and_run):
+    # The helper reads the named argument from the ambient backing field. Inside a
+    # PROC that declared it LOCAL, that field holds the local value (dynamic
+    # scoping) and the synchronously-called helper picks it up -- LOCAL-correct.
+    out = compile_and_run(analyse(
+        'cmd$="area"\nPROCgo\nEND\n'
+        'DEF PROCgo\nLOCAL arg\narg=5\n'
+        'PRINT EVAL("FN"+cmd$+"(arg)")\nENDPROC\n'
+        'DEF FNarea(r)=r*r\nDEF FNperim(r)=4*r\n', name="t"))
+    assert out.split() == ["25"]
+
+
+@requires_dotnet_toolchain
+def test_dispatch_with_chr34_string_value_hole_runs(compile_and_run):
+    # The CHR$34 + s$ + CHR$34 idiom is a string-value hole: EVAL parses the
+    # quoted literal back to s$, so it is passed by value to the named function.
+    out = compile_and_run(analyse(
+        'op$="size"\ns$="hello"\n'
+        'PRINT EVAL("FN"+op$+"("+CHR$34+s$+CHR$34+")")\n'
+        'END\n'
+        'DEF FNsize(t$)=LEN(t$)\n', name="t"))
+    assert out.split() == ["5"]
+
+
+@requires_dotnet_toolchain
+def test_dispatch_with_staged_literal_argument_runs(compile_and_run):
+    # A literal argument is staged: EVAL("FN"+cmd$+"(3)") dispatches with 3 bound
+    # to the real parameter.
+    out = compile_and_run(analyse(
+        'cmd$="area"\nPRINT EVAL("FN"+cmd$+"(3)")\n' + _AREA_PERIM, name="t"))
+    assert out.split() == ["9"]
+
+
+@requires_dotnet_toolchain
+def test_dispatch_unknown_name_faults_at_runtime(compile_expecting_error):
+    # A runtime name matching no DEF FN faults exactly as the interpreter's EVAL
+    # would: "No such FN/PROC".
+    out = compile_expecting_error(analyse(
+        'arg=3\ncmd$="nope"\nPRINT EVAL("FN"+cmd$+"(arg)")\n' + _AREA_PERIM,
+        name="t"))
+    assert "No such FN/PROC" in out
+
+
+def test_dispatch_runtime_argument_structure_is_rejected():
+    # The callee name is runtime (fine) but an argument is *built* from a runtime
+    # string -- that is general EVAL again, so it stays rejected.
+    with pytest.raises(CompileError) as excinfo:
+        analyse('cmd$="area"\narg$="3"\n'
+                'B=EVAL("FN"+cmd$+"("+arg$+")")\n' + _AREA_PERIM, name="t")
+    assert "EVAL" in str(excinfo.value)
+
+
+def test_variable_by_name_reflective_write_stays_rejected():
+    # FNassign2's callee is constant; the runtime thing is an l-value selected by
+    # a string and passed by RETURN. That reflective write is out of scope for #9
+    # and stays rejected.
+    with pytest.raises(CompileError) as excinfo:
+        analyse(
+            'PROCassign("x$", "hi")\nEND\n'
+            'DEF PROCassign(a$, b$)\n'
+            'unused=EVAL("FNassign2(" + a$ + "," + CHR$34 + b$ + CHR$34 + ")")\n'
+            'ENDPROC\n'
+            'DEF FNassign2(RETURN a$, b$)\n'
+            'a$=b$\n'
+            '=0\n', name="t")
+    assert "EVAL" in str(excinfo.value)
