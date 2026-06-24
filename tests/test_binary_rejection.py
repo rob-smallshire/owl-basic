@@ -44,6 +44,14 @@ def test_clean_usr_still_reports_usr():
     assert "USR is not supported" in _reject("A=USR(&FFF4)\nEND\n")
 
 
+def test_call_machine_code_is_rejected():
+    # CALL <addr> enters a machine-code routine, like USR; OWL targets .NET and
+    # cannot run 6502, so reject it up front (not as a late "cannot lower").
+    msg = _reject("CALL &FFEE\nEND\n")
+    assert "CALL is not supported" in msg
+    assert "machine code" in msg
+
+
 def test_inline_assembly_still_reported():
     assert "assembl" in _reject("P%=0\n[OPT0:RTS:]\n").lower()
 
