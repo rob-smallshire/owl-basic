@@ -1267,75 +1267,71 @@ def p_nullable_expr_list(p):
         p[1].append(p[3])
         p[0] = p[1]
     
-# TODO : Should any of these expressions take factors rather than expr as operands
-def p_expr(p):
-    '''expr : factor
-            | expr PLUS expr
-            | expr MINUS expr
-            | expr TIMES expr
-            | expr DIVIDE expr
-            | expr MOD expr
-            | expr DIV expr
-            | expr DOT expr
-            | expr CARET expr
-            | expr EQ expr
-            | expr NE expr
-            | expr LTE expr
-            | expr GTE expr
-            | expr LT expr
-            | expr GT expr
-            | expr SHIFT_LEFT expr
-            | expr SHIFT_RIGHT expr
-            | expr SHIFT_RIGHT_UNSIGNED expr
-            | expr AND expr
-            | expr OR expr
-            | expr EOR expr
-            | dyadic_indirection'''
+# The expression hierarchy is layered -- expr (logical) over comparison
+# (relational) over arith (arithmetic) -- rather than one flat production with
+# precedence, because BBC BASIC relational operators DO NOT CHAIN. `a>b=c` is the
+# relational `a>b` followed by a *separate* `=c`, not `((a>b)=c)` (verified on the
+# BBC ROM: PRINT 3>2=0 prints just -1, then errors on the dangling =0). Making a
+# `comparison` take `arith` operands (never another comparison) enforces this: a
+# trailing `=expr` after a relational cannot extend it, so in a function it is the
+# `=value` return -- which is exactly how `IF cond =0` works as a conditional
+# return. (A flat nonassoc `expr` instead rejected `IF a>b =0`.)
+_BINARY_NODE = {
+    '+': Plus, '-': Minus, '*': Multiply, '/': Divide,
+    'DIV': IntegerDivide, 'MOD': IntegerModulus, '.': MatrixMultiply, '^': Power,
+    '=': Equal, '<>': NotEqual, '<': LessThan, '<=': LessThanEqual,
+    '>': GreaterThan, '>=': GreaterThanEqual,
+    '<<': ShiftLeft, '>>': ShiftRight, '>>>': ShiftRightUnsigned,
+    'AND': And, 'OR': Or, 'EOR': Eor,
+}
+
+
+def _build_binary(p):
+    """Shared action for the arith/comparison/expr binary productions."""
     if len(p) == 2:
         p[0] = p[1]
-    elif len(p) == 4:
-        if p[2] == '+':
-            p[0] = Plus(lhs = p[1], rhs = p[3])
-        elif p[2] == '-':
-            p[0] = Minus(lhs = p[1], rhs = p[3])
-        elif p[2] == '*':
-            p[0] = Multiply(lhs = p[1], rhs = p[3])
-        elif p[2] == '/':
-            p[0] = Divide(lhs = p[1], rhs = p[3])
-        elif p[2] == 'DIV':
-            p[0] = IntegerDivide(lhs = p[1], rhs = p[3])
-        elif p[2] == 'MOD':
-            p[0] = IntegerModulus(lhs = p[1], rhs = p[3])
-        elif p[2] == '.':
-            p[0] = MatrixMultiply(lhs = p[1], rhs = p[3])
-        elif p[2] == '^':
-            p[0] = Power(lhs = p[1], rhs = p[3])
-        elif p[2] == '=':
-            p[0] = Equal(lhs = p[1], rhs = p[3])
-        elif p[2] == '<>':
-            p[0] = NotEqual(lhs = p[1], rhs = p[3])
-        elif p[2] == '<':
-            p[0] = LessThan(lhs = p[1], rhs = p[3])
-        elif p[2] == '<=':
-            p[0] = LessThanEqual(lhs = p[1], rhs = p[3])
-        elif p[2] == '>':
-            p[0] = GreaterThan(lhs = p[1], rhs = p[3])
-        elif p[2] == '>=':
-            p[0] = GreaterThanEqual(lhs = p[1], rhs = p[3])
-        elif p[2] == '<<':
-            p[0] = ShiftLeft(lhs = p[1], rhs = p[3])
-        elif p[2] == '>>':
-            p[0] = ShiftRight(lhs = p[1], rhs = p[3])
-        elif p[2] == '>>>':
-            p[0] = ShiftRightUnsigned(lhs = p[1], rhs = p[3])
-        elif p[2] == 'AND':
-            p[0] = And(lhs = p[1], rhs = p[3])
-        elif p[2] == 'OR':
-            p[0] = Or(lhs = p[1], rhs = p[3])
-        elif p[2] == 'EOR':
-            p[0] = Eor(lhs = p[1], rhs = p[3])
+    else:
+        p[0] = _BINARY_NODE[p[2]](lhs=p[1], rhs=p[3])
         p[0].lineNum = p.lineno(2) - 1
     p[0].isLValue = False
+
+
+def p_arith(p):
+    '''arith : factor
+             | arith PLUS arith
+             | arith MINUS arith
+             | arith TIMES arith
+             | arith DIVIDE arith
+             | arith MOD arith
+             | arith DIV arith
+             | arith DOT arith
+             | arith CARET arith
+             | dyadic_indirection'''
+    _build_binary(p)
+
+
+def p_comparison(p):
+    # One relational/shift over arithmetic operands -- never recursive on a
+    # comparison, so relationals cannot chain (matching BBC BASIC).
+    '''comparison : arith
+                  | arith EQ arith
+                  | arith NE arith
+                  | arith LTE arith
+                  | arith GTE arith
+                  | arith LT arith
+                  | arith GT arith
+                  | arith SHIFT_LEFT arith
+                  | arith SHIFT_RIGHT arith
+                  | arith SHIFT_RIGHT_UNSIGNED arith'''
+    _build_binary(p)
+
+
+def p_expr(p):
+    '''expr : comparison
+            | expr AND comparison
+            | expr OR comparison
+            | expr EOR comparison'''
+    _build_binary(p)
 
 def p_end_fn_stmt(p):
     # =expr is a function return. It is defined AFTER p_expr so that, in the
@@ -1616,12 +1612,12 @@ def p_bget_func(p):
     p[0].lineNum = p.lineno(1) - 1
 
 def p_chr_str_func(p):
-    'chr_str_func : CHR_STR expr %prec FUNCTION'
+    'chr_str_func : CHR_STR factor %prec FUNCTION'
     p[0] = ChrStrFunc(factor = p[2])
     p[0].lineNum = p.lineno(1) - 1
 
 def p_cos_func(p):
-    'cos_func : COS expr %prec FUNCTION'
+    'cos_func : COS factor %prec FUNCTION'
     p[0] = CosFunc(factor = p[2])
     p[0].lineNum = p.lineno(1) - 1    
 
@@ -1859,12 +1855,12 @@ def p_str_str_func(p):
     p[0].lineNum = p.lineno(1) - 1
     
 def p_str_str_dec_func(p):
-    'str_str_dec_func : STR_STR expr %prec FUNCTION'
+    'str_str_dec_func : STR_STR factor %prec FUNCTION'
     p[0] = StrStringFunc(factor = p[2], base = 10)
     p[0].lineNum = p.lineno(1) - 1
     
 def p_str_str_hex_func(p):
-    'str_str_hex_func : STR_STR TILDE expr %prec FUNCTION'
+    'str_str_hex_func : STR_STR TILDE factor %prec FUNCTION'
     p[0] = StrStringFunc(factor = p[2], base = 16)
     p[0].lineNum = p.lineno(1) - 1
     
@@ -1908,7 +1904,7 @@ def p_true_func(p):
     p[0].lineNum = p.lineno(1) - 1
     
 def p_val_func(p):
-    '''val_func : VAL expr %prec FUNCTION'''
+    '''val_func : VAL factor %prec FUNCTION'''
     p[0] = ValFunc(factor = p[2])
     p[0].lineNum = p.lineno(1) - 1
     
