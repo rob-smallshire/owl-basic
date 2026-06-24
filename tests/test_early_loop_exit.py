@@ -84,3 +84,48 @@ def test_comma_continue_next_runs_correctly(compile_and_run):
         "FORY=0TO1\nFORX=0TO2\nIFX=1 NEXT,\nPRINTY*10+X\nNEXT,\n", name="t"),
         timeout=30)
     assert out == "0\n2\n10\n12\n"
+
+
+# --- nested / multiple / cross-construct continue idioms -------------------
+# The conditional-closer continue generalises: a closer (NEXT / ENDWHILE; and,
+# via UNTIL-FALSE exit pruning, UNTIL FALSE) whose loop is re-closed downstream
+# is a back-edge. This holds inside nested loops and for several continues on one
+# loop. (WHILE/REPEAT here are checked at analysis; WHILE codegen is a separate
+# unimplemented feature, so those are not run.)
+
+def test_nested_for_continue_compiles():
+    assert _compiles("FORL=0TO2\nFORS=0TO7\nIFS>5 NEXT\nNEXT\n")
+
+
+def test_for_multiple_continues_for_one_loop_compiles():
+    assert _compiles("FORS=0TO7\nIFS=4 NEXT\nIFS=2 NEXT\nNEXT\n")
+
+
+def test_while_conditional_endwhile_continue_compiles():
+    # IF c ENDWHILE is the BASIC V continue (jump back to the WHILE test early).
+    assert _compiles("X=0\nWHILE X<9\nX=X+1\nIFX=3 ENDWHILE\nPRINTX\nENDWHILE\n")
+
+
+def test_nested_while_endwhile_continue_compiles():
+    assert _compiles("WHILE A<2\nA=A+1\nWHILE B<3\nB=B+1\nIFB=1 ENDWHILE\nENDWHILE\nENDWHILE\n")
+
+
+def test_for_continue_inside_while_compiles():
+    assert _compiles("WHILE A<2\nA=A+1\nFORS=0TO3\nIFS=1 NEXT\nNEXT\nENDWHILE\n")
+
+
+@requires_dotnet_toolchain
+def test_nested_for_continue_runs_correctly(compile_and_run):
+    # Inner continue skips S=1; both loops close. Prints L*10+S for S in 0,2,3.
+    out = compile_and_run(analyse(
+        "FORL=0TO1\nFORS=0TO3\nIFS=1 NEXT\nPRINTL*10+S\nNEXT\nNEXT\n", name="t"),
+        timeout=30)
+    assert out.split() == ["0", "2", "3", "10", "12", "13"]
+
+
+@requires_dotnet_toolchain
+def test_for_multiple_continues_runs_correctly(compile_and_run):
+    # IF S=1 NEXT and IF S=3 NEXT both continue the one loop, so 1 and 3 skip.
+    out = compile_and_run(analyse(
+        "FORS=0TO5\nIFS=1 NEXT\nIFS=3 NEXT\nPRINTS\nNEXT\n", name="t"), timeout=30)
+    assert out.split() == ["0", "2", "4", "5"]

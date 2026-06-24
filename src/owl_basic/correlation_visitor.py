@@ -296,54 +296,69 @@ class CorrelationVisitor(Visitor):
         self.loops.append(while_stmt)
         
     def visitEndwhile(self, endwhile_stmt):
-        if len(self.loops) == 0:
+        idx = self._topmost_open()
+        if idx < 0:
             raise CompileError(
                 "ENDWHILE at line %d has no WHILE loop to close.%s"
                 % (endwhile_stmt.lineNum, _DYNAMIC_STACK_NOTE))
-        peek = self.loops[-1]
+        peek = self.loops[idx]
         if not isinstance(peek, While):
             raise CompileError(
                 "ENDWHILE at line %d does not match the innermost open loop (a %s "
                 "opened at line %d).%s"
                 % (endwhile_stmt.lineNum, peek.description, peek.lineNum, _DYNAMIC_STACK_NOTE))
-        while_stmt = self.loops.pop()
-        connectLoop(endwhile_stmt, while_stmt)
+        connectLoop(endwhile_stmt, peek)
+        # `IF c ENDWHILE` is the BASIC V continue idiom: a back-edge to the WHILE
+        # test, with a later ENDWHILE the real close. Keep the loop open if so.
+        if self._closer_continues_loop(endwhile_stmt, peek):
+            self._continued.add(id(peek))
+        else:
+            del self.loops[idx]
+        self._clear_continue_chain_flags(endwhile_stmt)
         
     def visitForToStep(self, for_stmt):
         self.loops.append(for_stmt)
         
-    def _next_continues_loop(self, next_stmt, for_stmt):
-        """Whether *next_stmt* is a *continue* for *for_stmt*, not its close.
+    def _closer_continues_loop(self, closer, opener):
+        """Whether *closer* is a *continue* for *opener*, not its exit.
 
-        A FOR may have several NEXTs -- the BBC `IF c NEXT` continue idiom: when
-        the condition holds, skip the rest of the body and start the next
-        iteration. Such a continue-NEXT is a back-edge when taken; its
-        fall-through (loop-done) edge re-enters the loop body, where a *later*
-        NEXT performs the real close. The genuine closing NEXT's fall-through
-        instead leaves the loop, reachable only *through* that NEXT.
+        A loop may have several closers -- the BBC continue idioms: `IF c NEXT`,
+        `IF c ENDWHILE` (and, via UNTIL-FALSE exit pruning, `IF c UNTIL FALSE`).
+        When the condition holds the closer is a back-edge -- skip the rest of
+        the body, start the next iteration -- and a *later* closer performs the
+        real exit. The exit closer's fall-through instead leaves the loop,
+        reachable only *through* that closer.
 
-        So the structural test, independent of CFG walk order: the FOR can reach
-        the *comma chain's* fall-through point -- where the run of consecutive
-        NEXTs (`NEXT,`/`NEXT,,`) re-enters ordinary code -- *without passing
-        through that chain*. A loop with one NEXT, or whose last NEXT exits the
-        body, is never a continue; the conditionally-opened-FOR cases reject
-        earlier at the join, so this is only consulted once a NEXT genuinely
+        Structural test, independent of CFG walk order: the opener can reach this
+        closer's fall-through point -- past any `NEXT,,` comma run it belongs to
+        -- *without passing through it*. A loop with one closer, or whose last
+        closer exits the body, is never a continue; a conditionally-*opened* loop
+        is a different shape that reaches a closing join with divergent nesting
+        and is rejected there, so this is consulted only once a closer genuinely
         matches an open loop.
         """
-        # Walk the run of consecutive NEXT vertices (the comma chain) to the first
-        # ordinary statement it falls through to -- the body re-entry of a
-        # continue. A chain that runs to a terminal (no fall-through) is a real
-        # close, not a continue.
+        # Walk the run of NEXT vertices that form ONE `NEXT,,` statement to where
+        # it falls through, then ask whether the FOR re-enters there. A genuine
+        # comma component is reached SOLELY from its predecessor (single in-edge);
+        # a NEXT reached from elsewhere (a join) is a *separate* closer -- e.g. a
+        # conditional `IF c NEXT` whose fall-through meets a later `NEXT` that the
+        # IF's other branch also reaches -- and the body re-enters there, so the
+        # chain ends and that separate NEXT is the re-entry point.
         chain = set()
-        cursor = next_stmt
-        while isinstance(cursor, Next):
+        cursor = closer
+        while True:
             chain.add(id(cursor))
             out = list(cursor.outEdges)
             if len(out) != 1:
-                return False
-            cursor = out[0]
+                break                      # terminal exit or branch: chain ends
+            nxt = out[0]
+            if isinstance(nxt, Next) and len(nxt.inEdges) == 1:
+                cursor = nxt               # genuine NEXT, comma component; walk on
+                continue
+            cursor = nxt                   # separate closer / ordinary re-entry
+            break
         seen = set(chain)
-        stack = [for_stmt]
+        stack = [opener]
         while stack:
             v = stack.pop()
             if id(v) in seen:
@@ -357,14 +372,28 @@ class CorrelationVisitor(Visitor):
     def _topmost_open(self):
         """Index of the innermost loop not already continued in this comma chain.
 
-        A continue-NEXT leaves its loop on the stack (flagged in self._continued)
-        so a following NEXT in the same `NEXT,`/`NEXT,,` chain matches the next
-        loop out, not the one just continued.
+        A continue closer leaves its loop on the stack (flagged in
+        self._continued) so a following NEXT in the same `NEXT,`/`NEXT,,` chain
+        matches the next loop out, not the one just continued.
         """
         idx = len(self.loops) - 1
         while idx >= 0 and id(self.loops[idx]) in self._continued:
             idx -= 1
         return idx
+
+    def _clear_continue_chain_flags(self, closer):
+        """Clear the continue flags on leaving a `NEXT,,` comma chain.
+
+        Only a genuine comma component -- a single NEXT successor reached solely
+        from here -- keeps the flags; a separate following closer (a join, e.g. a
+        real closing NEXT after a conditional continue) ends the chain, so the
+        continued loops are open again here.
+        """
+        outs = list(closer.outEdges)
+        in_comma_chain = (len(outs) == 1 and isinstance(outs[0], Next)
+                          and len(outs[0].inEdges) == 1)
+        if not in_comma_chain:
+            self._continued = set()
 
     def visitNext(self, next_stmt):
         logging.debug("NEXT statement = %s", next_stmt)
@@ -396,7 +425,7 @@ class CorrelationVisitor(Visitor):
             # TODO: Check that the symbols are equal, not just the names
             if for_stmt.identifier.identifier == next_stmt.identifiers[0].identifier:
                 connectLoop(next_stmt, for_stmt)
-                if self._next_continues_loop(next_stmt, for_stmt):
+                if self._closer_continues_loop(next_stmt, for_stmt):
                     # The BBC continue idiom: this NEXT loops back, but the loop
                     # is closed by a later NEXT. Record the back-edge and keep the
                     # loop open (flagged), so a following NEXT in the same comma
@@ -409,10 +438,7 @@ class CorrelationVisitor(Visitor):
                 break
             # A named NEXT closing an outer loop: the skipped inner loop leaks.
             del self.loops[idx]
-        # Leaving the comma chain (the fall-through is not another NEXT): the
-        # continued loops are simply open again, so clear the flags.
-        if not any(isinstance(t, Next) for t in next_stmt.outEdges):
-            self._continued = set()
+        self._clear_continue_chain_flags(next_stmt)
     
         
         
