@@ -63,5 +63,21 @@ namespace OwlRuntime.Tests
         {
             Assert.Equal(expected, BasicCommands.Instr(searched, substring));
         }
+
+        [Theory]
+        [InlineData("42", 42.0)]
+        [InlineData("  -3.5", -3.5)]            // leading spaces and a sign
+        [InlineData("12X", 12.0)]              // value of the leading numeric part
+        [InlineData("X12", 0.0)]               // no leading number is 0
+        [InlineData("1E3", 1000.0)]            // VAL scans the E exponent...
+        [InlineData("1.2E10", 1.2E10)]         // ...like the rest of BBC BASIC
+        [InlineData("-2.5E-2", -0.025)]        // signed mantissa and signed exponent
+        [InlineData("1E3+1", 1000.0)]          // stops at the operator, as VAL does
+        [InlineData("1E", 1.0)]                // a bare E is not an exponent: ends the number
+        [InlineData("1EX", 1.0)]               // malformed exponent: E is not consumed
+        public void Val_scans_the_leading_numeric_literal_including_exponents(string s, double expected)
+        {
+            Assert.Equal(expected, BasicCommands.Val(s));
+        }
     }
 }

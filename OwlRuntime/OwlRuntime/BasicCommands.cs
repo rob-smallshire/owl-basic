@@ -85,10 +85,12 @@ namespace OwlRuntime
 
         public static double Val(string s)
         {
-            // BBC VAL: the value of the leading numeric part of the string,
-            // or 0 if it does not begin with a number. Leading spaces are
-            // skipped; an optional sign, digits and a single decimal point
-            // are accepted.
+            // BBC VAL: the value of the leading numeric part of the string, or 0
+            // if it does not begin with a number. It scans the same numeric
+            // literal grammar the rest of BBC BASIC uses -- leading spaces, an
+            // optional sign, digits, an optional decimal point, and an optional
+            // E exponent -- so VAL, STR$ and the expression parser all agree
+            // (e.g. VAL("1E3") = 1000, VAL("1.2E10") = 1.2E10).
             int i = 0;
             int n = s.Length;
             while (i < n && s[i] == ' ')
@@ -100,9 +102,11 @@ namespace OwlRuntime
             {
                 i++;
             }
+            bool sawDigit = false;
             while (i < n && char.IsDigit(s[i]))
             {
                 i++;
+                sawDigit = true;
             }
             if (i < n && s[i] == '.')
             {
@@ -110,6 +114,26 @@ namespace OwlRuntime
                 while (i < n && char.IsDigit(s[i]))
                 {
                     i++;
+                    sawDigit = true;
+                }
+            }
+            // An E exponent extends the mantissa, but only when it is well-formed
+            // (an optional sign and at least one digit) and a mantissa preceded
+            // it; otherwise the E is not part of the number and ends it.
+            if (sawDigit && i < n && s[i] == 'E')
+            {
+                int j = i + 1;
+                if (j < n && (s[j] == '+' || s[j] == '-'))
+                {
+                    j++;
+                }
+                if (j < n && char.IsDigit(s[j]))
+                {
+                    i = j;
+                    while (i < n && char.IsDigit(s[i]))
+                    {
+                        i++;
+                    }
                 }
             }
             string number = s.Substring(start, i - start);
