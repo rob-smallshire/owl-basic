@@ -129,3 +129,37 @@ def test_for_multiple_continues_runs_correctly(compile_and_run):
     out = compile_and_run(analyse(
         "FORS=0TO5\nIFS=1 NEXT\nIFS=3 NEXT\nPRINTS\nNEXT\n", name="t"), timeout=30)
     assert out.split() == ["0", "2", "4", "5"]
+
+
+# --- cross-type closer skip: a closer (NEXT/UNTIL/ENDWHILE) closes its matching
+# opener, leaking any inner open loop of a *different* kind on the way -- as the
+# BBC interpreter unwinds the runtime stack to the matching frame. A conditional
+# such closer is the outer loop's continue; the inner loop is abandoned on that
+# path and re-entered fresh on the next outer iteration.
+
+def test_until_false_continues_outer_repeat_from_inner_for_compiles():
+    # IF c UNTIL FALSE inside a FOR continues the enclosing REPEAT, abandoning the
+    # FOR. UNTIL FALSE's dead exit is pruned, so it is a pure back-edge -- no join
+    # divergence at the FOR's NEXT (that NEXT is reached only on the non-continue
+    # path). This is the user's canonical "UNTIL FALSE as an outer continue".
+    assert _compiles("REPEAT\nI=I+1\nFORJ=0TO3\nIFJ=2 UNTIL FALSE\nNEXT\nUNTILI>2\n")
+
+
+def test_closer_skips_inner_open_loop_of_other_type_compiles():
+    # A bare closer matching its opener, leaking an inner still-open loop of a
+    # different kind: UNTIL over an open FOR, ENDWHILE over an open FOR, NEXT over
+    # an open WHILE. Each unwinds to its matching opener.
+    assert _compiles("REPEAT\nFORI=0TO3\nUNTILX>1\n")
+    assert _compiles("WHILE A<2\nA=A+1\nFORI=0TO3\nENDWHILE\n")
+    assert _compiles("FORK=0TO2\nWHILE A<2\nA=A+1\nNEXT\n")
+
+
+@requires_dotnet_toolchain
+def test_until_false_continues_outer_repeat_runs_correctly(compile_and_run):
+    # When I=2 and J=1 the UNTIL FALSE continues the REPEAT, abandoning FOR J; the
+    # next REPEAT iteration restarts FOR J from 0. So I=1 prints 10..13, I=2 prints
+    # only 20 (abandoned at J=1), I=3 prints 30..33, then UNTIL I>2 exits.
+    out = compile_and_run(analyse(
+        "I=0\nREPEAT\nI=I+1\nFORJ=0TO3\nIFI=2 ANDJ=1 UNTIL FALSE\nPRINTI*10+J\nNEXT\nUNTILI>2\n",
+        name="t"), timeout=30)
+    assert out.split() == ["10", "11", "12", "13", "20", "30", "31", "32", "33"]

@@ -279,41 +279,52 @@ class CorrelationVisitor(Visitor):
         self.loops.append(repeat_stmt)
         
     def visitUntil(self, until_stmt):
-        if len(self.loops) == 0:
-            raise CompileError(
-                "UNTIL at line %d has no REPEAT loop to close.%s"
-                % (until_stmt.lineNum, _DYNAMIC_STACK_NOTE))
-        peek = self.loops[-1]
-        if not isinstance(peek, Repeat):
-            raise CompileError(
-                "UNTIL at line %d does not match the innermost open loop (a %s "
-                "opened at line %d).%s"
-                % (until_stmt.lineNum, peek.description, peek.lineNum, _DYNAMIC_STACK_NOTE))
-        repeat_stmt = self.loops.pop()
-        connectLoop(until_stmt, repeat_stmt)
+        while True:
+            idx = self._topmost_open()
+            if idx < 0:
+                raise CompileError(
+                    "UNTIL at line %d has no REPEAT loop to close.%s"
+                    % (until_stmt.lineNum, _DYNAMIC_STACK_NOTE))
+            peek = self.loops[idx]
+            if not isinstance(peek, Repeat):
+                # UNTIL closes a REPEAT; an inner loop of another kind above it is
+                # abandoned (BBC unwinds to the matching opener). Skip and leak it.
+                del self.loops[idx]
+                continue
+            connectLoop(until_stmt, peek)
+            # `IF c UNTIL FALSE` is the REPEAT continue idiom (its dead exit edge
+            # is pruned, so it is a pure back-edge). Keep the loop open if so.
+            if self._closer_continues_loop(until_stmt, peek):
+                self._continued.add(id(peek))
+            else:
+                del self.loops[idx]
+            break
+        self._clear_continue_chain_flags(until_stmt)
         
     def visitWhile(self, while_stmt):
         self.loops.append(while_stmt)
         
     def visitEndwhile(self, endwhile_stmt):
-        idx = self._topmost_open()
-        if idx < 0:
-            raise CompileError(
-                "ENDWHILE at line %d has no WHILE loop to close.%s"
-                % (endwhile_stmt.lineNum, _DYNAMIC_STACK_NOTE))
-        peek = self.loops[idx]
-        if not isinstance(peek, While):
-            raise CompileError(
-                "ENDWHILE at line %d does not match the innermost open loop (a %s "
-                "opened at line %d).%s"
-                % (endwhile_stmt.lineNum, peek.description, peek.lineNum, _DYNAMIC_STACK_NOTE))
-        connectLoop(endwhile_stmt, peek)
-        # `IF c ENDWHILE` is the BASIC V continue idiom: a back-edge to the WHILE
-        # test, with a later ENDWHILE the real close. Keep the loop open if so.
-        if self._closer_continues_loop(endwhile_stmt, peek):
-            self._continued.add(id(peek))
-        else:
-            del self.loops[idx]
+        while True:
+            idx = self._topmost_open()
+            if idx < 0:
+                raise CompileError(
+                    "ENDWHILE at line %d has no WHILE loop to close.%s"
+                    % (endwhile_stmt.lineNum, _DYNAMIC_STACK_NOTE))
+            peek = self.loops[idx]
+            if not isinstance(peek, While):
+                # ENDWHILE closes a WHILE; an inner loop of another kind above it
+                # is abandoned (BBC unwinds to the matching opener). Skip/leak it.
+                del self.loops[idx]
+                continue
+            connectLoop(endwhile_stmt, peek)
+            # `IF c ENDWHILE` is the BASIC V continue idiom: a back-edge to the
+            # WHILE test, with a later ENDWHILE the real close. Keep it open if so.
+            if self._closer_continues_loop(endwhile_stmt, peek):
+                self._continued.add(id(peek))
+            else:
+                del self.loops[idx]
+            break
         self._clear_continue_chain_flags(endwhile_stmt)
         
     def visitForToStep(self, for_stmt):
@@ -406,10 +417,13 @@ class CorrelationVisitor(Visitor):
                     % (next_stmt.lineNum, _DYNAMIC_STACK_NOTE))
             peek = self.loops[idx]
             if not isinstance(peek, ForToStep):
-                raise CompileError(
-                    "NEXT at line %d does not match the innermost open loop (a %s "
-                    "opened at line %d).%s"
-                    % (next_stmt.lineNum, peek.description, peek.lineNum, _DYNAMIC_STACK_NOTE))
+                # NEXT closes a FOR; an inner loop of another kind sitting above
+                # it is abandoned -- BBC unwinds the run-time stack to the
+                # matching opener, leaking the skipped frame. Skip it and look
+                # deeper. (If no FOR is found at all, idx falls below 0 above and
+                # the "no FOR to close" error fires.)
+                del self.loops[idx]
+                continue
 
             for_stmt = self.loops[idx]
             # If the next_stmt has no attached identifiers, it applies to the
