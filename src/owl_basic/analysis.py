@@ -172,7 +172,21 @@ def _diagnose_parse_failure(data, options):
 
     * otherwise -- a genuine syntax error in an otherwise-text listing; name the
       first one the parser reported.
+
+    A source that is itself a URL (commonly a bbcmic.ro share link pasted in place
+    of a program) is named as such first of all: its encoded fragment would
+    otherwise trip the binary counter and be mis-reported as "binary".
     """
+    stripped = data.lstrip()
+    lowered = stripped[:8].lower()
+    if lowered.startswith("http://") or lowered.startswith("https://"):
+        first_line = stripped.splitlines()[0]
+        if "bbcmic.ro" in first_line:
+            raise CompileError(
+                "the source is a bbcmic.ro share link, not a BASIC program: the "
+                "program is encoded in the URL after '#' and must be decoded "
+                "before it can be compiled.")
+        raise CompileError("the source is a URL, not a BASIC program.")
     lexer = syntax_parser.buildLexer(options)
     lexer.input(data)
     has_assembler = has_usr = False

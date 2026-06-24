@@ -55,6 +55,23 @@ def test_control_bytes_inside_a_string_still_compile():
     assert not program.diagnostics
 
 
+def test_bbcmicro_share_url_is_named_as_a_link_not_binary():
+    # A bbcmic.ro share link pasted in place of a program: the program is encoded
+    # (compressed) in the URL fragment, so the bytes trip the binary counter --
+    # but the right diagnosis names the link, not "binary or control bytes".
+    url = ('https://bbcmic.ro/#%7B%22v%22%3A1%2C%22program%22%3A%22'
+           + chr(0xf4) + chr(0xc6) + chr(0xde) + 'AaA%22%7D\n')
+    msg = _reject(url)
+    assert "bbcmic.ro share link" in msg
+    assert "binary" not in msg
+
+
+def test_plain_url_is_named_as_a_url_not_binary():
+    msg = _reject("https://example.com/some/path\n")
+    assert "URL" in msg
+    assert "binary" not in msg
+
+
 def test_prose_still_reports_a_syntax_error_not_binary():
     # Prose is printable text -- it tokenises (into words), so it is a genuine
     # syntax error, not binary. The message should not claim binary content.
