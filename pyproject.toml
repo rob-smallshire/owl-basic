@@ -28,7 +28,7 @@ dependencies = [
     "ply>=3.11",
     "stevedore>=5",
     "click>=8.1",
-    "oaknut-basic>=12.9",
+    "oaknut-basic>=12.10.1",
 ]
 
 [project.urls]
