@@ -192,6 +192,46 @@ def test_closer_skips_inner_open_loop_of_other_type_compiles():
     assert _compiles("FORK=0TO2\nWHILE A<2\nA=A+1\nNEXT\n")
 
 
+# A live closer (IF c NEXT / IF c ENDWHILE) can continue an *outer* loop from
+# inside an inner loop that has its own closer. Every closer here matches one
+# static opener (the NEXT -> the outer FOR, the inner UNTIL/ENDWHILE -> its own
+# loop), so it compiles: the continue's skip of the inner loop is path-local and
+# does not corrupt the stack the inner closer relies on. (A conditionally-*opened*
+# inner loop, by contrast, has a closer with no single target -- still rejected,
+# see test_loop_correlation_errors.) These rely on the same runtime invariant as
+# any continue: the continue does not fire on the outer loop's last iteration.
+
+def test_next_continues_outer_for_from_inside_repeat_compiles():
+    assert _compiles("FORK=0TO3\nJ=0\nREPEAT\nJ=J+1\nIFK=1 NEXT\nUNTILJ>=2\nNEXT\n")
+
+
+def test_next_continues_outer_for_from_inside_while_compiles():
+    assert _compiles("FORK=0TO3\nB=0\nWHILE B<2\nB=B+1\nIFK=1 NEXT\nENDWHILE\nNEXT\n")
+
+
+def test_endwhile_continues_outer_while_from_inside_for_compiles():
+    assert _compiles("A=0\nWHILE A<3\nA=A+1\nFORI=0TO9\nIFI=5 ENDWHILE\nNEXT\nENDWHILE\n")
+
+
+@requires_dotnet_toolchain
+def test_next_continues_outer_for_from_inside_repeat_runs_correctly(compile_and_run):
+    # IF K=1 NEXT continues the outer FOR K from inside the REPEAT, so the whole
+    # K=1 pass is skipped: K=0 and K=2,3 each print their two REPEAT iterations.
+    out = compile_and_run(analyse(
+        "FORK=0TO3\nJ=0\nREPEAT\nJ=J+1\nIFK=1 NEXT\nPRINTK*10+J\nUNTILJ>=2\nNEXT\n",
+        name="t"), timeout=30)
+    assert out.split() == ["1", "2", "21", "22", "31", "32"]
+
+
+@requires_dotnet_toolchain
+def test_next_continues_outer_for_from_inside_while_runs_correctly(compile_and_run):
+    # The WHILE analogue: IF K=1 NEXT continues the outer FOR K from inside a WHILE.
+    out = compile_and_run(analyse(
+        "FORK=0TO3\nB=0\nWHILE B<2\nB=B+1\nIFK=1 NEXT\nPRINTK*10+B\nENDWHILE\nNEXT\n",
+        name="t"), timeout=30)
+    assert out.split() == ["1", "2", "21", "22", "31", "32"]
+
+
 @requires_dotnet_toolchain
 def test_until_false_continues_outer_repeat_runs_correctly(compile_and_run):
     # When I=2 and J=1 the UNTIL FALSE continues the REPEAT, abandoning FOR J; the

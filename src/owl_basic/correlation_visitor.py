@@ -279,55 +279,34 @@ class CorrelationVisitor(Visitor):
         self.loops.append(repeat_stmt)
         
     def visitUntil(self, until_stmt):
-        while True:
-            idx = self._topmost_open()
-            if idx < 0:
-                raise CompileError(
-                    "UNTIL at line %d has no REPEAT loop to close.%s"
-                    % (until_stmt.lineNum, _DYNAMIC_STACK_NOTE))
-            peek = self.loops[idx]
-            if not isinstance(peek, Repeat):
-                # UNTIL closes a REPEAT; an inner loop of another kind above it is
-                # abandoned (BBC unwinds to the matching opener). Skip and leak it.
-                del self.loops[idx]
-                continue
-            connectLoop(until_stmt, peek)
-            # `IF c UNTIL FALSE` is the REPEAT continue idiom (its dead exit edge
-            # is pruned, so it is a pure back-edge). Keep the loop open if so.
-            if self._closer_continues_loop(until_stmt, peek):
-                self._continued.add(id(peek))
-            else:
-                del self.loops[idx]
-            break
+        # UNTIL closes the innermost open REPEAT, skipping inner loops of other
+        # kinds. `IF c UNTIL FALSE` is the REPEAT continue idiom (its dead exit
+        # edge is pruned, so it is a pure back-edge).
+        idx, skipped = self._match_open_loop(lambda peek: isinstance(peek, Repeat))
+        if idx < 0:
+            raise CompileError(
+                "UNTIL at line %d has no REPEAT loop to close.%s"
+                % (until_stmt.lineNum, _DYNAMIC_STACK_NOTE))
+        self._close_or_continue(until_stmt, self.loops[idx], idx, skipped)
         self._clear_continue_chain_flags(until_stmt)
         
     def visitWhile(self, while_stmt):
         self.loops.append(while_stmt)
         
     def visitEndwhile(self, endwhile_stmt):
-        while True:
-            idx = self._topmost_open()
-            if idx < 0:
-                raise CompileError(
-                    "ENDWHILE at line %d has no WHILE loop to close.%s"
-                    % (endwhile_stmt.lineNum, _DYNAMIC_STACK_NOTE))
-            peek = self.loops[idx]
-            if not isinstance(peek, While):
-                # ENDWHILE closes a WHILE; an inner loop of another kind above it
-                # is abandoned (BBC unwinds to the matching opener). Skip/leak it.
-                del self.loops[idx]
-                continue
-            connectLoop(endwhile_stmt, peek)
-            # `IF c ENDWHILE` is the BASIC V continue idiom: a back-edge to the
-            # WHILE test, with a later ENDWHILE the real close. Keep it open if so.
-            if self._closer_continues_loop(endwhile_stmt, peek):
-                self._continued.add(id(peek))
-            else:
-                # The real close: record the pairing so codegen can branch the
-                # WHILE's pre-test past this ENDWHILE to the after-loop block.
-                peek.closingEndwhile = endwhile_stmt
-                del self.loops[idx]
-            break
+        # ENDWHILE closes the innermost open WHILE, skipping inner loops of other
+        # kinds. `IF c ENDWHILE` is the BASIC V continue idiom: a back-edge to the
+        # WHILE test, with a later ENDWHILE the real close.
+        idx, skipped = self._match_open_loop(lambda peek: isinstance(peek, While))
+        if idx < 0:
+            raise CompileError(
+                "ENDWHILE at line %d has no WHILE loop to close.%s"
+                % (endwhile_stmt.lineNum, _DYNAMIC_STACK_NOTE))
+        while_stmt = self.loops[idx]
+        if self._close_or_continue(endwhile_stmt, while_stmt, idx, skipped):
+            # The real close: record the pairing so codegen can branch the WHILE's
+            # pre-test past this ENDWHILE to the after-loop block.
+            while_stmt.closingEndwhile = endwhile_stmt
         self._clear_continue_chain_flags(endwhile_stmt)
         
     def visitForToStep(self, for_stmt):
@@ -395,6 +374,47 @@ class CorrelationVisitor(Visitor):
             idx -= 1
         return idx
 
+    def _match_open_loop(self, matches):
+        """Find the innermost open loop satisfying *matches*, skipping inner ones.
+
+        Returns ``(idx, skipped)``: the stack index of the matching opener (-1 if
+        none) and the indices of the inner loops sitting above it that did not
+        match -- loops of another kind, or (for a named NEXT) FORs with a
+        different identifier. Those are abandoned (leaked) only on a *real* close;
+        a *continue* closer loops back into the body, still lexically inside them,
+        so it leaves the whole stack intact. Already-continued loops (a `NEXT,,`
+        comma chain) are passed over and never leaked.
+        """
+        idx = self._topmost_open()
+        skipped = []
+        while idx >= 0:
+            peek = self.loops[idx]
+            if id(peek) in self._continued:
+                idx -= 1
+                continue
+            if matches(peek):
+                return idx, skipped
+            skipped.append(idx)
+            idx -= 1
+        return -1, skipped
+
+    def _close_or_continue(self, closer, opener, idx, skipped):
+        """Correlate *closer* to *opener*; return True if it is the real close.
+
+        A continue closer (`IF c NEXT/UNTIL FALSE/ENDWHILE`, re-closed downstream)
+        keeps its loop -- and the inner loops its fall-through is still inside --
+        open. A real close pops the loop and leaks every skipped inner loop above
+        it, as the BBC interpreter unwinds the run-time stack to the matching
+        frame.
+        """
+        connectLoop(closer, opener)
+        if self._closer_continues_loop(closer, opener):
+            self._continued.add(id(opener))
+            return False
+        for j in sorted(skipped + [idx], reverse=True):
+            del self.loops[j]
+        return True
+
     def _clear_continue_chain_flags(self, closer):
         """Clear the continue flags on leaving a `NEXT,,` comma chain.
 
@@ -410,51 +430,23 @@ class CorrelationVisitor(Visitor):
             self._continued = set()
 
     def visitNext(self, next_stmt):
-        logging.debug("NEXT statement = %s", next_stmt)
-        #logging.debug("NEXT identifiers = %s", next_stmt.identifiers[0].identifier)
-        while True:
-            idx = self._topmost_open()
-            if idx < 0:
-                raise CompileError(
-                    "NEXT at line %d has no FOR loop to close.%s"
-                    % (next_stmt.lineNum, _DYNAMIC_STACK_NOTE))
-            peek = self.loops[idx]
+        # NEXT closes the innermost open FOR, matching its identifier if named.
+        # An unnamed NEXT takes the innermost FOR; inner loops of another kind, or
+        # (for a named NEXT) inner FORs with a different identifier, are skipped.
+        # TODO: Check that the symbols are equal, not just the names.
+        def matches(peek):
             if not isinstance(peek, ForToStep):
-                # NEXT closes a FOR; an inner loop of another kind sitting above
-                # it is abandoned -- BBC unwinds the run-time stack to the
-                # matching opener, leaking the skipped frame. Skip it and look
-                # deeper. (If no FOR is found at all, idx falls below 0 above and
-                # the "no FOR to close" error fires.)
-                del self.loops[idx]
-                continue
-
-            for_stmt = self.loops[idx]
-            # If the next_stmt has no attached identifiers, it applies to the
-            # top FOR statement on the stack
+                return False
             if len(next_stmt.identifiers) == 0:
-                 next_stmt.identifiers.append(for_stmt.identifier)
-            id1 = for_stmt.identifier.identifier
-            logging.debug("next_stmt identifiers: %s", next_stmt.identifiers)
-            id2 = next_stmt.identifiers[0].identifier
-            logging.debug("self.loops = %s", self.loops)
-            logging.debug("id1 = %s", id1)
-            logging.debug("id2 = %s", id2)
-            # TODO: Check that the symbols are equal, not just the names
-            if for_stmt.identifier.identifier == next_stmt.identifiers[0].identifier:
-                connectLoop(next_stmt, for_stmt)
-                if self._closer_continues_loop(next_stmt, for_stmt):
-                    # The BBC continue idiom: this NEXT loops back, but the loop
-                    # is closed by a later NEXT. Record the back-edge and keep the
-                    # loop open (flagged), so a following NEXT in the same comma
-                    # chain matches the next loop, and the real close still
-                    # correlates -- its fall-through into the body does not
-                    # spuriously empty the stack.
-                    self._continued.add(id(for_stmt))
-                else:
-                    del self.loops[idx]
-                break
-            # A named NEXT closing an outer loop: the skipped inner loop leaks.
-            del self.loops[idx]
+                next_stmt.identifiers.append(peek.identifier)
+                return True
+            return peek.identifier.identifier == next_stmt.identifiers[0].identifier
+        idx, skipped = self._match_open_loop(matches)
+        if idx < 0:
+            raise CompileError(
+                "NEXT at line %d has no FOR loop to close.%s"
+                % (next_stmt.lineNum, _DYNAMIC_STACK_NOTE))
+        self._close_or_continue(next_stmt, self.loops[idx], idx, skipped)
         self._clear_continue_chain_flags(next_stmt)
     
         

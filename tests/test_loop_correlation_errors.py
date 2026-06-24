@@ -37,25 +37,6 @@ def test_message_explains_the_dynamic_stack_reason():
     assert "dynamic" in message or "conditional" in message
 
 
-def test_cross_type_continue_through_inner_closer_rejects():
-    # A conditional NEXT closing the *outer* FOR from inside a REPEAT that has its
-    # own UNTIL. Unlike `UNTIL FALSE` (whose dead exit is pruned), the NEXT has a
-    # live fall-through that reaches the inner UNTIL -- where the REPEAT is leaked
-    # on the continue path but live otherwise. That genuine nesting divergence at
-    # the inner closer is not statically compilable; reject, do not crash.
-    src = "FORK=0TO3\nREPEAT\nIFK=2 NEXT\nUNTILB>1\nNEXT\n"
-    with pytest.raises(CompileError):
-        analyse(src, name="t")
-
-
-def test_cross_type_endwhile_continue_through_inner_closer_rejects():
-    # The WHILE/ENDWHILE analogue: IF c ENDWHILE closing the outer WHILE from inside
-    # an inner FOR whose NEXT then sees divergent nesting.
-    src = "WHILE A<3\nA=A+1\nFORI=0TO9\nIFI=5 ENDWHILE\nNEXT\nENDWHILE\n"
-    with pytest.raises(CompileError):
-        analyse(src, name="t")
-
-
 def test_plain_triple_nested_next_comma_comma_compiles():
     # Control: three unconditionally nested loops closed by NEXT,, correlate
     # statically and compile -- nothing here is dynamic.
