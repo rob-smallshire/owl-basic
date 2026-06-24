@@ -93,6 +93,14 @@ def fold_constant(node):
     if name == "SgnFunc":
         a = fold_constant(node.factor)
         return None if a is None else (a > 0) - (a < 0)
+    if name == "ChrStrFunc":      # CHR$(n) -- the character whose code is n
+        a = fold_constant(node.factor)
+        if a is None:
+            return None
+        try:
+            return chr(int(a) & 0xFF)
+        except (ValueError, OverflowError):
+            return None
 
     if name in _UNARY_FN:
         a = fold_constant(node.factor)

@@ -53,6 +53,14 @@ def test_pure_functions_of_constants_fold():
     assert fold("SQR(16)") == 4.0
 
 
+def test_chr_str_of_constant_folds():
+    # CHR$ of a constant code point folds to that character. CHR$34 is the quote
+    # the EVAL dispatch's string-value hole is built from.
+    assert fold("CHR$34") == '"'
+    assert fold("CHR$(65)") == "A"
+    assert fold("CHR$X") is None             # not a pure function of constants
+
+
 def test_sin_rad_30_folds_recursively():
     # The motivating case: SIN(RAD(30)) reduces RAD(30) then SIN of that.
     assert fold("SIN(RAD(30))") == math.sin(30 * math.pi / 180.0)
