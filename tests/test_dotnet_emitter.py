@@ -162,6 +162,29 @@ def test_longjump_out_of_proc_compiles_and_runs(compile_and_run):
     assert stdout.split() == ["start", "landed"]
 
 
+# A backward GOTO into a loop region makes the whole region one strongly-connected
+# component; the approximate topological order then places this FOR's NEXT block
+# before the FOR's own block. Codegen pre-registers every FOR's state up front, so
+# the NEXT still resolves it (execution stays correct -- branches carry control
+# flow). Before that, _stmt_Next hit a KeyError. Reduced from corpus program
+# e2aabf59fba8 (a Hamming-code demo looping forever via GOTO 2).
+_GOTO_LOOP_PROGRAM = [
+    (1, "MODE 2"),
+    (2, "CLS:N=RND(2^16):PROCS(N,2):M=N:Q=0:FOR K=0 TO 15:"
+        "IF(K AND(K-1))AND(M AND 1)=1:Q=Q EOR K"),
+    (3, "M=M DIV 2:NEXT:PROCS(Q,1):FOR I=0 TO 3:N=N OR((Q AND 1)*2):"
+        "Q=Q DIV 2:NEXT:Z=5:GOTO 2"),
+    (4, 'DEFPROCS(N,L):FOR K=0 TO 4^L-1:M=((N DIV(2^K))AND 1):'
+        'IF(K MOD 4)=3:PRINT""'),
+    (5, "NEXT:ENDPROC"),
+]
+
+
+def test_emit_il_for_with_next_block_ordered_before_it(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse_numbered_lines(_GOTO_LOOP_PROGRAM, name="gl"))
+    assert "FOR_body" in il   # the loops lowered; no KeyError on the early NEXT
+
+
 # Lines 30/40 sit physically before DEFPROC but are reachable only from PROCp
 # (via GOTO 30), so the CFG tags them as part of PROCp and the GOTO stays an
 # ordinary in-scope branch -- no LongJump, no throw.

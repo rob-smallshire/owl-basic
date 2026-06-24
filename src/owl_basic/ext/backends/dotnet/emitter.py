@@ -650,6 +650,17 @@ class _MethodEmitter:
         with an explicit branch (otherwise it falls through).
         """
         self._block_index = {id(block): index for index, block in enumerate(blocks)}
+        # Pre-register every FOR loop's state (body label and slots) before
+        # lowering. A NEXT looks its FOR up by node id; with a reducible CFG the
+        # FOR's block is lowered first, but a GOTO into the loop region makes the
+        # whole region one strongly-connected component, and the approximate
+        # topological order can then place a NEXT's block before its FOR's.
+        # Execution is still correct (branches carry control flow, so the FOR's
+        # setup runs first), but the lookup would miss -- so seed it up front.
+        for block in blocks:
+            for statement in block.statements:
+                if type(statement).__name__ == "ForToStep":
+                    self._register_for_loop(statement)
         for index, block in enumerate(blocks):
             self.emit("%s:" % self._block_label(block))
             for statement in block.statements:
@@ -958,23 +969,35 @@ class _MethodEmitter:
         self._label_seq += 1
         return "%s_%d" % (stem, self._label_seq)
 
+    def _register_for_loop(self, node):
+        """Allocate a FOR loop's body label and slots, keyed by node id.
+
+        Called once up front for every FOR (see lower_blocks) so a NEXT can
+        resolve its FOR regardless of block order. Everything here is stable per
+        node -- the counter variable, its IL type, and the last/step slots (keyed
+        by node id) -- so the FOR's own lowering reuses these exact entries.
+        """
+        counter = node.identifier
+        counter_il = _il_type(counter.actualType)
+        last_slot = self._local_slot("__for_last_%d" % id(node), counter.actualType)
+        step_slot = self._local_slot("__for_step_%d" % id(node), counter.actualType)
+        body_label = self._new_label("FOR_body")
+        self._for_loops[id(node)] = (body_label, counter, last_slot, step_slot, counter_il)
+
     def _stmt_ForToStep(self, node):
         # counter = first; stash last and step in locals; mark the loop-body top.
         # The continuation test lives in the correlated NEXT (BBC FOR is
-        # post-tested, so the body always runs at least once).
-        counter = node.identifier
-        counter_il = _il_type(counter.actualType)
+        # post-tested, so the body always runs at least once). State (body label,
+        # slots) was pre-registered in lower_blocks so a NEXT lowered before this
+        # block (cyclic CFG) still finds it.
+        body_label, counter, last_slot, step_slot, counter_il = self._for_loops[id(node)]
         self.lower_expression(node.first)
         self._store_variable(counter)
-        last_slot = self._local_slot("__for_last_%d" % id(node), counter.actualType)
         self.lower_expression(node.last)
         self.emit("stloc V_%d" % last_slot)
-        step_slot = self._local_slot("__for_step_%d" % id(node), counter.actualType)
         self.lower_expression(node.step)
         self.emit("stloc V_%d" % step_slot)
-        body_label = self._new_label("FOR_body")
         self.emit("%s:" % body_label)
-        self._for_loops[id(node)] = (body_label, counter, last_slot, step_slot, counter_il)
 
     def _stmt_Next(self, node):
         for_statement = _sole_loop_back(node, "NEXT")
