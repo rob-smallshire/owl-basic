@@ -145,6 +145,49 @@ namespace OwlRuntime
             return 0.0;
         }
 
+        public static long EvalHex(string s)
+        {
+            // The BBC hex-to-integer idiom EVAL("&" + h$) -- VAL is decimal-only,
+            // so this is the only way to read a hex string. The '&' must be
+            // followed by at least one hex digit, else "Bad hex"; the maximal run
+            // of [0-9A-F] (uppercase only, like the ROM) is read and any trailing
+            // characters are ignored (EVAL("&FG") = &F = 15). The digits fold into
+            // a signed cell as a bit pattern with no overflow check -- 32-bit for
+            // up to 8 digits (so "FFFFFFFF" is -1), 64-bit beyond -- exactly as the
+            // hex-literal lexer does, so runtime and constant hex agree.
+            int n = s.Length;
+            int digits = 0;
+            ulong raw = 0;
+            while (digits < n)
+            {
+                char c = s[digits];
+                int value;
+                if (c >= '0' && c <= '9')
+                {
+                    value = c - '0';
+                }
+                else if (c >= 'A' && c <= 'F')   // uppercase only, like the ROM
+                {
+                    value = c - 'A' + 10;
+                }
+                else
+                {
+                    break;
+                }
+                raw = (raw << 4) | (ulong)value;   // wraps past 64 bits
+                digits++;
+            }
+            if (digits == 0)
+            {
+                throw new BadHexException();
+            }
+            if (digits <= 8)
+            {
+                return (int)(uint)raw;       // 32-bit pattern, sign-extended
+            }
+            return unchecked((long)raw);     // 64-bit pattern as a signed value
+        }
+
         public static string StrString(double n)
         {
             // BBC STR$: the string a number would PRINT as (the inverse of VAL).
@@ -1511,6 +1554,21 @@ namespace OwlRuntime
         public const int ErrorNumber = 20;
         public NumberTooBigException() :
             base("Number too big")
+        {
+        }
+    }
+
+    /// <summary>
+    /// Thrown when EVAL("&"+h$) is handed a string whose leading character is
+    /// not an (uppercase) hex digit, including the empty string: BBC BASIC's
+    /// "Bad hex", error 28 (the ROM's factor_hex raises BRK &1C when its hex
+    /// reader consumes zero digits).
+    /// </summary>
+    public class BadHexException : OwlRuntimeException
+    {
+        public const int ErrorNumber = 28;
+        public BadHexException() :
+            base("Bad hex")
         {
         }
     }

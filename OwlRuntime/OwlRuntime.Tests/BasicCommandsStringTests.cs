@@ -94,5 +94,35 @@ namespace OwlRuntime.Tests
         {
             Assert.Equal(expected, BasicCommands.Val(s));
         }
+
+        [Theory]
+        [InlineData("FF", 255L)]               // EVAL("&"+h$): the hex value of h$
+        [InlineData("7FFFFFFF", 2147483647L)]
+        [InlineData("FFFFFFFF", -1L)]          // 8 hex digits: a 32-bit signed pattern
+        [InlineData("FG", 15L)]                // reads the F, stops at G (ROM factor_hex)
+        [InlineData("FFx", 255L)]              // trailing non-hex tolerated, no fault
+        [InlineData("Ff", 15L)]                // lowercase f terminates: reads F=15, stops
+        public void EvalHex_reads_the_leading_hex_run(string s, long expected)
+        {
+            Assert.Equal(expected, BasicCommands.EvalHex(s));
+        }
+
+        [Fact]
+        public void EvalHex_supersets_the_ROM_to_64_bits_beyond_8_digits()
+        {
+            // Deliberate divergence: the ROM rolls into a 32-bit cell and the 9th
+            // digit shifts off the top, so the ROM gives 0 for "&100000000". OWL
+            // keeps 64 bits for 9-16 digits, matching its own hex-literal lexer.
+            Assert.Equal(4294967296L, BasicCommands.EvalHex("100000000"));
+        }
+
+        [Theory]
+        [InlineData("")]                       // EVAL("&"): no digit -> Bad hex (err 28)
+        [InlineData("ff")]                     // leading lowercase: zero digits read -> Bad hex
+        [InlineData("G")]                      // no leading hex digit -> Bad hex
+        public void EvalHex_faults_when_not_led_by_a_hex_digit(string s)
+        {
+            Assert.Throws<BadHexException>(() => BasicCommands.EvalHex(s));
+        }
     }
 }
