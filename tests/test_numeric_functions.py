@@ -37,7 +37,8 @@ def test_power_operator(compile_and_run):
 
 
 def test_emit_il_lowers_power_to_math_pow(dotnet_backend):
-    il = dotnet_backend.emit_il(analyse("A = 2 ^ 3\nEND\n", name="powil"))
+    # Non-constant operands so the power is lowered, not constant-folded.
+    il = dotnet_backend.emit_il(analyse("A = B ^ C\nEND\n", name="powil"))
     assert "Pow(float64, float64)" in il
 
 

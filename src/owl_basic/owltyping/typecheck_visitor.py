@@ -6,8 +6,9 @@ from owl_basic.visitor import Visitor
 from owl_basic.errors import *
 from owl_basic.exceptions import CompileError
 from owl_basic.utility import underscoresToCamelCase
-from owl_basic.syntax.ast import Cast, Concatenate, LiteralInteger
+from owl_basic.syntax.ast import Cast, Concatenate, LiteralInteger, LiteralFloat
 from owl_basic.ast_utils import elideNode
+from owl_basic.constant_folding import fold_constant
 from owl_basic.owltyping.type_system import (NumericOwlType, ObjectOwlType, IntegerOwlType,
                                 LongIntegerOwlType, FloatOwlType, ByteOwlType, PendingOwlType,
                                 StringOwlType, ArrayOwlType)
@@ -138,29 +139,35 @@ class TypecheckVisitor(Visitor):
         self.determineNumericResultType(operator)
         self.promoteNumericOperands(operator)
 
-    def _foldConstant(self, operator):
+    def _foldConstant(self, node):
         '''
-        If an additive/multiplicative operator has two integer-literal operands,
-        replace it with the folded constant. The fold is done in arbitrary
-        precision and typed by magnitude, so a product that overflows 32 bits
-        becomes a 64-bit literal (e.g. 100000*80500 -> 8050000000) rather than
-        wrapping. Returns True if the node was folded and replaced.
+        If *node* is a pure function of constants -- arithmetic, or a pure
+        built-in function (SIN, RAD, ABS, ...) of constant arguments -- replace it
+        with the folded literal. Integer folds are done in arbitrary precision and
+        typed by magnitude, so a product that overflows 32 bits becomes a 64-bit
+        literal (100000*80500 -> 8050000000) rather than wrapping; float folds
+        yield a float literal. Returns True if the node was folded and replaced.
+
+        The host-side evaluator lives in owl_basic.constant_folding; see
+        docs/eval-static-compilation.md for the fidelity rationale.
         '''
-        fold = _FOLD_OPS.get(type(operator).__name__)
-        if fold is None:
+        value = fold_constant(node)
+        # bool is an int subclass; fold_constant never yields it, but guard so a
+        # stray bool never becomes an integer literal. Strings are not folded here.
+        if value is None or isinstance(value, bool) or not isinstance(value, (int, float)):
             return False
-        lhs, rhs = operator.lhs, operator.rhs
-        if not (isinstance(lhs, LiteralInteger) and isinstance(rhs, LiteralInteger)):
-            return False
-        value = fold(lhs.value, rhs.value)
-        literal = LiteralInteger(value=value)
-        literal.lineNum = operator.lineNum
-        literal.actualType = (IntegerOwlType() if _INT32_MIN <= value <= _INT32_MAX
-                              else LongIntegerOwlType())
-        literal.parent = operator.parent
-        literal.parent_property = operator.parent_property
-        literal.parent_index = operator.parent_index
-        operator.parent.setProperty(literal, operator.parent_property, operator.parent_index)
+        if isinstance(value, int):
+            literal = LiteralInteger(value=value)
+            literal.actualType = (IntegerOwlType() if _INT32_MIN <= value <= _INT32_MAX
+                                  else LongIntegerOwlType())
+        else:
+            literal = LiteralFloat(value=value)
+            literal.actualType = FloatOwlType()
+        literal.lineNum = node.lineNum
+        literal.parent = node.parent
+        literal.parent_property = node.parent_property
+        literal.parent_index = node.parent_index
+        node.parent.setProperty(literal, node.parent_property, node.parent_index)
         return True
                 
     def visitDivide(self, divide):
@@ -171,6 +178,8 @@ class TypecheckVisitor(Visitor):
         '''
         self.visit(divide.lhs)
         self.visit(divide.rhs)
+        if self._foldConstant(divide):
+            return
         if divide.lhs.actualType == PendingOwlType() or divide.rhs.actualType == PendingOwlType():
             divide.actualType = PendingOwlType()
             return
@@ -186,6 +195,8 @@ class TypecheckVisitor(Visitor):
         '''
         self.visit(power.lhs)
         self.visit(power.rhs)
+        if self._foldConstant(power):
+            return
         if power.lhs.actualType == PendingOwlType() or power.rhs.actualType == PendingOwlType():
             power.actualType = PendingOwlType()
             return
@@ -293,6 +304,8 @@ class TypecheckVisitor(Visitor):
             
     def visitUnaryNumericOperator(self, operator):
         self.visit(operator.factor)
+        if self._foldConstant(operator):     # e.g. unary minus of a constant
+            return
         if not self.checkSignature(operator):
             return
         operator.actualType = operator.factor.actualType
@@ -328,6 +341,8 @@ class TypecheckVisitor(Visitor):
          
     def visitUnaryNumericFunc(self, func):
         self.visit(func.factor)
+        if self._foldConstant(func):     # SIN/COS/RAD/... of a constant
+            return
         if not self.checkSignature(func):
             # TODO: Error?
             return
@@ -340,13 +355,17 @@ class TypecheckVisitor(Visitor):
         the type of the ABS function.
         '''
         self.visit(abs.factor)
+        if self._foldConstant(abs):
+            return
         if not self.checkSignature(abs):
             # TODO: Error?
             return
         abs.actualType = abs.factor.actualType
-            
+
     def visitIntFunc(self, func):
         self.visit(func.factor)
+        if self._foldConstant(func):
+            return
         if not self.checkSignature(func):
             # TODO: Error?
             return
