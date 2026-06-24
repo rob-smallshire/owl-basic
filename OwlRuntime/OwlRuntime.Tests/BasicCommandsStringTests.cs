@@ -78,6 +78,7 @@ namespace OwlRuntime.Tests
         [InlineData("5.", 5.0)]                // a trailing decimal point
         [InlineData("1.2.3", 1.2)]             // only the first decimal point counts
         [InlineData(".E3", 0.0)]               // no mantissa digit: not a number
+        [InlineData("&FF", 0.0)]               // VAL scans decimal only, not &hex (ROM-confirmed)
         [InlineData("1E3", 1000.0)]            // VAL scans the E exponent...
         [InlineData("1.2E10", 1.2E10)]         // ...like the rest of BBC BASIC
         [InlineData("1E-3", 0.001)]            // a signed exponent
