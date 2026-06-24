@@ -57,6 +57,42 @@ def test_nested_eval_runs(compile_and_run):
     assert out.split() == ["3"]
 
 
+# --- value-hole templates: the digit idiom -------------------------------
+# EVAL of a string provably containing only decimal digits is EVAL == VAL, so it
+# lowers to VAL of the same argument with no run-time evaluator.
+
+def test_digit_idiom_compiles():
+    assert _compiles('DEF FNd(K)=EVAL(MID$("13264",K,1))\n')
+
+
+def test_digit_idiom_lowers_to_val_not_eval(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse(
+        'PRINT FNd(1)\nEND\nDEF FNd(K)=EVAL(MID$("13264",K,1))\n', name="t"))
+    assert "BasicCommands::Val" in il
+
+
+@requires_dotnet_toolchain
+def test_digit_idiom_runs_correctly(compile_and_run):
+    # MID$("13264",K,1) is the K-th digit; EVAL of it is that digit's value.
+    out = compile_and_run(analyse(
+        'PRINT FNd(1)\nPRINT FNd(3)\nPRINT FNd(5)\nEND\n'
+        'DEF FNd(K)=EVAL(MID$("13264",K,1))\n', name="t"))
+    assert out.split() == ["1", "2", "4"]
+
+
+@requires_dotnet_toolchain
+def test_eval_of_left_str_digits_runs(compile_and_run):
+    out = compile_and_run(analyse('PRINT EVAL(LEFT$("789",2))\nEND\n', name="t"))
+    assert out.split() == ["78"]
+
+
+def test_eval_of_slice_of_non_digit_string_still_rejected():
+    # The source is not a digit-only literal, so EVAL != VAL in general: residue.
+    with pytest.raises(CompileError) as excinfo:
+        analyse('A$="a+b"\nB=EVAL(MID$(A$,1,1))\nEND\n', name="t")
+    assert "EVAL" in str(excinfo.value)
+
+
 def test_eval_of_malformed_constant_string_is_rejected_naming_it():
     with pytest.raises(CompileError) as excinfo:
         analyse('PRINT EVAL("1+")\n', name="t")

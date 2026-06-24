@@ -153,6 +153,25 @@ each:
    text). Parse the skeleton, substitute the holes' sub-expressions for their
    placeholders. Splice inline, or lift into a synthesized `DEF FN` whose
    parameters are the holes (the lambda-lifted form).
+
+   *Implemented so far -- the digit idiom:* a `MID$`/`LEFT$`/`RIGHT$` slice of a
+   digit-only literal always yields a plain decimal numeral, so `EVAL` of it is
+   `EVAL == VAL`; it lowers to `VAL` of the same argument. No placeholder
+   machinery and no float-precision concern (digits are exact).
+
+   *Rejected as unsound -- the `STR$` concatenation template:* it is tempting to
+   reduce `EVAL(STR$(e)+"+1")` to `e+1`, treating `STR$(e)` as a numeric hole.
+   But `STR$` formats its argument according to the runtime `@%` format variable
+   (the same control `PRINT` uses), so `STR$(e)` is *not* guaranteed to be a
+   lossless representation of `e`. Even at the default `@%` it is ~10 significant
+   figures in general format, so `STR$(12345678901)` is `"1.23456789E10"` and
+   `EVAL` reads back `12345678900`; and `@%` can be set to anything at run time.
+   Substituting the exact expression `e` would therefore give a *different* value
+   from what `EVAL` actually computes. Compiling it soundly would require
+   statically tracking `@%` (an arbitrary runtime global) plus value-range
+   analysis -- narrow and fragile -- so the `STR$` template is not done. The
+   digit idiom does not go through `STR$` (it slices a fixed literal: no
+   formatting, no `@%`), so it stays exact.
 3. **Dispatch.** If the residual is statically a function call (its skeleton
    begins with the literal `"FN"`) with a runtime name and already-staged
    arguments, generate a `CASE` dispatch over the program's `DEF FN`s of

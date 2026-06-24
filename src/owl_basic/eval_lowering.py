@@ -18,6 +18,7 @@ from owl_basic.exceptions import CompileError
 from owl_basic.parent_visitor import ParentVisitor
 from owl_basic.syntax import parser as syntax_parser
 from owl_basic.syntax import grammar as _grammar
+from owl_basic.syntax.ast import ValFunc
 
 
 def lower_eval(parse_tree, options):
@@ -35,11 +36,17 @@ def _lower_once(parse_tree, options):
     progressed = False
     for eval_node in _collect_evals(parse_tree):
         source = _constant_string(eval_node.factor)
-        if source is None:
-            continue                       # not a constant-string EVAL
-        expression = _parse_expression(source, eval_node.lineNum, options)
-        _splice(eval_node, expression)
-        progressed = True
+        if source is not None:
+            # Constant-string EVAL: re-parse the string and splice it.
+            expression = _parse_expression(source, eval_node.lineNum, options)
+            _splice(eval_node, expression)
+            progressed = True
+        elif _is_provably_decimal_string(eval_node.factor):
+            # Digit idiom: EVAL of a string provably containing only decimal
+            # digits (a slice of a digit-only literal) is EVAL == VAL. Rewrite to
+            # VAL of the same argument -- no run-time evaluator needed.
+            _splice(eval_node, ValFunc(factor=eval_node.factor))
+            progressed = True
     return progressed
 
 
@@ -60,6 +67,25 @@ def _collect_evals(parse_tree):
 def _constant_string(node):
     value = fold_constant(node)
     return value if isinstance(value, str) else None
+
+
+def _is_provably_decimal_string(node):
+    """Whether *node* always yields a string of decimal digits at run time.
+
+    A slice (MID$/LEFT$/RIGHT$) of a digit-only string literal is such a string,
+    whatever the runtime index: every character is a digit, so EVAL of it parses
+    the same plain numeral that VAL does. (A constant digit string is handled by
+    the constant-string path instead.)
+    """
+    name = type(node).__name__
+    if name in ("MidStrFunc", "LeftStrFunc", "RightStrFunc"):
+        return _is_digit_literal(node.source)
+    return False
+
+
+def _is_digit_literal(node):
+    return (type(node).__name__ == "LiteralString"
+            and len(node.value) > 0 and node.value.isdigit())
 
 
 def _parse_expression(source, line_num, options):
