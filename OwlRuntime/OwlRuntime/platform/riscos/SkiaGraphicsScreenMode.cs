@@ -30,6 +30,7 @@ namespace OwlRuntime.platform.riscos
         private readonly float cellWidth;
         private readonly float cellHeight;
         private SKColor foreground;
+        private SKColor background;
         private SKColor textForeground;
         private bool written;
 
@@ -49,6 +50,7 @@ namespace OwlRuntime.platform.riscos
 
             palette = DefaultPalette(LogicalColourCount);
             foreground = palette.Length > 0 ? palette[palette.Length - 1] : SKColors.White;
+            background = palette.Length > 0 ? palette[0] : SKColors.Black;
             textForeground = foreground;
 
             // Text is placed by character cell; render glyphs in a monospace
@@ -103,7 +105,17 @@ namespace OwlRuntime.platform.riscos
 
         public override void UpdateGraphicsBackgroundColour(int logicalColour, int tint)
         {
-            // Background colour is used by CLG / background plots, not yet drawn.
+            // The graphics background colour is what CLG clears to (and what
+            // background plots would draw).
+            background = ColourOf(logicalColour);
+        }
+
+        public override bool TryClearGraphics()
+        {
+            // CLG: fill the whole graphics area with the graphics background.
+            canvas.Clear(background);
+            written = true;
+            return true;
         }
 
         public override void UpdateTextForegroundColour(int logicalColour, int tint)

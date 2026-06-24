@@ -44,12 +44,19 @@ def test_clean_usr_still_reports_usr():
     assert "USR is not supported" in _reject("A=USR(&FFF4)\nEND\n")
 
 
-def test_call_machine_code_is_rejected():
-    # CALL <addr> enters a machine-code routine, like USR; OWL targets .NET and
-    # cannot run 6502, so reject it up front (not as a late "cannot lower").
-    msg = _reject("CALL &FFEE\nEND\n")
-    assert "CALL is not supported" in msg
-    assert "machine code" in msg
+def test_call_machine_code_is_rejected_at_codegen():
+    # CALL <addr> enters a machine-code routine, like USR; OWL cannot run 6502.
+    # Unlike EVAL it stays analysable (the call graph shows it as an external
+    # sink), so it is named clearly at code generation rather than left as an
+    # opaque "cannot lower statement node 'Call'".
+    from owl_basic.extension import create_extension
+    from owl_basic.ext.backends.dotnet.emitter import CodeGenerationError
+    backend = create_extension("backend", "owl_basic.backend", "dotnet")
+    program = analyse("CALL &FFEE\nEND\n", name="t")  # analyses fine
+    with pytest.raises(CodeGenerationError) as excinfo:
+        backend.emit_il(program)
+    assert "CALL is not supported" in str(excinfo.value)
+    assert "machine code" in str(excinfo.value)
 
 
 def test_inline_assembly_still_reported():

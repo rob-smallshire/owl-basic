@@ -1339,7 +1339,9 @@ namespace OwlRuntime.platform.riscos
 
         private void ClearGraphicsWindow()
         {
-            throw new NotImplementedException();
+            // CLG (VDU 16): clear the graphics area to its background colour. A
+            // mode with no addressable graphics surface treats it as a no-op.
+            screenMode.TryClearGraphics();
         }
 
         private void SetPalette()

@@ -1113,9 +1113,25 @@ class _MethodEmitter:
         self.lower_expression(node.number)
         self.emit(_runtime("Mode", "int32"))
 
+    def _stmt_Call(self, node):
+        # CALL <addr> enters a 6502 machine-code routine at an address; OWL
+        # targets .NET and cannot run it (like USR). Named here rather than left
+        # as an opaque "cannot lower". (Analysis keeps it -- the call graph shows
+        # it as an external sink -- so the rejection lives at code generation.)
+        raise CodeGenerationError(
+            "CALL is not supported: it enters a machine-code routine at an "
+            "address, which OWL targets .NET and cannot run as 6502 machine code.")
+
     def _stmt_Cls(self, node):
         # CLS: clear the text screen and home the cursor.
         self.emit(_runtime("Cls"))
+
+    def _stmt_Clg(self, node):
+        # CLG: clear the graphics area to the graphics background colour. That is
+        # exactly VDU 16, so send it through the VDU driver like any other code.
+        self.emit("ldc.i4.s 16")
+        self.emit("conv.u1")
+        self.emit(_runtime("Vdu", "uint8"))
 
     def _stmt_Colour(self, node):
         # COLOUR n: set the text foreground (n < 128) or background colour. The

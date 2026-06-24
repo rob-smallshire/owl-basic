@@ -85,3 +85,17 @@ def test_emit_il_lowers_vdu_bytes_and_words(dotnet_backend):
     il = dotnet_backend.emit_il(analyse('VDU 23,1,0;0;0;0;\nEND\n', name="vduil"))
     assert "Vdu(uint8)" in il     # the ',' byte items (23, 1)
     assert "Vdu(int16)" in il      # the ';' word items (0;0;0;0;)
+
+
+def test_emit_il_lowers_clg_as_vdu16(dotnet_backend):
+    # CLG clears the graphics area -- exactly VDU 16 through the VDU driver.
+    il = dotnet_backend.emit_il(analyse('GCOL 0,1\nCLG\nEND\n', name="clgil"))
+    assert "ldc.i4.s 16" in il
+    assert "Vdu(uint8)" in il
+
+
+@requires_dotnet_toolchain
+def test_clg_runs(compile_and_run):
+    # CLG runs cleanly (clears graphics) and PRINT after it still works.
+    out = compile_and_run(analyse('MODE 1\nGCOL 0,1\nCLG\nPRINT "ok"\nEND\n', name="clg"))
+    assert out.splitlines() == ["ok"]

@@ -429,6 +429,17 @@ namespace OwlRuntime.platform.riscos
         }
 
         /// <summary>
+        /// Clear the graphics area to the graphics background colour (CLG / VDU
+        /// 16). Return true if the mode handled it; false for modes with no
+        /// addressable graphics surface (a streaming console), where CLG is a
+        /// no-op.
+        /// </summary>
+        public virtual bool TryClearGraphics()
+        {
+            return false;
+        }
+
+        /// <summary>
         /// Destructively delete the character to the left of the text cursor
         /// (VDU 127). The default does nothing; text modes that drive a host
         /// terminal override it.
