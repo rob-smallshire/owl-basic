@@ -127,6 +127,21 @@ namespace OwlRuntime
             return printManager.NumberToString(n);
         }
 
+        public static string StringString(int count, string s)
+        {
+            // BBC STRING$(count, s$): s$ repeated count times (empty if count <= 0).
+            if (count <= 0 || s.Length == 0)
+            {
+                return string.Empty;
+            }
+            var sb = new StringBuilder(s.Length * count);
+            for (int i = 0; i < count; ++i)
+            {
+                sb.Append(s);
+            }
+            return sb.ToString();
+        }
+
         /// <summary>
         /// The @% print-format control word: the 4-byte BBC packing of STR$
         /// switch, G/E/F format, precision and field width. Driving PRINT, STR$.

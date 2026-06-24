@@ -1802,6 +1802,13 @@ class _MethodEmitter:
         else:
             self.emit(_runtime("Instr", "string", "string"))
 
+    def _expr_StringStrFunc(self, node):
+        # STRING$(count, source): the source string repeated count times.
+        self.lower_expression(node.count)
+        self.emit("conv.ovf.i4")          # count is an integer repeat
+        self.lower_expression(node.source)
+        self.emit(_runtime("StringString", "int32", "string"))
+
     def _expr_LeftStrFunc(self, node):
         self.lower_expression(node.source)
         if node.length is not None:

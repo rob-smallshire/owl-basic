@@ -551,6 +551,15 @@
       ]
     ]
   ],
+  "BasicCommands::StringString": [
+    [
+      "string",
+      [
+        "int32",
+        "string"
+      ]
+    ]
+  ],
   "BasicCommands::TabH": [
     [
       "void",

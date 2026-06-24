@@ -129,3 +129,11 @@ def test_print_spc(compile_and_run):
     # SPC(n) prints n spaces.
     out = compile_and_run(analyse('PRINT "a";SPC(3);"b"\nEND\n', name="spc"))
     assert out == "a   b\n"
+
+
+@requires_dotnet_toolchain
+def test_string_string_repeats(compile_and_run):
+    # STRING$(n, s$): s$ repeated n times; n <= 0 gives the empty string.
+    out = compile_and_run(analyse(
+        'PRINT STRING$(3,"ab")\nPRINT STRING$(0,"x")+"end"\nEND\n', name="strrep"))
+    assert out.splitlines() == ["ababab", "end"]
