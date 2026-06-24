@@ -1811,6 +1811,12 @@ class _MethodEmitter:
         self.lower_expression(node.factor)
         self.emit(_runtime("Val", "string"))
 
+    def _expr_EvalHexFunc(self, node):
+        # The reduction of EVAL("&" + h$): parse the runtime hex string the way a
+        # &-literal is read (faulting "Bad hex" on a missing leading hex digit).
+        self.lower_expression(node.factor)
+        self.emit(_runtime("EvalHex", "string"))
+
     def _expr_ChrStrFunc(self, node):
         self.lower_expression(node.factor)
         self.emit(_runtime("Chr", "int32"))

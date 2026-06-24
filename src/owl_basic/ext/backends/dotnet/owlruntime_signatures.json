@@ -164,6 +164,14 @@
       ]
     ]
   ],
+  "BasicCommands::EvalHex": [
+    [
+      "int64",
+      [
+        "string"
+      ]
+    ]
+  ],
   "BasicCommands::Ext": [
     [
       "int64",

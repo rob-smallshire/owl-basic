@@ -259,6 +259,24 @@ is already LOCAL-correct). A lifted helper is invoked synchronously at the
      RETURN (by-reference) formal disqualifies a candidate (reflective write, out
      of scope). No compatible DEF FN is a clear rejection; a runtime *argument
      structure* or a compound argument expression stays the honest residual.
+5. **Hex-to-int idiom** -- DONE. `EVAL("&" + h$)` reads a runtime hex string;
+   `VAL` is decimal-only, so this is the only conversion for it. (In the ROM, `VAL`
+   runs the decimal literal reader `parse_number`, while `EVAL` runs the full
+   expression evaluator whose factor dispatcher `eval_factor` alone routes `&` to
+   `factor_hex` -- which is exactly why `VAL` cannot do this and `EVAL` can.)
+   `eval_lowering._lower_hex` rewrites the operand `"&"` + one runtime string into
+   `EvalHexFunc`, lowered to the new `OwlRuntime.BasicCommands.EvalHex`, which
+   reads the maximal `[0-9A-F]` run (uppercase only, like `factor_hex`), tolerates
+   trailing non-hex (`EVAL("&FG")` = 15), and faults **"Bad hex" (error 28)** when
+   no leading hex digit is read (`EVAL("&ff")`, `EVAL("&")`). It folds into a
+   32-bit signed pattern for up to 8 digits (`&FFFFFFFF` = -1); OWL deliberately
+   supersets the ROM to 64 bits for 9-16 digits (the ROM wraps to the low 32),
+   matching OWL's own hex-literal lexer. A trailing runtime *structure* (`"&" +
+   h$ + "+1"`) stays the honest residual. The constant form `EVAL("&FF")` already
+   folds via the constant-string path. `VAL` itself was also fixed to scan `E`
+   exponents (it had stopped at the `E`), so `VAL`/`STR$`/the expression parser
+   agree -- which is what makes the deferred `STR$` value-hole (reduce to
+   `VAL(STR$(e))`, not `e`) sound; that remains a clean future increment.
 
 Each increment keeps every prior corpus program compiling-or-gracefully-rejected
 and ends green. Category 6 keeps the honest rejection throughout.

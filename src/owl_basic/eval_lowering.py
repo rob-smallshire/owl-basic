@@ -21,8 +21,8 @@ from owl_basic.exceptions import CompileError
 from owl_basic.parent_visitor import ParentVisitor
 from owl_basic.syntax import parser as syntax_parser
 from owl_basic.syntax import grammar as _grammar
-from owl_basic.syntax.ast import (ActualArgList, Raise, UserFunc, ValFunc,
-                                  Variable)
+from owl_basic.syntax.ast import (ActualArgList, EvalHexFunc, Raise, UserFunc,
+                                  ValFunc, Variable)
 
 
 def lower_eval(parse_tree, options):
@@ -61,6 +61,9 @@ def _lower_once(parse_tree, options, helper_serial):
             # digits (a slice of a digit-only literal) is EVAL == VAL. Rewrite to
             # VAL of the same argument -- no run-time evaluator needed.
             _splice(eval_node, ValFunc(factor=eval_node.factor))
+            progressed = True
+        elif _lower_hex(eval_node):
+            # Hex-to-int idiom EVAL("&" + h$): rewrite to a runtime hex parse.
             progressed = True
         elif _lower_dispatch(eval_node, parse_tree, options, helper_serial):
             # Function-by-name dispatch: replaced by a call to a synthesised
@@ -161,6 +164,31 @@ def _set_line_num(node, line_num):
 # #9 in detail" section of docs/eval-static-compilation.md.
 
 _STRING_CONCAT = ("Plus", "Concatenate")
+
+
+def _lower_hex(eval_node):
+    """Lower the hex-to-int idiom EVAL("&" + h$), or return False to leave it.
+
+    EVAL of "&" followed by a runtime string is BBC's standard hex-to-integer
+    conversion -- VAL is decimal-only, so this is the only way to read a hex
+    string. (In the ROM, VAL runs the decimal literal reader, while EVAL runs the
+    full expression evaluator, whose factor dispatcher alone handles the "&" hex
+    reader -- which is exactly why VAL cannot do this and EVAL can.)
+
+    When the operand is exactly the literal "&" concatenated with one runtime
+    string -- no other structure -- it lowers to EvalHexFunc, which at run time
+    reads the leading hex run as a &-literal does and faults "Bad hex" on a
+    missing/invalid leading digit, as EVAL does. Anything more elaborate (e.g.
+    "&" + h$ + "+1") keeps its structure runtime and stays residue.
+    """
+    segments = _string_segments(eval_node.factor)
+    if segments is None or len(segments) != 2:
+        return False
+    (first_kind, first_value), (second_kind, second_value) = segments
+    if first_kind == "lit" and first_value == "&" and second_kind == "hole":
+        _splice(eval_node, EvalHexFunc(factor=second_value))
+        return True
+    return False
 
 
 def _lower_dispatch(eval_node, parse_tree, options, helper_serial):

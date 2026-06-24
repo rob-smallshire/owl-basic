@@ -198,6 +198,45 @@ def test_dispatch_runtime_argument_structure_is_rejected():
     assert "EVAL" in str(excinfo.value)
 
 
+# --- hex-to-int idiom: EVAL("&" + h$) ------------------------------------
+# VAL is decimal-only, so EVAL("&"+h$) is the standard way to read a hex string.
+# It lowers to a runtime hex parse (EvalHexFunc) -- no run-time evaluator.
+
+def test_hex_idiom_compiles():
+    assert _compiles('h$="FF"\nPRINT EVAL("&"+h$)\n')
+
+
+def test_hex_idiom_lowers_to_evalhex_not_eval(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse('h$="FF"\nPRINT EVAL("&"+h$)\n', name="t"))
+    assert "BasicCommands::EvalHex" in il
+
+
+@requires_dotnet_toolchain
+def test_hex_idiom_runs(compile_and_run):
+    out = compile_and_run(analyse(
+        'h$="FF"\nPRINT EVAL("&"+h$)\n'
+        'h$="7FFFFFFF"\nPRINT EVAL("&"+h$)\n'
+        'h$="FFFFFFFF"\nPRINT EVAL("&"+h$)\n'      # 32-bit signed pattern: -1
+        'h$="FG"\nPRINT EVAL("&"+h$)\n', name="t"))  # reads F, stops at G
+    assert out.split() == ["255", "2147483647", "-1", "15"]
+
+
+@requires_dotnet_toolchain
+def test_hex_idiom_bad_hex_faults_at_runtime(compile_expecting_error):
+    # A leading non-hex character (here lowercase) reads zero digits: "Bad hex",
+    # exactly as EVAL("&ff") faults on the BBC.
+    out = compile_expecting_error(analyse('h$="ff"\nPRINT EVAL("&"+h$)\n', name="t"))
+    assert "Bad hex" in out
+
+
+def test_hex_with_runtime_trailing_structure_stays_rejected():
+    # "&" + h$ + "+1" keeps a runtime structure beyond the hex string -- that is
+    # general EVAL again, so it stays the honest residual rejection.
+    with pytest.raises(CompileError) as excinfo:
+        analyse('h$="FF"\nPRINT EVAL("&"+h$+"+1")\n', name="t")
+    assert "EVAL" in str(excinfo.value)
+
+
 def test_variable_by_name_reflective_write_stays_rejected():
     # FNassign2's callee is constant; the runtime thing is an l-value selected by
     # a string and passed by RETURN. That reflective write is out of scope for #9

@@ -10,7 +10,8 @@ from owl_basic.cfg_vertex import CfgVertex
 from owl_basic.owltyping.type_system import (VoidOwlType, IntegerOwlType, ChannelOwlType,
                                 ScalarOwlType, NumericOwlType, StringOwlType,
                                 FloatOwlType, AddressOwlType, ByteOwlType,
-                                PendingOwlType, ArrayOwlType, ObjectOwlType)
+                                PendingOwlType, ArrayOwlType, ObjectOwlType,
+                                LongIntegerOwlType)
     
 class AstStatement(AstNode, CfgVertex):
     formal_type = TypeOption(VoidOwlType())
@@ -1041,6 +1042,12 @@ class TrueFunc(AstNode):
 
 class ValFunc(AstNode):
     formal_type = TypeOption(FloatOwlType())
+    actual_type = formal_type
+    factor = Node(formalType=StringOwlType())
+
+class EvalHexFunc(AstNode):
+    "The hex-to-integer reduction of EVAL(\"&\" + h$): the value of a runtime hex string"
+    formal_type = TypeOption(LongIntegerOwlType())
     actual_type = formal_type
     factor = Node(formalType=StringOwlType())
 
