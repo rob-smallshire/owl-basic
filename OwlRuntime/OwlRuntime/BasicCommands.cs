@@ -140,6 +140,12 @@ namespace OwlRuntime
             double result;
             if (double.TryParse(number, NumberStyles.Float, CultureInfo.InvariantCulture, out result))
             {
+                if (double.IsInfinity(result))
+                {
+                    // The literal overflows the float range, e.g. VAL("1E999"):
+                    // BBC raises "Too big" rather than yielding an infinity.
+                    throw new NumberTooBigException();
+                }
                 return result;
             }
             return 0.0;

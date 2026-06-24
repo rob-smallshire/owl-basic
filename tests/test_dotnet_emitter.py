@@ -263,6 +263,14 @@ def test_val_compiles_and_runs(compile_and_run):
     assert stdout.split() == ["42", "3.5", "0", "123", "123", "12300", "12300"]
 
 
+@requires_dotnet_toolchain
+def test_val_overflow_faults_too_big(compile_expecting_error):
+    # VAL of a literal beyond the float range faults "Too big" (BBC error 20),
+    # rather than yielding an infinity.
+    out = compile_expecting_error(analyse('PRINT VAL("1E999")\nEND\n', name="t"))
+    assert "too big" in out.lower()
+
+
 def test_emit_il_lowers_string_functions(dotnet_backend):
     il = dotnet_backend.emit_il(analyse_fixture("string_functions.bbctxt"))
     assert "System.String::Concat(string, string)" in il

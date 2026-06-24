@@ -70,6 +70,8 @@ namespace OwlRuntime.Tests
         [InlineData("   ", 0.0)]               // whitespace only is 0
         [InlineData("X12", 0.0)]               // no leading number is 0
         [InlineData("  123", 123.0)]           // leading spaces are skipped
+        [InlineData("+5", 5.0)]                // a leading plus (ROM-confirmed)
+        [InlineData("--5", 0.0)]               // a second sign is not a digit: 0 (ROM-confirmed)
         [InlineData("  -3.5", -3.5)]            // leading spaces and a sign
         [InlineData("007", 7.0)]               // leading zeros
         [InlineData("12X", 12.0)]              // value of the leading numeric part
@@ -105,6 +107,14 @@ namespace OwlRuntime.Tests
         public void EvalHex_reads_the_leading_hex_run(string s, long expected)
         {
             Assert.Equal(expected, BasicCommands.EvalHex(s));
+        }
+
+        [Fact]
+        public void Val_faults_too_big_on_overflow()
+        {
+            // VAL("1E999") overflows the float range: BBC "Too big" (error 20),
+            // not an infinity.
+            Assert.Throws<NumberTooBigException>(() => BasicCommands.Val("1E999"));
         }
 
         [Fact]
