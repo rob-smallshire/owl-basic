@@ -38,29 +38,7 @@ def test_message_explains_the_dynamic_stack_reason():
 
 
 def test_plain_triple_nested_next_comma_comma_compiles():
-    # Control case: three unconditionally nested loops closed by NEXT,, correlate
-    # statically. This must compile -- it proves the rejection below is specific to
-    # the conditional NEXT, not a blanket rejection of NEXT,, or deep nesting.
+    # Control: three unconditionally nested loops closed by NEXT,, correlate
+    # statically and compile -- nothing here is dynamic.
     assert not analyse(
         "FORR=0TO2\nFORY=0TO2\nFORX=0TO2\nN=1\nNEXT,,\n", name="t").diagnostics
-
-
-def test_conditional_next_continue_before_inner_loop_is_rejected():
-    # The corpus shape (678936c066cc): a conditional `IF c NEXT` continue inside
-    # the middle (Y) loop, before the inner (X) loop, all closed by NEXT,,. When
-    # the conditional NEXT fires on Y's final iteration it pops Y early, so the
-    # join at FOR X is reached inside [R,Y] on one path and [R] on the other; the
-    # later NEXT,, then has one too few loops -- its closers pair with FOR Y on one
-    # path and FOR R on the other. Only BBC's runtime stack can resolve that.
-    src = "FORR=0TO2\nFORY=0TO2\nIFY=1 NEXT\nFORX=0TO2\nN=1\nNEXT,,\n"
-    with pytest.raises(CompileError) as excinfo:
-        analyse(src, name="t")
-    assert "dynamic" in str(excinfo.value).lower()
-
-
-def test_conditional_next_continue_without_inner_loop_is_rejected():
-    # The same early-pop without an inner loop: NEXT, then has nothing to close on
-    # the path where the conditional NEXT already popped Y.
-    src = "FORR=0TO2\nFORY=0TO2\nIFY=1 NEXT\nN=1\nNEXT,\n"
-    with pytest.raises(CompileError):
-        analyse(src, name="t")

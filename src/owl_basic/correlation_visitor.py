@@ -107,6 +107,11 @@ class CorrelationVisitor(Visitor):
         self.to_visit = deque()
         self.visited = set()
         self.loops = [] # A stack for tracking the current abstract execution state
+        # Loops (by id) kept open by a continue-NEXT within the comma chain
+        # currently being walked. A later NEXT in the same chain skips them so it
+        # matches the next loop out; the flags clear when the chain ends, leaving
+        # those loops open for their real close. See visitNext.
+        self._continued = set()
 
     def start(self, entry_point):
         """
@@ -117,6 +122,8 @@ class CorrelationVisitor(Visitor):
         for v in self.visited:
             if hasattr(v, "loop_stack"):
                 del v.loop_stack
+            if hasattr(v, "continued_ids"):
+                del v.continued_ids
 
     def _pruneNeverTakenLoopExits(self, entry_point):
         """Remove the fall-through (loop-exit) edge of an `UNTIL FALSE`.
@@ -156,6 +163,7 @@ class CorrelationVisitor(Visitor):
             # Restore the loop stack
             if hasattr(v, "loop_stack"):
                 self.loops = v.loop_stack[:]
+                self._continued = set(getattr(v, "continued_ids", ()))
             if v not in self.visited:
                 self.visited.add(v)
                 v.accept(self)
@@ -188,6 +196,11 @@ class CorrelationVisitor(Visitor):
                 ordered_targets = _in_id_order(v.outEdges)
                 for target in ordered_targets:
                     self._propagateLoopStack(v, target, outgoing)
+                    # Carry the continue flags alongside the stack. They are empty
+                    # except inside a comma chain (which has no joins), so the
+                    # first writer wins, like loop_stack.
+                    if not hasattr(target, "continued_ids"):
+                        target.continued_ids = set(self._continued)
                 self.to_visit.extend(ordered_targets)
 
     def _propagateLoopStack(self, source, target, loops):
@@ -299,22 +312,77 @@ class CorrelationVisitor(Visitor):
     def visitForToStep(self, for_stmt):
         self.loops.append(for_stmt)
         
+    def _next_continues_loop(self, next_stmt, for_stmt):
+        """Whether *next_stmt* is a *continue* for *for_stmt*, not its close.
+
+        A FOR may have several NEXTs -- the BBC `IF c NEXT` continue idiom: when
+        the condition holds, skip the rest of the body and start the next
+        iteration. Such a continue-NEXT is a back-edge when taken; its
+        fall-through (loop-done) edge re-enters the loop body, where a *later*
+        NEXT performs the real close. The genuine closing NEXT's fall-through
+        instead leaves the loop, reachable only *through* that NEXT.
+
+        So the structural test, independent of CFG walk order: the FOR can reach
+        the *comma chain's* fall-through point -- where the run of consecutive
+        NEXTs (`NEXT,`/`NEXT,,`) re-enters ordinary code -- *without passing
+        through that chain*. A loop with one NEXT, or whose last NEXT exits the
+        body, is never a continue; the conditionally-opened-FOR cases reject
+        earlier at the join, so this is only consulted once a NEXT genuinely
+        matches an open loop.
+        """
+        # Walk the run of consecutive NEXT vertices (the comma chain) to the first
+        # ordinary statement it falls through to -- the body re-entry of a
+        # continue. A chain that runs to a terminal (no fall-through) is a real
+        # close, not a continue.
+        chain = set()
+        cursor = next_stmt
+        while isinstance(cursor, Next):
+            chain.add(id(cursor))
+            out = list(cursor.outEdges)
+            if len(out) != 1:
+                return False
+            cursor = out[0]
+        seen = set(chain)
+        stack = [for_stmt]
+        while stack:
+            v = stack.pop()
+            if id(v) in seen:
+                continue
+            seen.add(id(v))
+            if v is cursor:
+                return True
+            stack.extend(v.outEdges)
+        return False
+
+    def _topmost_open(self):
+        """Index of the innermost loop not already continued in this comma chain.
+
+        A continue-NEXT leaves its loop on the stack (flagged in self._continued)
+        so a following NEXT in the same `NEXT,`/`NEXT,,` chain matches the next
+        loop out, not the one just continued.
+        """
+        idx = len(self.loops) - 1
+        while idx >= 0 and id(self.loops[idx]) in self._continued:
+            idx -= 1
+        return idx
+
     def visitNext(self, next_stmt):
         logging.debug("NEXT statement = %s", next_stmt)
         #logging.debug("NEXT identifiers = %s", next_stmt.identifiers[0].identifier)
         while True:
-            if len(self.loops) == 0:
+            idx = self._topmost_open()
+            if idx < 0:
                 raise CompileError(
                     "NEXT at line %d has no FOR loop to close.%s"
                     % (next_stmt.lineNum, _DYNAMIC_STACK_NOTE))
-            peek = self.loops[-1]
+            peek = self.loops[idx]
             if not isinstance(peek, ForToStep):
                 raise CompileError(
                     "NEXT at line %d does not match the innermost open loop (a %s "
                     "opened at line %d).%s"
                     % (next_stmt.lineNum, peek.description, peek.lineNum, _DYNAMIC_STACK_NOTE))
-            
-            for_stmt = self.loops.pop()
+
+            for_stmt = self.loops[idx]
             # If the next_stmt has no attached identifiers, it applies to the
             # top FOR statement on the stack
             if len(next_stmt.identifiers) == 0:
@@ -328,7 +396,23 @@ class CorrelationVisitor(Visitor):
             # TODO: Check that the symbols are equal, not just the names
             if for_stmt.identifier.identifier == next_stmt.identifiers[0].identifier:
                 connectLoop(next_stmt, for_stmt)
-                break    
+                if self._next_continues_loop(next_stmt, for_stmt):
+                    # The BBC continue idiom: this NEXT loops back, but the loop
+                    # is closed by a later NEXT. Record the back-edge and keep the
+                    # loop open (flagged), so a following NEXT in the same comma
+                    # chain matches the next loop, and the real close still
+                    # correlates -- its fall-through into the body does not
+                    # spuriously empty the stack.
+                    self._continued.add(id(for_stmt))
+                else:
+                    del self.loops[idx]
+                break
+            # A named NEXT closing an outer loop: the skipped inner loop leaks.
+            del self.loops[idx]
+        # Leaving the comma chain (the fall-through is not another NEXT): the
+        # continued loops are simply open again, so clear the flags.
+        if not any(isinstance(t, Next) for t in next_stmt.outEdges):
+            self._continued = set()
     
         
         
