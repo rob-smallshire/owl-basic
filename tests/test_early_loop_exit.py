@@ -90,8 +90,7 @@ def test_comma_continue_next_runs_correctly(compile_and_run):
 # The conditional-closer continue generalises: a closer (NEXT / ENDWHILE; and,
 # via UNTIL-FALSE exit pruning, UNTIL FALSE) whose loop is re-closed downstream
 # is a back-edge. This holds inside nested loops and for several continues on one
-# loop. (WHILE/REPEAT here are checked at analysis; WHILE codegen is a separate
-# unimplemented feature, so those are not run.)
+# loop, and across loop kinds (continue an outer loop from inside an inner one).
 
 def test_nested_for_continue_compiles():
     assert _compiles("FORL=0TO2\nFORS=0TO7\nIFS>5 NEXT\nNEXT\n")
@@ -112,6 +111,45 @@ def test_nested_while_endwhile_continue_compiles():
 
 def test_for_continue_inside_while_compiles():
     assert _compiles("WHILE A<2\nA=A+1\nFORS=0TO3\nIFS=1 NEXT\nNEXT\nENDWHILE\n")
+
+
+@requires_dotnet_toolchain
+def test_while_conditional_endwhile_continue_runs_correctly(compile_and_run):
+    # IF X=3 ENDWHILE jumps back to the WHILE test (continue), skipping the PRINT
+    # for X=3, so it prints 1, 2, 4, 5, 6.
+    out = compile_and_run(analyse(
+        "X=0\nWHILE X<6\nX=X+1\nIFX=3 ENDWHILE\nPRINTX\nENDWHILE\n", name="t"),
+        timeout=30)
+    assert out.split() == ["1", "2", "4", "5", "6"]
+
+
+@requires_dotnet_toolchain
+def test_nested_while_endwhile_continue_runs_correctly(compile_and_run):
+    # The inner IF B=2 ENDWHILE continues the inner WHILE, skipping B=2's PRINT.
+    out = compile_and_run(analyse(
+        "A=0\nWHILE A<2\nA=A+1\nB=0\nWHILE B<3\nB=B+1\nIFB=2 ENDWHILE\n"
+        "PRINTA*10+B\nENDWHILE\nENDWHILE\n", name="t"), timeout=30)
+    assert out.split() == ["11", "13", "21", "23"]
+
+
+@requires_dotnet_toolchain
+def test_for_continue_inside_while_runs_correctly(compile_and_run):
+    # An inner FOR with an IF S=1 NEXT continue, nested in a WHILE.
+    out = compile_and_run(analyse(
+        "A=0\nWHILE A<2\nA=A+1\nFORS=0TO3\nIFS=1 NEXT\nPRINTA*10+S\nNEXT\nENDWHILE\n",
+        name="t"), timeout=30)
+    assert out.split() == ["10", "12", "13", "20", "22", "23"]
+
+
+@requires_dotnet_toolchain
+def test_until_false_continues_outer_repeat_over_inner_while_runs_correctly(compile_and_run):
+    # Cross-kind: an UNTIL FALSE inside a WHILE continues the enclosing REPEAT,
+    # abandoning the WHILE. At I=2,B=2 the WHILE is abandoned; the next REPEAT
+    # iteration restarts it.
+    out = compile_and_run(analyse(
+        "I=0\nREPEAT\nI=I+1\nB=0\nWHILE B<3\nB=B+1\nIFI=2 ANDB=2 UNTIL FALSE\n"
+        "PRINTI*10+B\nENDWHILE\nUNTILI>2\n", name="t"), timeout=30)
+    assert out.split() == ["11", "12", "13", "21", "31", "32", "33"]
 
 
 @requires_dotnet_toolchain

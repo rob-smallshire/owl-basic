@@ -8,7 +8,7 @@ tests are skipped unless the full .NET toolchain is present (see conftest:
 from conftest import requires_dotnet_toolchain
 from helpers import analyse_fixture
 
-from owl_basic.analysis import analyse_numbered_lines
+from owl_basic.analysis import analyse, analyse_numbered_lines
 
 
 def _statement_types(program):
@@ -518,6 +518,31 @@ def test_repeat_until_compiles_and_runs(compile_and_run):
     # n%=0 : REPEAT n%=n%+1 : PRINT n% : UNTIL n%>=3  -> 1, 2, 3
     stdout = compile_and_run(analyse_fixture("repeat_until.bbctxt"))
     assert stdout.split() == ["1", "2", "3"]
+
+
+def test_emit_il_lowers_while_endwhile(dotnet_backend):
+    # WHILE is pre-tested: its condition branches past the loop when false, and
+    # ENDWHILE is an unconditional back-edge to the WHILE test.
+    il = dotnet_backend.emit_il(
+        analyse("X=0\nWHILE X<3\nX=X+1\nENDWHILE\nPRINT99\n", name="t"))
+    assert "brfalse BB_" in il    # pre-test exits past the loop
+    assert "\n        br BB_" in il    # ENDWHILE back-edge to the WHILE test
+
+
+@requires_dotnet_toolchain
+def test_while_endwhile_compiles_and_runs(compile_and_run):
+    # X=0 : WHILE X<3 : X=X+1 : PRINT X : ENDWHILE  -> 1, 2, 3
+    stdout = compile_and_run(
+        analyse("X=0\nWHILE X<3\nX=X+1\nPRINTX\nENDWHILE\n", name="t"))
+    assert stdout.split() == ["1", "2", "3"]
+
+
+@requires_dotnet_toolchain
+def test_while_with_initially_false_condition_skips_body(compile_and_run):
+    # Pre-tested: the body must not run when the condition is false on entry.
+    stdout = compile_and_run(
+        analyse("X=5\nWHILE X<3\nPRINTX\nENDWHILE\nPRINT99\n", name="t"))
+    assert stdout.split() == ["99"]
 
 
 @requires_dotnet_toolchain

@@ -541,7 +541,7 @@ def _wrap_longjump_dispatch(emitter, prologue):
 # block they end needs no implicit fall-through branch generated for it.
 _BRANCHING_STATEMENTS = frozenset(
     {"If", "OnGoto", "End", "ReturnFromProcedure", "ReturnFromFunction",
-     "LongJump", "Run", "Raise"}
+     "LongJump", "Run", "Raise", "Endwhile"}
 )
 
 
@@ -1258,6 +1258,28 @@ class _MethodEmitter:
         self.lower_expression(node.condition)
         repeat = _sole_loop_back(node, "UNTIL")
         self.emit("brfalse " + self._block_label(repeat.block))
+
+    def _stmt_While(self, node):
+        # Pre-tested loop: exit past the loop when the condition is false, else
+        # fall through into the body. Every ENDWHILE (the real close and any
+        # `IF c ENDWHILE` continue) branches back here to re-test, so the test is
+        # emitted only once, here.
+        self.lower_expression(node.condition)
+        endwhile = getattr(node, "closingEndwhile", None)
+        if endwhile is None:
+            raise CodeGenerationError(
+                "WHILE at line %d has no closing ENDWHILE to exit to" % node.lineNum)
+        after = list(endwhile.outEdges)
+        target = (self._block_label(after[0].block) if after
+                  else self._method_end_label())
+        self.emit("brfalse " + target)
+
+    def _stmt_Endwhile(self, node):
+        # Unconditional back-edge to the WHILE test (which exits when false). This
+        # is the real close; a conditional `IF c ENDWHILE` continue emits the same
+        # branch, giving continue semantics for free.
+        while_stmt = _sole_loop_back(node, "ENDWHILE")
+        self.emit("br " + self._block_label(while_stmt.block))
 
     def _stmt_CallProcedure(self, node):
         for actual in node.actualParameters or []:

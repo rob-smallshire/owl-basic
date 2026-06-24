@@ -323,6 +323,9 @@ class CorrelationVisitor(Visitor):
             if self._closer_continues_loop(endwhile_stmt, peek):
                 self._continued.add(id(peek))
             else:
+                # The real close: record the pairing so codegen can branch the
+                # WHILE's pre-test past this ENDWHILE to the after-loop block.
+                peek.closingEndwhile = endwhile_stmt
                 del self.loops[idx]
             break
         self._clear_continue_chain_flags(endwhile_stmt)
