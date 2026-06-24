@@ -66,11 +66,22 @@ namespace OwlRuntime.Tests
 
         [Theory]
         [InlineData("42", 42.0)]
-        [InlineData("  -3.5", -3.5)]            // leading spaces and a sign
-        [InlineData("12X", 12.0)]              // value of the leading numeric part
+        [InlineData("", 0.0)]                  // empty string is 0
+        [InlineData("   ", 0.0)]               // whitespace only is 0
         [InlineData("X12", 0.0)]               // no leading number is 0
+        [InlineData("  123", 123.0)]           // leading spaces are skipped
+        [InlineData("  -3.5", -3.5)]            // leading spaces and a sign
+        [InlineData("007", 7.0)]               // leading zeros
+        [InlineData("12X", 12.0)]              // value of the leading numeric part
+        [InlineData("1 2", 1.0)]               // an internal space ends the number
+        [InlineData(".5", 0.5)]                // a leading decimal point
+        [InlineData("5.", 5.0)]                // a trailing decimal point
+        [InlineData("1.2.3", 1.2)]             // only the first decimal point counts
+        [InlineData(".E3", 0.0)]               // no mantissa digit: not a number
         [InlineData("1E3", 1000.0)]            // VAL scans the E exponent...
         [InlineData("1.2E10", 1.2E10)]         // ...like the rest of BBC BASIC
+        [InlineData("1E-3", 0.001)]            // a signed exponent
+        [InlineData("-.5E1", -5.0)]            // sign, leading point, exponent
         [InlineData("-2.5E-2", -0.025)]        // signed mantissa and signed exponent
         [InlineData("1E3+1", 1000.0)]          // stops at the operator, as VAL does
         [InlineData("123ABC", 123.0)]          // stops at the first non-numeric
