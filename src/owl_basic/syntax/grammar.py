@@ -1861,7 +1861,7 @@ def p_str_str_dec_func(p):
     
 def p_str_str_hex_func(p):
     'str_str_hex_func : STR_STR TILDE factor %prec FUNCTION'
-    p[0] = StrStringFunc(factor = p[2], base = 16)
+    p[0] = StrStringFunc(factor = p[3], base = 16)
     p[0].lineNum = p.lineno(1) - 1
     
 def p_sum_func(p):

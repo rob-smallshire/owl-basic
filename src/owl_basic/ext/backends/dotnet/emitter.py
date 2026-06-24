@@ -1883,9 +1883,21 @@ class _MethodEmitter:
         self.emit(_runtime("get_Time"))
 
     def _expr_StrStringFunc(self, node):
-        # STR$: format a number as PRINT would. (STR$~ hex base not yet handled.)
-        if getattr(node, "base", 10) != 10:
-            raise CodeGenerationError("STR$ with a non-decimal base is not supported yet")
+        # STR$: format a number as PRINT would. STR$~ is the hexadecimal form --
+        # BBC gives uppercase hex with no leading zeros, which is exactly
+        # Convert.ToString(value, 16) (lowercase) upper-cased. The value is taken
+        # as a 32-bit integer, so e.g. STR$~(&FFFFFFFF) is "FFFFFFFF".
+        base = getattr(node, "base", 10)
+        if base == 16:
+            self.lower_expression(node.factor)
+            self.emit("conv.i4")
+            self.emit("ldc.i4.s 16")
+            self.emit("call string [System.Runtime]System.Convert::ToString(int32, int32)")
+            self.emit("call instance string [System.Runtime]System.String::ToUpper()")
+            return
+        if base != 10:
+            raise CodeGenerationError(
+                "STR$ with base %d is not supported (only decimal and hex)" % base)
         self.lower_expression(node.factor)
         if not isinstance(getattr(node.factor, "actualType", None), FloatOwlType):
             self.emit("conv.r8")          # StrString takes a float64

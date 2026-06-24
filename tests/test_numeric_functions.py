@@ -65,6 +65,28 @@ def test_str_string(compile_and_run):
     assert out.splitlines() == ["42", "3.5"]
 
 
+def test_str_string_hex_takes_its_argument_not_the_tilde():
+    # STR$~(n) is the hexadecimal form. The `STR_STR TILDE factor` rule must put
+    # the *factor* (p[3]) in the node, not the TILDE token (p[2]) -- the latter
+    # left the literal '~' as the StrStringFunc's child, crashing the EVAL walk
+    # with "'str' object has no attribute 'forEachChild'" (corpus d1bead354214).
+    from owl_basic.syntax.ast import StrStringFunc
+    from helpers import walk
+    program = analyse("A$ = STR$~(255)\n", name="t")
+    funcs = [n for n in walk(program.parse_tree) if isinstance(n, StrStringFunc)]
+    assert len(funcs) == 1
+    assert funcs[0].base == 16
+    assert not isinstance(funcs[0].factor, str)
+
+
+@requires_dotnet_toolchain
+def test_str_string_hex_runs_correctly(compile_and_run):
+    # STR$~(255) is "FF"; STR$~(10) is "A".
+    out = compile_and_run(analyse(
+        'PRINT STR$~(255)\nPRINT STR$~(10)\nEND\n', name="strhex"))
+    assert out.splitlines() == ["FF", "A"]
+
+
 @requires_dotnet_toolchain
 def test_time_reads_and_writes(compile_and_run):
     # TIME is the centisecond clock; set it, then read it back.
