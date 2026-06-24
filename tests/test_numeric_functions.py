@@ -137,3 +137,13 @@ def test_string_string_repeats(compile_and_run):
     out = compile_and_run(analyse(
         'PRINT STRING$(3,"ab")\nPRINT STRING$(0,"x")+"end"\nEND\n', name="strrep"))
     assert out.splitlines() == ["ababab", "end"]
+
+
+@requires_dotnet_toolchain
+def test_inkey_times_out_and_reads_a_waiting_key(compile_and_run):
+    # INKEY(0) with no key waiting times out to -1; INKEY(n) returns a waiting
+    # key's code ('A' = 65, fed on stdin).
+    assert compile_and_run(
+        analyse("PRINT INKEY(0)\nEND\n", name="ik0")).strip() == "-1"
+    assert compile_and_run(
+        analyse("PRINT INKEY(10)\nEND\n", name="ikr"), stdin="A").strip() == "65"

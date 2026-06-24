@@ -330,19 +330,37 @@ namespace OwlRuntime
         {
             if (factor >= 0)
             {
-                // Wait for keypress for factor milliseconds
+                // INKEY(n): wait up to n centiseconds for a keypress; return its
+                // code, or -1 if none arrives in time.
+                if (Console.IsInputRedirected)
+                {
+                    // A redirected stream has no real-time keyboard: return a
+                    // character if one is already waiting, otherwise -1 (so a
+                    // pause-for-key does not block on an exhausted input).
+                    return Console.In.Peek() < 0 ? -1 : Console.In.Read();
+                }
+                long deadline = Environment.TickCount64 + factor * 10L;
+                do
+                {
+                    if (Console.KeyAvailable)
+                    {
+                        return Console.ReadKey(true).KeyChar;
+                    }
+                    System.Threading.Thread.Sleep(1);
+                }
+                while (Environment.TickCount64 < deadline);
+                return -1;
             }
-            else if (factor == -256)
+            if (factor == -256)
             {
-                
+                // INKEY(-256): a number identifying the host machine. The BBC
+                // Master returns &FD; report a stable value so programs that
+                // branch on the host still run.
+                return 0xFD;
             }
-            else if (factor < 0)
-            {
-                // Use GetAsyncKeyState to determine whether the requested key is down
-            }
-
-            // TODO: Return a number indicating the OS version
-            return 100;
+            // INKEY(-n): is the key with that negative scan code held down? OWL
+            // has no portable key-state source, so report "not pressed".
+            return 0;
         }
 
         public static int Instr(string searched, string substring)

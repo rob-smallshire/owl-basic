@@ -1802,6 +1802,13 @@ class _MethodEmitter:
         else:
             self.emit(_runtime("Instr", "string", "string"))
 
+    def _expr_InkeyFunc(self, node):
+        # INKEY(n): wait up to n centiseconds for a key (n>=0, code or -1), or
+        # test a key / identify the host (n<0). The runtime does the work.
+        self.lower_expression(node.factor)
+        self.emit("conv.ovf.i4")
+        self.emit(_runtime("Inkey", "int32"))
+
     def _expr_StringStrFunc(self, node):
         # STRING$(count, source): the source string repeated count times.
         self.lower_expression(node.count)
