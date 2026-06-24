@@ -159,19 +159,30 @@ each:
    `EVAL == VAL`; it lowers to `VAL` of the same argument. No placeholder
    machinery and no float-precision concern (digits are exact).
 
-   *Rejected as unsound -- the `STR$` concatenation template:* it is tempting to
-   reduce `EVAL(STR$(e)+"+1")` to `e+1`, treating `STR$(e)` as a numeric hole.
-   But `STR$` formats its argument according to the runtime `@%` format variable
-   (the same control `PRINT` uses), so `STR$(e)` is *not* guaranteed to be a
-   lossless representation of `e`. Even at the default `@%` it is ~10 significant
-   figures in general format, so `STR$(12345678901)` is `"1.23456789E10"` and
-   `EVAL` reads back `12345678900`; and `@%` can be set to anything at run time.
-   Substituting the exact expression `e` would therefore give a *different* value
-   from what `EVAL` actually computes. Compiling it soundly would require
-   statically tracking `@%` (an arbitrary runtime global) plus value-range
-   analysis -- narrow and fragile -- so the `STR$` template is not done. The
-   digit idiom does not go through `STR$` (it slices a fixed literal: no
-   formatting, no `@%`), so it stays exact.
+   *The `STR$` concatenation template -- compilable, but only with the round-trip
+   kept.* It is tempting to reduce `EVAL(STR$(e)+"+1")` to `e+1`, treating
+   `STR$(e)` as a numeric hole. That cancellation is **unsound**: `STR$` formats
+   its argument according to the runtime `@%` format variable (the same control
+   `PRINT` uses), so `STR$(e)` is *not* a lossless representation of `e`. Even at
+   the default `@%` it is ~10 significant figures in general format, so
+   `STR$(12345678901)` is `"1.23456789E10"` and `EVAL` reads back `12345678900`;
+   and `@%` can be set to anything at run time. Substituting the exact expression
+   `e` would therefore give a *different* value from what `EVAL` computes. Making
+   the cancellation sound would need static `@%` tracking plus value-range
+   analysis -- narrow and fragile.
+
+   But the cancellation is the only unsound part. **Keeping** the round-trip is
+   exact: `EVAL(STR$(e) + "+1") == VAL(STR$(e)) + 1`, because `EVAL`'s parser reads
+   from `STR$(e)` exactly the numeric literal that `VAL` reads -- the same trick
+   the digit idiom uses (wrap the hole in `VAL`), for the same reason. This holds
+   for any `@%` and needs no range analysis. It does require that `VAL` and the
+   expression parser agree on numeric syntax; OWL's `VAL` used to stop at an `E`
+   exponent (a bug -- BBC `VAL` scans the same number grammar as the rest of the
+   interpreter, so `VAL("1E3")=1000`), which is now fixed, so `VAL(STR$(n))`
+   round-trips. The sound `STR$` value-hole (reducing to `VAL(STR$(e))`, not `e`)
+   is therefore a clean next increment. The digit idiom does not go through `STR$`
+   at all (it slices a fixed literal: no formatting, no `@%`), so it stays exact
+   regardless.
 3. **Dispatch.** If the residual is statically a function call (its skeleton
    begins with the literal `"FN"`) with a runtime name and already-staged
    arguments, generate a `CASE` dispatch over the program's `DEF FN`s of
