@@ -42,14 +42,26 @@ def fold_constant(node):
         return None
     name = type(node).__name__
 
-    if name in ("LiteralInteger", "LiteralFloat"):
+    if name in ("LiteralInteger", "LiteralFloat", "LiteralString"):
         return node.value
     if name == "PiFunc":
         return math.pi
 
+    if name == "Concatenate":     # string concat after type-check converts Plus
+        a, b = fold_constant(node.lhs), fold_constant(node.rhs)
+        if isinstance(a, str) and isinstance(b, str):
+            return a + b
+        return None
+
     if name in _BINARY:
         a, b = fold_constant(node.lhs), fold_constant(node.rhs)
         if a is None or b is None:
+            return None
+        if isinstance(a, str) or isinstance(b, str):
+            # Plus of two constant strings is concatenation (before type-check
+            # turns it into a Concatenate). No other string arithmetic exists.
+            if name == "Plus" and isinstance(a, str) and isinstance(b, str):
+                return a + b
             return None
         return _BINARY[name](a, b)
 

@@ -16,6 +16,7 @@ from owl_basic import (
     correlation_visitor,
     data_visitor,
     errors,
+    eval_lowering,
     line_number_visitor,
     parent_visitor,
     separation_visitor,
@@ -269,9 +270,14 @@ def _run_pipeline(data, physical_to_logical_map, line_offsets, line_number_prefi
         # contains a few stray bytes (Sphinx) or an unterminated string is not
         # mistaken for binary.
         _diagnose_parse_failure(data, options)
-    _reject_unsupported_constructs(parse_tree)
     parse_tree.accept(SourceDebuggingVisitor(data, line_offsets, line_number_prefixes))
     parse_tree.accept(parent_visitor.ParentVisitor())
+    # Lower the EVALs we can compile statically (constant-string EVAL becomes the
+    # parsed expression), then reject only the residue. Re-parent afterwards so
+    # the spliced expressions are seen by every downstream pass.
+    eval_lowering.lower_eval(parse_tree, options)
+    parse_tree.accept(parent_visitor.ParentVisitor())
+    _reject_unsupported_constructs(parse_tree)
     parse_tree.accept(separation_visitor.SeparationVisitor())
     parse_tree.accept(simplify_visitor.SimplificationVisitor())
 
