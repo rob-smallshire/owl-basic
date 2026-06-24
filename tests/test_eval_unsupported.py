@@ -1,10 +1,11 @@
-"""EVAL cannot be statically compiled, so OWL rejects it with a clear message.
+"""OWL does not yet support EVAL, so it rejects it up front with a clear message.
 
-EVAL interprets a string as a BASIC expression at run time -- its result type and
-behaviour are not knowable until then -- which a static compiler cannot reproduce.
-Rather than mislead (it used to surface as a spurious "+ incompatible" type error
-when an EVAL result met a string) OWL rejects a program using EVAL up front,
-naming EVAL as the reason.
+EVAL interprets a string as a BASIC expression at run time. Supporting it means
+embedding a run-time expression evaluator (as the interpreter has) and a dynamic
+result type -- a project of its own that OWL does not yet provide. Rather than
+mislead (it used to surface as a spurious "+ incompatible" type error when an EVAL
+result met a string) OWL rejects a program using EVAL up front, naming EVAL as the
+reason. The message states the missing capability, not that EVAL is impossible.
 """
 import pytest
 

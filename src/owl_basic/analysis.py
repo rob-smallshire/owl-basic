@@ -220,21 +220,24 @@ def _diagnose_parse_failure(data, options):
 def _reject_unsupported_constructs(parse_tree):
     """Reject constructs OWL cannot compile, up front, with a clear message.
 
-    EVAL interprets a string as a BASIC expression at run time, so its type and
-    behaviour are unknowable to a static compiler; compiling even a restricted
-    subset is a project of its own. Reject it here -- naming EVAL -- rather than
-    let it surface later as an opaque type or code-generation error. (CALL is
-    machine code and also cannot be compiled, but unlike EVAL it is still
-    analysable -- the call graph shows it as an external sink -- so it is rejected
-    at code generation, not here.)
+    EVAL interprets a string as a BASIC expression at run time. Supporting it in
+    general means shipping a run-time expression evaluator in OwlRuntime and
+    handing it the string (as the interpreter does) -- and its result type is
+    statically unknown, so it would also need a dynamic value. That evaluator is a
+    project of its own and OWL does not yet provide one, so EVAL is rejected here
+    -- naming EVAL -- rather than surfacing later as an opaque type or
+    code-generation error. (CALL is machine code and also unsupported, but unlike
+    EVAL it is still analysable -- the call graph shows it as an external sink --
+    so it is rejected at code generation, not here.)
     """
     def walk(node):
         if node is None:
             return
         if type(node).__name__ == "EvalFunc":
             raise CompileError(
-                "EVAL is not supported: it evaluates a string as BASIC at run "
-                "time, which a static compiler cannot reproduce."
+                "EVAL is not supported: it evaluates a string as a BASIC "
+                "expression at run time, which needs a run-time expression "
+                "evaluator that OWL does not yet provide."
             )
         node.forEachChild(walk)
 
