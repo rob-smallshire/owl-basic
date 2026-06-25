@@ -20,6 +20,7 @@ and the tests ever disagree, the tests win -- update this table.
 | Nested EVAL | recursively lowered | `EVAL("EVAL(""1+2"")")` → `3` | `test_nested_eval_runs` |
 | Digit-slice idiom | `VAL(...)` | `EVAL(MID$("13264",K,1))` | `test_digit_idiom_runs_correctly`, `test_eval_of_left_str_digits_runs` |
 | Hex-to-int idiom | runtime hex parse (`EvalHex`) | `EVAL("&"+h$)` | `test_hex_idiom_runs`, `test_hex_idiom_lowers_to_evalhex_not_eval` |
+| `STR$` value-hole | each `STR$(e)` → `VAL(STR$(e))`, spliced | `EVAL(STR$(n)+"+1")` | `test_str_template_runs`, `test_str_template_lowers_to_val_of_str` |
 | Function-by-name dispatch | `IF`-chain helper over the program's `DEF FN`s | `EVAL("FN"+cmd$+"(arg)")` | `test_dispatch_with_named_argument_runs`, `test_dispatch_with_chr34_string_value_hole_runs`, `test_dispatch_with_staged_literal_argument_runs`, `test_dispatch_reads_local_argument_dynamically` |
 
 Two run-time behaviours that are *correct compilation*, not rejection:
@@ -44,10 +45,9 @@ mis-compile.
 | Runtime structure after a hex string | structure beyond the hex run is runtime | `EVAL("&"+h$+"+1")` | `test_hex_with_runtime_trailing_structure_stays_rejected` |
 | Variable-by-name / reflective write | `RETURN` (by-reference) argument selected by a string | `EVAL("FNassign2("+a$+","+CHR$34+b$+CHR$34+")")` | `test_variable_by_name_reflective_write_stays_rejected` |
 
-Not yet implemented (a clean future increment, not a fundamental limitation):
-the **`STR$` value-hole**, `EVAL(STR$(e)+"+1")` → `VAL(STR$(e))+1` -- sound now
-that `VAL` and the expression parser agree on number syntax (see the lowering
-pass section). Until then it stays in the residual above.
+A `STR$` value-hole that *lexically fuses* with adjacent text stays rejected
+(e.g. `EVAL(STR$(n)+"0")` would read `"50"`, not the `STR$`-formatted number):
+`test_str_template_lexical_merge_stays_rejected`.
 
 ## Why this exists
 
@@ -240,8 +240,10 @@ each:
    exponent (a bug -- BBC `VAL` scans the same number grammar as the rest of the
    interpreter, so `VAL("1E3")=1000`), which is now fixed, so `VAL(STR$(n))`
    round-trips. The sound `STR$` value-hole (reducing to `VAL(STR$(e))`, not `e`)
-   is therefore a clean next increment. The digit idiom does not go through `STR$`
-   at all (it slices a fixed literal: no formatting, no `@%`), so it stays exact
+   is **implemented** -- `eval_lowering._lower_str_template` reduces each `STR$(e)`
+   hole to `VAL(STR$(e))` and splices the reparsed skeleton; a hole that lexically
+   fuses with adjacent text stays residue. The digit idiom does not go through
+   `STR$` at all (it slices a fixed literal: no formatting, no `@%`), so it stays exact
    regardless.
 3. **Dispatch.** If the residual is statically a function call (its skeleton
    begins with the literal `"FN"`) with a runtime name and already-staged
@@ -335,8 +337,16 @@ is already LOCAL-correct). A lifted helper is invoked synchronously at the
    h$ + "+1"`) stays the honest residual. The constant form `EVAL("&FF")` already
    folds via the constant-string path. `VAL` itself was also fixed to scan `E`
    exponents (it had stopped at the `E`), so `VAL`/`STR$`/the expression parser
-   agree -- which is what makes the deferred `STR$` value-hole (reduce to
-   `VAL(STR$(e))`, not `e`) sound; that remains a clean future increment.
+   agree -- which is what makes the `STR$` value-hole (next increment) sound.
+6. **`STR$` value-hole** -- DONE. `EVAL(STR$(e) + ...)` reduces each `STR$(e)`
+   hole to `VAL(STR$(e))` -- keeping the round-trip, not cancelling it to `e`
+   (which is unsound: `STR$` formats per `@%`). `eval_lowering._lower_str_template`
+   reparses the literal text as a skeleton with a placeholder per hole, swaps in
+   `VAL(STR$(e))`, and splices it. Sound for any `@%` (`VAL(STR$(e))` reproduces
+   exactly what `EVAL` reads, now that `VAL` scans exponents) and any position
+   (OWL's unary minus binds tighter than every binary operator, so a leading sign
+   groups as a unit). A hole that lexically fuses with adjacent text
+   (`EVAL(STR$(n)+"0")`) or a non-`STR$` hole stays the honest residual.
 
 Each increment keeps every prior corpus program compiling-or-gracefully-rejected
 and ends green. Category 6 keeps the honest rejection throughout.

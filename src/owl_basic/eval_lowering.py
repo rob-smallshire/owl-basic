@@ -69,6 +69,10 @@ def _lower_once(parse_tree, options, helper_serial):
             # Function-by-name dispatch: replaced by a call to a synthesised
             # helper appended to the program (see _lower_dispatch).
             progressed = True
+        elif _lower_str_template(eval_node, options):
+            # STR$ value-hole: EVAL(STR$(e)+...) -> the spliced expression with
+            # each STR$(e) reduced to VAL(STR$(e)) (see _lower_str_template).
+            progressed = True
         # Anything else stays an EvalFunc for _reject_unsupported_constructs to
         # reject honestly -- only Category 6 (open structure/referents) reaches it.
     return progressed
@@ -189,6 +193,71 @@ def _lower_hex(eval_node):
         _splice(eval_node, EvalHexFunc(factor=second_value))
         return True
     return False
+
+
+def _lower_str_template(eval_node, options):
+    """Lower a STR$ value-hole template EVAL(STR$(e) + ...), or return False.
+
+    Every runtime part must be a STR$(e): EVAL parses the formatted number back,
+    and VAL(STR$(e)) reproduces exactly that number (VAL and the expression
+    parser agree on numeric syntax since the VAL exponent fix), so STR$(e)
+    reduces soundly to VAL(STR$(e)) -- keeping the round-trip rather than
+    cancelling it to e (which would be unsound: STR$ formats per @%). The literal
+    text is reparsed as the skeleton of an expression with a placeholder per
+    hole; a placeholder that does not survive parsing as a recoverable identifier
+    (it fused with adjacent text, e.g. STR$(n)+"0" or STR$(n)+"E2") leaves the
+    EVAL as residue, since EVAL would then read a different number.
+
+    Precedence is safe in any position: OWL's unary minus binds tighter than
+    every binary operator, so a leading sign in STR$'s output groups as a unit,
+    exactly as VAL(STR$(e)) collapses it.
+    """
+    segments = _string_segments(eval_node.factor)
+    if segments is None:
+        return False
+    holes = [payload for kind, payload in segments if kind == "hole"]
+    if not holes or any(type(h).__name__ != "StrStringFunc" for h in holes):
+        return False
+
+    pieces = []
+    mapping = {}        # placeholder identifier -> the STR$ subtree
+    for kind, payload in segments:
+        if kind == "lit":
+            pieces.append(payload)
+        else:
+            placeholder = "owlstrhole%d" % len(mapping)
+            mapping[placeholder] = payload
+            pieces.append(placeholder)
+
+    expression = _parse_skeleton("".join(pieces), options)
+    if expression is None:
+        return False
+    substituted = set()
+    expression = _replace_str_placeholders(expression, mapping, substituted)
+    if substituted != set(mapping):     # a hole fused with adjacent text: residue
+        return False
+    _splice(eval_node, expression)
+    return True
+
+
+def _replace_str_placeholders(node, mapping, substituted):
+    """Replace each placeholder Variable with VAL(STR$(e)); return the new node."""
+    if node is None:
+        return None
+    if type(node).__name__ == "Variable" and node.identifier in mapping:
+        substituted.add(node.identifier)
+        return ValFunc(factor=mapping[node.identifier])
+    for key, child in list(node.children.items()):
+        if isinstance(child, list):
+            for index, sub in enumerate(child):
+                replacement = _replace_str_placeholders(sub, mapping, substituted)
+                if replacement is not sub:
+                    child[index] = replacement
+        else:
+            replacement = _replace_str_placeholders(child, mapping, substituted)
+            if replacement is not child:
+                node._children[key] = replacement
+    return node
 
 
 def _lower_dispatch(eval_node, parse_tree, options, helper_serial):

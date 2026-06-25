@@ -245,6 +245,50 @@ def test_hex_with_runtime_trailing_structure_stays_rejected():
     assert "EVAL" in str(excinfo.value)
 
 
+# --- STR$ value-hole: EVAL(STR$(e) + ...) --------------------------------
+# Sound now that VAL scans the same number syntax as the expression parser:
+# EVAL(STR$(e)+"+1") == VAL(STR$(e))+1. The STR$->parse round-trip is *kept*
+# (reduced to VAL(STR$(e))), not cancelled to e -- so it agrees with EVAL even
+# when STR$ is lossy. OWL's unary minus binds tighter than every binary
+# operator, so a leading sign in STR$'s output groups as a unit exactly as VAL
+# collapses it -- the reduction is precedence-safe in any position.
+
+def test_str_template_compiles():
+    assert _compiles('n=5\nPRINT EVAL(STR$(n)+"+1")\n')
+
+
+def test_str_template_lowers_to_val_of_str(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse('n=5\nPRINT EVAL(STR$(n)+"+1")\n', name="t"))
+    assert "BasicCommands::Val" in il          # the round-trip is kept...
+    assert "BasicCommands::StrString" in il     # ...VAL of STR$, not a bare splice
+
+
+@requires_dotnet_toolchain
+def test_str_template_runs(compile_and_run):
+    out = compile_and_run(analyse(
+        'n=5\nPRINT EVAL(STR$(n)+"+1")\n'              # 6
+        'a=3\nb=4\nPRINT EVAL(STR$(a)+"+"+STR$(b))\n'   # 7 (two holes)
+        'm=5\nPRINT EVAL(STR$(m)+"*2")\n'              # 10
+        'k=-5\nPRINT EVAL(STR$(k)+"*2")\n'             # -10 (sign in the hole)
+        'p=3\nPRINT EVAL(STR$(p)+"^2")\n', name="t"))  # 9 (precedence-safe)
+    assert out.split() == ["6", "7", "10", "-10", "9"]
+
+
+def test_str_template_with_non_str_hole_stays_rejected():
+    # A bare runtime string is not STR$(e); reducing it would be general EVAL.
+    with pytest.raises(CompileError) as excinfo:
+        analyse('A$="1+2"\nB=EVAL(A$+"+1")\n', name="t")
+    assert "EVAL" in str(excinfo.value)
+
+
+def test_str_template_lexical_merge_stays_rejected():
+    # STR$(n)+"0" fuses the formatted number with the appended digit
+    # (EVAL("50") != VAL(STR$(5))...), so it is not soundly reducible.
+    with pytest.raises(CompileError) as excinfo:
+        analyse('n=5\nB=EVAL(STR$(n)+"0")\n', name="t")
+    assert "EVAL" in str(excinfo.value)
+
+
 def test_variable_by_name_reflective_write_stays_rejected():
     # FNassign2's callee is constant; the runtime thing is an l-value selected by
     # a string and passed by RETURN. That reflective write is out of scope for #9
