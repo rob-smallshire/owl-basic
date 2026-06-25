@@ -127,6 +127,46 @@ namespace OwlRuntime.Tests
         }
 
         [Theory]
+        [InlineData(5, 2, 20)]
+        [InlineData(1, 31, -2147483648)]       // overflow to the sign bit (32-bit)
+        [InlineData(1, 32, 0)]                 // count == width: shifted out (not masked)
+        [InlineData(1, 40, 0)]                 // count > width
+        [InlineData(1, -1, 0)]                 // negative count
+        public void ShiftLeft_zeroes_out_of_range_counts(int value, int count, int expected)
+        {
+            Assert.Equal(expected, BasicCommands.ShiftLeft(value, count));
+        }
+
+        [Theory]
+        [InlineData(-8, 1, -4)]                 // arithmetic (sign-propagating)
+        [InlineData(-1, 1, -1)]
+        [InlineData(-1024, 33, -1)]            // count > width, negative: sign fill -1
+        [InlineData(1024, 33, 0)]              // count > width, positive: 0
+        [InlineData(8, -1, 0)]                 // negative count, positive value
+        public void ShiftRight_is_arithmetic_and_sign_fills_out_of_range(int value, int count, int expected)
+        {
+            Assert.Equal(expected, BasicCommands.ShiftRight(value, count));
+        }
+
+        [Theory]
+        [InlineData(-1, 1, 2147483647)]        // logical (zero fill)
+        [InlineData(8, 1, 4)]
+        [InlineData(-1, 33, 0)]                // count > width: 0
+        [InlineData(8, -1, 0)]                 // negative count: 0
+        public void ShiftRightUnsigned_is_logical_and_zeroes_out_of_range(int value, int count, int expected)
+        {
+            Assert.Equal(expected, BasicCommands.ShiftRightUnsigned(value, count));
+        }
+
+        [Fact]
+        public void Shifts_at_64_bits_use_a_width_of_64()
+        {
+            Assert.Equal(1099511627776L, BasicCommands.ShiftLeft(1L, 40));   // in range at 64
+            Assert.Equal(0L, BasicCommands.ShiftLeft(1L, 64));               // out of range at 64
+            Assert.Equal(-1L, BasicCommands.ShiftRight(-1L, 1));
+        }
+
+        [Theory]
         [InlineData("")]                       // EVAL("&"): no digit -> Bad hex (err 28)
         [InlineData("ff")]                     // leading lowercase: zero digits read -> Bad hex
         [InlineData("G")]                      // no leading hex digit -> Bad hex

@@ -151,6 +151,68 @@ namespace OwlRuntime
             return 0.0;
         }
 
+        // BBC BASIC V shift operators << >> >>>. Unlike CIL's shl/shr (which mask
+        // the count modulo the operand width), BASIC V follows the ARM barrel
+        // shifter: a count outside [0, width-1] shifts every bit out, so << and
+        // >>> give 0 and >> (arithmetic) gives the sign fill (-1 or 0). A negative
+        // count is out of range the same way. >> is the signed/arithmetic shift,
+        // >>> the unsigned/logical one. (No BBC BASIC V disassembly to verify
+        // against; these match the emulator's observed results.)
+
+        public static int ShiftLeft(int value, int count)
+        {
+            if (count < 0 || count >= 32)
+            {
+                return 0;
+            }
+            return value << count;
+        }
+
+        public static long ShiftLeft(long value, int count)
+        {
+            if (count < 0 || count >= 64)
+            {
+                return 0;
+            }
+            return value << count;
+        }
+
+        public static int ShiftRight(int value, int count)
+        {
+            if (count < 0 || count >= 32)
+            {
+                return value < 0 ? -1 : 0;       // arithmetic: fill with the sign bit
+            }
+            return value >> count;
+        }
+
+        public static long ShiftRight(long value, int count)
+        {
+            if (count < 0 || count >= 64)
+            {
+                return value < 0 ? -1L : 0L;
+            }
+            return value >> count;
+        }
+
+        public static int ShiftRightUnsigned(int value, int count)
+        {
+            if (count < 0 || count >= 32)
+            {
+                return 0;
+            }
+            return (int)((uint) value >> count);    // logical: fill with zero
+        }
+
+        public static long ShiftRightUnsigned(long value, int count)
+        {
+            if (count < 0 || count >= 64)
+            {
+                return 0;
+            }
+            return (long)((ulong) value >> count);
+        }
+
         public static long EvalHex(string s)
         {
             // The BBC hex-to-integer idiom EVAL("&" + h$) -- VAL is decimal-only,

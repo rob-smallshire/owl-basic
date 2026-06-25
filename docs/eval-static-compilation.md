@@ -132,9 +132,9 @@ covers everything pure:
 - arithmetic `+ - * / ^`, unary `+`/`-`;
 - integer `DIV`/`MOD`, bitwise `AND OR EOR NOT`, and the shifts `<< >> >>>`
   (integer operands only, so BBC's float->int coercion is never second-guessed;
-  shift semantics are defined by the .NET opcodes -- BBC BASIC V, which added
-  them, has no disassembly to check against -- with the folded value kept equal
-  to the runtime's);
+  `>>` arithmetic, `>>>` logical, with an out-of-range count shifting everything
+  out as in BBC BASIC V on ARM -- emulator-checked, not CIL's modulo masking --
+  and the folded value kept equal to the runtime helpers);
 - the relational operators (numeric operands -> BBC `-1`/`0`);
 - `PI TRUE FALSE`;
 - `ABS INT SGN` and the transcendentals `SIN COS TAN ASN ACS ATN RAD DEG SQR EXP

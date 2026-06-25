@@ -11,12 +11,13 @@ READ, user functions, ... -- are never folded):
 
 * arithmetic ``+ - * /`` and ``^``, unary ``+``/``-``;
 * integer ``DIV``/``MOD`` (truncating; remainder takes the dividend's sign),
-  bitwise ``AND OR EOR NOT`` and the shifts ``<< >> >>>`` (>> arithmetic, >>>
-  logical; count masked to the value's width) -- folded only when both operands
-  are integers, so BBC's float->int coercion is never second-guessed. The shift
-  semantics are OWL's definition (the .NET shift opcodes); BBC BASIC V, which
-  introduced them, has no disassembly to verify against, but the folded value is
-  kept equal to the runtime's so folding stays sound;
+  bitwise ``AND OR EOR NOT`` and the shifts ``<< >> >>>`` -- folded only when
+  both operands are integers, so BBC's float->int coercion is never
+  second-guessed. ``>>`` is arithmetic, ``>>>`` logical, and a shift count
+  outside ``[0, width)`` shifts every bit out (``<<``/``>>>`` give 0, arithmetic
+  ``>>`` sign-fills) -- BBC BASIC V's ARM behaviour, *not* CIL's modulo-width
+  masking. There is no BBC BASIC V disassembly; these match the emulator and are
+  kept equal to the runtime helpers, so folding stays sound;
 * the relational operators (numeric operands -> BBC's ``-1``/``0``);
 * ``PI``, ``TRUE``, ``FALSE``;
 * numeric functions ``ABS INT SGN`` and the transcendentals
@@ -293,18 +294,19 @@ def fold_constant(node):
         a, b = fold_constant(node.lhs), fold_constant(node.rhs)
         if not (isinstance(a, int) and isinstance(b, int)):
             return None
-        # The shifted value's magnitude sets the width (32-bit unless it needs
-        # 64); the count is masked to that width, as the CIL shift opcodes do.
-        # These semantics are OWL's definition (the .NET shift opcodes) -- there
-        # is no BBC BASIC V disassembly to verify them against -- but the folded
-        # value is kept equal to the runtime's, so folding is sound regardless.
+        # BBC BASIC V (ARM): the shifted value's magnitude sets the width (32-bit
+        # unless it needs 64); a count outside [0, width-1) shifts every bit out,
+        # so << and >>> give 0 and arithmetic >> gives the sign fill. (Verified
+        # against the emulator, not a disassembly; kept equal to the runtime
+        # helpers so folding is sound.)
         width = 32 if _INT32_MIN <= a <= _INT32_MAX else 64
-        count = b & (width - 1)
-        if name == "ShiftLeft":
-            return _signed(a << count, width)
         if name == "ShiftRight":                 # signed / arithmetic
-            return a >> count
-        return _signed((a & ((1 << width) - 1)) >> count, width)   # logical
+            return (a >> b) if 0 <= b < width else (-1 if a < 0 else 0)
+        if not (0 <= b < width):
+            return 0                             # << and >>> shift everything out
+        if name == "ShiftLeft":
+            return _signed(a << b, width)
+        return _signed((a & ((1 << width) - 1)) >> b, width)   # logical
 
     if name in _RELATIONAL:
         a, b = fold_constant(node.lhs), fold_constant(node.rhs)

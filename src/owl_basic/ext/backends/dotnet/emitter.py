@@ -115,15 +115,12 @@ _LOGICAL_OPS = {
     "Eor": "xor",
 }
 
-# Shifts: << and >> (>> is the signed/arithmetic shift, hence shr; >>> is the
-# logical/zero-fill shift, shr.un). The CIL shift opcodes take the value (at its
-# own width, 32- or 64-bit) and an int32 count, and the result has the value's
-# width -- the front end types the operands accordingly.
-_SHIFT_OPS = {
-    "ShiftLeft": "shl",
-    "ShiftRight": "shr",
-    "ShiftRightUnsigned": "shr.un",
-}
+# Shifts: << >> >>>. These call OwlRuntime helpers rather than the CIL shl/shr
+# opcodes, because BBC BASIC V (ARM) zeroes (or sign-fills, for arithmetic >>) a
+# count outside [0, width-1), whereas the CIL opcodes mask the count modulo the
+# width. The value is passed at its own width (32- or 64-bit) and the count as
+# int32; the overload (and so the result width) is chosen by the value's type.
+_SHIFT_OPS = ("ShiftLeft", "ShiftRight", "ShiftRightUnsigned")
 
 # Numeric relational operators, as CIL opcode sequences that leave an OWL
 # boolean (0 / -1) on the stack. The trailing `neg` converts a CLR boolean
@@ -1383,7 +1380,7 @@ class _MethodEmitter:
         if name in _SHIFT_OPS:
             self.lower_expression(node.lhs)     # the value, at its own width
             self.lower_expression(node.rhs)     # the int32 shift count
-            self.emit(_SHIFT_OPS[name])
+            self.emit(_runtime(name, _il_type(node.lhs.actualType), "int32"))
             return
         if name in _RELATIONAL_OPS:
             self._lower_relational(node)

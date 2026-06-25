@@ -104,12 +104,24 @@ def test_bitwise_operators_fold():
 def test_shift_operators_fold():
     assert fold("5 << 2") == 20
     assert fold("1 << 31") == -2147483648        # overflows int32 to the sign bit
-    assert fold("1 << 40") == 256                # count masked to the width (40 & 31)
     assert fold("-8 >> 1") == -4                 # >> is arithmetic (signed)
     assert fold("-1 >> 1") == -1
     assert fold("-1 >>> 1") == 2147483647        # >>> is logical (zero-fill)
     assert fold("8 >>> 1") == 4
     assert fold("2.0 << 1") is None              # float operand: leave to runtime
+
+
+def test_shift_out_of_range_counts_match_basic_v():
+    # BBC BASIC V (ARM): a count outside [0,31] shifts everything out -- << and
+    # >>> give 0, arithmetic >> sign-fills. Not CIL's modulo-32 masking.
+    assert fold("1 << 32") == 0
+    assert fold("1 << 40") == 0
+    assert fold("1 << -1") == 0
+    assert fold("1024 >> 33") == 0               # positive: 0
+    assert fold("-1024 >> 33") == -1             # negative: sign fill
+    assert fold("-1 >>> 33") == 0
+    assert fold("8 >> -1") == 0
+    assert fold("8 >>> -1") == 0
 
 
 def test_relational_operators_fold_to_minus_one_or_zero():

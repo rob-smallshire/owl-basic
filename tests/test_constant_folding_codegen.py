@@ -119,22 +119,25 @@ def test_shift_fold(dotnet_backend):
     assert _folds_to(dotnet_backend, "5<<2", "20")
     assert _folds_to(dotnet_backend, "1<<31", "-2147483648")
     assert _folds_to(dotnet_backend, "8>>>1", "4")
+    assert _folds_to(dotnet_backend, "1<<40", "0")     # out-of-range count -> 0
 
 
 @requires_dotnet_toolchain
 def test_shift_fold_matches_runtime(compile_and_run):
-    # The folded constant shift must equal the runtime opcode result, including
-    # count-masking (1<<40), int32 overflow (1<<31), arithmetic >> and logical >>>.
+    # The folded constant shift must equal the runtime result, including the
+    # out-of-range count rule (1<<40 -> 0; -1024>>33 -> -1), int32 overflow
+    # (1<<31), arithmetic >> and logical >>>.
     folded = compile_and_run(analyse(
         "PRINT 5<<2\nPRINT 1<<31\nPRINT 1<<40\nPRINT -8>>1\nPRINT -1>>1\n"
-        "PRINT -1>>>1\nPRINT 8>>>1\n", name="t"))
+        "PRINT -1>>>1\nPRINT 8>>>1\nPRINT -1024>>33\n", name="t"))
     runtime = compile_and_run(analyse(
         "A%=5\nB%=2\nC%=1\nD%=31\nE%=40\nF%=-8\nG%=1\nH%=-1\nI%=8\n"
+        "J%=-1024\nK%=33\n"
         "PRINT A%<<B%\nPRINT C%<<D%\nPRINT C%<<E%\nPRINT F%>>G%\nPRINT H%>>G%\n"
-        "PRINT H%>>>G%\nPRINT I%>>>G%\n", name="t"))
+        "PRINT H%>>>G%\nPRINT I%>>>G%\nPRINT J%>>K%\n", name="t"))
     assert folded.split() == runtime.split()
-    assert folded.split() == ["20", "-2147483648", "256", "-4", "-1",
-                              "2147483647", "4"]
+    assert folded.split() == ["20", "-2147483648", "0", "-4", "-1",
+                              "2147483647", "4", "-1"]
 
 
 # --- string functions of constants -----------------------------------------

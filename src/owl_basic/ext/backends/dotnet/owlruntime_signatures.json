@@ -529,6 +529,54 @@
       ]
     ]
   ],
+  "BasicCommands::ShiftLeft": [
+    [
+      "int32",
+      [
+        "int32",
+        "int32"
+      ]
+    ],
+    [
+      "int64",
+      [
+        "int64",
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::ShiftRight": [
+    [
+      "int32",
+      [
+        "int32",
+        "int32"
+      ]
+    ],
+    [
+      "int64",
+      [
+        "int64",
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::ShiftRightUnsigned": [
+    [
+      "int32",
+      [
+        "int32",
+        "int32"
+      ]
+    ],
+    [
+      "int64",
+      [
+        "int64",
+        "int32"
+      ]
+    ]
+  ],
   "BasicCommands::Spc": [
     [
       "void",

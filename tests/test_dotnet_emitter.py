@@ -274,9 +274,10 @@ def test_val_overflow_faults_too_big(compile_expecting_error):
 @requires_dotnet_toolchain
 def test_shift_operators_run(compile_and_run):
     # << / >> / >>> via integer variables (so the result comes from the emitted
-    # opcodes, not from folding). >> is the signed/arithmetic shift, >>> the
-    # logical one; the count is masked to the value's width (1<<40 at int32 is
-    # 1<<8). The 64-bit value (V%%) shifts at width 64, so 1<<40 is 2^40.
+    # runtime calls, not from folding). >> is the signed/arithmetic shift, >>>
+    # the logical one. BBC BASIC V zeroes a count outside [0,width) rather than
+    # masking it, so 1<<40 at int32 is 0; the 64-bit value (W%%) shifts at width
+    # 64, where 40 is in range, so 1<<40 is 2^40.
     out = compile_and_run(analyse(
         "V%=5\nN%=2\nPRINT V%<<N%\n"
         "V%=1\nN%=31\nPRINT V%<<N%\n"
@@ -284,7 +285,7 @@ def test_shift_operators_run(compile_and_run):
         "V%=-8\nN%=1\nPRINT V%>>N%\n"
         "V%=-1\nN%=1\nPRINT V%>>>N%\n"
         "W%%=1\nM%=40\nPRINT W%%<<M%\n", name="t"))
-    assert out.split() == ["20", "-2147483648", "256", "-4", "2147483647",
+    assert out.split() == ["20", "-2147483648", "0", "-4", "2147483647",
                            "1099511627776"]
 
 
