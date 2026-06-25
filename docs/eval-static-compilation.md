@@ -121,21 +121,29 @@ but we can enumerate *every function it could be* (the compiler knows all
 
 The single most important realisation: **EVAL constant-folding is not an EVAL
 feature.** `EVAL("SIN(RAD(30))")` should fold to `0.5` for exactly the same
-reason that `SIN(RAD(30))` *written literally* should -- and today OWL folds
-neither. `_foldConstant` only folds `+ - *` of two *integer* literals.
+reason that `SIN(RAD(30))` *written literally* should. So the foundation is a
+reusable constant evaluator, valuable in its own right (it improves every
+program, not just `EVAL` users).
 
-So the foundation is a reusable constant evaluator, valuable in its own right
-(it improves every program, not just `EVAL` users):
+**Status: built and broad** -- `owl_basic.constant_folding.fold_constant`. It is
+recursive (`SIN(RAD(30))` folds because `RAD(30)` folds, then `SIN` of that) and
+covers everything pure:
 
-- `fold(node) -> Python value | None` -- returns the constant value of a subtree
-  when it is a pure function of constants, else `None`.
-- Arithmetic over **int and float** literals: `+ - * / ^ DIV MOD`, unary `-`.
-- Pure built-in functions of constant arguments: `SIN COS TAN ASN ACS ATN RAD
-  DEG SQR EXP LN LOG ABS INT SGN PI` (and the string ones: `LEN ASC CHR$ STR$
-  MID$ LEFT$ RIGHT$ VAL` over constant strings -- needed for template
-  reduction).
-- Recursive: `SIN(RAD(30))` folds because `RAD(30)` folds to `0.523...` then
-  `SIN(0.523...)` folds to `0.5`.
+- arithmetic `+ - * / ^`, unary `+`/`-`;
+- integer `DIV`/`MOD` and bitwise `AND OR EOR NOT` (integer operands only, so
+  BBC's float->int coercion is never second-guessed);
+- the relational operators (numeric operands -> BBC `-1`/`0`);
+- `PI TRUE FALSE`;
+- `ABS INT SGN` and the transcendentals `SIN COS TAN ASN ACS ATN RAD DEG SQR EXP
+  LN LOG`;
+- string functions over constant strings: `CHR$ LEN ASC LEFT$ RIGHT$ MID$
+  STRING$ INSTR VAL`, each mirroring its OwlRuntime implementation op-for-op.
+
+Impure functions (`RND GET INKEY TIME`, file/screen I/O, `READ`, user functions,
+...) are never folded. `STR$` is excluded too: it formats per the runtime `@%`
+variable (see the STR$ discussion above). Each folded form is spliced in by the
+type checker's `_foldConstant` before codegen, so the optimisation reaches the
+emitted IL.
 
 `EVAL` then rides on it; so does ordinary code. The existing integer-only
 `_foldConstant` becomes a thin caller of this evaluator.

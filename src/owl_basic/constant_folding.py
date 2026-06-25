@@ -6,6 +6,24 @@ not statically constant. It is a host-side evaluator (it interprets the AST in
 Python; it never compiles and runs target code, so it stays correct when
 cross-compiling -- see docs/eval-static-compilation.md).
 
+Coverage (everything pure; impure functions -- RND, GET, TIME, file/screen I/O,
+READ, user functions, ... -- are never folded):
+
+* arithmetic ``+ - * /`` and ``^``, unary ``+``/``-``;
+* integer ``DIV``/``MOD`` (truncating; remainder takes the dividend's sign) and
+  bitwise ``AND OR EOR NOT`` -- folded only when both operands are integers, so
+  BBC's float->int coercion is never second-guessed;
+* the relational operators (numeric operands -> BBC's ``-1``/``0``);
+* ``PI``, ``TRUE``, ``FALSE``;
+* numeric functions ``ABS INT SGN`` and the transcendentals
+  ``SIN COS TAN ASN ACS ATN EXP LN LOG SQR RAD DEG``;
+* string functions of constants ``CHR$ LEN ASC LEFT$ RIGHT$ MID$ STRING$ INSTR
+  VAL`` -- each mirroring the OwlRuntime BasicCommands implementation op-for-op.
+
+``STR$`` is *not* folded: it formats per the runtime ``@%`` variable (see the
+EVAL doc's STR$ discussion). Each call is reached by ``_foldConstant`` in the
+type checker, which replaces the folded subtree with a literal before codegen.
+
 Fidelity to the run-time splits in two:
 
 * IEEE-exact cases -- integer arithmetic, float ``+ - * /`` and ``SQR`` -- agree
