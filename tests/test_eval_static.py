@@ -57,6 +57,14 @@ def test_nested_eval_runs(compile_and_run):
     assert out.split() == ["3"]
 
 
+@requires_dotnet_toolchain
+def test_constant_skeleton_with_runtime_variable_runs(compile_and_run):
+    # The string is constant, so it is parsed and spliced; the variable it names
+    # is an ordinary free reference read at run time (category 1).
+    out = compile_and_run(analyse('a%=10\nPRINT EVAL("a%*2-1")\n', name="t"))
+    assert out.split() == ["19"]
+
+
 # --- value-hole templates: the digit idiom -------------------------------
 # EVAL of a string provably containing only decimal digits is EVAL == VAL, so it
 # lowers to VAL of the same argument with no run-time evaluator.

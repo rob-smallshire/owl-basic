@@ -1,5 +1,54 @@
 # Statically compiling EVAL
 
+## What EVAL supports today
+
+A quick reference to what the EVAL lowering currently compiles, and what it
+still rejects. The rest of this document is the design and rationale behind it;
+the authoritative, executable specification is `tests/test_eval_static.py` (with
+the constant evaluator pinned in `tests/test_constant_evaluator.py` and the
+runtime hex/`VAL` semantics in `OwlRuntime/OwlRuntime.Tests/`). If this table
+and the tests ever disagree, the tests win -- update this table.
+
+### Compiles
+
+| Construct | Compiles to | Example | Tests (`tests/test_eval_static.py`) |
+|---|---|---|---|
+| Constant arithmetic | folded literal | `EVAL("1+2")` → `3` | `test_eval_constant_arithmetic_runs`, `test_eval_constant_string_leaves_no_eval_node` |
+| Pure function of constants | folded literal | `EVAL("SIN(RAD(30))")` → `0.5` | `test_eval_constant_function_folds_and_runs` |
+| Constant string by concatenation | folded literal | `EVAL("2"+"+"+"3")` → `5` | `test_eval_constant_string_concatenation_runs` |
+| Constant skeleton naming runtime variables | spliced expression (vars read at run time) | `EVAL("a%*2-1")` | `test_constant_skeleton_with_runtime_variable_runs` |
+| Nested EVAL | recursively lowered | `EVAL("EVAL(""1+2"")")` → `3` | `test_nested_eval_runs` |
+| Digit-slice idiom | `VAL(...)` | `EVAL(MID$("13264",K,1))` | `test_digit_idiom_runs_correctly`, `test_eval_of_left_str_digits_runs` |
+| Hex-to-int idiom | runtime hex parse (`EvalHex`) | `EVAL("&"+h$)` | `test_hex_idiom_runs`, `test_hex_idiom_lowers_to_evalhex_not_eval` |
+| Function-by-name dispatch | `IF`-chain helper over the program's `DEF FN`s | `EVAL("FN"+cmd$+"(arg)")` | `test_dispatch_with_named_argument_runs`, `test_dispatch_with_chr34_string_value_hole_runs`, `test_dispatch_with_staged_literal_argument_runs`, `test_dispatch_reads_local_argument_dynamically` |
+
+Two run-time behaviours that are *correct compilation*, not rejection:
+
+- A dispatch on a **name no `DEF FN` matches** compiles, and faults `No such
+  FN/PROC` at run time exactly as the interpreter's EVAL does
+  (`test_dispatch_unknown_name_faults_at_runtime`).
+- The hex idiom faults **`Bad hex`** at run time on a missing/invalid leading
+  digit, e.g. `EVAL("&ff")` (`test_hex_idiom_bad_hex_faults_at_runtime`).
+
+### Rejected (the honest residual)
+
+Each is rejected at compile time naming EVAL -- never a crash or silent
+mis-compile.
+
+| Construct | Why | Example | Test |
+|---|---|---|---|
+| Open structure / referents | needs a run-time evaluator (Category 6) | `EVAL(A$)`, `A$` not constant | `test_eval_of_runtime_string_still_rejected` |
+| Malformed constant string | not a valid BASIC expression | `EVAL("1+")` | `test_eval_of_malformed_constant_string_is_rejected_naming_it` |
+| Slice of a non-digit string | `EVAL` ≠ `VAL` in general | `EVAL(MID$(A$,1,1))` | `test_eval_of_slice_of_non_digit_string_still_rejected` |
+| Runtime argument *structure* | selecting the callee is not enough; the arg is itself general EVAL | `EVAL("FN"+cmd$+"("+arg$+")")` | `test_dispatch_runtime_argument_structure_is_rejected` |
+| Runtime structure after a hex string | structure beyond the hex run is runtime | `EVAL("&"+h$+"+1")` | `test_hex_with_runtime_trailing_structure_stays_rejected` |
+| Variable-by-name / reflective write | `RETURN` (by-reference) argument selected by a string | `EVAL("FNassign2("+a$+","+CHR$34+b$+CHR$34+")")` | `test_variable_by_name_reflective_write_stays_rejected` |
+
+Not yet implemented (a clean future increment, not a fundamental limitation):
+the **`STR$` value-hole**, `EVAL(STR$(e)+"+1")` → `VAL(STR$(e))+1` -- sound now
+that `VAL` and the expression parser agree on number syntax (see the lowering
+pass section). Until then it stays in the residual above.
+
 ## Why this exists
 
 `EVAL` takes a string and evaluates it as a BASIC expression at run time. The
