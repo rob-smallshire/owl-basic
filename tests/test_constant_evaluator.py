@@ -76,6 +76,47 @@ def test_pi_folds():
     assert fold("PI") == math.pi
 
 
+def test_integer_div_and_mod_fold():
+    assert fold("7 DIV 2") == 3
+    assert fold("-7 DIV 2") == -3            # truncate toward zero, not floor
+    assert fold("7 MOD 3") == 1
+    assert fold("-7 MOD 3") == -1            # remainder takes the dividend's sign
+    assert fold("7 MOD -3") == 1
+    assert fold("5 DIV 0") is None           # division by zero: leave to runtime
+    assert fold("5 MOD 0") is None
+
+
+def test_div_mod_of_float_operands_do_not_fold():
+    # Integer operators over a float operand are left to runtime (we do not
+    # second-guess BBC's float->int coercion here).
+    assert fold("7.5 DIV 2") is None
+    assert fold("7 MOD 2.0") is None
+
+
+def test_bitwise_operators_fold():
+    assert fold("5 AND 3") == 1
+    assert fold("5 OR 2") == 7
+    assert fold("5 EOR 1") == 4
+    assert fold("NOT 0") == -1
+    assert fold("NOT 5") == -6               # bitwise complement: ~5 == -6
+
+
+def test_relational_operators_fold_to_minus_one_or_zero():
+    assert fold("1=1") == -1
+    assert fold("1=2") == 0
+    assert fold("2<3") == -1 and fold("3<2") == 0
+    assert fold("2<=2") == -1 and fold("3>=4") == 0
+    assert fold("1<>2") == -1 and fold("2<>2") == 0
+    assert fold("1.5<2") == -1               # float comparison
+
+
+def test_true_false_and_unary_plus_fold():
+    assert fold("TRUE") == -1
+    assert fold("FALSE") == 0
+    assert fold("3*TRUE") == -3
+    assert fold("+7") == 7
+
+
 def test_non_constant_subtrees_do_not_fold():
     assert fold("A%+1") is None              # references a variable
     assert fold("SIN(X)") is None

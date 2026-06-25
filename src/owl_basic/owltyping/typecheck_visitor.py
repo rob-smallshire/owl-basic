@@ -242,7 +242,8 @@ class TypecheckVisitor(Visitor):
         '''        
         self.visit(operator.lhs)
         self.visit(operator.rhs)
-        
+        if self._foldConstant(operator):     # e.g. 1=1 -> -1, 2<3 -> -1
+            return
         if not (operator.lhs.actualType.isConvertibleTo(operator.rhs.actualType) or operator.rhs.actualType.isConvertibleTo(operator.lhs.actualType)):
             message = "Cannot compare %s with %s using operator %s" % (operator.lhs.actualType.__doc__, operator.rhs.actualType.__doc__, operator.__doc__)
             self.typeMismatch(operator, message)
@@ -313,6 +314,8 @@ class TypecheckVisitor(Visitor):
     def visitBinaryIntegerOperator(self, operator):
         self.visit(operator.lhs)
         self.visit(operator.rhs)
+        if self._foldConstant(operator):     # DIV/MOD/AND/OR/EOR of constants
+            return
         if not self.checkSignature(operator):
             return
         # DIV/MOD, the bitwise operators and shifts operate at the width of the
@@ -374,6 +377,8 @@ class TypecheckVisitor(Visitor):
     
     def visitNot(self, operator):
         self.visit(operator.factor)
+        if self._foldConstant(operator):     # NOT of a constant
+            return
         if not self.checkSignature(operator):
             # TODO: Error?
             return

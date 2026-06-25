@@ -24,6 +24,40 @@ _BINARY = {
     "Multiply": lambda a, b: a * b,
 }
 
+# Bitwise operators (CIL and/or/xor on the integer operands). Exact.
+_BITWISE = {
+    "And": lambda a, b: a & b,
+    "Or": lambda a, b: a | b,
+    "Eor": lambda a, b: a ^ b,
+}
+
+# Relational operators yield BBC's -1 (true) / 0 (false), matching the emitter's
+# ceq/clt/cgt-then-neg sequences.
+_RELATIONAL = {
+    "Equal": lambda a, b: a == b,
+    "NotEqual": lambda a, b: a != b,
+    "LessThan": lambda a, b: a < b,
+    "LessThanEqual": lambda a, b: a <= b,
+    "GreaterThan": lambda a, b: a > b,
+    "GreaterThanEqual": lambda a, b: a >= b,
+}
+
+
+def _trunc_div(a, b):
+    """BBC/CIL integer division: truncate toward zero (not Python's floor)."""
+    if b == 0:
+        return None
+    quotient = abs(a) // abs(b)
+    return -quotient if (a < 0) != (b < 0) else quotient
+
+
+def _trunc_mod(a, b):
+    """BBC/CIL remainder: magnitude of abs(a) mod abs(b), sign of the dividend."""
+    if b == 0:
+        return None
+    remainder = abs(a) % abs(b)
+    return -remainder if a < 0 else remainder
+
 # Library transcendentals: host math, ~1 ULP versus the .NET run-time. RAD/DEG
 # mirror OWL's exact lowering instead of math.radians/degrees.
 _UNARY_FN = {
@@ -46,6 +80,10 @@ def fold_constant(node):
         return node.value
     if name == "PiFunc":
         return math.pi
+    if name == "TrueFunc":            # BBC TRUE is -1, FALSE is 0
+        return -1
+    if name == "FalseFunc":
+        return 0
 
     if name == "Concatenate":     # string concat after type-check converts Plus
         a, b = fold_constant(node.lhs), fold_constant(node.rhs)
@@ -81,9 +119,37 @@ def fold_constant(node):
             return None
         return None if isinstance(result, complex) else result
 
+    if name in ("IntegerDivide", "IntegerModulus", "And", "Or", "Eor"):
+        a, b = fold_constant(node.lhs), fold_constant(node.rhs)
+        # Integer operators; fold only when both operands are already integers, so
+        # we never have to second-guess BBC's float->int coercion. A float operand
+        # is left to run time.
+        if not (isinstance(a, int) and isinstance(b, int)):
+            return None
+        if name == "IntegerDivide":
+            return _trunc_div(a, b)
+        if name == "IntegerModulus":
+            return _trunc_mod(a, b)
+        return _BITWISE[name](a, b)
+
+    if name in _RELATIONAL:
+        a, b = fold_constant(node.lhs), fold_constant(node.rhs)
+        if a is None or b is None or isinstance(a, str) or isinstance(b, str):
+            return None           # string comparison fidelity: leave to run time
+        if isinstance(a, float) or isinstance(b, float):
+            a, b = float(a), float(b)   # mirror the runtime's promotion to float64
+        return -1 if _RELATIONAL[name](a, b) else 0
+
+    if name == "Not":             # BBC NOT is bitwise complement: ~a == -a-1
+        a = fold_constant(node.factor)
+        return None if not isinstance(a, int) else ~a
+
     if name == "UnaryMinus":
         a = fold_constant(node.factor)
         return None if a is None else -a
+    if name == "UnaryPlus":
+        a = fold_constant(node.factor)
+        return None if a is None else a
     if name == "AbsFunc":
         a = fold_constant(node.factor)
         return None if a is None else abs(a)

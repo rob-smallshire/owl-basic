@@ -25,7 +25,9 @@ def _first_if(program):
 
 
 def test_colon_if_condition_is_an_equality_not_a_return():
-    program = analyse_numbered_lines([(10, 'IF 1=1:PRINT"x"'), (20, "END")], name="t")
+    # A non-constant equality, so the disambiguated Equal survives to be inspected
+    # (a constant equality like 1=1 would be constant-folded to a literal).
+    program = analyse_numbered_lines([(10, 'IF A%=1:PRINT"x"'), (20, "END")], name="t")
     iff = _first_if(program)
     assert type(iff.condition).__name__ == "Equal"
     # The true clause is the PRINT, with no spurious ReturnFromFunction.

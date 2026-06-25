@@ -244,9 +244,10 @@ def test_emit_il_lowers_simple_functions(dotnet_backend):
 
 @requires_dotnet_toolchain
 def test_simple_functions_compile_and_run(compile_and_run):
-    # ABS(-5)=5, ABS(-2.5)=2.5, SGN(-3)=-1, NOT 0=-1, TRUE=-1, FALSE=0, SQR(9)=3
+    # ABS(-5)=5, ABS(-2.5)=2.5, SGN(-3)=-1, NOT A%=NOT(-5)=4, TRUE=-1, FALSE=0,
+    # SQR(9)=3. NOT applies to a variable so it lowers (NOT of a constant folds).
     stdout = compile_and_run(analyse_fixture("simple_functions.bbctxt"))
-    assert stdout.split("\n") == ["5", "2.5", "-1", "-1", "-1", "0", "3", ""]
+    assert stdout.split("\n") == ["5", "2.5", "-1", "4", "-1", "0", "3", ""]
 
 
 def test_emit_il_lowers_val(dotnet_backend):
