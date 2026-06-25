@@ -70,6 +70,130 @@ _UNARY_FN = {
 }
 
 
+# Pure string functions of constant arguments. Each mirrors the OwlRuntime
+# BasicCommands implementation op-for-op (1-based indexing, the unsigned-clamp
+# edge cases, the empty-string conventions) so a folded constant equals the
+# value the runtime would compute.
+
+def _fold_len(node):
+    s = fold_constant(node.factor)
+    return len(s) if isinstance(s, str) else None
+
+
+def _fold_asc(node):
+    s = fold_constant(node.factor)
+    if not isinstance(s, str):
+        return None
+    return -1 if len(s) == 0 else ord(s[0])
+
+
+def _fold_left(node):
+    s, length = fold_constant(node.source), fold_constant(node.length)
+    if not isinstance(s, str) or not isinstance(length, int):
+        return None
+    # A negative length reaches s.Length via the (uint) cast: the whole string.
+    keep = len(s) if length < 0 else min(length, len(s))
+    return s[:keep]
+
+
+def _fold_right(node):
+    s, length = fold_constant(node.source), fold_constant(node.length)
+    if not isinstance(s, str) or not isinstance(length, int):
+        return None
+    keep = len(s) if length < 0 else min(length, len(s))
+    return s[len(s) - keep:]
+
+
+def _fold_mid(node):
+    s = fold_constant(node.source)
+    start = fold_constant(node.position)
+    length = fold_constant(node.length)
+    if not isinstance(s, str) or not isinstance(start, int) or not isinstance(length, int):
+        return None
+    if start < 0:                     # (uint) cast -> a huge index -> past the end
+        return ""
+    zero_based = max(start, 1) - 1     # MID$ is 1-based; 0 behaves as 1
+    if zero_based >= len(s):
+        return ""
+    available = len(s) - zero_based
+    keep = available if length < 0 else min(length, available)
+    return s[zero_based:zero_based + keep]
+
+
+def _fold_string(node):              # STRING$(count, s$)
+    count, s = fold_constant(node.count), fold_constant(node.source)
+    if not isinstance(count, int) or not isinstance(s, str):
+        return None
+    return "" if count <= 0 or len(s) == 0 else s * count
+
+
+def _fold_instr(node):
+    searched = fold_constant(node.source)
+    substring = fold_constant(node.subString)
+    if not isinstance(searched, str) or not isinstance(substring, str):
+        return None
+    start = 1
+    if node.startPosition is not None:
+        start = fold_constant(node.startPosition)
+        if not isinstance(start, int):
+            return None
+    if len(substring) == 0:           # InstrAt returns the start index unchanged
+        return start
+    if len(substring) > len(searched):
+        return 0
+    if not (1 <= start <= len(searched) + 1):
+        return None                   # C# IndexOf would throw; leave it to runtime
+    return searched.find(substring, start - 1) + 1   # 1-based; 0 if not found
+
+
+def _fold_val(node):
+    s = fold_constant(node.factor)
+    if not isinstance(s, str):
+        return None
+    # Mirror BasicCommands.Val: skip spaces, an optional sign, digits, an optional
+    # '.', and an optional E exponent (consumed only when well-formed).
+    i, n = 0, len(s)
+    while i < n and s[i] == " ":
+        i += 1
+    start = i
+    if i < n and s[i] in "+-":
+        i += 1
+    saw_digit = False
+    while i < n and "0" <= s[i] <= "9":
+        i += 1
+        saw_digit = True
+    if i < n and s[i] == ".":
+        i += 1
+        while i < n and "0" <= s[i] <= "9":
+            i += 1
+            saw_digit = True
+    if saw_digit and i < n and s[i] == "E":
+        j = i + 1
+        if j < n and s[j] in "+-":
+            j += 1
+        if j < n and "0" <= s[j] <= "9":
+            i = j
+            while i < n and "0" <= s[i] <= "9":
+                i += 1
+    try:
+        result = float(s[start:i])
+    except ValueError:
+        return 0.0                    # no leading number is 0
+    return None if math.isinf(result) else result   # overflow faults at runtime
+
+
+_STRING_FUNCS = {
+    "LenFunc": _fold_len,
+    "AscFunc": _fold_asc,
+    "LeftStrFunc": _fold_left,
+    "RightStrFunc": _fold_right,
+    "MidStrFunc": _fold_mid,
+    "StringStrFunc": _fold_string,
+    "InstrFunc": _fold_instr,
+    "ValFunc": _fold_val,
+}
+
+
 def fold_constant(node):
     """Return the constant value of *node*, or None if not statically constant."""
     if node is None:
@@ -167,6 +291,9 @@ def fold_constant(node):
             return chr(int(a) & 0xFF)
         except (ValueError, OverflowError):
             return None
+
+    if name in _STRING_FUNCS:
+        return _STRING_FUNCS[name](node)
 
     if name in _UNARY_FN:
         a = fold_constant(node.factor)

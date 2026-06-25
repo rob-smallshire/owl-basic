@@ -237,8 +237,7 @@ def test_emit_il_lowers_simple_functions(dotnet_backend):
     assert "System.Math::Abs(int32)" in il
     assert "System.Math::Abs(float64)" in il
     assert "System.Math::Sign(int32)" in il
-    assert "\n        not" in il          # NOT
-    assert "ldc.i4.m1" in il              # TRUE
+    assert "\n        not" in il          # NOT (of a variable; NOT of a constant folds)
     assert "BasicCommands::Sqr(float64)" in il
 
 

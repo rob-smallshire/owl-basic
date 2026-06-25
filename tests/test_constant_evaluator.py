@@ -117,6 +117,52 @@ def test_true_false_and_unary_plus_fold():
     assert fold("+7") == 7
 
 
+def test_len_and_asc_fold():
+    assert fold('LEN("hello")') == 5
+    assert fold('LEN("")') == 0
+    assert fold('ASC("A")') == 65
+    assert fold('ASC("")') == -1            # ASC of the empty string is -1
+
+
+def test_left_and_right_str_fold_with_clamping():
+    assert fold('LEFT$("HELLO",2)') == "HE"
+    assert fold('LEFT$("HELLO",0)') == ""
+    assert fold('LEFT$("HELLO",10)') == "HELLO"    # clamped to the string
+    assert fold('LEFT$("HELLO",-1)') == "HELLO"    # negative -> whole (uint clamp)
+    assert fold('RIGHT$("HELLO",2)') == "LO"
+    assert fold('RIGHT$("HELLO",10)') == "HELLO"
+    assert fold('RIGHT$("HELLO",-1)') == "HELLO"
+
+
+def test_mid_str_folds_one_based_with_clamping():
+    assert fold('MID$("HELLO",2,3)') == "ELL"       # 1-based start
+    assert fold('MID$("HELLO",1,5)') == "HELLO"
+    assert fold('MID$("HELLO",0,2)') == "HE"         # 0 behaves as 1
+    assert fold('MID$("HELLO",2,-1)') == "ELLO"      # negative length -> rest
+    assert fold('MID$("HELLO",10,2)') == ""          # start past the end
+    assert fold('MID$("HELLO",-1,2)') == ""          # negative start -> empty
+
+
+def test_string_str_and_instr_fold():
+    assert fold('STRING$(3,"ab")') == "ababab"
+    assert fold('STRING$(0,"x")') == ""
+    assert fold('STRING$(-1,"x")') == ""
+    assert fold('INSTR("HELLO","L")') == 3           # 1-based
+    assert fold('INSTR("HELLO","Z")') == 0           # not found
+    assert fold('INSTR("HELLO","LO")') == 4
+    assert fold('INSTR("HELLO","")') == 1            # empty -> the start index
+    assert fold('INSTR("AB","ABC")') == 0            # substring longer than searched
+
+
+def test_val_folds_like_the_runtime_parser():
+    assert fold('VAL("42")') == 42.0
+    assert fold('VAL("3.5")') == 3.5
+    assert fold('VAL("1E3")') == 1000.0              # exponent, like VAL/STR$
+    assert fold('VAL("12x")') == 12.0               # leading numeric part
+    assert fold('VAL("abc")') == 0.0                # no number -> 0
+    assert fold('VAL("1E999")') is None             # overflow: runtime "Too big"
+
+
 def test_non_constant_subtrees_do_not_fold():
     assert fold("A%+1") is None              # references a variable
     assert fold("SIN(X)") is None

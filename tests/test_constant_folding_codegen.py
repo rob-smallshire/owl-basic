@@ -111,3 +111,35 @@ def test_relational_fold_matches_runtime(compile_and_run):
     folded = compile_and_run(analyse(
         "".join("PRINT %s\n" % e for e in exprs), name="t"))
     assert folded.split() == ["-1", "0", "-1", "0", "-1", "0", "-1", "0"]
+
+
+# --- string functions of constants -----------------------------------------
+
+def test_numeric_string_functions_fold(dotnet_backend):
+    assert _folds_to(dotnet_backend, 'LEN("hello")', "5")
+    assert _folds_to(dotnet_backend, 'ASC("A")', "65")
+    assert _folds_to(dotnet_backend, 'INSTR("HELLO","L")', "3")
+
+
+def test_string_valued_functions_fold_to_literal(dotnet_backend):
+    # The runtime helper is gone; the result is a string literal.
+    il = _il(dotnet_backend, 'PRINT LEFT$("HELLO",2)\n')
+    assert "BasicCommands::LeftStr" not in il
+    assert _il(dotnet_backend, 'PRINT LEFT$("HELLO",2)\n') == _il(
+        dotnet_backend, 'PRINT "HE"\n')
+    assert _il(dotnet_backend, 'PRINT MID$("HELLO",2,3)\n') == _il(
+        dotnet_backend, 'PRINT "ELL"\n')
+
+
+@requires_dotnet_toolchain
+def test_string_functions_fold_and_run(compile_and_run):
+    out = compile_and_run(analyse(
+        'PRINT LEN("hello")\n'
+        'PRINT ASC("A")\n'
+        'PRINT LEFT$("HELLO",2)\n'
+        'PRINT RIGHT$("HELLO",2)\n'
+        'PRINT MID$("HELLO",2,3)\n'
+        'PRINT STRING$(3,"ab")\n'
+        'PRINT INSTR("HELLO","LO")\n'
+        'PRINT VAL("3.5")+1\n', name="t"))
+    assert out.split("\n") == ["5", "65", "HE", "LO", "ELL", "ababab", "4", "4.5", ""]

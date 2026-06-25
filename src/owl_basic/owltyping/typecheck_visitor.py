@@ -6,7 +6,8 @@ from owl_basic.visitor import Visitor
 from owl_basic.errors import *
 from owl_basic.exceptions import CompileError
 from owl_basic.utility import underscoresToCamelCase
-from owl_basic.syntax.ast import Cast, Concatenate, LiteralInteger, LiteralFloat
+from owl_basic.syntax.ast import (Cast, Concatenate, LiteralInteger, LiteralFloat,
+                                  LiteralString)
 from owl_basic.ast_utils import elideNode
 from owl_basic.constant_folding import fold_constant
 from owl_basic.owltyping.type_system import (NumericOwlType, ObjectOwlType, IntegerOwlType,
@@ -74,6 +75,8 @@ class TypecheckVisitor(Visitor):
     
     def visitAstNode(self, node):
         node.forEachChild(self.visit)
+        if self._foldConstant(node):     # LEN/ASC/LEFT$/MID$/VAL/... of constants
+            return
         self.checkSignature(node) # TODO: What about return types
         self.insertNumericCasts(node)
     
@@ -153,21 +156,35 @@ class TypecheckVisitor(Visitor):
         '''
         value = fold_constant(node)
         # bool is an int subclass; fold_constant never yields it, but guard so a
-        # stray bool never becomes an integer literal. Strings are not folded here.
-        if value is None or isinstance(value, bool) or not isinstance(value, (int, float)):
+        # stray bool never becomes an integer literal.
+        if value is None or isinstance(value, bool):
             return False
-        if isinstance(value, int):
+        if isinstance(value, str):
+            literal = LiteralString(value=value)
+            literal.actualType = StringOwlType()
+        elif isinstance(value, int):
             literal = LiteralInteger(value=value)
             literal.actualType = (IntegerOwlType() if _INT32_MIN <= value <= _INT32_MAX
                                   else LongIntegerOwlType())
-        else:
+        elif isinstance(value, float):
             literal = LiteralFloat(value=value)
             literal.actualType = FloatOwlType()
+        else:
+            return False
+        # Locate the slot via findChild rather than the parent_property/index
+        # stamped by ParentVisitor: a node created during type-check itself (e.g.
+        # a Concatenate folded from a constant string concatenation) was never
+        # stamped, but its parent does reference it.
+        if node.parent is None:
+            return False
+        property_name, index = node.parent.findChild(node)
+        if property_name is None:
+            return False
         literal.lineNum = node.lineNum
         literal.parent = node.parent
-        literal.parent_property = node.parent_property
-        literal.parent_index = node.parent_index
-        node.parent.setProperty(literal, node.parent_property, node.parent_index)
+        literal.parent_property = property_name
+        literal.parent_index = index
+        node.parent.setProperty(literal, property_name, index)
         return True
                 
     def visitDivide(self, divide):
@@ -389,6 +406,8 @@ class TypecheckVisitor(Visitor):
         self.visit(instr.source)
         self.visit(instr.subString)
         self.visit(instr.startPosition)
+        if self._foldConstant(instr):    # INSTR of constant strings
+            return
         if not self.checkSignature(instr):
             # TODO: Error?
             return

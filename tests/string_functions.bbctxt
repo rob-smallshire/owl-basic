@@ -1,11 +1,14 @@
 a$ = "HELLO"
+n% = 65
+c$ = "A"
+f$ = "foo"
 PRINT LEN(a$)
 PRINT LEFT$(a$, 2)
 PRINT RIGHT$(a$, 2)
 PRINT MID$(a$, 2, 3)
-PRINT CHR$(65)
-PRINT ASC("A")
+PRINT CHR$(n%)
+PRINT ASC(c$)
 PRINT INSTR(a$, "L")
-b$ = "foo" + "bar"
+b$ = f$ + "bar"
 PRINT b$
 END
