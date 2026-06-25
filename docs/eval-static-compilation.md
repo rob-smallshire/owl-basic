@@ -130,8 +130,11 @@ recursive (`SIN(RAD(30))` folds because `RAD(30)` folds, then `SIN` of that) and
 covers everything pure:
 
 - arithmetic `+ - * / ^`, unary `+`/`-`;
-- integer `DIV`/`MOD` and bitwise `AND OR EOR NOT` (integer operands only, so
-  BBC's float->int coercion is never second-guessed);
+- integer `DIV`/`MOD`, bitwise `AND OR EOR NOT`, and the shifts `<< >> >>>`
+  (integer operands only, so BBC's float->int coercion is never second-guessed;
+  shift semantics are defined by the .NET opcodes -- BBC BASIC V, which added
+  them, has no disassembly to check against -- with the folded value kept equal
+  to the runtime's);
 - the relational operators (numeric operands -> BBC `-1`/`0`);
 - `PI TRUE FALSE`;
 - `ABS INT SGN` and the transcendentals `SIN COS TAN ASN ACS ATN RAD DEG SQR EXP

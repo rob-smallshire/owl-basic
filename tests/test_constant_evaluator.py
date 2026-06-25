@@ -101,6 +101,17 @@ def test_bitwise_operators_fold():
     assert fold("NOT 5") == -6               # bitwise complement: ~5 == -6
 
 
+def test_shift_operators_fold():
+    assert fold("5 << 2") == 20
+    assert fold("1 << 31") == -2147483648        # overflows int32 to the sign bit
+    assert fold("1 << 40") == 256                # count masked to the width (40 & 31)
+    assert fold("-8 >> 1") == -4                 # >> is arithmetic (signed)
+    assert fold("-1 >> 1") == -1
+    assert fold("-1 >>> 1") == 2147483647        # >>> is logical (zero-fill)
+    assert fold("8 >>> 1") == 4
+    assert fold("2.0 << 1") is None              # float operand: leave to runtime
+
+
 def test_relational_operators_fold_to_minus_one_or_zero():
     assert fold("1=1") == -1
     assert fold("1=2") == 0

@@ -10,9 +10,13 @@ Coverage (everything pure; impure functions -- RND, GET, TIME, file/screen I/O,
 READ, user functions, ... -- are never folded):
 
 * arithmetic ``+ - * /`` and ``^``, unary ``+``/``-``;
-* integer ``DIV``/``MOD`` (truncating; remainder takes the dividend's sign) and
-  bitwise ``AND OR EOR NOT`` -- folded only when both operands are integers, so
-  BBC's float->int coercion is never second-guessed;
+* integer ``DIV``/``MOD`` (truncating; remainder takes the dividend's sign),
+  bitwise ``AND OR EOR NOT`` and the shifts ``<< >> >>>`` (>> arithmetic, >>>
+  logical; count masked to the value's width) -- folded only when both operands
+  are integers, so BBC's float->int coercion is never second-guessed. The shift
+  semantics are OWL's definition (the .NET shift opcodes); BBC BASIC V, which
+  introduced them, has no disassembly to verify against, but the folded value is
+  kept equal to the runtime's so folding stays sound;
 * the relational operators (numeric operands -> BBC's ``-1``/``0``);
 * ``PI``, ``TRUE``, ``FALSE``;
 * numeric functions ``ABS INT SGN`` and the transcendentals
@@ -59,6 +63,17 @@ _RELATIONAL = {
     "GreaterThan": lambda a, b: a > b,
     "GreaterThanEqual": lambda a, b: a >= b,
 }
+
+
+_INT32_MIN, _INT32_MAX = -(2 ** 31), 2 ** 31 - 1
+
+
+def _signed(value, width):
+    """Interpret the low *width* bits of *value* as a two's-complement integer."""
+    value &= (1 << width) - 1
+    if value & (1 << (width - 1)):
+        value -= 1 << width
+    return value
 
 
 def _trunc_div(a, b):
@@ -273,6 +288,23 @@ def fold_constant(node):
         if name == "IntegerModulus":
             return _trunc_mod(a, b)
         return _BITWISE[name](a, b)
+
+    if name in ("ShiftLeft", "ShiftRight", "ShiftRightUnsigned"):
+        a, b = fold_constant(node.lhs), fold_constant(node.rhs)
+        if not (isinstance(a, int) and isinstance(b, int)):
+            return None
+        # The shifted value's magnitude sets the width (32-bit unless it needs
+        # 64); the count is masked to that width, as the CIL shift opcodes do.
+        # These semantics are OWL's definition (the .NET shift opcodes) -- there
+        # is no BBC BASIC V disassembly to verify them against -- but the folded
+        # value is kept equal to the runtime's, so folding is sound regardless.
+        width = 32 if _INT32_MIN <= a <= _INT32_MAX else 64
+        count = b & (width - 1)
+        if name == "ShiftLeft":
+            return _signed(a << count, width)
+        if name == "ShiftRight":                 # signed / arithmetic
+            return a >> count
+        return _signed((a & ((1 << width) - 1)) >> count, width)   # logical
 
     if name in _RELATIONAL:
         a, b = fold_constant(node.lhs), fold_constant(node.rhs)
