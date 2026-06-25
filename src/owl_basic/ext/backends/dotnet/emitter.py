@@ -115,6 +115,16 @@ _LOGICAL_OPS = {
     "Eor": "xor",
 }
 
+# Shifts: << and >> (>> is the signed/arithmetic shift, hence shr; >>> is the
+# logical/zero-fill shift, shr.un). The CIL shift opcodes take the value (at its
+# own width, 32- or 64-bit) and an int32 count, and the result has the value's
+# width -- the front end types the operands accordingly.
+_SHIFT_OPS = {
+    "ShiftLeft": "shl",
+    "ShiftRight": "shr",
+    "ShiftRightUnsigned": "shr.un",
+}
+
 # Numeric relational operators, as CIL opcode sequences that leave an OWL
 # boolean (0 / -1) on the stack. The trailing `neg` converts a CLR boolean
 # (0 / 1) into BBC's 0 / -1; `<>`/`<=`/`>=` build on `ceq`/`clt`/`cgt`.
@@ -1369,6 +1379,11 @@ class _MethodEmitter:
             self.lower_expression(node.lhs)
             self.lower_expression(node.rhs)
             self.emit(_LOGICAL_OPS[name])
+            return
+        if name in _SHIFT_OPS:
+            self.lower_expression(node.lhs)     # the value, at its own width
+            self.lower_expression(node.rhs)     # the int32 shift count
+            self.emit(_SHIFT_OPS[name])
             return
         if name in _RELATIONAL_OPS:
             self._lower_relational(node)

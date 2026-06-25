@@ -331,11 +331,20 @@ class TypecheckVisitor(Visitor):
     def visitBinaryIntegerOperator(self, operator):
         self.visit(operator.lhs)
         self.visit(operator.rhs)
-        if self._foldConstant(operator):     # DIV/MOD/AND/OR/EOR of constants
+        if self._foldConstant(operator):     # DIV/MOD/AND/OR/EOR/shifts of constants
             return
         if not self.checkSignature(operator):
             return
-        # DIV/MOD, the bitwise operators and shifts operate at the width of the
+        if type(operator).__name__ in ("ShiftLeft", "ShiftRight", "ShiftRightUnsigned"):
+            # A shift keeps the shifted value's width (32- or 64-bit); the count is
+            # always int32 (the CIL shl/shr/shr.un opcodes take an int32 amount).
+            if not isinstance(operator.lhs.actualType, (IntegerOwlType, LongIntegerOwlType)):
+                self.insertCast(operator.lhs, source=operator.lhs.actualType, target=IntegerOwlType())
+            if operator.rhs.actualType != IntegerOwlType():
+                self.insertCast(operator.rhs, source=operator.rhs.actualType, target=IntegerOwlType())
+            operator.actualType = operator.lhs.actualType
+            return
+        # DIV/MOD and the bitwise operators operate at the width of the
         # wider operand: 64-bit if either operand is a LongInteger, else 32-bit.
         # The narrower operand widens to match (lossless); the polymorphic CIL
         # opcodes (div/rem/and/or/xor) then compute at that width.

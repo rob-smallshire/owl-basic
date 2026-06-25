@@ -691,7 +691,7 @@ class ShiftRight(BinaryIntegerOperator):
     pass
 
 class ShiftRightUnsigned(BinaryIntegerOperator):
-    "<<<"
+    ">>>"
     pass
 
 class And(BinaryIntegerOperator):
