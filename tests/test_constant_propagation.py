@@ -99,3 +99,13 @@ def test_propagation_into_for_limit_runs(compile_and_run):
 def test_chained_constant_runs(compile_and_run):
     out = compile_and_run(analyse('A%=7\nB%=A%\nPRINT B%\nEND\n', name="cp"))
     assert out.strip() == "7"
+
+
+@requires_dotnet_toolchain
+def test_constant_poked_into_a_byte_wraps_not_rejected(compile_and_run):
+    # A ? poke stores the low byte; a constant (here exposed by propagating base)
+    # that exceeds a byte wraps at run time as on the BBC, rather than being
+    # rejected at compile time. 258 AND 255 = 2.
+    out = compile_and_run(analyse(
+        'DIM b 4\nbase=258\n?b=base\nPRINT ?b\nEND\n', name="cp"))
+    assert out.strip() == "2"

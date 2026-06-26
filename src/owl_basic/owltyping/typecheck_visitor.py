@@ -116,7 +116,13 @@ class TypecheckVisitor(Visitor):
                 self.typeMismatch(assignment, message)
         else:
             logger.debug(assignment.lValue)
-            self.checkAndInsertRValueCast(assignment.rValue, assignment.lValue.actualType)
+            # A ?/! indirection store is a poke: it truncates to the low byte(s)
+            # at run time (the BBC idiom ?addr=v : ?(addr+1)=v DIV 256 relies on
+            # it), so an out-of-range constant must wrap, not be rejected.
+            is_indirection = "Indirection" in type(assignment.lValue).__name__
+            self.checkAndInsertRValueCast(
+                assignment.rValue, assignment.lValue.actualType,
+                check_constant_range=not is_indirection)
         
     def visitForToStep(self, for_stmt):
         '''
@@ -699,16 +705,20 @@ class TypecheckVisitor(Visitor):
                     return False
         return True
     
-    def checkAndInsertRValueCast(self, r_value, target_type):
+    def checkAndInsertRValueCast(self, r_value, target_type, check_constant_range=True):
         '''
         Check the value of the given r_value for compatibility with the target_type
         and insert casts as necessary, or raise an error if no conversion is possible.
-        :param r_value: The r_value Node which is to be type checked. 
+        :param r_value: The r_value Node which is to be type checked.
         :param target_type: The type to which the r_value should be converted.
+        :param check_constant_range: Reject an out-of-range constant store. False
+            for a ``?``/``!`` indirection (a poke), which truncates to the low
+            byte(s) at run time -- as BBC BASIC does -- rather than erroring.
         '''
         assert target_type is not None
         if r_value is not None: # TODO Could this be an assert?
-            self._checkConstantInRange(r_value, target_type)
+            if check_constant_range:
+                self._checkConstantInRange(r_value, target_type)
             if r_value.actualType.isConvertibleTo(target_type):
                 if r_value.actualType is not target_type:
                     self.insertCast(r_value, r_value.actualType, target_type)
