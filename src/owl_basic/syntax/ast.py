@@ -217,6 +217,10 @@ class ReturnError(AstStatement):
 class End(AstStatement):
     pass
 
+class Chain(AstStatement):
+    "CHAIN <filename> -- load and run another program (handing over @%/A%-Z%)"
+    filename = Node(formalType=StringOwlType())
+
 class Envelope(AstStatement):
     n                 = Node(formalType=IntegerOwlType())
     t                 = Node(formalType=IntegerOwlType())

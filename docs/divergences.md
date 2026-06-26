@@ -23,6 +23,7 @@ here; only intentional ones.
 | 7 | `<value> TOP` as a `FOR` limit (residual) | always splits `TOP` after a value | one un-listed value-ending token *type* could leave `TOP` glued as the pseudo-variable | Keys on the previous token type rather than re-parsing; the set covers every value-ender in practice -- extend it if the corpus surfaces a miss | `docs/bbc-tokeniser-to-top.md` |
 | 8 | `LOCAL ERROR` / `RESTORE ERROR` (BASIC V) | push/pop the error context on the BASIC stack, so a `RESTORE ERROR` mid-PROC reinstates the caller's handler for the rest of the routine | no-op: the saved/restored context is the per-method dispatch, so the caller's handler is back in effect once the PROC returns, but a mid-PROC `RESTORE ERROR` does *not* switch handlers before then | OWL emits error dispatch per method, which already gives the save-on-entry / restore-on-return behaviour these directives request; a true savable handler stack would cost a push/pop with no real-program benefit | `tests/test_on_error.py` |
 | 9 | `TRACE ON` / `TRACE OFF` / `TRACE <line>` | the interpreter prints each line number as it is executed | no-op (parses, emits nothing) | Interactive line tracing has no meaning for a compiled program | `tests/test_trace.py` |
+| 10 | `CHAIN` | loads the file over the program at `PAGE` and runs it in place, preserving `@%`/`A%`-`Z%`, `HIMEM` and reserved memory | launches `<name>.dll` (the chained program's own compiled assembly) as a fresh process, carrying `@%`/`A%`-`Z%` across via `OWL_BASIC_RESIDENT_*` environment variables; named variables don't cross (faithful), but `HIMEM`-reserved memory doesn't either | The fresh process gives the "clear all dynamic vars" semantics for free, and the resident-integer channel is exactly the data BBC carries over; `HIMEM` blocks are machine-code territory (already out of scope) | `tests/test_chain.py`, `tests/test_resident_integers.py` |
 
 ## Notes
 
@@ -38,8 +39,14 @@ here; only intentional ones.
 - **#8 / #9** keep BASIC V programs that sprinkle these directives compiling and
   running; both fall out of decisions already made (#8 from the per-method
   dispatch behind #3, #9 from compiling rather than interpreting).
+- **#10** the resident integers are the *only* state BBC CHAIN carries over (plus
+  `HIMEM`-reserved memory), so the environment channel is faithful to the data a
+  program can pass; the fresh process is how a compiled target gives "replace the
+  program and clear its dynamic world". The name-resolution (`<name>.dll`) and
+  process launch live in the runtime, so another target can do the right thing
+  differently.
 
 Out of scope here (these are *limitations*, not divergences -- OWL rejects
 cleanly rather than behaving differently): inline assembler (`[ ... ]`, rejected
 by the backend; see `docs/inline-assembler.md`), `USR`/`SYS`/`CALL` to machine
-code, `CHAIN`, `EVAL` of a runtime-dynamic string.
+code, `EVAL` of a runtime-dynamic string.

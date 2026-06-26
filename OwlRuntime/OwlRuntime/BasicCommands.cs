@@ -361,6 +361,57 @@ namespace OwlRuntime
             }
         }
 
+        /// <summary>
+        /// Stage one resident integer's current value into the environment, so a
+        /// program launched by CHAIN inherits it (the partner of SeedResident).
+        /// </summary>
+        public static void StageResident(string name, int value)
+        {
+            Environment.SetEnvironmentVariable(
+                "OWL_BASIC_RESIDENT_" + name,
+                value.ToString(CultureInfo.InvariantCulture));
+        }
+
+        /// <summary>
+        /// CHAIN: load and run another program, replacing this one. The resident
+        /// integers A%-Z% have already been staged into the environment by the
+        /// caller; @% is staged here. The BBC program name is resolved to a .NET
+        /// assembly beside this one and launched as a fresh process that inherits
+        /// our environment (and so the residents) and standard streams. CHAIN
+        /// never returns: we exit with the chained program's status.
+        /// </summary>
+        public static void Chain(string filename)
+        {
+            StageResident("AT", AtPercent);
+
+            string artifact = ResolveChainTarget(filename);
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                UseShellExecute = false,
+            };
+            startInfo.ArgumentList.Add(artifact);
+            using (Process child = Process.Start(startInfo))
+            {
+                child.WaitForExit();
+                Environment.Exit(child.ExitCode);
+            }
+        }
+
+        /// <summary>
+        /// Map a BBC BASIC program name to the .NET artifact CHAIN should launch:
+        /// the &lt;name&gt;.dll beside the chaining assembly. This is the .NET
+        /// target's notion of "the right thing"; another target resolves its own
+        /// way.
+        /// </summary>
+        private static string ResolveChainTarget(string name)
+        {
+            string leaf = name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
+                ? name : name + ".dll";
+            string directory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            return Path.Combine(directory ?? string.Empty, leaf);
+        }
+
         // OSCLI / a star command: hand the command line to the host OS command
         // interpreter. BBC BASIC's `*HELP`, `*FX n,m`, ... all arrive here (with
         // the leading '*' already stripped) as the text after the star. There is

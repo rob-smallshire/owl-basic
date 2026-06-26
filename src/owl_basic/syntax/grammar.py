@@ -111,6 +111,7 @@ def p_stmt_body(p):
                  | beats_stmt
                  | bput_stmt
                  | call_stmt
+                 | chain_stmt
                  | circle_stmt
                  | clear_stmt
                  | clg_stmt
@@ -396,6 +397,14 @@ def p_draw_stmt(p):
 def p_end_stmt(p):
     '''end_stmt : END'''
     p[0] = End()
+    p[0].lineNum = p.lineno(1) - 1
+
+def p_chain_stmt(p):
+    # CHAIN <filename> loads and runs another program, replacing this one. The
+    # filename is any string expression. It is a terminal statement: control
+    # never returns (the runtime launches the program and exits with its status).
+    '''chain_stmt : CHAIN expr'''
+    p[0] = Chain(filename = p[2])
     p[0].lineNum = p.lineno(1) - 1
     
 def p_ellipse_stmt(p): # BBC BASIC V also supports rotation of an ellipse

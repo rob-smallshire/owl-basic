@@ -47,6 +47,14 @@
       ]
     ]
   ],
+  "BasicCommands::Chain": [
+    [
+      "void",
+      [
+        "string"
+      ]
+    ]
+  ],
   "BasicCommands::Chr": [
     [
       "string",
@@ -487,6 +495,14 @@
       ]
     ]
   ],
+  "BasicCommands::ResolveChainTarget": [
+    [
+      "string",
+      [
+        "string"
+      ]
+    ]
+  ],
   "BasicCommands::RightJustifyNumerics": [
     [
       "void",
@@ -612,6 +628,15 @@
       "float64",
       [
         "float64"
+      ]
+    ]
+  ],
+  "BasicCommands::StageResident": [
+    [
+      "void",
+      [
+        "string",
+        "int32"
       ]
     ]
   ],

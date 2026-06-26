@@ -212,6 +212,11 @@ class FlowgraphForwardVisitor(Visitor):
         # Do not connect to following statement
         logger.debug("visitEnd")
 
+    def visitChain(self, chain):
+        # CHAIN replaces the running program: control never returns, so it is a
+        # terminal node with no edge to the following statement.
+        logger.debug("visitChain")
+
     def visitReturn(self, end):
         # Do not connect to following statement
         # TODO: Rheolism!

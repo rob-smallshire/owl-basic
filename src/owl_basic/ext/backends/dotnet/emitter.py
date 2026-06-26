@@ -293,6 +293,9 @@ def emit_program(program, assembly_name):
     # __seed_residents likewise needs the full registry (it stores into the
     # resident fields the program uses), so it is generated here at the end.
     methods.append(_emit_seed_residents_method(globals_registry))
+    # __stage_residents pushes the residents into the environment for CHAIN; like
+    # the others it needs the full registry, so it is generated here at the end.
+    methods.append(_emit_stage_residents_method(globals_registry))
     return _ASSEMBLY_TEMPLATE.format(
         name=assembly_name, fields=fields, methods="\n\n".join(methods)
     )
@@ -405,6 +408,25 @@ def _emit_seed_residents_method(globals_registry):
     body = "\n".join("        " + line for line in lines)
     return _METHOD_TEMPLATE.format(
         return_type="void", name="__seed_residents", signature="", entrypoint="",
+        locals="", body=body,
+    )
+
+
+def _emit_stage_residents_method(globals_registry):
+    """A method that stages this program's resident integers into the runtime's
+    environment, so a CHAINed program inherits them. The mirror of
+    __seed_residents: A%-Z% are pushed with StageResident; @% is the runtime's
+    and is staged by Chain itself. Generated last, so the full registry is known."""
+    lines = []
+    for name in sorted(_RESIDENT_FIELD_NAMES):
+        if name in globals_registry:
+            lines.append('ldstr "%s"' % _RESIDENT_FIELD_NAMES[name])
+            lines.append("ldsfld int32 %s" % name)
+            lines.append(_runtime("StageResident", "string", "int32"))
+    lines.append("ret")
+    body = "\n".join("        " + line for line in lines)
+    return _METHOD_TEMPLATE.format(
+        return_type="void", name="__stage_residents", signature="", entrypoint="",
         locals="", body=body,
     )
 
@@ -1626,6 +1648,15 @@ class _MethodEmitter:
         # Returning from Main ends the program; the template's trailing `ret`
         # also covers a program with no explicit END.
         self.emit("ret")
+
+    def _stmt_Chain(self, node):
+        # CHAIN hands the resident integers to the program it launches, then calls
+        # the runtime, which starts a fresh process and exits with its status --
+        # CHAIN never returns. Only the residents cross (named variables do not),
+        # exactly as on the BBC.
+        self.emit("call void __stage_residents()")
+        self.lower_expression(node.filename)
+        self.emit(_runtime("Chain", "string"))
 
     # -- expressions --------------------------------------------------------
 
