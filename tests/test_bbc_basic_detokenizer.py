@@ -1,4 +1,7 @@
-"""Golden-master tests for the clean-room BBC BASIC detokeniser."""
+"""Golden-master tests for OWL's BBC BASIC detokeniser facade.
+
+Detokenisation is delegated to oaknut-basic, defaulting to the BASIC V dialect
+(see owl_basic.bbc_basic.detokenizer). These pin the behaviour OWL relies on."""
 
 from owl_basic.bbc_basic import detokenize
 from owl_basic.bbc_basic.detokenizer import decode_line_reference, detokenize_lines
@@ -52,7 +55,18 @@ def test_multiple_lines_and_numbers():
     assert detokenize_lines(data) == [(10, "REPEAT"), (20, "UNTIL")]
 
 
-def test_command_tokens_0xc6_to_0xcd():
-    # AUTO/DELETE/LOAD/LIST/NEW/OLD/RENUMBER/SAVE occupy 0xC6-0xCD in BASIC II
-    data = _program((10, [0xC9]))  # LIST
-    assert detokenize(data) == "10LIST\n"
+def test_basic_v_is_the_default_dialect():
+    # OWL defaults to BASIC V. The 0xC6-0xCD bytes that were BASIC II's
+    # command-mode keywords (AUTO/DELETE/LOAD/LIST/NEW/OLD/RENUMBER/SAVE) are
+    # reassigned in BASIC V -- 0xC9 is WHEN, not LIST. Those command keywords
+    # never appear in a saved program body, so defaulting to BASIC V loses
+    # nothing on BBC Micro programs and gains BASIC V (Archimedes) support.
+    assert detokenize(_program((10, [0xC9]))) == "10WHEN\n"
+
+
+def test_basic_v_escape_token_decodes():
+    # 0xC8 0x91 is a single BASIC V keyword (ORIGIN) reached through the
+    # 0xC6/0xC7/0xC8 escape mechanism -- not LOAD + TIME, the BASIC II
+    # mis-reading that produced the bogus "LOADTIME" (oaknut issue #44).
+    data = _program((10, [0xC8, 0x91, ord(" "), ord("0")]))
+    assert detokenize(data) == "10ORIGIN 0\n"
