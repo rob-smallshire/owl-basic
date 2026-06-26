@@ -47,6 +47,16 @@
       ]
     ]
   ],
+  "BasicCommands::BputString": [
+    [
+      "void",
+      [
+        "int32",
+        "string",
+        "int32"
+      ]
+    ]
+  ],
   "BasicCommands::Chain": [
     [
       "void",
@@ -252,6 +262,30 @@
       ]
     ]
   ],
+  "BasicCommands::InputInteger": [
+    [
+      "int32",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::InputReal": [
+    [
+      "float64",
+      [
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::InputString": [
+    [
+      "string",
+      [
+        "int32"
+      ]
+    ]
+  ],
   "BasicCommands::Instr": [
     [
       "int32",
@@ -409,6 +443,14 @@
       ]
     ]
   ],
+  "BasicCommands::PackFloat5": [
+    [
+      "uint8[]",
+      [
+        "float64"
+      ]
+    ]
+  ],
   "BasicCommands::Plot": [
     [
       "void",
@@ -454,13 +496,6 @@
     [
       "void",
       [
-        "int32",
-        "object[]"
-      ]
-    ],
-    [
-      "void",
-      [
         "string"
       ]
     ],
@@ -489,6 +524,33 @@
       ]
     ]
   ],
+  "BasicCommands::PrintInteger": [
+    [
+      "void",
+      [
+        "int32",
+        "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::PrintReal": [
+    [
+      "void",
+      [
+        "int32",
+        "float64"
+      ]
+    ]
+  ],
+  "BasicCommands::PrintString": [
+    [
+      "void",
+      [
+        "int32",
+        "string"
+      ]
+    ]
+  ],
   "BasicCommands::RandomFraction": [
     [
       "float64",
@@ -500,6 +562,15 @@
       "void",
       [
         "class [System.Runtime]System.Exception"
+      ]
+    ]
+  ],
+  "BasicCommands::RequireChannel": [
+    [
+      "class [System.Runtime]System.IO.FileStream",
+      [
+        "int32",
+        "string"
       ]
     ]
   ],
@@ -685,6 +756,14 @@
       [
         "int32",
         "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::UnpackFloat5": [
+    [
+      "float64",
+      [
+        "uint8[]"
       ]
     ]
   ],

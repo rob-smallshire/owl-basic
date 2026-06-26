@@ -487,37 +487,194 @@ namespace OwlRuntime
             vdu.Enqueue((byte) 23, (byte) 17, (byte) type, (byte) tint, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0);
         }
 
-        public static void Print(int channel, params object[] items)
+        private static FileStream RequireChannel(int channel, string operation)
         {
-            if (channels.ContainsKey(channel))
+            if (!channels.ContainsKey(channel))
             {
-                throw new NoSuchChannelException("Cannot use PRINT# with this channel", channel);
+                throw new NoSuchChannelException("Cannot use " + operation + " with this channel", channel);
             }
-            FileStream stream = channels[channel];
-            foreach (object item in items)
+            return channels[channel];
+        }
+
+        // PRINT# / INPUT# write BASIC's private type-tagged, byte-reversed record
+        // format -- not text. A value is a one-byte type tag (&40 integer, &FF
+        // real, &00 string) then the value's bytes written by a single
+        // down-counting copy loop, so they land big-endian / last-character-first.
+        // INPUT# undoes the reversal and validates the tag (Type mismatch on the
+        // wrong one -- it does not coerce). See docs/divergences.md and the BBC
+        // BASIC II disassembly (print_file / inputf_skip_hash).
+
+        public static void PrintInteger(int channel, int value)
+        {
+            FileStream stream = RequireChannel(channel, "PRINT#");
+            stream.WriteByte(0x40);
+            stream.WriteByte((byte) (value >> 24));   // most-significant byte first
+            stream.WriteByte((byte) (value >> 16));
+            stream.WriteByte((byte) (value >> 8));
+            stream.WriteByte((byte) value);
+        }
+
+        public static void PrintReal(int channel, double value)
+        {
+            FileStream stream = RequireChannel(channel, "PRINT#");
+            byte[] packed = PackFloat5(value);        // exponent-first in memory
+            stream.WriteByte(0xFF);
+            for (int i = 4; i >= 0; i--)              // reversed: exponent lands last
             {
-                if (item is int)
-                {
-                    int i = (int) item;
-                }
-                else if (item is float)
-                {
-                    float f = (float) item;
-                }
-                else if (item is string)
-                {
-                    string s = (string) item;
-                }
+                stream.WriteByte(packed[i]);
             }
+        }
+
+        public static void PrintString(int channel, string value)
+        {
+            FileStream stream = RequireChannel(channel, "PRINT#");
+            if (value.Length > 255)
+            {
+                throw new StringTooLongException();
+            }
+            stream.WriteByte(0x00);
+            stream.WriteByte((byte) value.Length);
+            for (int i = value.Length - 1; i >= 0; i--)   // characters reversed
+            {
+                stream.WriteByte((byte) value[i]);
+            }
+        }
+
+        public static int InputInteger(int channel)
+        {
+            FileStream stream = RequireChannel(channel, "INPUT#");
+            long offset = stream.Position;
+            int tag = stream.ReadByte();
+            if (tag != 0x40)
+            {
+                stream.Position = offset;
+                throw new TypeMismatchException("INPUT# expected an integer record");
+            }
+            int b3 = stream.ReadByte();               // most-significant byte first
+            int b2 = stream.ReadByte();
+            int b1 = stream.ReadByte();
+            int b0 = stream.ReadByte();
+            return (b3 << 24) | (b2 << 16) | (b1 << 8) | b0;
+        }
+
+        public static double InputReal(int channel)
+        {
+            FileStream stream = RequireChannel(channel, "INPUT#");
+            long offset = stream.Position;
+            int tag = stream.ReadByte();
+            if (tag != 0xFF)
+            {
+                stream.Position = offset;
+                throw new TypeMismatchException("INPUT# expected a real record");
+            }
+            byte[] packed = new byte[5];
+            for (int i = 4; i >= 0; i--)              // wire is reversed -> exponent-first
+            {
+                packed[i] = (byte) stream.ReadByte();
+            }
+            return UnpackFloat5(packed);
+        }
+
+        public static string InputString(int channel)
+        {
+            FileStream stream = RequireChannel(channel, "INPUT#");
+            long offset = stream.Position;
+            int tag = stream.ReadByte();
+            if (tag != 0x00)
+            {
+                stream.Position = offset;
+                throw new TypeMismatchException("INPUT# expected a string record");
+            }
+            int length = stream.ReadByte();
+            char[] characters = new char[length];
+            for (int i = length - 1; i >= 0; i--)     // characters stored reversed
+            {
+                characters[i] = (char) stream.ReadByte();
+            }
+            return new string(characters);
+        }
+
+        // BPUT#ch, A$ (BASIC V) writes the string's bytes; unless suppressed with
+        // a trailing `;`, a newline (&0A) follows.
+        public static void BputString(int channel, string value, int newline)
+        {
+            FileStream stream = RequireChannel(channel, "BPUT#");
+            foreach (char c in value)
+            {
+                stream.WriteByte((byte) c);
+            }
+            if (newline != 0)
+            {
+                stream.WriteByte(0x0A);
+            }
+        }
+
+        // The BBC 5-byte packed REAL, exponent-first (the ROM's constant-pool
+        // order); folds the -128 excess bias and the 2^-32 fraction scale into
+        // -160. Ported from oaknut-basic's float5.py for byte-identical interop.
+        private const int Float5ExponentFold = 160;
+
+        private static byte[] PackFloat5(double value)
+        {
+            byte[] packed = new byte[5];
+            if (value == 0.0)
+            {
+                return packed;                        // five zero bytes
+            }
+            if (double.IsNaN(value) || double.IsInfinity(value))
+            {
+                throw new NumberTooBigException();
+            }
+            bool negative = double.IsNegative(value);
+            double magnitude = Math.Abs(value);
+            int exponent = Math.ILogB(magnitude) + 1;             // 0.5 <= fraction < 1
+            double fraction = Math.ScaleB(magnitude, -exponent);
+            long significand = (long) Math.Round(Math.ScaleB(fraction, 32), MidpointRounding.ToEven);
+            if (significand == (1L << 32))            // rounded up to 1.0: carry into exponent
+            {
+                significand = 1L << 31;
+                exponent += 1;
+            }
+            int biasedExponent = exponent + 128;
+            if (biasedExponent > 0xFF)
+            {
+                throw new NumberTooBigException();
+            }
+            if (biasedExponent < 1)
+            {
+                return new byte[5];                   // underflow: no denormals
+            }
+            int signAndMsb = (int) ((significand >> 24) & 0x7F);  // drop the implied leading 1
+            if (negative)
+            {
+                signAndMsb |= 0x80;
+            }
+            packed[0] = (byte) biasedExponent;
+            packed[1] = (byte) signAndMsb;
+            packed[2] = (byte) ((significand >> 16) & 0xFF);
+            packed[3] = (byte) ((significand >> 8) & 0xFF);
+            packed[4] = (byte) (significand & 0xFF);
+            return packed;
+        }
+
+        private static double UnpackFloat5(byte[] packed)
+        {
+            int exponent = packed[0];
+            if (exponent == 0)
+            {
+                return 0.0;
+            }
+            int signAndMsb = packed[1];
+            bool negative = (signAndMsb & 0x80) != 0;
+            long significand = ((long) ((signAndMsb | 0x80) & 0xFF) << 24)
+                | ((long) packed[2] << 16) | ((long) packed[3] << 8) | packed[4];
+            double value = Math.ScaleB((double) significand, exponent - Float5ExponentFold);
+            return negative ? -value : value;
         }
 
         public static long Ext(int channel)
         {
-            if (channels.ContainsKey(channel))
-            {
-                throw new NoSuchChannelException("Cannot use EXT# with this channel", channel);
-            }
-            FileStream stream = channels[channel];
+            FileStream stream = RequireChannel(channel, "EXT#");
             return stream.Length;
         }
 
@@ -547,21 +704,13 @@ namespace OwlRuntime
 
         public static void SetPtr(int channel, long offset)
         {
-            if (channels.ContainsKey(channel))
-            {
-                throw new NoSuchChannelException("Cannot use BPUT with this channel", channel);
-            }
-            FileStream stream = channels[channel];
+            FileStream stream = RequireChannel(channel, "PTR#");
             stream.Seek(offset, SeekOrigin.Begin);
         }
 
         public static long GetPtr(int channel)
         {
-            if (channels.ContainsKey(channel))
-            {
-                throw new NoSuchChannelException("Cannot use BPUT with this channel", channel);
-            }
-            FileStream stream = channels[channel];
+            FileStream stream = RequireChannel(channel, "PTR#");
             return stream.Position;
         }
 
@@ -1648,6 +1797,15 @@ namespace OwlRuntime
     {
         public TypeMismatchException(string message) :
             base("Type mismatch: " + message)
+        {
+        }
+    }
+
+    public class StringTooLongException :OwlRuntimeException
+    {
+        public override int ErrorNumber => 19;
+        public StringTooLongException() :
+            base("String too long")
         {
         }
     }

@@ -87,7 +87,19 @@ class TypecheckVisitor(Visitor):
         # statements (BPUT/BGET/CLOSE/PRINT#/INPUT#) accept it.
         self.visit(channel.channel)
         channel.actualType = ChannelOwlType()
-    
+
+    def visitBput(self, statement):
+        # BPUT#ch, v writes the low byte of a numeric v; in BASIC V a string v
+        # writes its bytes (plus a newline unless suppressed with `;`). The
+        # formal IntegerOwlType on `data` would reject the string form, so type
+        # the operands here and only cast -- and tag-check -- a numeric operand.
+        statement.forEachChild(self.visit)
+        if isinstance(statement.data.actualType, StringOwlType):
+            return
+        if not self.checkSignature(statement):
+            return
+        self.insertNumericCasts(statement)
+
     def visitAstStatement(self, statement):
         "Generic visitor for simple statements"
         # TODO: If this is the same as above, it can be removed

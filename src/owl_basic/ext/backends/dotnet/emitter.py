@@ -1023,6 +1023,14 @@ class _MethodEmitter:
             self.lower_expression(node.rValue)
             self.emit(_runtime("set_Time", "int32"))
             return
+        if name == "PtrValue":
+            # PTR#ch = n : move the channel's sequential file pointer (random
+            # access on an OPENUP channel). The pointer is a 64-bit file offset.
+            self.lower_expression(target.channel)
+            self.lower_expression(node.rValue)
+            self.emit("conv.i8")
+            self.emit(_runtime("SetPtr", "int32", "int64"))
+            return
         if name == "Indexer":
             # A(i) = v : store into an array element.
             self._store_element(target, node.rValue)
@@ -2179,16 +2187,90 @@ class _MethodEmitter:
         self.lower_expression(node.channel)
         self.emit(_runtime("Eof", "int32"))
 
+    def _expr_PtrValue(self, node):
+        # =PTR#ch : the channel's current sequential pointer, as an integer.
+        self.lower_expression(node.channel)
+        self.emit(_runtime("GetPtr", "int32"))
+        self.emit("conv.i4")                     # a BBC PTR# is a 32-bit integer
+
+    def _expr_ExtValue(self, node):
+        # =EXT#ch : the channel's extent (file length), as an integer.
+        self.lower_expression(node.channel)
+        self.emit(_runtime("Ext", "int32"))
+        self.emit("conv.i4")
+
     def _stmt_Bput(self, node):
-        # BPUT#ch, value -- write the low byte of value to the channel.
+        # BPUT#ch, value -- a numeric value writes its low byte; a string (BASIC
+        # V) writes its bytes, followed by a newline unless suppressed with `;`.
         self.lower_expression(node.channel)
         self.lower_expression(node.data)
-        self.emit("conv.u1")                     # truncate to a byte, as BBC does
-        self.emit(_runtime("Bput", "int32", "uint8"))
+        if isinstance(node.data.actualType, StringOwlType):
+            self.emit("ldc.i4.%d" % (1 if node.newline else 0))
+            self.emit(_runtime("BputString", "int32", "string", "int32"))
+        else:
+            self.emit("conv.u1")                 # truncate to a byte, as BBC does
+            self.emit(_runtime("Bput", "int32", "uint8"))
 
     def _stmt_Close(self, node):
         self.lower_expression(node.channel)
         self.emit(_runtime("Close", "int32"))
+
+    def _stmt_PrintFile(self, node):
+        # PRINT#ch, a, b, c -- write each value as a type-tagged record (NOT
+        # text). The static type of each item picks the record kind; INPUT#
+        # validates the tag against its target's type and will not coerce.
+        for item in node.items:
+            self.lower_expression(node.channel)
+            self.lower_expression(item)
+            actual = item.actualType
+            if isinstance(actual, StringOwlType):
+                self.emit(_runtime("PrintString", "int32", "string"))
+            elif isinstance(actual, FloatOwlType):
+                self.emit(_runtime("PrintReal", "int32", "float64"))
+            else:
+                if isinstance(actual, LongIntegerOwlType):
+                    self.emit("conv.i4")         # the record is a 32-bit integer
+                self.emit(_runtime("PrintInteger", "int32", "int32"))
+
+    def _stmt_InputFile(self, node):
+        # INPUT#ch, a, b -- read one tagged record per target, validating the tag
+        # against the target's type. Supports scalar and array-element targets.
+        for target in node.items:
+            kind = type(target).__name__
+            if kind == "Variable":
+                self._emit_input_record(node.channel, target.actualType)
+                self._store_variable(target)
+            elif kind == "Indexer":
+                indices = target.indices
+                rank = len(indices)
+                field, array_il, element_il = self._array_field(
+                    target.identifier, rank)
+                self.emit("ldsfld %s %s" % (array_il, field))
+                self._push_indices(indices)
+                self._emit_input_record(node.channel, target.actualType)
+                if rank == 1:
+                    self.emit(_STELEM[element_il])
+                else:
+                    args = ", ".join(["int32"] * rank)
+                    self.emit("call instance void %s::Set(%s, %s)"
+                              % (array_il, args, element_il))
+            else:
+                raise CodeGenerationError(
+                    "INPUT# target %r not supported" % kind)
+
+    def _emit_input_record(self, channel, actual_type):
+        """Read one tagged record off *channel*, leaving its value (matching
+        *actual_type*'s CIL type) on the stack. InputXxx consumes only the
+        channel, so any array/index prefix pushed before this call survives."""
+        self.lower_expression(channel)
+        if isinstance(actual_type, StringOwlType):
+            self.emit(_runtime("InputString", "int32"))
+        elif isinstance(actual_type, FloatOwlType):
+            self.emit(_runtime("InputReal", "int32"))
+        else:
+            self.emit(_runtime("InputInteger", "int32"))
+            if isinstance(actual_type, LongIntegerOwlType):
+                self.emit("conv.i8")
 
     def _expr_AscFunc(self, node):
         self.lower_expression(node.factor)
