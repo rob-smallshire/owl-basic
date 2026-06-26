@@ -46,12 +46,18 @@ def findFollowingStatement(statement):
         return None
     
     parent_list = getattr(statement.parent, statement.parent_property)
-    
+
     if isinstance(parent_list, list):
         logging.debug("statement.parent_index = %s", statement.parent_index)
         if statement.parent_index < (len(parent_list) - 1):
-            return parent_list[statement.parent_index + 1]
-    
+            sibling = parent_list[statement.parent_index + 1]
+            # A non-statement sibling -- e.g. the next WhenClause of a CASE -- is
+            # not a control-flow successor; the clause body rejoins after the
+            # whole construct, so keep recursing outward past it.
+            from owl_basic.syntax.ast import AstStatement
+            if isinstance(sibling, AstStatement):
+                return sibling
+
     return findFollowingStatement(statement.parent)
 
 def findRoot(node):

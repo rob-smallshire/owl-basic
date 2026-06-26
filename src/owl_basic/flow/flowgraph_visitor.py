@@ -163,18 +163,21 @@ class FlowgraphForwardVisitor(Visitor):
             
     def visitCase(self, case):
         """
-        Connect the Case statement to the first statement of each when clause and
-        the otherwise clause. Process the statements within each clause.
+        Connect the Case statement to the first statement of each WHEN/OTHERWISE
+        clause, wire the statements within each clause, and connect the no-match
+        fall-through to the statement following ENDCASE. Each clause body's last
+        statement rejoins after ENDCASE because findFollowingStatement recurses
+        past the sibling clauses (which are not statements).
         """
         logger.debug("visitCase")
-        for when_clause in case.whenClauses:
-            if when_clause.statements is not None and len(when_clause.statements) > 0:
-                # Connect to the beginning of the when clause
-                first_when_statement = when_clause.statements[0]
-                connect(case,first_when_statement)
-                
-                for statement in when_clause.statements:
+        for clause in case.whenClauses:
+            if clause.statements is not None and len(clause.statements) > 0:
+                connect(case, clause.statements[0])
+                for statement in clause.statements:
                     self.visit(statement)
+        # A value matching no WHEN (and no OTHERWISE) continues after ENDCASE;
+        # this edge also keeps the following statement reachable.
+        connectToFollowing(case)
                                         
     # The following are statements which do not pass control to the
     # succeeding statement in the linear source code order of the program

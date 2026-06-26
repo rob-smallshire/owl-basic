@@ -132,13 +132,37 @@ class SimplificationVisitor(Visitor):
         self.visit(ongoto.targetLogicalLines)
             
     def visitCase(self, case):
-        "Remove the WhenClauseList level from the AST"
+        "Remove the WhenClauseList level and flatten each clause's body."
         _localize_child_infos(case)
         case.child_infos["when_clauses"] = case.whenClauses.child_infos["clauses"]
         case.whenClauses = case.whenClauses.clauses
-        for clause in case.whenClauses:
+        for index, clause in enumerate(case.whenClauses):
             clause.parent = case
-            self.visit(clause)
+            clause.parent_property = "whenClauses"
+            clause.parent_index = index
+            # Flatten the clause body (a StatementList) into a plain list on the
+            # clause, exactly as visitIf does for its clauses, so the body
+            # statements live in the CFG and a body's last statement rejoins
+            # after ENDCASE (via findFollowingStatement).
+            if isinstance(clause.statements, StatementList):
+                sslv = SimplifyStatementListVisitor()
+                sslv.visit(clause.statements)
+                _localize_child_infos(clause)
+                clause.child_infos["statements"] = \
+                    clause.statements.child_infos["statements"]
+                clause.statements = sslv.accumulatedStatements
+                for statement_index, statement in enumerate(clause.statements):
+                    statement.parent = clause
+                    statement.parent_property = "statements"
+                    statement.parent_index = statement_index
+                    self.visit(statement)
+            else:
+                self.visit(clause.statements)
+            # The WHEN match expressions are not statements; simplify them too.
+            matches = getattr(clause, "matches", None)
+            if matches is not None:
+                self.visit(matches)
+        self.visit(case.condition)
             
     def visitMarkerStatement(self, marker):
         """
