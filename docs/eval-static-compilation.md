@@ -24,13 +24,16 @@ and the tests ever disagree, the tests win -- update this table.
 | Function-by-name dispatch | `IF`-chain helper over the program's `DEF FN`s | `EVAL("FN"+cmd$+"(arg)")` | `test_dispatch_with_named_argument_runs`, `test_dispatch_with_chr34_string_value_hole_runs`, `test_dispatch_with_staged_literal_argument_runs`, `test_dispatch_reads_local_argument_dynamically` |
 | Constant *variable* (via propagation) | propagated to its literal, then lowered as above | `f$="user1+area" : EVAL(f$)` | `tests/test_eval_constant_propagation.py` |
 | Constant argument unblocking a dispatch (via propagation) | the constant argument becomes a literal, so the runtime-name dispatch applies | `p$="7" : EVAL("FN"+c$+"("+p$+")")` | `tests/test_eval_constant_propagation.py` |
+| Constant set up in one routine, EVAL'd in another (via inter-procedural propagation) | the cross-method constant is propagated, then lowered as above | `DEFPROCsetup … f$="user1+area" … DEFPROCuse … =EVAL(f$)` | `test_cross_method_constant_string_eval_runs` |
 
-The last two are not EVAL features: constant propagation runs *before* EVAL
+The last three are not EVAL features: constant propagation runs *before* EVAL
 lowering (see `docs/constant-propagation.md`), so a scalar that holds a single
 constant is already a literal by the time EVAL is lowered. The propagation is
-intra-method, so a constant assigned in one PROC and EVAL'd in another is not yet
-connected (the Acorn User `ImageP` "user formula" program is this cross-method
-case) -- inter-procedural propagation is the future generalisation.
+inter-procedural -- a constant assigned in one PROC and EVAL'd in another is
+connected through the call graph, provided the setup routine is always called
+before the use (the Acorn User `ImageP` "user formula" program is this
+cross-method shape, and its `EVAL`s now lower). The residual rejections below are
+for values that really are unknown until run time.
 
 Two run-time behaviours that are *correct compilation*, not rejection:
 
