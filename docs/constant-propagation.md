@@ -110,7 +110,20 @@ the substitution machinery itself is trivial (it is the leaf swap above).
 
 ## Status
 
-Not implemented. A no-dataflow first cut was prototyped and rejected for the
-unsoundness above (it regressed the RUN test). The folder was hardened as part of
-that work so `-"string"` / `ABS("string")` fold to "not constant" rather than
-crashing. See `docs/eval-static-compilation.md` for the EVAL consumer.
+**Implemented** in `src/owl_basic/constant_propagation.py`
+(`tests/test_constant_propagation.py`, `tests/test_eval_constant_propagation.py`).
+The shipped pass uses the *uniform-constant + definite-assignment* form rather
+than full reaching definitions: a scalar is a candidate only when every write of
+it is a `ScalarAssignment` of the same folded constant, and the per-method
+"must be defined" dataflow (entry IN forced empty) then propagates it to the uses
+it dominates. `%%`/`&` scalars and `@%` are skipped (width/narrowing/print-format
+subtleties); substitution is iterated to a fixpoint for chains. General reaching
+definitions (mixing different constants, cross-PROC) remains the future
+generalisation.
+
+Pipeline: the pass runs after `orderBasicBlocks`; `eval_lowering` then runs a
+second time so EVAL benefits (`analysis._build_flow` is re-run only when a
+newly-enabled dispatch appends helper statements). The folder also reads the
+shift width from the operand's type, and was hardened so `-"string"` /
+`ABS("string")` fold to "not constant" rather than crashing. See
+`docs/eval-static-compilation.md` for the EVAL consumer.
