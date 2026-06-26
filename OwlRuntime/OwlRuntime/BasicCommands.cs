@@ -326,6 +326,41 @@ namespace OwlRuntime
             printManager.FormatString = format;
         }
 
+        /// <summary>
+        /// The initial value of a resident integer for this run, read from the
+        /// OWL_BASIC_RESIDENT_&lt;name&gt; environment variable (0 if unset or
+        /// unparseable). BBC BASIC preserves the resident integers @% and A%-Z%
+        /// across RUN and CHAIN; OWL seeds them from the environment once at
+        /// process start so a CHAINing program can hand values to the program it
+        /// launches. <paramref name="name"/> is a single letter "A".."Z".
+        /// </summary>
+        public static int SeedResident(string name)
+        {
+            string text = Environment.GetEnvironmentVariable("OWL_BASIC_RESIDENT_" + name);
+            int value;
+            if (!string.IsNullOrEmpty(text) && Int32.TryParse(text, out value))
+            {
+                return value;
+            }
+            return 0;
+        }
+
+        /// <summary>
+        /// Seed @% (the print-format control word) from OWL_BASIC_RESIDENT_AT,
+        /// the same channel as the A%-Z% resident integers. Unlike those, @% has
+        /// a non-zero default format, so an absent variable must leave it alone
+        /// rather than zeroing it.
+        /// </summary>
+        public static void SeedAtPercent()
+        {
+            string text = Environment.GetEnvironmentVariable("OWL_BASIC_RESIDENT_AT");
+            int value;
+            if (!string.IsNullOrEmpty(text) && Int32.TryParse(text, out value))
+            {
+                AtPercent = value;
+            }
+        }
+
         // OSCLI / a star command: hand the command line to the host OS command
         // interpreter. BBC BASIC's `*HELP`, `*FX n,m`, ... all arrive here (with
         // the leading '*' already stripped) as the text after the star. There is

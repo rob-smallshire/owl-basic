@@ -479,6 +479,14 @@
       []
     ]
   ],
+  "BasicCommands::RecordError": [
+    [
+      "void",
+      [
+        "class [System.Runtime]System.Exception"
+      ]
+    ]
+  ],
   "BasicCommands::RightJustifyNumerics": [
     [
       "void",
@@ -509,6 +517,20 @@
       "float64",
       [
         "int32"
+      ]
+    ]
+  ],
+  "BasicCommands::SeedAtPercent": [
+    [
+      "void",
+      []
+    ]
+  ],
+  "BasicCommands::SeedResident": [
+    [
+      "int32",
+      [
+        "string"
       ]
     ]
   ],

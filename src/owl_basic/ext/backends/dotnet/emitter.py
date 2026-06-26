@@ -212,6 +212,16 @@ _MAIN_ENTRY = "__owl__main"
 
 _NON_IDENT = re.compile(r"[^A-Za-z0-9_]")
 
+# The resident integers A%-Z% are this program's own static fields (kept fast --
+# read/written with ldsfld/stsfld like any global), but unlike ordinary globals
+# they are preserved across RUN/CHAIN and seeded once from the environment at
+# process start (see _resident_seed_lines and OwlRuntime.SeedResident). @% is the
+# runtime's, handled separately. Maps each resident's field name to its letter.
+_RESIDENT_FIELD_NAMES = {
+    _global_field_name(chr(code) + "%"): chr(code)
+    for code in range(ord("A"), ord("Z") + 1)
+}
+
 
 def _method_name(owl_name):
     """Map an OWL routine name (e.g. ``PROCgreet``) to a CIL method name."""
@@ -256,7 +266,9 @@ def emit_program(program, assembly_name):
     # Main initialises all globals to their BBC defaults (string globals to "",
     # not CLR null) via __reset, then builds the DATA array. __reset runs once
     # at the top (outside any longjump dispatch loop) and again on RUN.
-    prologue = ["call void __reset()"]
+    # __reset clears ordinary globals; __seed_residents then seeds @%/A%-Z% from
+    # the environment (both run once here, not on RUN -- see their definitions).
+    prologue = ["call void __reset()", "call void __seed_residents()"]
     if data_items:
         prologue += _data_init_lines(data_items)
     methods = [
@@ -278,6 +290,9 @@ def emit_program(program, assembly_name):
     # __reset is always defined (Main calls it to initialise globals; RUN reuses
     # it to clear them), generated once all globals are known.
     methods.append(_emit_reset_method(globals_registry, bool(data_items)))
+    # __seed_residents likewise needs the full registry (it stores into the
+    # resident fields the program uses), so it is generated here at the end.
+    methods.append(_emit_seed_residents_method(globals_registry))
     return _ASSEMBLY_TEMPLATE.format(
         name=assembly_name, fields=fields, methods="\n\n".join(methods)
     )
@@ -369,10 +384,41 @@ def _on_error_goto_target(on_error):
     return int(target.value)
 
 
+def _emit_seed_residents_method(globals_registry):
+    """A method that seeds the resident integers from the environment, once.
+
+    A%-Z% are this program's static fields -- only those it actually uses exist
+    -- so each present one is seeded with OwlRuntime.SeedResident(letter); @% is
+    the runtime's, seeded by SeedAtPercent. Ordinary globals are zeroed by
+    __reset, but the residents are preserved across RUN/CHAIN, so Main's prologue
+    calls this once at process start rather than seeding in __reset (which also
+    runs on RUN). Generated last, so the full registry of used residents is known.
+    Letters are emitted in order for deterministic output."""
+    lines = []
+    for name in sorted(_RESIDENT_FIELD_NAMES):
+        if name in globals_registry:
+            lines.append('ldstr "%s"' % _RESIDENT_FIELD_NAMES[name])
+            lines.append(_runtime("SeedResident", "string"))
+            lines.append("stsfld int32 %s" % name)
+    lines.append(_runtime("SeedAtPercent"))
+    lines.append("ret")
+    body = "\n".join("        " + line for line in lines)
+    return _METHOD_TEMPLATE.format(
+        return_type="void", name="__seed_residents", signature="", entrypoint="",
+        locals="", body=body,
+    )
+
+
 def _emit_reset_method(globals_registry, has_data):
-    """A method that resets all globals (and the DATA pointer) for RUN."""
+    """A method that resets all globals (and the DATA pointer) for RUN.
+
+    The resident integers A%-Z% are deliberately skipped: BBC BASIC preserves
+    them across RUN/CHAIN, and they are seeded once at process start instead (see
+    _resident_seed_lines)."""
     lines = []
     for name, il_type in globals_registry.items():
+        if name in _RESIDENT_FIELD_NAMES:
+            continue
         if il_type.endswith("]"):
             lines.append("ldnull")          # an array reference: unallocated until DIM
         elif il_type == "string":
