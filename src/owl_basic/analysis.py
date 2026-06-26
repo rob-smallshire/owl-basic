@@ -13,6 +13,7 @@ line numbers are synthesised here (the legacy tokenised-file path in
 import logging
 
 from owl_basic import (
+    constant_propagation,
     correlation_visitor,
     data_visitor,
     errors,
@@ -345,6 +346,11 @@ def _run_pipeline(data, physical_to_logical_map, line_offsets, line_number_prefi
 
         basic_blocks = identifyBasicBlocks(entry_points, options)
         ordered_basic_blocks = orderBasicBlocks(basic_blocks, options)
+
+        # Replace reads of provably-constant scalars with their literals, using the
+        # per-method CFG for definite-assignment. A leaf swap inside statements, so
+        # the blocks stay valid; typecheck/folding/DIM/FOR below see the constants.
+        constant_propagation.propagate_constants(ordered_basic_blocks, parse_tree, options)
 
         typecheck(parse_tree, entry_points, options)
 

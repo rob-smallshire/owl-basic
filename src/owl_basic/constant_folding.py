@@ -40,6 +40,8 @@ Fidelity to the run-time splits in two:
 """
 import math
 
+from owl_basic.owltyping.type_system import LongIntegerOwlType
+
 # Integer + - *, and the same in float64 when an operand is a float. Exact.
 _BINARY = {
     "Plus": lambda a, b: a + b,
@@ -294,12 +296,21 @@ def fold_constant(node):
         a, b = fold_constant(node.lhs), fold_constant(node.rhs)
         if not (isinstance(a, int) and isinstance(b, int)):
             return None
-        # BBC BASIC V (ARM): the shifted value's magnitude sets the width (32-bit
-        # unless it needs 64); a count outside [0, width-1) shifts every bit out,
-        # so << and >>> give 0 and arithmetic >> gives the sign fill. (Verified
-        # against the emulator, not a disassembly; kept equal to the runtime
-        # helpers so folding is sound.)
-        width = 32 if _INT32_MIN <= a <= _INT32_MAX else 64
+        # BBC BASIC V (ARM): the shift width is the *type* of the shifted value --
+        # 64 bits for a %% (int64) operand, 32 otherwise -- exactly as the runtime
+        # ShiftLeft/ShiftRight/ShiftRightUnsigned overloads pick width by their
+        # int32/int64 argument. A count outside [0, width) shifts every bit out,
+        # so << and >>> give 0 and arithmetic >> gives the sign fill. The operand's
+        # type is read from its node when known (set on a propagated literal or by
+        # the type checker); before typing, a bare literal's magnitude is its type,
+        # so fall back to that. (Verified against the emulator, kept equal to the
+        # runtime helpers so folding is sound.)
+        if isinstance(getattr(node.lhs, "actualType", None), LongIntegerOwlType):
+            width = 64
+        elif getattr(node.lhs, "actualType", None) is not None:
+            width = 32
+        else:
+            width = 32 if _INT32_MIN <= a <= _INT32_MAX else 64
         if name == "ShiftRight":                 # signed / arithmetic
             return (a >> b) if 0 <= b < width else (-1 if a < 0 else 0)
         if not (0 <= b < width):

@@ -124,6 +124,20 @@ def test_shift_out_of_range_counts_match_basic_v():
     assert fold("8 >>> -1") == 0
 
 
+def test_shift_width_follows_the_operand_type_not_its_magnitude():
+    # The shift width is the operand's type (matching the runtime's int32/int64
+    # overloads), not its value's magnitude. A small value in a %% (int64)
+    # operand shifts at width 64, so 1<<40 is 2^40 -- not 0, which width 32 gives.
+    # This is what makes propagating a typed %% constant into a shift sound.
+    from owl_basic.owltyping.type_system import IntegerOwlType, LongIntegerOwlType
+    node = _rvalue("1 << 40")
+    assert fold_constant(node) == 0                  # untyped literal -> width 32
+    node.lhs.actualType = LongIntegerOwlType()
+    assert fold_constant(node) == 2 ** 40            # %% operand -> width 64
+    node.lhs.actualType = IntegerOwlType()
+    assert fold_constant(node) == 0                  # % operand -> width 32
+
+
 def test_relational_operators_fold_to_minus_one_or_zero():
     assert fold("1=1") == -1
     assert fold("1=2") == 0

@@ -51,7 +51,10 @@ def test_emit_il_lowers_string_and_float_variables(dotnet_backend):
 
 
 def test_emit_il_lowers_if_with_relational_condition(dotnet_backend):
-    il = dotnet_backend.emit_il(analyse_fixture("conditional.bbctxt"))
+    # A runtime (INPUT) operand so the comparison lowers rather than folding.
+    il = dotnet_backend.emit_il(analyse(
+        'INPUT A%\nIF A% > 5 THEN PRINT "big" ELSE PRINT "small"\nPRINT "done"\n',
+        name="cond"))
     assert "cgt" in il             # A% > 5
     assert "\n        neg" in il   # converted to a BBC boolean (0 / -1)
     # The clauses live in their own labelled blocks, reached by a branch.
@@ -233,7 +236,12 @@ def test_int_function_compiles_and_runs(compile_and_run):
 
 
 def test_emit_il_lowers_simple_functions(dotnet_backend):
-    il = dotnet_backend.emit_il(analyse_fixture("simple_functions.bbctxt"))
+    # Runtime (INPUT) operands so the functions lower to their runtime calls
+    # rather than constant-folding away.
+    il = dotnet_backend.emit_il(analyse(
+        "INPUT A%\nINPUT B\nINPUT C%\nINPUT D\n"
+        "PRINT ABS(A%)\nPRINT ABS(B)\nPRINT SGN(C%)\nPRINT NOT A%\nPRINT SQR(D)\nEND\n",
+        name="sf"))
     assert "System.Math::Abs(int32)" in il
     assert "System.Math::Abs(float64)" in il
     assert "System.Math::Sign(int32)" in il
@@ -290,7 +298,12 @@ def test_shift_operators_run(compile_and_run):
 
 
 def test_emit_il_lowers_string_functions(dotnet_backend):
-    il = dotnet_backend.emit_il(analyse_fixture("string_functions.bbctxt"))
+    # Runtime (INPUT) operands so the string functions lower rather than folding.
+    il = dotnet_backend.emit_il(analyse(
+        "INPUT a$\nINPUT n%\nINPUT c$\nINPUT f$\n"
+        "PRINT LEN(a$)\nPRINT LEFT$(a$, 2)\nPRINT RIGHT$(a$, 2)\nPRINT MID$(a$, 2, 3)\n"
+        "PRINT CHR$(n%)\nPRINT ASC(c$)\nPRINT INSTR(a$, " + '"L"' + ")\n"
+        "PRINT f$ + " + '"bar"' + "\nEND\n", name="strf"))
     assert "System.String::Concat(string, string)" in il
     assert "System.String::get_Length()" in il
     assert "BasicCommands::LeftStr(string, int32)" in il
