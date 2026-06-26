@@ -40,6 +40,18 @@ def test_eval_of_a_constant_string_variable_runs(compile_and_run):
 
 
 @requires_dotnet_toolchain
+def test_cross_method_constant_string_eval_runs(compile_and_run):
+    # The ImageP shape: the formula constant f$ is set up in one PROC and EVAL'd
+    # in another. Inter-procedural propagation makes EVAL(f$) -> EVAL("user1+area"),
+    # which reads user1/area at run time.
+    out = compile_and_run(analyse(
+        'PROCsetup\nPROCuse\nEND\n'
+        'DEFPROCsetup\nuser1=10\narea=5\nf$="user1+area"\nENDPROC\n'
+        'DEFPROCuse\nPRINT EVAL(f$)\nENDPROC\n', name="ev"))
+    assert out.strip() == "15"
+
+
+@requires_dotnet_toolchain
 def test_dispatch_with_a_constant_argument_runs(compile_and_run):
     # The runtime name (c$) dispatches over the DEF FNs; the argument p$ is a
     # constant, so EVAL("FN"+c$+"("+p$+")") becomes the literal-argument dispatch

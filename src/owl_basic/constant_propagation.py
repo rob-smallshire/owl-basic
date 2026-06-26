@@ -28,6 +28,8 @@ assigned in another method are conservatively not propagated (sound, intra-metho
 incomplete).
 """
 
+from collections import defaultdict
+
 from owl_basic.syntax.ast import (
     AstStatement,
     LiteralFloat,
@@ -135,11 +137,50 @@ def _reads_in(statement, constants):
     return reads
 
 
-def _definite_assignment(blocks, constants):
-    """id(block) -> constant names definitely assigned on entry to that block."""
-    gen = {id(b): set().union(*[_defs_in(s, constants) for s in b.statements] or [set()])
-           for b in blocks}
+def _statement_call_groups(statement):
+    """The calls in *statement* as one-of callee-name groups: a singleton for a
+    PROC/FN call (CallProcedure / UserFunc), the target set for an ON..GOSUB (one
+    target runs). Callee names are the keys of ordered_basic_blocks."""
+    groups = []
+
+    def record(node):
+        kind = type(node).__name__
+        if kind in ("CallProcedure", "UserFunc"):
+            groups.append(frozenset((node.name,)))
+        elif kind == "OnGosub":
+            groups.append(frozenset(
+                "PROCSub%d" % int(target.value) for target in node.targetLogicalLines))
+
+    _walk_own(statement, record)
+    return groups
+
+
+def _call_gen(statement, must_define, universe):
+    """Constants a statement assigns via its calls: each call defines what its
+    callee must-defines (an ON..GOSUB the intersection over its targets)."""
+    defined = set()
+    for group in _statement_call_groups(statement):
+        through_group = set(universe)
+        for callee in group:
+            through_group &= must_define.get(callee, set())
+        defined |= through_group
+    return defined
+
+
+def _block_gen(block, constants, must_define, universe):
+    gen = set()
+    for statement in block.statements:
+        gen |= _defs_in(statement, constants)
+        gen |= _call_gen(statement, must_define, universe)
+    return gen
+
+
+def _definite_assignment(blocks, constants, must_define, entry_seed):
+    """id(block) -> constants definitely assigned on entry to that block, given the
+    method's entry availability *entry_seed* and the callees' must-define summaries
+    (so a call counts as defining what the callee always assigns)."""
     universe = set(constants)
+    gen = {id(b): _block_gen(b, constants, must_define, universe) for b in blocks}
     entry = blocks[0] if blocks else None
     defined_out = {id(b): set(universe) for b in blocks}
     defined_in = {id(b): set() for b in blocks}
@@ -149,14 +190,15 @@ def _definite_assignment(blocks, constants):
         changed = False
         for block in blocks:
             if block is entry:
-                new_in = set()                       # the program start defines nothing
+                new_in = set(entry_seed)             # what callers guarantee on entry
             else:
                 preds = list(block.inEdges) + list(block.loopFromEdges)
-                new_in = set(universe)
-                for pred in preds:
-                    new_in &= defined_out[id(pred)]
-                if not preds:
-                    new_in = set()
+                if preds:
+                    new_in = set(universe)
+                    for pred in preds:
+                        new_in &= defined_out[id(pred)]
+                else:
+                    new_in = set()                   # unreachable: defines nothing
             new_out = new_in | gen[id(block)]
             if new_in != defined_in[id(block)] or new_out != defined_out[id(block)]:
                 defined_in[id(block)] = new_in
@@ -187,6 +229,91 @@ def _literal_for(value):
 _MAX_ITERATIONS = 64
 
 
+def _has_unlowered_eval(parse_tree):
+    found = []
+
+    def record(node):
+        if type(node).__name__ in ("EvalFunc", "EvalHexFunc"):
+            found.append(node)
+
+    _walk(parse_tree, record)
+    return bool(found)
+
+
+def _method_summaries(ordered_basic_blocks, constants, parse_tree):
+    """Inter-procedural definite-assignment summaries over the call graph:
+
+      * ``must_define[M]`` -- constants method M assigns on every path to a return
+        (a call inside M counts as defining its callee's must-set);
+      * ``entry_avail[M]`` -- constants definitely defined at M's entry, the
+        intersection over its call sites of what is available just before the call.
+
+    Both are computed to a fixpoint (the call graph may be cyclic). The main
+    program, a method with no statically-known caller, and -- if any un-lowered
+    EVAL remains -- every FN (an EVAL could dispatch to it) are conservatively
+    given an empty entry set.
+    """
+    methods = [m for m, blocks in ordered_basic_blocks.items() if blocks]
+    universe = frozenset(constants)
+
+    has_callers = set()
+    for method in methods:
+        for block in ordered_basic_blocks[method]:
+            for statement in block.statements:
+                for group in _statement_call_groups(statement):
+                    has_callers |= group
+
+    eval_present = _has_unlowered_eval(parse_tree)
+
+    def conservative(method):
+        return (method == "__owl__main" or method not in has_callers
+                or (eval_present and method.startswith("FN")))
+
+    must_define = {m: set(universe) for m in methods}             # optimistic
+    entry_avail = {m: set() if conservative(m) else set(universe) for m in methods}
+
+    for _ in range(_MAX_ITERATIONS):
+        changed = False
+        # Pass 1: must_define from each method's own definite-assignment (seed empty,
+        # so it is only what M itself guarantees), read off the return blocks.
+        da_empty = {}
+        for method in methods:
+            blocks = ordered_basic_blocks[method]
+            di = _definite_assignment(blocks, constants, must_define, set())
+            da_empty[method] = di
+            exits = [b for b in blocks if not (list(b.outEdges) + list(b.loopBackEdges))]
+            if exits:
+                new_md = set(universe)
+                for block in exits:
+                    new_md &= di[id(block)] | _block_gen(block, constants, must_define, universe)
+            else:
+                new_md = set()                       # never returns: guarantees nothing
+            if new_md != must_define[method]:
+                must_define[method] = new_md
+                changed = True
+        # Pass 2: entry_avail = intersection over call sites of availability there.
+        new_entry = {m: set() if conservative(m) else set(universe) for m in methods}
+        for method in methods:
+            seed = entry_avail[method]
+            di = da_empty[method]
+            for block in ordered_basic_blocks[method]:
+                available = seed | di[id(block)]     # seed propagates everywhere (no kills)
+                for statement in block.statements:
+                    for group in _statement_call_groups(statement):
+                        for callee in group:
+                            if callee in new_entry and not conservative(callee):
+                                new_entry[callee] &= available
+                    available |= _defs_in(statement, constants)
+                    available |= _call_gen(statement, must_define, universe)
+        for method in methods:
+            if new_entry[method] != entry_avail[method]:
+                entry_avail[method] = new_entry[method]
+                changed = True
+        if not changed:
+            break
+    return entry_avail, must_define
+
+
 def propagate_constants(ordered_basic_blocks, parse_tree, options=None):
     """Substitute reads of uniform-constant scalars with their literal values,
     where definite-assignment proves the value reaches the read. Iterated to a
@@ -201,11 +328,15 @@ def propagate_constants(ordered_basic_blocks, parse_tree, options=None):
 
 
 def _propagate_once(ordered_basic_blocks, parse_tree, constants):
+    entry_avail, must_define = _method_summaries(
+        ordered_basic_blocks, constants, parse_tree)
+    universe = set(constants)
     targets = []        # read nodes safe to replace
-    for blocks in ordered_basic_blocks.values():
+    for method, blocks in ordered_basic_blocks.items():
         if not blocks:
             continue
-        defined_in = _definite_assignment(blocks, constants)
+        defined_in = _definite_assignment(
+            blocks, constants, must_define, entry_avail.get(method, set()))
         for block in blocks:
             available = set(defined_in[id(block)])
             for statement in block.statements:
@@ -213,6 +344,7 @@ def _propagate_once(ordered_basic_blocks, parse_tree, constants):
                     if read.identifier in available:
                         targets.append(read)
                 available |= _defs_in(statement, constants)
+                available |= _call_gen(statement, must_define, universe)
 
     substituted = 0
     for read in targets:

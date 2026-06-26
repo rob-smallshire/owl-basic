@@ -101,6 +101,25 @@ def test_chained_constant_runs(compile_and_run):
     assert out.strip() == "7"
 
 
+def test_cross_method_constant_is_propagated():
+    # K% is set in PROCsetup (called first) and read in PROCuse -- the call to
+    # PROCsetup defines K%, so it is available at PROCuse's entry.
+    program = analyse(
+        'PROCsetup\nPROCuse\nEND\n'
+        'DEFPROCsetup\nK%=42\nENDPROC\n'
+        'DEFPROCuse\nM%=K%\nPRINT M%\nENDPROC\n', name="cp")
+    assert _reads_of(program, "K%") == []
+
+
+def test_cross_method_use_before_setup_is_not_propagated():
+    # PROCuse runs BEFORE PROCsetup, so K% is not yet assigned at PROCuse's entry.
+    program = analyse(
+        'PROCuse\nPROCsetup\nEND\n'
+        'DEFPROCsetup\nK%=42\nENDPROC\n'
+        'DEFPROCuse\nM%=K%\nPRINT M%\nENDPROC\n', name="cp")
+    assert _reads_of(program, "K%")
+
+
 @requires_dotnet_toolchain
 def test_constant_poked_into_a_byte_wraps_not_rejected(compile_and_run):
     # A ? poke stores the low byte; a constant (here exposed by propagating base)
