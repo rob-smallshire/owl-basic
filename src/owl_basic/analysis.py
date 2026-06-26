@@ -287,6 +287,48 @@ def _reject_unsupported_constructs(parse_tree):
     walk(parse_tree)
 
 
+def _clear_cfg_edges(parse_tree):
+    """Drop every control-flow edge from the statement graph, so the flow can be
+    rebuilt cleanly after EVAL lowering appends dispatch-helper statements."""
+    def walk(node):
+        if node is None:
+            return
+        if hasattr(node, "clearOutEdges"):
+            node.clearInEdges()
+            node.clearOutEdges()
+            node.clearComeFromGosubEdges()
+            node.clearLoopBackEdges()
+            node.clearLoopFromEdges()
+        node.forEachChild(walk)
+
+    walk(parse_tree)
+
+
+def _build_flow(parse_tree, line_mapper, options):
+    """Build the forward CFG, locate entry points, convert longjumps/subroutines,
+    correlate loops, and return ``(entry_points, ordered_basic_blocks)``.
+
+    Idempotent enough to run twice (it clears prior edges first; subroutine
+    conversion finds no remaining GOSUBs on a re-run), so it can be re-run after a
+    second EVAL pass appends dispatch helpers.
+    """
+    _clear_cfg_edges(parse_tree)
+    createForwardControlFlowGraph(parse_tree, line_mapper, options)
+    entry_points = locateEntryPoints(parse_tree, line_mapper, options)
+    convertLongjumpsToExceptions(parse_tree, line_mapper, options)
+    convertSubroutinesToProcedures(parse_tree, entry_points, line_mapper, options)
+    for entry_point in entry_points.values():
+        correlation_visitor.CorrelationVisitor().start(entry_point)
+    basic_blocks = identifyBasicBlocks(entry_points, options)
+    return entry_points, orderBasicBlocks(basic_blocks, options)
+
+
+def _build_line_map(parse_tree, physical_to_logical_map):
+    lnv = line_number_visitor.LineNumberVisitor()
+    parse_tree.accept(lnv)
+    return LineMapper(physical_to_logical_map, lnv.line_to_stmt)
+
+
 def _run_pipeline(data, physical_to_logical_map, line_offsets, line_number_prefixes,
                   name, source_filepath, options, tolerant=False):
     """Run the front-end pipeline and bundle the result as a :class:`Program`.
@@ -314,43 +356,52 @@ def _run_pipeline(data, physical_to_logical_map, line_offsets, line_number_prefi
         _diagnose_parse_failure(data, options)
     parse_tree.accept(SourceDebuggingVisitor(data, line_offsets, line_number_prefixes))
     parse_tree.accept(parent_visitor.ParentVisitor())
-    # Lower the EVALs we can compile statically (constant-string EVAL becomes the
-    # parsed expression), then reject only the residue. Re-parent afterwards so
+    # Lower the EVALs compilable now (constant-string, dispatch). A second pass
+    # runs after constant propagation, which can turn EVAL(f$) into EVAL of a
+    # literal and a constant argument into a literal-argument dispatch; the shared
+    # helper_serial keeps the two passes from colliding. The residue is rejected
+    # only after that second pass (deferred from here). Re-parent afterwards so
     # the spliced expressions are seen by every downstream pass.
-    eval_lowering.lower_eval(parse_tree, options)
+    helper_serial = eval_lowering.lower_eval(parse_tree, options)
     parse_tree.accept(parent_visitor.ParentVisitor())
-    _reject_unsupported_constructs(parse_tree)
     parse_tree.accept(separation_visitor.SeparationVisitor())
     parse_tree.accept(simplify_visitor.SimplificationVisitor())
 
-    lnv = line_number_visitor.LineNumberVisitor()
-    parse_tree.accept(lnv)
-    line_mapper = LineMapper(physical_to_logical_map, lnv.line_to_stmt)
+    line_mapper = _build_line_map(parse_tree, physical_to_logical_map)
 
     dv = data_visitor.DataVisitor()
     parse_tree.accept(dv)
 
-    createForwardControlFlowGraph(parse_tree, line_mapper, options)
-    entry_points = locateEntryPoints(parse_tree, line_mapper, options)
-    convertLongjumpsToExceptions(parse_tree, line_mapper, options)
-    convertSubroutinesToProcedures(parse_tree, entry_points, line_mapper, options)
-
-    # Everything from loop correlation onward may reject a pathological program.
-    # In tolerant mode we keep the partial program built so far (forward CFG) for
-    # visualisation; otherwise the failure propagates as before.
+    # The flow build onward may reject a pathological program. In tolerant mode we
+    # keep the partial program built so far for visualisation; otherwise failures
+    # propagate as before.
+    entry_points = {}
     ordered_basic_blocks = []
     global_symbols = None
     try:
-        for entry_point in entry_points.values():
-            correlation_visitor.CorrelationVisitor().start(entry_point)
-
-        basic_blocks = identifyBasicBlocks(entry_points, options)
-        ordered_basic_blocks = orderBasicBlocks(basic_blocks, options)
+        entry_points, ordered_basic_blocks = _build_flow(parse_tree, line_mapper, options)
 
         # Replace reads of provably-constant scalars with their literals, using the
         # per-method CFG for definite-assignment. A leaf swap inside statements, so
         # the blocks stay valid; typecheck/folding/DIM/FOR below see the constants.
         constant_propagation.propagate_constants(ordered_basic_blocks, parse_tree, options)
+
+        # Second EVAL pass: propagation may have turned EVAL(f$) into EVAL of a
+        # literal, or a constant argument into a literal-argument dispatch. A
+        # constant-string splice only rewrites an expression (the blocks stay
+        # valid), but a newly-enabled dispatch appends helper DEF FNs, so rebuild
+        # the flow when the statement count grows.
+        statement_count = len(parse_tree.statements)
+        eval_lowering.lower_eval(parse_tree, options, helper_serial)
+        parse_tree.accept(parent_visitor.ParentVisitor())
+        if len(parse_tree.statements) != statement_count:
+            parse_tree.accept(simplify_visitor.SimplificationVisitor())
+            line_mapper = _build_line_map(parse_tree, physical_to_logical_map)
+            dv = data_visitor.DataVisitor()
+            parse_tree.accept(dv)
+            entry_points, ordered_basic_blocks = _build_flow(parse_tree, line_mapper, options)
+
+        _reject_unsupported_constructs(parse_tree)   # any EVAL we still cannot lower
 
         typecheck(parse_tree, entry_points, options)
 

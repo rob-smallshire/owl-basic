@@ -25,7 +25,7 @@ from owl_basic.syntax.ast import (ActualArgList, EvalHexFunc, Raise, UserFunc,
                                   ValFunc, Variable)
 
 
-def lower_eval(parse_tree, options):
+def lower_eval(parse_tree, options, helper_serial=None):
     """Lower every statically determinable EVAL in *parse_tree*.
 
     Three mechanisms, by what is runtime (see docs/eval-static-compilation.md):
@@ -42,9 +42,14 @@ def lower_eval(parse_tree, options):
     lowered too. Parent references on the spliced subtrees are re-established as we
     go, so a freshly exposed inner EVAL can itself be spliced.
     """
-    helper_serial = itertools.count()
+    # A shared serial can be passed so a second lowering pass (after constant
+    # propagation) keeps numbering helpers where the first left off, rather than
+    # colliding on FN_eval_dispatch_0.
+    if helper_serial is None:
+        helper_serial = itertools.count()
     while _lower_once(parse_tree, options, helper_serial):
         pass
+    return helper_serial
 
 
 def _lower_once(parse_tree, options, helper_serial):

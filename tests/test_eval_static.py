@@ -97,7 +97,7 @@ def test_eval_of_left_str_digits_runs(compile_and_run):
 def test_eval_of_slice_of_non_digit_string_still_rejected():
     # The source is not a digit-only literal, so EVAL != VAL in general: residue.
     with pytest.raises(CompileError) as excinfo:
-        analyse('A$="a+b"\nB=EVAL(MID$(A$,1,1))\nEND\n', name="t")
+        analyse('INPUT A$\nB=EVAL(MID$(A$,1,1))\nEND\n', name="t")
     assert "EVAL" in str(excinfo.value)
 
 
@@ -113,7 +113,7 @@ def test_eval_of_runtime_string_still_rejected():
     # A non-constant argument is the residue this increment does not handle; it
     # keeps the honest "needs a run-time evaluator" rejection.
     with pytest.raises(CompileError) as excinfo:
-        analyse('A$="1+2"\nPRINT EVAL(A$)\n', name="t")
+        analyse('INPUT A$\nPRINT EVAL(A$)\n', name="t")
     assert "EVAL" in str(excinfo.value)
 
 
@@ -201,7 +201,7 @@ def test_dispatch_runtime_argument_structure_is_rejected():
     # The callee name is runtime (fine) but an argument is *built* from a runtime
     # string -- that is general EVAL again, so it stays rejected.
     with pytest.raises(CompileError) as excinfo:
-        analyse('cmd$="area"\narg$="3"\n'
+        analyse('cmd$="area"\nINPUT arg$\n'
                 'B=EVAL("FN"+cmd$+"("+arg$+")")\n' + _AREA_PERIM, name="t")
     assert "EVAL" in str(excinfo.value)
 
@@ -241,7 +241,7 @@ def test_hex_with_runtime_trailing_structure_stays_rejected():
     # "&" + h$ + "+1" keeps a runtime structure beyond the hex string -- that is
     # general EVAL again, so it stays the honest residual rejection.
     with pytest.raises(CompileError) as excinfo:
-        analyse('h$="FF"\nPRINT EVAL("&"+h$+"+1")\n', name="t")
+        analyse('INPUT h$\nPRINT EVAL("&"+h$+"+1")\n', name="t")
     assert "EVAL" in str(excinfo.value)
 
 
@@ -277,7 +277,7 @@ def test_str_template_runs(compile_and_run):
 def test_str_template_with_non_str_hole_stays_rejected():
     # A bare runtime string is not STR$(e); reducing it would be general EVAL.
     with pytest.raises(CompileError) as excinfo:
-        analyse('A$="1+2"\nB=EVAL(A$+"+1")\n', name="t")
+        analyse('INPUT A$\nB=EVAL(A$+"+1")\n', name="t")
     assert "EVAL" in str(excinfo.value)
 
 
