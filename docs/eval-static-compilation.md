@@ -22,6 +22,15 @@ and the tests ever disagree, the tests win -- update this table.
 | Hex-to-int idiom | runtime hex parse (`EvalHex`) | `EVAL("&"+h$)` | `test_hex_idiom_runs`, `test_hex_idiom_lowers_to_evalhex_not_eval` |
 | `STR$` value-hole | each `STR$(e)` → `VAL(STR$(e))`, spliced | `EVAL(STR$(n)+"+1")` | `test_str_template_runs`, `test_str_template_lowers_to_val_of_str` |
 | Function-by-name dispatch | `IF`-chain helper over the program's `DEF FN`s | `EVAL("FN"+cmd$+"(arg)")` | `test_dispatch_with_named_argument_runs`, `test_dispatch_with_chr34_string_value_hole_runs`, `test_dispatch_with_staged_literal_argument_runs`, `test_dispatch_reads_local_argument_dynamically` |
+| Constant *variable* (via propagation) | propagated to its literal, then lowered as above | `f$="user1+area" : EVAL(f$)` | `tests/test_eval_constant_propagation.py` |
+| Constant argument unblocking a dispatch (via propagation) | the constant argument becomes a literal, so the runtime-name dispatch applies | `p$="7" : EVAL("FN"+c$+"("+p$+")")` | `tests/test_eval_constant_propagation.py` |
+
+The last two are not EVAL features: constant propagation runs *before* EVAL
+lowering (see `docs/constant-propagation.md`), so a scalar that holds a single
+constant is already a literal by the time EVAL is lowered. The propagation is
+intra-method, so a constant assigned in one PROC and EVAL'd in another is not yet
+connected (the Acorn User `ImageP` "user formula" program is this cross-method
+case) -- inter-procedural propagation is the future generalisation.
 
 Two run-time behaviours that are *correct compilation*, not rejection:
 
@@ -44,6 +53,12 @@ mis-compile.
 | Runtime argument *structure* | selecting the callee is not enough; the arg is itself general EVAL | `EVAL("FN"+cmd$+"("+arg$+")")` | `test_dispatch_runtime_argument_structure_is_rejected` |
 | Runtime structure after a hex string | structure beyond the hex run is runtime | `EVAL("&"+h$+"+1")` | `test_hex_with_runtime_trailing_structure_stays_rejected` |
 | Variable-by-name / reflective write | `RETURN` (by-reference) argument selected by a string | `EVAL("FNassign2("+a$+","+CHR$34+b$+CHR$34+")")` | `test_variable_by_name_reflective_write_stays_rejected` |
+
+Each of these is rejected only when the operand is *genuinely* run-time. A scalar
+that holds a single constant is propagated to its literal first, so `EVAL(A$)`,
+`EVAL(MID$(A$,1,1))` or the runtime-argument dispatch all compile when the
+variable is constant -- the residual rejection is for values that really are
+unknown until run time (`INPUT`, `READ`, a reassigned variable, memory).
 
 A `STR$` value-hole that *lexically fuses* with adjacent text stays rejected
 (e.g. `EVAL(STR$(n)+"0")` would read `"50"`, not the `STR$`-formatted number):
