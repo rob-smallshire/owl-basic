@@ -20,3 +20,19 @@ def test_input_file_multiple_variables_analyses():
     program = analyse('chan% = OPENIN("d")\nINPUT#chan%, a, b%, c$\nEND\n',
                       name="inf2")
     assert program is not None
+
+
+def test_input_file_into_array_elements_analyses():
+    # INPUT# reads into array elements, not just plain scalars -- the dominant
+    # form in record-file type-ins (e.g. INPUT#ch, name$(i%), bells(i%)).
+    # Surfaced across ~22 Acorn User programs.
+    program = analyse(
+        'DIM name$(10), bells(10)\nch% = OPENIN("d")\n'
+        'INPUT#ch%, name$(3), bells(3)\nEND\n', name="infa")
+    assert program is not None
+
+
+def test_input_file_into_two_dimensional_array_element_analyses():
+    program = analyse(
+        'DIM C$(9,9)\nch% = OPENIN("d")\nINPUT#ch%, C$(2,3)\nEND\n', name="infb")
+    assert program is not None

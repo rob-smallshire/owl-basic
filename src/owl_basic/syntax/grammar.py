@@ -472,7 +472,7 @@ def p_input_stmt(p):
                   | LINE INPUT input_list
                   | INPUT LINE
                   | INPUT LINE input_list
-                  | INPUT channel COMMA variable_list'''
+                  | INPUT channel COMMA writable_list'''
     # TODO: All other syntax of input to replace the second line above - see PRINT
     if len(p) == 2:
         #INPUT 
@@ -495,7 +495,13 @@ def p_input_stmt(p):
             #INPUT LINE input_list
             p[0] = Input(inputLine = True, inputList = p[3])
     elif len(p) == 5:
-        p[0] = InputFile(channel = p[2], items = p[4])
+        # INPUT#chan, <writables> -- the read targets are lvalues (array
+        # elements and indirections, not just plain scalars). Repackage the
+        # writable_list into a VariableList so the simplify pass elides it to a
+        # plain list, as visitInputFile expects.
+        items = VariableList()
+        items.variables = list(p[4].writables)
+        p[0] = InputFile(channel = p[2], items = items)
     p[0].lineNum = p.lineno(1) - 1  
 
 def p_input_list(p):
