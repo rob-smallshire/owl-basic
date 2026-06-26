@@ -1131,6 +1131,21 @@ class _MethodEmitter:
         # table records that); each gets a local slot when it is referenced.
         pass
 
+    def _stmt_LocalError(self, node):
+        # LOCAL ERROR / RESTORE ERROR save and restore the error context so a PROC
+        # can install its own handler and hand the caller's back. OWL emits error
+        # dispatch per method, so that scoping is already automatic -- nothing to
+        # emit here (see docs/divergences.md).
+        pass
+
+    def _stmt_RestoreError(self, node):
+        pass
+
+    def _stmt_Trace(self, node):
+        # TRACE drives the interpreter's interactive line trace; meaningless for a
+        # compiled program (see docs/divergences.md).
+        pass
+
     def _new_label(self, stem):
         self._label_seq += 1
         return "%s_%d" % (stem, self._label_seq)

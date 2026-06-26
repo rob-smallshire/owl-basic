@@ -90,13 +90,6 @@ def p_statement(p):
 #=============================================================================#
 # STATEMENTS
 
-# TODO: Statements to be implemented
-    '''stmt_body : chain_stmt
-                 | local_stmt
-                 | on_error_stmt
-                 | restore_stmt    PAGE 69 BBCBASIC.PDF - RESTORE +offset???
-                 | trace_stmt'''
-    
 # Statements which must appear alone on
 # their own line. (A star command is handled by compound_statement instead, as
 # it may end a multi-statement line.)
@@ -185,6 +178,7 @@ def p_stmt_body(p):
                  | width_stmt
                  | wait_stmt
                  | endwhile_stmt
+                 | trace_stmt
                  | run_stmt'''
     p[0] = p[1]
         
@@ -765,6 +759,15 @@ def p_local_stmt(p):
     p[0] = Local(variables = p[2])
     p[0].lineNum = p.lineno(1) - 1
 
+def p_local_error_stmt(p):
+    # LOCAL ERROR (BASIC V) saves the current error context so a PROC can install
+    # its own ON ERROR LOCAL and have the caller's restored. OWL emits error
+    # dispatch per method, so handler scoping is already automatic -- this is a
+    # no-op (see docs/divergences.md), paired with RESTORE ERROR.
+    '''local_stmt : LOCAL ERROR'''
+    p[0] = LocalError()
+    p[0].lineNum = p.lineno(1) - 1
+
 def p_local_var_list(p):
     '''local_var_list : local_var
                       | local_var_list COMMA local_var'''
@@ -1041,7 +1044,24 @@ def p_restore_stmt(p):
         p[0] = Restore(targetLogicalLine = p[2])
     p[0].lineNum = p.lineno(1) - 1
 
-    
+def p_restore_error_stmt(p):
+    # RESTORE ERROR (BASIC V): the partner of LOCAL ERROR. A no-op in OWL because
+    # error dispatch is per method (see p_local_error_stmt).
+    '''restore_stmt : RESTORE ERROR'''
+    p[0] = RestoreError()
+    p[0].lineNum = p.lineno(1) - 1
+
+def p_trace_stmt(p):
+    # TRACE ON/OFF/<line> drives the interpreter's interactive line trace; it has
+    # no meaning for a compiled program, so it parses to a no-op.
+    '''trace_stmt : TRACE
+                  | TRACE ON
+                  | TRACE OFF
+                  | TRACE expr'''
+    p[0] = Trace()
+    p[0].lineNum = p.lineno(1) - 1
+
+
 def p_sound_stmt(p):
     '''sound_stmt : SOUND expr COMMA expr COMMA expr COMMA expr
                   | SOUND ON

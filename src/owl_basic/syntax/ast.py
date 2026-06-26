@@ -297,6 +297,15 @@ class LoadLibrary(AstStatement):
 class Local(AstStatement):
     variables = Node()
 
+class LocalError(AstStatement):
+    "LOCAL ERROR -- save the current error context (BASIC V)"
+
+class RestoreError(AstStatement):
+    "RESTORE ERROR -- restore the saved error context (BASIC V)"
+
+class Trace(AstStatement):
+    "TRACE (ON | OFF | <line> | nothing) -- interactive line trace"
+
 class Mandel(AstStatement):
     "MANDEL"
     i_coord = Node(formalType=FloatOwlType(), description="The i coordinate")

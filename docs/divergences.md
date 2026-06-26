@@ -21,6 +21,8 @@ here; only intentional ones.
 | 5 | `LOCAL` with no PROC/FN frame | saves-and-zeroes the variable (and leaks it) | no-op | Follows from save-on-entry/restore-on-exit; unobservable in practice (the variable is assigned right after) | `docs/local-semantics.md` |
 | 6 | Hex `EVAL`/literals, 9-16 digits | the ROM wraps to the low 32 bits (`&1FFFFFFFF` -> `-1`) | superset: folds to 64 bits, matching OWL's own hex-literal lexer | OWL's numeric model is 64-bit internally; the 8-digit (32-bit) case is unchanged | `docs/eval-static-compilation.md`, `tests/test_eval_static.py` |
 | 7 | `<value> TOP` as a `FOR` limit (residual) | always splits `TOP` after a value | one un-listed value-ending token *type* could leave `TOP` glued as the pseudo-variable | Keys on the previous token type rather than re-parsing; the set covers every value-ender in practice -- extend it if the corpus surfaces a miss | `docs/bbc-tokeniser-to-top.md` |
+| 8 | `LOCAL ERROR` / `RESTORE ERROR` (BASIC V) | push/pop the error context on the BASIC stack, so a `RESTORE ERROR` mid-PROC reinstates the caller's handler for the rest of the routine | no-op: the saved/restored context is the per-method dispatch, so the caller's handler is back in effect once the PROC returns, but a mid-PROC `RESTORE ERROR` does *not* switch handlers before then | OWL emits error dispatch per method, which already gives the save-on-entry / restore-on-return behaviour these directives request; a true savable handler stack would cost a push/pop with no real-program benefit | `tests/test_on_error.py` |
+| 9 | `TRACE ON` / `TRACE OFF` / `TRACE <line>` | the interpreter prints each line number as it is executed | no-op (parses, emits nothing) | Interactive line tracing has no meaning for a compiled program | `tests/test_trace.py` |
 
 ## Notes
 
@@ -33,6 +35,9 @@ here; only intentional ones.
   input a real BBC accepts.
 - **#7** is a residual parsing gap with a clear fix (extend the token set) rather
   than a permanent choice.
+- **#8 / #9** keep BASIC V programs that sprinkle these directives compiling and
+  running; both fall out of decisions already made (#8 from the per-method
+  dispatch behind #3, #9 from compiling rather than interpreting).
 
 Out of scope here (these are *limitations*, not divergences -- OWL rejects
 cleanly rather than behaving differently): inline assembler (`[ ... ]`, rejected

@@ -12,7 +12,7 @@ import pytest
 from conftest import requires_dotnet_toolchain
 
 from owl_basic.analysis import analyse_numbered_lines
-from owl_basic.syntax.ast import OnError
+from owl_basic.syntax.ast import LocalError, OnError, RestoreError
 
 
 def _analyse(lines):
@@ -244,6 +244,44 @@ def test_on_error_local_handler_sees_the_procs_locals(compile_and_run):
         (80, " ENDPROC"),
     ]))
     assert out.splitlines() == ["caught x=42"]
+
+
+def test_local_error_and_restore_error_parse():
+    # The BASIC V save/restore-error-context idiom: LOCAL ERROR saves the
+    # caller's handler, ON ERROR LOCAL installs a PROC-scoped one, RESTORE ERROR
+    # hands the caller's back. Both directives parse to their own nodes.
+    program = _analyse([
+        (10, " PROCfred"),
+        (20, " END"),
+        (30, " DEFPROCfred"),
+        (40, " LOCAL ERROR"),
+        (50, ' ON ERROR LOCAL PRINT"local":RESTORE ERROR:ENDPROC'),
+        (60, " RESTORE ERROR"),
+        (70, " ENDPROC")])
+    stmts = _statements(program)
+    assert any(isinstance(s, LocalError) for s in stmts)
+    assert any(isinstance(s, RestoreError) for s in stmts)
+
+
+@requires_dotnet_toolchain
+def test_local_error_idiom_restores_the_global_handler(compile_and_run):
+    # LclEr2's structure: a global handler in Main, and PROCfred that saves the
+    # context (LOCAL ERROR), installs its own (ON ERROR LOCAL), then restores on
+    # the way out. OWL's per-method dispatch makes the save/restore automatic, so
+    # LOCAL/RESTORE ERROR are no-ops: PROCfred's error is caught locally, and the
+    # later error in Main reaches the global handler.
+    out = compile_and_run(_analyse([
+        (10, " ON ERROR PRINT" + '"global"' + ":END"),
+        (20, " PROCfred"),
+        (30, " B=SQR(-1)"),
+        (40, " END"),
+        (50, " DEFPROCfred"),
+        (60, " LOCAL ERROR"),
+        (70, ' ON ERROR LOCAL PRINT"local":RESTORE ERROR:ENDPROC'),
+        (80, " A=SQR(-1)"),
+        (90, " RESTORE ERROR"),
+        (100, " ENDPROC")]))
+    assert out.splitlines() == ["local", "global"]
 
 
 @requires_dotnet_toolchain
