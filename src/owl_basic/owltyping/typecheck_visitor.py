@@ -325,9 +325,12 @@ class TypecheckVisitor(Visitor):
         self.visit(operator.factor)
         if self._foldConstant(operator):     # e.g. unary minus of a constant
             return
-        if not self.checkSignature(operator):
-            return
+        # The result is the operand's type (unary +/- are transparent). Set it
+        # before checking the signature so that an invalid operand (e.g. -A$ on a
+        # string) leaves a usable type for the rest of the pass and is reported as
+        # a clean Type mismatch rather than propagating a None type into a crash.
         operator.actualType = operator.factor.actualType
+        self.checkSignature(operator)
         
     def visitBinaryIntegerOperator(self, operator):
         self.visit(operator.lhs)

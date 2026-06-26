@@ -605,8 +605,11 @@ class UnaryNumericOperator(AstNode):
     factor = Node(formalType=NumericOwlType())
     
 class UnaryPlus(UnaryNumericOperator):
-    pass
-    
+    # Unary + is the identity on any scalar -- a string as well as a number
+    # (BBC BASIC: +A$ = A$, so R6$++C$ means R6$ + C$). It therefore accepts a
+    # scalar operand, unlike unary minus, and its result is the operand's type.
+    factor = Node(formalType=ScalarOwlType())
+
 class UnaryMinus(UnaryNumericOperator):
     pass
 
