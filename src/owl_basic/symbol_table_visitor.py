@@ -253,18 +253,14 @@ class SymbolTableVisitor(Visitor):
         self.followSuccessors(statement)
         
     def visitMouse(self, mouse):
-        # NOTE: latent twin of the visitInputFile bug -- this body references an
-        # undefined `statement` (copy-pasted from visitInput) and would also
-        # add a None `time` for the common three-argument MOUSE. No corpus
-        # program exercises MOUSE, so it is left for a cycle that can test it.
-        #logger.debug("SymbolTableVisitor.visitInput")
-        statement.symbolTable = self.checkPredecessorsAndRefer(statement)
-        assert statement.symbolTable is not None
-        self.tryAddVariable(statement.symbolTable, statement.xCoord)
-        self.tryAddVariable(statement.symbolTable, statement.yCoord)
-        self.tryAddVariable(statement.symbolTable, statement.buttons)
-        self.tryAddVariable(statement.symbolTable, statement.time)
-        self.followSuccessors(statement)
+        # MOUSE x,y,b[,t] reads the pointer position, button state and (optional)
+        # time into its target variables -- so each is declared, like INPUT's.
+        mouse.symbolTable = self.checkPredecessorsAndRefer(mouse)
+        assert mouse.symbolTable is not None
+        for target in (mouse.xCoord, mouse.yCoord, mouse.buttons, mouse.time):
+            if isinstance(target, Variable):
+                self.tryAddVariable(mouse.symbolTable, target)
+        self.followSuccessors(mouse)
         
     def visitRead(self, statement):
         #logger.debug("SymbolTableVisitior.visitRead")

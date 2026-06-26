@@ -18,6 +18,7 @@ from oaknut.basic import (
     detokenise as _oaknut_detokenise,
     scan_program,
 )
+from oaknut.basic.exceptions import DetokeniseError
 
 
 def decode_line_reference(b0: int, b1: int, b2: int) -> int:
@@ -27,11 +28,19 @@ def decode_line_reference(b0: int, b1: int, b2: int) -> int:
 
 
 def detokenize_lines(data, dialect: Dialect = BASIC_V) -> List[Tuple[int, str]]:
-    """Detokenise *data*, returning a list of ``(line_number, source_text)``."""
-    return [
-        (record.line_number, "".join(token.value for token in record.tokens))
-        for record in scan_program(bytes(data), dialect=dialect)
-    ]
+    """Detokenise *data*, returning a list of ``(line_number, source_text)``.
+
+    A truncated or malformed image (common in cover-disc rips) keeps its valid
+    prefix -- the lines decoded before the bad byte -- rather than failing the
+    whole program, as OWL's former hand-written detokeniser did."""
+    lines: List[Tuple[int, str]] = []
+    try:
+        for record in scan_program(bytes(data), dialect=dialect):
+            lines.append(
+                (record.line_number, "".join(token.value for token in record.tokens)))
+    except DetokeniseError:
+        pass
+    return lines
 
 
 def detokenize(data, dialect: Dialect = BASIC_V) -> str:

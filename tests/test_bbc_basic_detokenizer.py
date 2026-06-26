@@ -64,6 +64,14 @@ def test_basic_v_is_the_default_dialect():
     assert detokenize(_program((10, [0xC9]))) == "10WHEN\n"
 
 
+def test_truncated_image_keeps_its_valid_prefix():
+    # A program whose bytes are cut off mid-record (common in cover-disc rips)
+    # keeps the lines decoded before the truncation rather than raising.
+    good = _program((10, [0xF5]), (20, [0xFD]))    # REPEAT / UNTIL + end marker
+    truncated = good[:-2] + bytes([0x0D, 0x00, 0x1E])  # start a line, then cut off
+    assert detokenize_lines(truncated) == [(10, "REPEAT"), (20, "UNTIL")]
+
+
 def test_basic_v_escape_token_decodes():
     # 0xC8 0x91 is a single BASIC V keyword (ORIGIN) reached through the
     # 0xC6/0xC7/0xC8 escape mechanism -- not LOAD + TIME, the BASIC II
