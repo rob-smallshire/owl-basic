@@ -15,6 +15,24 @@ The point of constant propagation is to make this a *general* capability rather
 than an EVAL special case: replace each read of a provably-constant scalar with
 its literal, and every downstream pass benefits unchanged.
 
+It also feeds the **function-by-name dispatch** path (`_lower_dispatch` in
+`eval_lowering.py`). That path already compiles `EVAL("FN" + name + "(args)")`
+for a runtime `name` over the program's DEF FNs, but rejects the EVAL when an
+*argument* is a runtime structure rather than a literal:
+
+| EVAL | Today |
+|---|---|
+| `EVAL("FN"+c$+"(1,2)")` (literal args) | compiles |
+| `EVAL("FN"+c$+"("+p$+")")`, with `p$="7"` | rejected |
+
+The second is rejected only because `p$` is not known to be constant; propagate
+it and the EVAL becomes the first form, which compiles. So the dispatch's
+"runtime argument structure" wall is partly an artefact of not knowing which
+"runtime" parts are actually constant. (Two related gaps are *not* propagation: a
+`STR$(e)` value-hole argument should reuse the `STR$(e)->VAL(STR$(e))` reduction
+the value-hole path already has, and resolving an array-element *name* like
+`sorts$(sort)` needs array-constant propagation.)
+
 ## The trap: a conservative no-dataflow rule is unsound
 
 The tempting cheap rule — *"a scalar with exactly one assignment, whose RHS is a
