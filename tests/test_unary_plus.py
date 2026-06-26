@@ -43,3 +43,10 @@ def test_unary_minus_on_a_string_is_rejected():
     assert program.diagnostics
     with pytest.raises(CompileError):
         emit_program(program, "up")
+
+
+def test_unary_minus_on_a_string_literal_is_rejected_not_a_crash():
+    # The constant folder must treat -"a" as not-constant (return None), not try
+    # to negate a Python str. The type checker then rejects it cleanly.
+    program = analyse('X=-"a"\nEND\n', name="up")
+    assert program.diagnostics

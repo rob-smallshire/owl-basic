@@ -320,15 +320,15 @@ def fold_constant(node):
         a = fold_constant(node.factor)
         return None if not isinstance(a, int) else ~a
 
-    if name == "UnaryMinus":
+    if name == "UnaryMinus":              # numeric only (-A$ is a Type mismatch)
         a = fold_constant(node.factor)
-        return None if a is None else -a
-    if name == "UnaryPlus":
+        return -a if isinstance(a, (int, float)) else None
+    if name == "UnaryPlus":               # identity on any scalar, strings too
         a = fold_constant(node.factor)
         return None if a is None else a
     if name == "AbsFunc":
         a = fold_constant(node.factor)
-        return None if a is None else abs(a)
+        return abs(a) if isinstance(a, (int, float)) else None
     if name == "IntFunc":         # BBC INT is floor (toward -infinity)
         a = fold_constant(node.factor)
         return None if a is None else math.floor(a)
