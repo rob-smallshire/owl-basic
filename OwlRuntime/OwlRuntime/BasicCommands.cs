@@ -20,6 +20,36 @@ namespace OwlRuntime
         private static readonly PrintManager printManager;
         private const int owlTrue = -1;
         private const int owlFalse = 0;
+
+        // ON ERROR state, set by RecordError on a caught error and read by
+        // ERR/ERL/REPORT$/REPORT.
+        public static int errorLine = 0;
+        public static int errorNumber = 0;
+        public static string errorMessage = "";
+
+        /// <summary>Record a caught runtime error for ERR/ERL/REPORT.</summary>
+        public static void RecordError(Exception ex)
+        {
+            // ERL (the line of the error) is not tracked yet: tracking it per
+            // line would cost on every line run, so it is left 0 for now. See
+            // docs/on-error-erl.md for the planned zero-hot-path-cost approach.
+            errorLine = 0;
+            if (ex is OwlRuntimeException oe)
+            {
+                errorNumber = oe.ErrorNumber;
+                errorMessage = oe.ReportMessage;
+            }
+            else if (ex is DivideByZeroException)
+            {
+                errorNumber = 18;            // BBC "Division by zero"
+                errorMessage = "Division by zero";
+            }
+            else
+            {
+                errorNumber = 0;
+                errorMessage = ex.Message;
+            }
+        }
         private const string acornDateTimeFormat = "ddd,dd MMM yyyy.HH:mm:ss";
         private const string bb4WDateTimeFormat = "ddd.dd MMM yyyy,HH:mm:ss";
         // BBC BASIC's RND is a 33-bit linear-feedback shift register using the
@@ -1510,6 +1540,11 @@ namespace OwlRuntime
             base("OwlRuntimeException: " + message)
         {
         }
+
+        // The BBC error number (ERR) and report message (REPORT/REPORT$).
+        // Defaults are a best effort; subclasses with a known BBC error override.
+        public virtual int ErrorNumber => 0;
+        public virtual string ReportMessage => Message;
     }
 
     public class TypeMismatchException :OwlRuntimeException
@@ -1619,7 +1654,7 @@ namespace OwlRuntime
     /// </summary>
     public class NumberTooBigException :OwlRuntimeException
     {
-        public const int ErrorNumber = 20;
+        public override int ErrorNumber => 20;
         public NumberTooBigException() :
             base("Number too big")
         {
@@ -1634,7 +1669,7 @@ namespace OwlRuntime
     /// </summary>
     public class BadHexException : OwlRuntimeException
     {
-        public const int ErrorNumber = 28;
+        public override int ErrorNumber => 28;
         public BadHexException() :
             base("Bad hex")
         {

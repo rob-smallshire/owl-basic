@@ -4,8 +4,8 @@ import logging
 from functools import partial
 
 from owl_basic.visitor import Visitor
-from owl_basic.errors import *
-from owl_basic.symbol_tables import *
+from owl_basic.symbol_tables import (SymbolInfo, SymbolTable, SystemSymbolTable,
+    FormalParameterSymbolTable, LocalSymbolTable, PrivateSymbolTable)
 from owl_basic.syntax.ast import FormalArgument, FormalReferenceArgument, Variable, Array, AstStatement
 
 
@@ -241,15 +241,22 @@ class SymbolTableVisitor(Visitor):
             self.tryAddVariable(statement.symbolTable, variable)
         self.followSuccessors(statement)
         
-    def visitInputFile(self, input):
+    def visitInputFile(self, statement):
         #logger.debug("SymbolTableVisitor.visitInputFile")
-        statement.symbolTable = self.checkPredecessorsAndRefer(statement)       
+        statement.symbolTable = self.checkPredecessorsAndRefer(statement)
         assert statement.symbolTable is not None
-        for item in statement.inputList:
-            self.tryAddVariable(statement.symbolTable, item)
-        self.followSuccessors(input)
+        # INPUT#channel, var, var, ... -- items is the variable list read into
+        # (flattened to a plain list by this stage, as visitInput's is).
+        variables = (item for item in statement.items if isinstance(item, Variable))
+        for variable in variables:
+            self.tryAddVariable(statement.symbolTable, variable)
+        self.followSuccessors(statement)
         
     def visitMouse(self, mouse):
+        # NOTE: latent twin of the visitInputFile bug -- this body references an
+        # undefined `statement` (copy-pasted from visitInput) and would also
+        # add a None `time` for the common three-argument MOUSE. No corpus
+        # program exercises MOUSE, so it is left for a cycle that can test it.
         #logger.debug("SymbolTableVisitor.visitInput")
         statement.symbolTable = self.checkPredecessorsAndRefer(statement)
         assert statement.symbolTable is not None

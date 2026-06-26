@@ -206,10 +206,33 @@ tokens = (
 )
 
 def t_ASSEMBLER(t):
-    # An inline 6502 assembler block: [ ... ]. Grab it whole (to the first ']')
-    # as raw text -- its contents are machine mnemonics, not BASIC -- so it is one
-    # token the front end can recognise and reject (OWL targets .NET, not 6502).
-    r'\[[^\]]*\]'
+    # An inline assembler block: [ ... ]. Grab it whole as raw text -- its
+    # contents are machine mnemonics, not BASIC -- so it is one token the front
+    # end keeps opaque and a backend lowers or rejects (see
+    # docs/inline-assembler.md). The closing ']' is the first one that is not
+    # inside a quoted string: per the BBC ROM the terminator is only recognised
+    # at the start of a statement, and a string (e.g. EQUS "Contains]") is read
+    # as one operand, so a ']' between quotes is data, not the terminator. A
+    # plain regex can't honour that, so scan manually.
+    r'\['
+    data = t.lexer.lexdata
+    start = t.lexer.lexpos - 1          # the '[' just matched
+    i = t.lexer.lexpos
+    n = len(data)
+    while i < n:
+        char = data[i]
+        if char == '"':                 # skip a quoted string whole
+            i += 1
+            while i < n and data[i] != '"':
+                i += 1
+            i += 1                       # step past the closing quote
+            continue
+        if char == ']':
+            i += 1                       # include the terminator
+            break
+        i += 1
+    t.value = data[start:i]
+    t.lexer.lexpos = i
     t.lexer.lineno += t.value.count('\n')
     return t
 

@@ -14,6 +14,7 @@ writes mnemonics as text instead of driving ``System.Reflection.Emit``.
 import re
 
 from owl_basic.exceptions import CompileError, OwlBasicError
+from owl_basic.ast_utils import findFollowingStatement
 from owl_basic.owltyping.type_system import (
     AddressOwlType,
     ArrayOwlType,
@@ -328,6 +329,44 @@ _DEFINITIONS = frozenset({"DefineProcedure", "DefineFunction"})
 _LONGJUMP_EXCEPTION = "[OwlRuntime]OwlRuntime.LongJumpException"
 _OVERFLOW_EXCEPTION = "[System.Runtime]System.OverflowException"
 _NUMBER_TOO_BIG = "[OwlRuntime]OwlRuntime.NumberTooBigException"
+# The base of every BBC runtime error; ON ERROR catches these and jumps to the
+# installed handler. LongJumpException derives from it but is caught first (it
+# is control flow, not an error).
+_RUNTIME_EXCEPTION = "[OwlRuntime]OwlRuntime.OwlRuntimeException"
+# ON ERROR must catch *every* runtime error, including the ones raised by raw
+# CIL rather than OwlRuntime -- integer DIV/MOD by zero (DivideByZeroException),
+# bad array subscripts (IndexOutOfRangeException), and so on. BBC catches them
+# all, so the handler catches System.Exception (LongJump is handled first, and
+# OFF/no-handler rethrows). This keeps the check at the boundary rather than
+# wrapping every arithmetic site.
+_SYSTEM_EXCEPTION = "[System.Runtime]System.Exception"
+# ON ERROR state in the runtime (set by RecordError on a caught error; read by
+# ERR/ERL/REPORT$/REPORT). ERL is a stub (always 0) for now -- see
+# docs/on-error-erl.md.
+_BASIC = "[OwlRuntime]OwlRuntime.BasicCommands"
+_ERR_FIELD = "int32 %s::errorNumber" % _BASIC
+_ERL_FIELD = "int32 %s::errorLine" % _BASIC
+_REPORT_FIELD = "string %s::errorMessage" % _BASIC
+_RECORD_ERROR = "void %s::RecordError(class %s)" % (_BASIC, _SYSTEM_EXCEPTION)
+
+
+def _on_error_goto_target(on_error):
+    """The constant line of an ``ON ERROR GOTO <line>`` handler, else None.
+
+    The handler is a statement list; this slice lowers only the single-GOTO form
+    (and ON ERROR OFF, handled separately). A statement handler returns None and
+    is rejected by the caller.
+    """
+    statements = getattr(on_error.handler, "statements", None)
+    if not statements or len(statements) != 1:
+        return None
+    goto = statements[0]
+    if type(goto).__name__ != "Goto":
+        return None
+    target = goto.targetLogicalLine
+    if type(target).__name__ != "LiteralInteger":
+        return None
+    return int(target.value)
 
 
 def _emit_reset_method(globals_registry, has_data):
@@ -368,6 +407,13 @@ def _collect_longjump_targets(blocks_by_entry):
                     target = statement.targetLogicalLine
                     if type(target).__name__ == "LiteralInteger":
                         targets.add(int(target.value))
+                elif type(statement).__name__ == "OnError":
+                    # ON ERROR GOTO <line> reaches its handler the same way a
+                    # LONGJUMP does -- via the dispatch -- so its target needs an
+                    # L_<line>: landing label too.
+                    target = _on_error_goto_target(statement)
+                    if target is not None:
+                        targets.add(target)
     return targets
 
 
@@ -468,7 +514,7 @@ def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
     # A LONGJUMP (GOTO out of a routine) is thrown as an exception; if any land
     # in this method (only Main, in practice), wrap the body in a dispatch loop
     # that catches them and resumes at the labelled target statement.
-    if emitter.landed_longjumps:
+    if emitter.landed_longjumps or emitter.has_error_handler:
         emitter.lines = _wrap_longjump_dispatch(emitter, prologue)
     else:
         startup = list(prologue) if prologue else []
@@ -530,6 +576,28 @@ def _wrap_longjump_dispatch(emitter, prologue):
     dispatcher = []
     for line in sorted(emitter.landed_longjumps):
         dispatcher += ["ldloc V_%d" % slot, "ldc.i4 %d" % line, "beq L_%d" % line]
+    # ON ERROR statement-handlers: a negative target branches to its EH_ label.
+    for target in sorted(emitter.landed_handlers):
+        dispatcher += ["ldloc V_%d" % slot, "ldc.i4 %d" % target,
+                       "beq EH_%d" % abs(target)]
+    # An ON ERROR handler catches a runtime error and resumes at the installed
+    # handler line, reusing the same dispatch. Ordered after the LongJump catch
+    # because LongJumpException derives from OwlRuntimeException -- control flow,
+    # not an error. No handler installed (slot 0) -> rethrow (default crash).
+    error_catch = []
+    if emitter.has_error_handler:
+        eh = emitter._error_handler_slot()
+        error_catch = [
+            "catch %s" % _SYSTEM_EXCEPTION, "{",
+            "call %s" % _RECORD_ERROR,              # record ERR/ERL/REPORT$ (pops the exception)
+            "ldloc V_%d" % eh,
+            "brfalse OWL_ON_ERROR_RETHROW",
+            "ldloc V_%d" % eh,
+            "stloc V_%d" % slot,
+            "leave DISPATCH",
+            "OWL_ON_ERROR_RETHROW:",
+            "rethrow", "}",
+        ]
     return (
         list(prologue or [])
         + ["ldc.i4.0", "stloc V_%d" % slot, "DISPATCH:", ".try", "{"]
@@ -539,8 +607,9 @@ def _wrap_longjump_dispatch(emitter, prologue):
            "catch %s" % _LONGJUMP_EXCEPTION, "{",
            "ldfld int32 %s::TargetLogicalLine" % _LONGJUMP_EXCEPTION,
            "stloc V_%d" % slot,
-           "leave DISPATCH", "}",
-           "DONE:", "ret"]
+           "leave DISPATCH", "}"]
+        + error_catch
+        + ["DONE:", "ret"]
     )
 
 
@@ -626,6 +695,44 @@ class _MethodEmitter:
         self._input_queue_slot = None  # reused local for the INPUT result queue
         self.local_restores = []       # per formal/LOCAL: CIL lines that restore it
         self._end_label_used = False   # a branch (terminal IF) targets the method end
+        self._error_handler_slot_index = None  # local holding the ON ERROR target line
+        # ON ERROR with a statement handler: each gets a unique negative target
+        # (no collision with line numbers). by_node: id(OnError)->target;
+        # by_entry: id(handler's first statement)->target (gets an EH_ label).
+        self._error_handler_targets = {}
+        self._error_handler_entries = {}
+        self.landed_handlers = set()   # targets whose EH_ label was emitted
+
+    def _index_error_handlers(self, blocks):
+        """Assign each ON ERROR statement-handler a target id and map its node
+        and its handler's first statement to it (for _stmt_OnError and the EH_
+        landing label)."""
+        counter = 0
+        for block in blocks:
+            for statement in block.statements:
+                if type(statement).__name__ != "OnError":
+                    continue
+                if statement.off or _on_error_goto_target(statement) is not None:
+                    continue
+                statements = getattr(statement.handler, "statements", None)
+                if not statements:
+                    continue
+                counter += 1
+                target = -counter
+                self._error_handler_targets[id(statement)] = target
+                self._error_handler_entries[id(statements[0])] = target
+
+    def _error_handler_slot(self):
+        """Local holding the current ON ERROR handler line (0 = none/disabled)."""
+        if self._error_handler_slot_index is None:
+            self._error_handler_slot_index = self._local_slot(
+                "__errorHandler", IntegerOwlType())
+        return self._error_handler_slot_index
+
+    @property
+    def has_error_handler(self):
+        """True once an ON ERROR (install or OFF) has been lowered in this method."""
+        return self._error_handler_slot_index is not None
 
     def emit(self, text):
         self.lines.append(text)
@@ -657,6 +764,7 @@ class _MethodEmitter:
         with an explicit branch (otherwise it falls through).
         """
         self._block_index = {id(block): index for index, block in enumerate(blocks)}
+        self._index_error_handlers(blocks)
         # Pre-register every FOR loop's state (body label and slots) before
         # lowering. A NEXT looks its FOR up by node id; with a reducible CFG the
         # FOR's block is lowered first, but a GOTO into the loop region makes the
@@ -674,6 +782,9 @@ class _MethodEmitter:
                 # A statement that a LONGJUMP targets gets a label so the
                 # dispatch loop can resume at it (targets are often mid-block).
                 self._maybe_longjump_label(statement)
+                # The first statement of an ON ERROR statement-handler gets an
+                # EH_ label the error dispatch branches to.
+                self._maybe_handler_label(statement)
                 # Variable storage (arg / local / global) is resolved against
                 # the symbol table of the statement being lowered.
                 self._symbol_table = getattr(statement, "symbolTable", None)
@@ -696,6 +807,12 @@ class _MethodEmitter:
     def _block_label(self, block):
         return "BB_%d" % self._block_index[id(block)]
 
+    def _maybe_handler_label(self, statement):
+        target = self._error_handler_entries.get(id(statement))
+        if target is not None and target not in self.landed_handlers:
+            self.landed_handlers.add(target)
+            self.emit("EH_%d:" % abs(target))
+
     def _maybe_longjump_label(self, statement):
         if not self._longjump_targets or self._line_mapper is None:
             return
@@ -708,6 +825,17 @@ class _MethodEmitter:
         last = block.statements[-1] if block.statements else None
         if last is not None and type(last).__name__ in _BRANCHING_STATEMENTS:
             return  # the statement emitted its own control transfer
+        if last is not None and type(last).__name__ == "OnError":
+            # ON ERROR has two successors: the following statement (normal flow)
+            # and its handler (reached only via the error dispatch). Fall through
+            # to the normal one -- never to the handler.
+            following = findFollowingStatement(last)
+            normal_block = getattr(following, "block", None)
+            if normal_block is None:
+                self.emit("ret")
+            elif self._block_index.get(id(normal_block)) != index + 1:
+                self.emit("br " + self._block_label(normal_block))
+            return
         successors = list(block.outEdges)
         if len(successors) == 1:
             successor = successors[0]
@@ -941,6 +1069,28 @@ class _MethodEmitter:
             self.emit("newobj instance void "
                       "[OwlRuntime]OwlRuntime.OnRangeException::.ctor()")
             self.emit("throw")
+
+    def _stmt_OnGosub(self, node):
+        # ON x GOSUB a, b, c : call the x-th target subroutine (1-based), then
+        # continue after the ON GOSUB. Each target line is PROCSub<line>; the
+        # switch routes to a per-target call, all of which branch to a common
+        # end and fall through to the following statement. Out of range raises
+        # the ON-range error (BBC's behaviour without an ELSE clause).
+        end = self._new_label("OG_END")
+        cases = [self._new_label("OG_CASE") for _ in node.targetLogicalLines]
+        self.lower_expression(node.switch)
+        self.emit("ldc.i4.1")
+        self.emit("sub")
+        self.emit("switch (%s)" % ", ".join(cases))
+        self.emit("newobj instance void "
+                  "[OwlRuntime]OwlRuntime.OnRangeException::.ctor()")
+        self.emit("throw")
+        for label, target_line in zip(cases, node.targetLogicalLines):
+            self.emit("%s:" % label)
+            self.emit("call void %s()"
+                      % _method_name("PROCSub%d" % int(target_line.value)))
+            self.emit("br " + end)
+        self.emit("%s:" % end)
 
     def _stmt_LongJump(self, node):
         # GOTO out of a routine: throw, to be caught by Main's dispatch loop.
@@ -1314,6 +1464,59 @@ class _MethodEmitter:
         for restore in self.local_restores:
             lines += restore
         return lines
+
+    def _expr_ErrFunc(self, node):
+        self.emit("ldsfld %s" % _ERR_FIELD)        # ERR: last error's number
+
+    def _expr_ErlFunc(self, node):
+        self.emit("ldsfld %s" % _ERL_FIELD)        # ERL: last error's line
+
+    def _expr_ReportStrFunc(self, node):
+        self.emit("ldsfld %s" % _REPORT_FIELD)     # REPORT$: last error's message
+
+    def _stmt_Report(self, node):
+        # REPORT prints the last error's message (no trailing newline).
+        self.emit("ldsfld %s" % _REPORT_FIELD)
+        self.emit(_runtime("Print", "string"))
+
+    def _stmt_OnError(self, node):
+        # Install (or clear) the current error handler. A runtime error is caught
+        # by the enclosing method's dispatch loop, which jumps to the handler
+        # (see _wrap_longjump_dispatch). Handles ON ERROR GOTO <line>, OFF, and a
+        # statement handler.
+        #
+        # node.local (ON ERROR LOCAL) needs no special handling: the dispatch is
+        # emitted per method, so an ON ERROR inside a PROC is already caught
+        # within that PROC -- its locals intact, the outer handler restored on
+        # return -- which is exactly the BASIC V LOCAL semantics. (The one
+        # divergence: a non-LOCAL ON ERROR written inside a PROC is also caught
+        # locally rather than resetting the stack to the top; that form is rare
+        # and absent from the corpus.)
+        slot = self._error_handler_slot()
+        if node.off:
+            self.emit("ldc.i4.0")
+            self.emit("stloc V_%d" % slot)
+            return
+        target = _on_error_goto_target(node)
+        if target is None:
+            # Statement handler: install its negative target id; the dispatch
+            # jumps to the EH_ label on the handler's first statement.
+            target = self._error_handler_targets.get(id(node))
+            if target is None:
+                raise CodeGenerationError(
+                    "ON ERROR handler at line %s cannot be lowered" % node.lineNum)
+        self.emit("ldc.i4 %d" % target)
+        self.emit("stloc V_%d" % slot)
+
+    def _stmt_InlineAssembler(self, node):
+        # The frontend keeps a [ ... ] block opaque; whether it can be lowered
+        # is a backend decision (see docs/inline-assembler.md). The dotnet
+        # backend has no assembler dialect and cannot run machine code, so it
+        # rejects the block cleanly rather than emitting nothing.
+        raise CodeGenerationError(
+            "the dotnet backend does not support inline assembler at line %s"
+            % node.lineNum
+        )
 
     def _stmt_ReturnFromProcedure(self, node):
         self.lines.extend(self._local_restore_lines())

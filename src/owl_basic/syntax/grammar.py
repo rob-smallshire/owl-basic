@@ -114,7 +114,8 @@ def p_star_command(p):
 # Statements which can appear alone,
 # or in compound statements on one line
 def p_stmt_body(p):
-    '''stmt_body : beats_stmt
+    '''stmt_body : assembler_stmt
+                 | beats_stmt
                  | bput_stmt
                  | call_stmt
                  | circle_stmt
@@ -137,6 +138,7 @@ def p_stmt_body(p):
                  | gcol_stmt
                  | goto_stmt
                  | on_goto_stmt
+                 | on_gosub_stmt
                  | gosub_stmt
                  | input_stmt
                  | install_stmt
@@ -152,6 +154,7 @@ def p_stmt_body(p):
                  | move_stmt
                  | off_stmt
                  | on_stmt
+                 | on_error_stmt
                  | origin_stmt
                  | oscli_stmt
                  | next_stmt
@@ -247,6 +250,14 @@ def p_circle_stmt(p):
         p[0] = Circle(xCoord = p[3], yCoord = p[5], radius = p[7], fill=True)
     p[0].lineNum = p.lineno(1) - 1
     
+def p_assembler_stmt(p):
+    'assembler_stmt : ASSEMBLER'
+    # The [ ... ] block is captured verbatim by the lexer; the frontend keeps it
+    # opaque and a backend decides whether it can lower it. See
+    # docs/inline-assembler.md.
+    p[0] = InlineAssembler(code = p[1])
+    p[0].lineNum = p.lineno(1) - 1
+
 def p_clear_stmt(p):
     'clear_stmt : CLEAR'
     p[0] = Clear()
@@ -529,6 +540,40 @@ def p_goto_stmt(p):
     # and leave it to a later pass to reject a non-constant target, which a
     # compiler (unlike the interpreter) cannot resolve.
     p[0] = Goto(targetLogicalLine = p[2])
+    p[0].lineNum = p.lineno(1) - 1
+
+def p_on_error_stmt(p):
+    '''on_error_stmt : ON ERROR multi_statement
+                     | ON ERROR LOCAL multi_statement'''
+    # The handler is the rest of the line (a multi_statement, as ON...GOTO's
+    # ELSE clause is). ON ERROR OFF arrives here as a handler of a single OFF
+    # statement, recognised below. ON ERROR LOCAL (BASIC V) scopes the handler
+    # to the enclosing PROC/FN. Lowering is a later phase; for now the node is
+    # built and the dotnet backend rejects it cleanly. See docs and
+    # tests/test_on_error.py.
+    if len(p) == 4:
+        handler = p[3]
+        off = _is_single_off(handler)
+        p[0] = OnError(handler=None if off else handler, off=off)
+    else:
+        p[0] = OnError(handler=p[4], local=True)
+    p[0].lineNum = p.lineno(1) - 1
+
+def _is_single_off(handler):
+    """True if a handler is just OFF -- i.e. ON ERROR OFF (disable the handler).
+
+    `OFF` is a statement in its own right (cursor off), so `ON ERROR OFF` parses
+    as a handler of one Off statement; treat that as the disable form.
+    """
+    statements = getattr(handler, "statements", None)
+    return (statements is not None and len(statements) == 1
+            and type(statements[0]).__name__ == "Off")
+
+def p_on_gosub_stmt(p):
+    '''on_gosub_stmt : ON expr GOSUB expr_list'''
+    # ON x GOSUB a, b, c -- the computed GOSUB. Each target line becomes a PROC
+    # via the usual GOSUB machinery; the emitter switches to the right call.
+    p[0] = OnGosub(switch = p[2], targetLogicalLines = p[4])
     p[0].lineNum = p.lineno(1) - 1
 
 def p_on_goto_stmt(p):
@@ -869,8 +914,11 @@ def p_print_stmt(p):
         p[0] = Print()
     elif len(p) == 3:
         p[0] = Print(printList = p[2])
-    elif len(p) == 4:
-        p[0] = PrintFile(channel = p[2], items = p[3])
+    elif len(p) == 5:
+        # PRINT channel COMMA actual_arg_list -- four RHS symbols, so len(p) is
+        # 5; the channel is p[2] and the items the arg list at p[4] (p[3] is the
+        # COMMA).
+        p[0] = PrintFile(channel = p[2], items = p[4])
     p[0].lineNum = p.lineno(1) - 1
     
 def p_print_list(p):

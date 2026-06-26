@@ -1,0 +1,4 @@
+PRINT#outputfile,byte%
+PRINT#channel,ASC(MID$(name$,pos,1))
+PRINT#f,e%,f%,kw%,nc%
+PRINT#chan,A$,B$,C

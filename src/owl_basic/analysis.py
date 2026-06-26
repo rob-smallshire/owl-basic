@@ -56,6 +56,43 @@ def _line_parse_errors(text, options):
     return list(_grammar.syntax_errors)
 
 
+def _assembler_block_numbers(numbered_lines):
+    """Line numbers lying within an inline-assembler ``[ ... ]`` block.
+
+    The per-line parse gate checks each line independently, so it cannot see a
+    block whose ``[`` and ``]`` are on different lines -- it would flag every
+    assembler body line as unparseable BASIC. The block is opaque to BASIC, so
+    identify its span here and let the gate skip it; the whole-program parse
+    then captures the block as a single ASSEMBLER token.
+
+    This mirrors the lexer's ``t_ASSEMBLER`` scan: a string literal is skipped
+    whole, so neither a ``[`` nor a ``]`` inside quotes counts -- a ``[`` in a
+    string does not open a block, and a ``]`` inside ``EQUS "Contains]"`` does
+    not close one (per the BBC ROM, ``]`` terminates only at a statement start,
+    and a quoted string is read as a single operand).
+    """
+    inside = set()
+    in_block = False
+    for number, text in numbered_lines:
+        was_in_block = in_block
+        opened_here = False
+        i = 0
+        while i < len(text):
+            char = text[i]
+            if char == '"':                       # skip a string literal whole
+                i += 1
+                while i < len(text) and text[i] != '"':
+                    i += 1
+            elif char == '[' and not in_block:
+                in_block, opened_here = True, True
+            elif char == ']' and in_block:
+                in_block = False
+            i += 1
+        if was_in_block or opened_here or in_block:
+            inside.add(number)
+    return inside
+
+
 def _synthesize_line_numbers(source):
     """Assign AUTO line numbers to un-numbered plain-text source.
 
@@ -117,9 +154,13 @@ def analyse_numbered_lines(numbered_lines, name, source_filepath=None, options=N
     options = options or _DefaultOptions()
     numbered_lines = expand_numbered_lines(numbered_lines)  # expand abbreviations
 
+    # Lines inside a multi-line [ ... ] assembler block can't be parsed on their
+    # own; the whole-program parse captures the block as one ASSEMBLER token.
+    assembler_lines = _assembler_block_numbers(numbered_lines)
     unparseable = [
         number for number, text in numbered_lines
-        if text.strip() and _line_parse_errors(text, options)
+        if number not in assembler_lines
+        and text.strip() and _line_parse_errors(text, options)
     ]
     if unparseable and strict:
         raise CompileError(

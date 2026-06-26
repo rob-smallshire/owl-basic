@@ -1,9 +1,10 @@
 # A visitor for performing type-checking over the Abstract Syntax Tree
 
 import logging
+import sys
 
 from owl_basic.visitor import Visitor
-from owl_basic.errors import *
+from owl_basic.errors import error, warning, internal
 from owl_basic.exceptions import CompileError
 from owl_basic.utility import underscoresToCamelCase
 from owl_basic.syntax.ast import (Cast, Concatenate, LiteralInteger, LiteralFloat,

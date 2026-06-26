@@ -59,8 +59,17 @@ def test_call_machine_code_is_rejected_at_codegen():
     assert "machine code" in str(excinfo.value)
 
 
-def test_inline_assembly_still_reported():
-    assert "assembl" in _reject("P%=0\n[OPT0:RTS:]\n").lower()
+def test_inline_assembly_is_rejected_at_codegen():
+    # Like CALL/USR, an inline assembler block now analyses (it parses to an
+    # opaque InlineAssembler node) and is named clearly at code generation --
+    # recognising the block is a frontend job, compiling it a backend one.
+    from owl_basic.extension import create_extension
+    from owl_basic.ext.backends.dotnet.emitter import CodeGenerationError
+    backend = create_extension("backend", "owl_basic.backend", "dotnet")
+    program = analyse("P%=0\n[OPT0:RTS:]\n", name="t")  # analyses fine
+    with pytest.raises(CodeGenerationError) as excinfo:
+        backend.emit_il(program)
+    assert "assembl" in str(excinfo.value).lower()
 
 
 def test_control_bytes_inside_a_string_still_compile():

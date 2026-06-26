@@ -14,8 +14,16 @@ class LineMapper(object):
     
     def logicalToPhysical(self, logical_line_number):
         if self.physical_to_logical_map is not None:
-            
-            return self.physical_to_logical_map.index(logical_line_number)
+            try:
+                return self.physical_to_logical_map.index(logical_line_number)
+            except ValueError:
+                # GOTO/GOSUB to a constant line that is not in the program --
+                # "No such line" in the BBC interpreter. Reject it cleanly
+                # rather than crash on list.index's ValueError.
+                raise CompileError(
+                    "the target of GOTO/GOSUB is line %s, which does not exist"
+                    % logical_line_number
+                )
         else:
             return logical_line_number
         

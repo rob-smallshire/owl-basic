@@ -1,5 +1,6 @@
-import sys
 import logging
+
+from owl_basic.exceptions import InternalError
 
 error_log = set()
 _reported_errors = []  # the error (not warning) messages this compilation
@@ -40,8 +41,8 @@ def error(message):
 
 def fatalError(message):
     logging.critical(message)
-    sys.exit(1)
-    
+    raise InternalError(message)
+
 def internal(message):
     logging.critical(message)
-    sys.exit(1)
+    raise InternalError(message)

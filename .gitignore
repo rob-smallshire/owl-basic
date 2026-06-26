@@ -60,3 +60,9 @@ tmp/
 # them. Entirely local and never committed (the programs are community-authored
 # and not redistributed); CI and a bare `pytest` never see it.
 local-corpus/
+
+# Build outputs from `owl-basic compile/run` when no -o is given (they land in
+# the cwd). OwlRuntime.dll is tracked, so it is unaffected by these.
+/*.il
+/*.runtimeconfig.json
+/*.dll

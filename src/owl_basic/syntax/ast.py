@@ -110,6 +110,24 @@ class Cls(AstStatement):
 class Clg(AstStatement):
     pass
 
+class Clear(AstStatement):
+    "CLEAR -- discard all variables"
+    pass
+
+class InlineAssembler(AstStatement):
+    "An inline machine-code block [ ... ]; its text is opaque to the frontend."
+    code = StringOption()
+
+class OnError(AstStatement):
+    """ON ERROR -- install an error handler, or ON ERROR OFF to disable it.
+
+    ``handler`` is the handler statement list (the rest of the line); ``off``
+    is set for ON ERROR OFF; ``local`` for the BASIC V ON ERROR LOCAL form.
+    """
+    handler = Node()
+    off = BoolOption(False)
+    local = BoolOption(False)
+
 class Colour(AstStatement):
     colour = Node(formalType=IntegerOwlType())
     tint   = Node(formalType=IntegerOwlType())
@@ -232,6 +250,11 @@ class OnGoto(AstStatement):
     switch = Node(formalType=IntegerOwlType())
     target_logical_lines = Node()
     out_of_range_clause = Node()
+
+class OnGosub(AstStatement):
+    "ON x GOSUB a, b, c -- call the x-th target subroutine (1-based)."
+    switch = Node(formalType=IntegerOwlType())
+    target_logical_lines = Node()
 
 class Gosub(AstStatement):
     target_logical_line = Node(formalType=IntegerOwlType())

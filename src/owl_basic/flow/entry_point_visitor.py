@@ -45,5 +45,15 @@ class EntryPointVisitor(Visitor):
             logging.debug("Line not found")
             # TODO: Error!
             pass
+
+    def visitOnGosub(self, ongosub):
+        # Each ON x GOSUB target is a GOSUB'd subroutine, registered exactly as a
+        # plain GOSUB target so it is converted to a PROC.
+        for target_line in ongosub.targetLogicalLines:
+            target = self.line_mapper.statementOnLine(target_line)
+            if target:
+                self.__entry_points["gosub%d" % int(target_line.value)] = target
+                target.entryPoint = "private"
+                target.addComeFromGosubEdge(ongosub)
         
     

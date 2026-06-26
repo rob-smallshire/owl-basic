@@ -96,6 +96,35 @@ class FlowgraphForwardVisitor(Visitor):
         else:
             errors.error("No such line %s at line %s" % (goto.targetLogicalLine.value, goto.lineNum))
                     
+    def visitOnError(self, on_error):
+        """Connect ON ERROR to the next statement (normal flow) and to its
+        handler, which runs via the runtime error path. The handler must be in
+        the CFG so it gets a basic block and is analysed/lowered; normal flow
+        skips it (it is reached only by the error dispatch).
+
+        ON ERROR GOTO <line> connects to the existing target line. A statement
+        handler (the rest of the line) is connected at its first statement, and
+        the handler statements are chained into the CFG; they normally end in
+        END/GOTO, which terminate, so they do not fall back into normal flow."""
+        connectToFollowing(on_error)
+        statements = getattr(on_error.handler, "statements", None)
+        if not statements:
+            return  # ON ERROR OFF
+        if len(statements) == 1 and type(statements[0]).__name__ == "Goto":
+            target = self.line_mapper.statementOnLine(statements[0].targetLogicalLine)
+            if target:
+                connect(on_error, target)
+            return
+        connect(on_error, statements[0])
+        for statement in statements:
+            self.visit(statement)
+
+    def visitOnGosub(self, ongosub):
+        """ON x GOSUB calls a subroutine and returns, so control continues at the
+        following statement. The targets are PROCs reached via come-from-GOSUB
+        edges (registered by the entry-point visitor), not normal successors."""
+        connectToFollowing(ongosub)
+
     def visitOnGoto(self, ongoto):
         """
         Connect the OnGoto to the first statement on each of the target lines
