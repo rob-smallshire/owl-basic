@@ -13,7 +13,7 @@ from owl_basic.ast_utils import elideNode
 from owl_basic.constant_folding import fold_constant
 from owl_basic.owltyping.type_system import (NumericOwlType, ObjectOwlType, IntegerOwlType,
                                 LongIntegerOwlType, FloatOwlType, ByteOwlType, PendingOwlType,
-                                StringOwlType, ArrayOwlType)
+                                StringOwlType, ArrayOwlType, ChannelOwlType)
 
 _INT32_MIN = -2147483648
 _INT32_MAX = 2147483647
@@ -80,6 +80,13 @@ class TypecheckVisitor(Visitor):
             return
         self.checkSignature(node) # TODO: What about return types
         self.insertNumericCasts(node)
+
+    def visitChannel(self, channel):
+        # `#expr` is a file channel: the wrapped expression is the integer handle
+        # (e.g. from OPENOUT). Type the wrapper as a channel so the file
+        # statements (BPUT/BGET/CLOSE/PRINT#/INPUT#) accept it.
+        self.visit(channel.channel)
+        channel.actualType = ChannelOwlType()
     
     def visitAstStatement(self, statement):
         "Generic visitor for simple statements"

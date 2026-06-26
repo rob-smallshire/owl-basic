@@ -430,29 +430,40 @@ namespace OwlRuntime
 
         public static void Bput(int channel, byte value)
         {
-            if (channels.ContainsKey(channel))
+            if (!channels.ContainsKey(channel))
             {
                 throw new NoSuchChannelException("Cannot use BPUT with this channel", channel);
             }
             FileStream stream = channels[channel];
             stream.WriteByte(value);
         }
- 
+
         public static int Bget(int channel)
         {
-            if (channels.ContainsKey(channel))
+            if (!channels.ContainsKey(channel))
             {
-                throw new NoSuchChannelException("Cannot use BPUT with this channel", channel);
+                throw new NoSuchChannelException("Cannot use BGET with this channel", channel);
             }
             FileStream stream = channels[channel];
-            return stream.ReadByte();
+            return stream.ReadByte();    // -1 at end of file
+        }
+
+        /// <summary>EOF#channel: TRUE (-1) when the file pointer is at the end.</summary>
+        public static int Eof(int channel)
+        {
+            if (!channels.ContainsKey(channel))
+            {
+                throw new NoSuchChannelException("Cannot use EOF with this channel", channel);
+            }
+            FileStream stream = channels[channel];
+            return stream.Position >= stream.Length ? owlTrue : owlFalse;
         }
 
         public static void Close(int channel)
         {
-            if (channels.ContainsKey(channel))
+            if (!channels.ContainsKey(channel))
             {
-                throw new NoSuchChannelException("Cannot use BPUT with this channel", channel);
+                throw new NoSuchChannelException("Cannot use CLOSE with this channel", channel);
             }
             FileStream stream = channels[channel];
             stream.Dispose();

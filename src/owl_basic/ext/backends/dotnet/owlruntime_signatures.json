@@ -112,6 +112,14 @@
       []
     ]
   ],
+  "BasicCommands::Eof": [
+    [
+      "int32",
+      [
+        "int32"
+      ]
+    ]
+  ],
   "BasicCommands::Equal": [
     [
       "int32",

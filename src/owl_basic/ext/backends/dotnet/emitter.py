@@ -2153,6 +2153,43 @@ class _MethodEmitter:
         self.lower_expression(node.factor)
         self.emit("call instance int32 [System.Runtime]System.String::get_Length()")
 
+    # -- file channels (OPENIN/OPENOUT/OPENUP, BPUT, BGET, EOF, CLOSE) ---------
+
+    def _expr_Channel(self, node):
+        # `#expr` is just its integer channel handle.
+        self.lower_expression(node.channel)
+
+    def _expr_OpeninFunc(self, node):
+        self.lower_expression(node.filename)
+        self.emit(_runtime("Openin", "string"))
+
+    def _expr_OpenoutFunc(self, node):
+        self.lower_expression(node.filename)
+        self.emit(_runtime("Openout", "string"))
+
+    def _expr_OpenupFunc(self, node):
+        self.lower_expression(node.filename)
+        self.emit(_runtime("Openup", "string"))
+
+    def _expr_BgetFunc(self, node):
+        self.lower_expression(node.channel)
+        self.emit(_runtime("Bget", "int32"))     # the byte, or -1 at EOF
+
+    def _expr_EofFunc(self, node):
+        self.lower_expression(node.channel)
+        self.emit(_runtime("Eof", "int32"))
+
+    def _stmt_Bput(self, node):
+        # BPUT#ch, value -- write the low byte of value to the channel.
+        self.lower_expression(node.channel)
+        self.lower_expression(node.data)
+        self.emit("conv.u1")                     # truncate to a byte, as BBC does
+        self.emit(_runtime("Bput", "int32", "uint8"))
+
+    def _stmt_Close(self, node):
+        self.lower_expression(node.channel)
+        self.emit(_runtime("Close", "int32"))
+
     def _expr_AscFunc(self, node):
         self.lower_expression(node.factor)
         self.emit(_runtime("Asc", "string"))
