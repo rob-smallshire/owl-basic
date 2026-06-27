@@ -303,3 +303,33 @@ def test_variable_by_name_reflective_write_stays_rejected():
             'a$=b$\n'
             '=0\n', name="t")
     assert "EVAL" in str(excinfo.value)
+
+
+# --- function-by-name dispatch with a fixed prefix -----------------------
+# EVAL("FNpart" + n$) names a family FNpart0, FNpart1, ... : a fixed prefix
+# between "FN" and the runtime suffix. Dispatch folds the prefix into the runtime
+# name, so it reduces to the by-name-dispatch case. Surfaced by The Micro User
+# (EVAL("FNpart" + MID$(M$,X,1))).
+
+_PARTS = ('END\n'
+          'DEF FNpart0=10\n'
+          'DEF FNpart1=20\n'
+          'DEF FNpart2=30\n')
+
+
+def test_dispatch_with_fixed_prefix_compiles():
+    assert _compiles('n$="1"\nPRINT EVAL("FNpart"+n$)\n' + _PARTS)
+
+
+def test_dispatch_with_fixed_prefix_leaves_no_eval_node(dotnet_backend):
+    il = dotnet_backend.emit_il(analyse(
+        'n$="1"\nPRINT EVAL("FNpart"+n$)\n' + _PARTS, name="t"))
+    assert "FN_eval_dispatch_0" in il
+
+
+@requires_dotnet_toolchain
+def test_dispatch_with_fixed_prefix_runs(compile_and_run):
+    out = compile_and_run(analyse(
+        'n$="0"\nPRINT EVAL("FNpart"+n$)\n'
+        'n$="2"\nPRINT EVAL("FNpart"+n$)\n' + _PARTS, name="t"))
+    assert out.split() == ["10", "30"]

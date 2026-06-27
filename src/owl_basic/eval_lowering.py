@@ -21,8 +21,9 @@ from owl_basic.exceptions import CompileError
 from owl_basic.parent_visitor import ParentVisitor
 from owl_basic.syntax import parser as syntax_parser
 from owl_basic.syntax import grammar as _grammar
-from owl_basic.syntax.ast import (ActualArgList, EvalHexFunc, Raise, UserFunc,
-                                  ValFunc, Variable)
+from owl_basic.syntax.ast import (ActualArgList, Concatenate, EvalHexFunc,
+                                  LiteralString, Raise, UserFunc, ValFunc,
+                                  Variable)
 
 
 def lower_eval(parse_tree, options, helper_serial=None):
@@ -282,12 +283,20 @@ def _lower_dispatch(eval_node, parse_tree, options, helper_serial):
     if call is None or type(call).__name__ != "UserFunc":
         return False    # the skeleton is not statically a function call: residue
 
-    # The "FN" literal prefix names the dispatch: the callee must be exactly
-    # "FN" + one bare hole (the runtime name). A constant or partially-runtime
-    # name is not this increment's case.
-    name_hole = next((h for h in holes
-                      if h["kind"] == "bare" and call.name == "FN" + h["placeholder"]),
-                     None)
+    # The "FN" literal prefix names the dispatch: the callee is "FN", an optional
+    # fixed prefix, then one bare hole that is the runtime name (a suffix). So
+    # EVAL("FN"+n$) has an empty prefix, and EVAL("FNpart"+n$) has prefix "part"
+    # selecting among FNpart0, FNpart1, ... The fixed prefix is folded into the
+    # runtime name below, reducing both to the same dispatch.
+    name_hole = None
+    name_prefix = ""
+    for hole in holes:
+        if (hole["kind"] == "bare" and call.name.startswith("FN")
+                and call.name.endswith(hole["placeholder"])
+                and len(call.name) > len(hole["placeholder"]) + 1):
+            name_hole = hole
+            name_prefix = call.name[len("FN"):len(call.name) - len(hole["placeholder"])]
+            break
     if name_hole is None:
         return False
     # A bare hole anywhere else is a runtime *argument structure* (general EVAL
@@ -329,7 +338,16 @@ def _lower_dispatch(eval_node, parse_tree, options, helper_serial):
     # The EVAL becomes a synchronous call to the helper: the runtime name first,
     # then each staged value argument (captured by value at the EVAL site).
     arguments = ActualArgList()
-    arguments.append(name_hole["node"])
+    # The helper matches owlname$ against each candidate's full name (minus "FN"),
+    # so a fixed prefix is prepended to the runtime suffix here: EVAL("FNpart"+n$)
+    # passes "part"+n$, which matches candidate FNpart<n>.
+    name_argument = name_hole["node"]
+    if name_prefix:
+        literal = LiteralString(value=name_prefix)
+        _set_line_num(literal, eval_node.lineNum)
+        name_argument = Concatenate(lhs=literal, rhs=name_argument)
+        _set_line_num(name_argument, eval_node.lineNum)
+    arguments.append(name_argument)
     for hole in value_holes:
         arguments.append(hole["node"])
     _splice(eval_node, UserFunc(name=helper_name, actualParameters=arguments))
