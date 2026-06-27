@@ -314,6 +314,10 @@ def _build_flow(parse_tree, line_mapper, options):
     """
     _clear_cfg_edges(parse_tree)
     createForwardControlFlowGraph(parse_tree, line_mapper, options)
+    # An UNTIL FALSE / WHILE TRUE loop never exits, so the dead loop-exit edge its
+    # closer draws must go before subroutine conversion classifies in-edges --
+    # otherwise a GOSUB'd line that merely follows the loop looks fallen-into.
+    correlation_visitor.prune_dead_loop_exits(parse_tree)
     entry_points = locateEntryPoints(parse_tree, line_mapper, options)
     convertLongjumpsToExceptions(parse_tree, line_mapper, options)
     convertSubroutinesToProcedures(parse_tree, entry_points, line_mapper, options)

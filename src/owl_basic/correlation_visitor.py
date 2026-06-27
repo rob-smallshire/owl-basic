@@ -45,6 +45,83 @@ def _constant_truth(condition):
     return None
 
 
+def _statements_in_source_order(parse_tree):
+    """Yield every statement in source order, descending into IF and CASE clauses
+    (the only compound statements that nest statement lists). Used to pair
+    WHILE/ENDWHILE for dead-exit pruning."""
+    def as_list(clause):
+        if clause is None:
+            return []
+        return clause if isinstance(clause, list) else [clause]
+
+    def walk(statements):
+        for statement in statements:
+            yield statement
+            name = type(statement).__name__
+            if name == "If":
+                yield from walk(as_list(statement.trueClause))
+                yield from walk(as_list(statement.falseClause))
+            elif name == "Case":
+                for clause in (statement.whenClauses or []):
+                    yield from walk(as_list(clause.statements))
+
+    yield from walk(parse_tree.statements)
+
+
+def prune_dead_loop_exits(parse_tree):
+    """Drop loop-exit CFG edges that can never be taken, before subroutine
+    conversion sees them.
+
+    Two infinite-loop idioms never reach their exit:
+
+      * ``REPEAT ... UNTIL FALSE`` -- the UNTIL always loops back;
+      * ``WHILE TRUE ... ENDWHILE`` -- the WHILE pre-test never fails.
+
+    The closer still draws a CFG edge to the following statement, so a line that
+    merely *follows* such a loop looks reachable by fall-through. When that line
+    is a GOSUB'd subroutine head, ``convertSubroutinesToProcedures`` then rejects
+    it as reached other than by GOSUB. Removing the dead edge here lets the head
+    convert as the GOSUB-only routine it is. (CorrelationVisitor prunes UNTIL
+    FALSE again for its own walk; it runs after conversion, hence this earlier
+    pass.)
+
+    A constant-false UNTIL is pruned unconditionally -- it is always a pure
+    back-edge. A constant-true WHILE is pruned only when the WHILE/ENDWHILE
+    nesting is cleanly balanced, so the ``IF c ENDWHILE`` continue idiom -- whose
+    ENDWHILE is a back-edge, not the loop exit -- is left untouched.
+    """
+    ordered = list(_statements_in_source_order(parse_tree))
+    dead = []
+    for statement in ordered:
+        if isinstance(statement, Until) and _constant_truth(statement.condition) is False:
+            dead.append(statement)
+
+    open_whiles = []
+    closing_while = {}
+    balanced = True
+    for statement in ordered:
+        if isinstance(statement, While):
+            open_whiles.append(statement)
+        elif isinstance(statement, Endwhile):
+            if open_whiles:
+                closing_while[id(statement)] = open_whiles.pop()
+            else:
+                balanced = False     # an orphan ENDWHILE (continue idiom / messy)
+    if open_whiles:
+        balanced = False             # an unclosed WHILE
+    if balanced:
+        for statement in ordered:
+            if isinstance(statement, Endwhile):
+                opener = closing_while.get(id(statement))
+                if opener is not None and _constant_truth(opener.condition) is True:
+                    dead.append(statement)
+
+    for closer in dead:
+        for target in list(closer.outEdges):
+            closer.outEdges.discard(target)
+            target.inEdges.discard(closer)
+
+
 def _same_loops(a, b):
     """Two loop stacks are equal iff they hold the same opener nodes in order."""
     return len(a) == len(b) and all(x is y for x, y in zip(a, b))
