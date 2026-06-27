@@ -4,14 +4,93 @@ Convert subroutines with named PROCedures
 
 import logging
 
-from owl_basic.syntax.ast import DefineProcedure
+from owl_basic.syntax.ast import (DefineProcedure, CallProcedure,
+                                  ReturnFromProcedure, End)
 from owl_basic.exceptions import CompileError
-from owl_basic.ast_utils import insertStatementBefore
+from owl_basic.ast_utils import insertStatementBefore, findFollowingStatement
 from .convert_sub_visitor import ConvertSubVisitor
 from .flow_analysis import tagSuccessors, deTagSuccessors
 from .traversal import depthFirstSearch
 
 logger = logging.getLogger('flow.subroutine_converter')
+
+
+def bridgeFallthroughSubroutines(entry_points, line_mapper):
+    """Replace each fall-through into a GOSUB'd subroutine head with an explicit
+    PROC call, so the head is entered only by GOSUB and converts cleanly.
+
+    A GOSUB target whose head is also reached by fall-through cannot be a plain
+    single-entry PROC -- its RETURN would be ambiguous. Three shapes produce this,
+    and all are bridged by splicing ``PROC PROCSub<head> : <terminator>`` onto the
+    fall-through edge ``pred -> head``, so the call runs the routine and the
+    terminator does what the original RETURN would:
+
+      * a jump-table handler with no RETURN running into the next handler -- the
+        fall-through is inside another subroutine, so a pending GOSUB frame exists
+        and the terminator is ENDPROC, which unwinds to the one GOSUB frame the
+        BBC's RETURN reaches (no return-address stack needed);
+      * a fall-through from the *main line* -- no GOSUB frame exists, so the BBC's
+        RETURN would be "RETURN without GOSUB", which halts; the terminator is END,
+        reproducing that halt (and if the routine loops or recurses it is never
+        reached);
+      * dead code preceding the head -- the bridge is simply never executed.
+
+    Only a *fall-through* entry is bridged (the head is the pred's textual
+    successor). A *branch* (GOTO) into a head is a different case and is left for
+    :func:`convertSubroutinesToProcedures` to reject. Returns True if any bridge
+    was inserted, so the caller can re-parent the mutated tree.
+    """
+    # A fall-through from the main line has no pending GOSUB frame, so its bridge
+    # ends the program (END); one from inside a subroutine returns to the caller
+    # (ENDPROC).
+    main_entry = entry_points.get("__owl__main")
+    main_reachable = set(depthFirstSearch(main_entry)) if main_entry is not None else set()
+    bridges = []
+    for name, entry_point in entry_points.items():
+        if not name.startswith("gosub"):
+            continue
+        procname = "PROCSub" + name[len("gosub"):]
+        # An in-edge from inside the routine (a GOTO back to the top -- a loop) is
+        # internal and fine; only an edge from outside the body is foreign.
+        body = set(depthFirstSearch(entry_point))
+        for predecessor in list(entry_point.inEdges):
+            if predecessor in body:
+                continue
+            if findFollowingStatement(predecessor) is entry_point:
+                from_main = predecessor in main_reachable
+                bridges.append((predecessor, entry_point, procname, from_main))
+    for predecessor, head, procname, from_main in bridges:
+        _bridgeFallthrough(predecessor, head, procname, from_main)
+    return bool(bridges)
+
+
+def _bridgeFallthrough(predecessor, head, procname, from_main):
+    """Splice ``PROC procname : <terminator>`` between *predecessor* and *head*,
+    and reroute the fall-through edge through it so *head* loses *predecessor* as
+    an entry. The terminator is END for a main-line fall-through (no GOSUB frame)
+    or ENDPROC for one inside another subroutine."""
+    call = CallProcedure(name=procname)
+    call.lineNum = predecessor.lineNum
+    terminator = End() if from_main else ReturnFromProcedure()
+    terminator.lineNum = predecessor.lineNum
+    for tag in predecessor.entryPoints:          # the bridge runs in pred's routine
+        call.addEntryPoint(tag)
+        terminator.addEntryPoint(tag)
+    # AST: place the bridge immediately after the predecessor in its statement
+    # list (a stable .index lookup, since insertions may have made indices stale).
+    parent_list = getattr(predecessor.parent, predecessor.parent_property)
+    index = parent_list.index(predecessor)
+    parent_list.insert(index + 1, call)
+    parent_list.insert(index + 2, terminator)
+    call.parent = terminator.parent = predecessor.parent
+    call.parent_property = terminator.parent_property = predecessor.parent_property
+    # CFG: predecessor -> call -> terminator (terminal); head loses the fall-through.
+    predecessor.outEdges.discard(head)
+    head.inEdges.discard(predecessor)
+    predecessor.addOutEdge(call)
+    call.addInEdge(predecessor)
+    call.addOutEdge(terminator)
+    terminator.addInEdge(call)
 
 def convertSubroutinesToProcedures(parse_tree, entry_points, line_mapper, options):
     logger.info("Convert subroutines to procedures")   

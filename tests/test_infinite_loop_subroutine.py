@@ -12,12 +12,9 @@ exit, so a genuine fall-through into a following subroutine is still rejected;
 and the ``IF c ENDWHILE`` continue idiom (where the ENDWHILE is not the loop
 exit) must keep working.
 """
-import pytest
-
 from conftest import requires_dotnet_toolchain
 
 from owl_basic.analysis import analyse_numbered_lines
-from owl_basic.exceptions import CompileError
 
 
 def _analyse(lines):
@@ -45,20 +42,31 @@ def test_until_zero_loop_before_subroutine_compiles():
     assert program is not None
 
 
-# -- soundness: a loop that can really exit still rejects fall-through ------
+# -- soundness: a loop that can really exit keeps its exit edge ------------
 
-def test_conditional_until_into_subroutine_still_rejected():
-    # UNTIL A% can exit, so line 100 really is reached by fall-through as well as
-    # by GOSUB -- that is the unsupported, ambiguous-RETURN case.
-    with pytest.raises(CompileError, match="not supported"):
-        _analyse([(10, " REPEAT"), (20, " GOSUB 100"), (30, " UNTIL A%"),
-                  (100, ' PRINT "x"'), (110, " RETURN")])
+def test_conditional_until_loop_into_subroutine_compiles():
+    # UNTIL A% can exit, so its exit edge into the following GOSUB'd head is real,
+    # not pruned (unlike UNTIL FALSE). The fall-through is then bridged rather than
+    # rejected, so the program compiles.
+    program = _analyse([(10, " REPEAT"), (20, " GOSUB 100"), (30, " UNTIL A%"),
+                        (100, ' PRINT "x"'), (110, " RETURN")])
+    assert program is not None
 
 
-def test_conditional_while_into_subroutine_still_rejected():
-    with pytest.raises(CompileError, match="not supported"):
-        _analyse([(10, " WHILE A%"), (20, " GOSUB 100"), (30, " ENDWHILE"),
-                  (100, ' PRINT "x"'), (110, " RETURN")])
+def test_conditional_while_loop_into_subroutine_compiles():
+    program = _analyse([(10, " WHILE A%"), (20, " GOSUB 100"), (30, " ENDWHILE"),
+                        (100, ' PRINT "x"'), (110, " RETURN")])
+    assert program is not None
+
+
+@requires_dotnet_toolchain
+def test_conditional_until_loop_terminates(compile_and_run):
+    # The real soundness check for the UNTIL FALSE pruning: a *non-constant* UNTIL
+    # keeps its exit edge, so the loop actually ends (it is not made infinite).
+    out = compile_and_run(_analyse([
+        (10, " I%=0"), (20, " REPEAT"), (30, " I%=I%+1"), (40, " UNTIL I%>=3"),
+        (50, " PRINT I%"), (60, " END")]))
+    assert out.split() == ["3"]
 
 
 # -- runnable end to end (the loop exits via GOTO, the sub is GOSUB-only) ---

@@ -6,19 +6,17 @@ distinguishes two kinds of non-GOSUB in-edge into the head:
 
 * an **internal** back-edge -- a GOTO from inside the routine back to its top,
   i.e. a loop -- which lowers fine as a branch within the PROC and is allowed;
-* a **foreign** entry -- a main-line statement falling into the head -- which
-  makes RETURN ambiguous and is rejected.
+* a **foreign** entry -- a statement falling into the head -- which makes RETURN
+  ambiguous. A fall-through foreign entry is bridged to an explicit PROC call
+  (see test_subroutine_fallthrough_chain); the head then converts cleanly.
 
 Internal vs foreign is decided by forward-reachability from the head (a GOSUB
 target is a CFG root whose body is sealed by RETURNs). Surfaced by
 Tau91-b/DEC91.Recur1 (a recursive, GOTO-looped subroutine).
 """
-import pytest
-
 from conftest import requires_dotnet_toolchain
 
 from owl_basic.analysis import analyse_numbered_lines
-from owl_basic.exceptions import CompileError
 
 
 def _analyse(lines):
@@ -34,14 +32,16 @@ def test_subroutine_with_internal_goto_loop_is_accepted():
     assert program is not None
 
 
-def test_subroutine_fallen_into_from_main_is_rejected():
-    # Line 30 is GOSUB'd but also fallen into from the main line 20, which is
-    # not part of the routine -- a foreign entry, so reject. Determinism: the
-    # outcome must not depend on hash-seeded set ordering, so check it holds.
+def test_subroutine_fallen_into_from_main_is_bridged():
+    # Line 30 is GOSUB'd but also fallen into from the main line 20. The fall-
+    # through has no GOSUB frame, so rather than reject it OWL bridges it to
+    # `PROC PROCSub30 : END` -- run the routine, then halt, which is what the BBC's
+    # "RETURN without GOSUB" does. So it compiles. Determinism: the outcome must
+    # not depend on hash-seeded set ordering, so check it holds across runs.
     for _ in range(5):
-        with pytest.raises(CompileError, match="not supported"):
-            _analyse([(10, " GOSUB 30"), (20, ' PRINT "a"'),
-                      (30, ' PRINT "b"'), (40, " RETURN")])
+        program = _analyse([(10, " GOSUB 30"), (20, ' PRINT "a"'),
+                            (30, ' PRINT "b"'), (40, " RETURN")])
+        assert program is not None
 
 
 def test_plain_single_entry_subroutine_still_compiles():

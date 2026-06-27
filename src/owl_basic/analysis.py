@@ -28,6 +28,7 @@ from owl_basic.abbreviations import expand_numbered_lines, expand_unnumbered
 from owl_basic.algorithms import all_indices
 from owl_basic.codegen.backend import Program
 from owl_basic.flow import (
+    bridgeFallthroughSubroutines,
     convertLongjumpsToExceptions,
     convertSubroutinesToProcedures,
     createForwardControlFlowGraph,
@@ -320,6 +321,12 @@ def _build_flow(parse_tree, line_mapper, options):
     correlation_visitor.prune_dead_loop_exits(parse_tree)
     entry_points = locateEntryPoints(parse_tree, line_mapper, options)
     convertLongjumpsToExceptions(parse_tree, line_mapper, options)
+    # A fall-through into a GOSUB'd head (a jump-table handler with no RETURN, or
+    # dead code before the head) is rewritten to an explicit PROC call so the head
+    # converts as a GOSUB-only routine. The splice mutates the AST, so re-parent
+    # before conversion inserts DEFPROCs by statement position.
+    if bridgeFallthroughSubroutines(entry_points, line_mapper):
+        parse_tree.accept(parent_visitor.ParentVisitor())
     convertSubroutinesToProcedures(parse_tree, entry_points, line_mapper, options)
     for entry_point in entry_points.values():
         correlation_visitor.CorrelationVisitor().start(entry_point)
