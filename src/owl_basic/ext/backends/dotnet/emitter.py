@@ -1513,16 +1513,19 @@ class _MethodEmitter:
 
     def _stmt_Colour(self, node):
         # COLOUR n: set the text foreground (n < 128) or background colour. The
-        # RISC OS TINT form is not modelled by the runtime yet.
+        # RISC OS TINT form is not modelled by the runtime yet -- defer it so the
+        # program still compiles and only the TINT form fails at run time.
         if node.tint is not None:
-            raise CodeGenerationError("COLOUR ... TINT not yet supported")
+            self._emit_deferred("COLOUR ... TINT")
+            return
         self.lower_expression(node.colour)
         self.emit(_runtime("Colour", "int32"))
 
     def _stmt_Gcol(self, node):
         # GCOL mode, colour: set the graphics colour and plot action.
         if node.tint is not None:
-            raise CodeGenerationError("GCOL ... TINT not yet supported")
+            self._emit_deferred("GCOL ... TINT")
+            return
         self.lower_expression(node.mode)
         self.lower_expression(node.logicalColour)
         self.emit(_runtime("Gcol", "int32", "int32"))
@@ -2584,8 +2587,53 @@ class _MethodEmitter:
     def _stmt_MouseRectangleOn(self, node):
         self._emit_deferred("MOUSE RECTANGLE")
 
+    def _stmt_Voices(self, node):
+        self._emit_deferred("VOICES")
+
+    def _stmt_Point(self, node):
+        self._emit_deferred("POINT")
+
+    def _stmt_Line(self, node):
+        self._emit_deferred("LINE")
+
+    def _stmt_Origin(self, node):
+        self._emit_deferred("ORIGIN")
+
+    def _stmt_MoveRectangle(self, node):
+        self._emit_deferred("RECTANGLE ... TO (move)")
+
+    def _stmt_MousePosition(self, node):
+        self._emit_deferred("MOUSE TO")
+
     def _stmt_Increment(self, node):
-        self._emit_deferred("+= (increment)")
+        self._augmented_assignment(node, "add")
+
+    def _stmt_Decrement(self, node):
+        self._augmented_assignment(node, "sub")
+
+    def _augmented_assignment(self, node, op):
+        # A += B / A -= B : read the target, apply the operation, write it back.
+        # The frontend keeps these as their own nodes (a 6502 backend could use
+        # INC/DEC); this is the dotnet lowering. The type-checker casts the operand
+        # to the target's type, so a numeric op's operands match and a string +=
+        # is a concatenation -- exactly the IL of A = A + B. (Only a plain variable
+        # target for now; array/indirection targets await a unified lvalue store.)
+        target = node.lValue
+        if type(target).__name__ != "Variable":
+            self._emit_deferred("+= / -= on a non-variable lvalue")
+            return
+        self._load_variable(target)
+        self.lower_expression(node.rValue)
+        if isinstance(target.actualType, StringOwlType):
+            self.emit("call string [System.Runtime]System.String::Concat(string, string)")
+        else:
+            self.emit(op)
+        self._store_variable(target)
+
+    def _stmt_Wait(self, node):
+        # WAIT [n]: wait for vertical sync (n centiseconds). Meaningless on the
+        # headless console, so a no-op -- not a deferred failure.
+        pass
 
     def _expr_GetFunc(self, node):
         # GET: read one keypress, returning its code.

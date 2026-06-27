@@ -143,6 +143,24 @@ class TypecheckVisitor(Visitor):
                 assignment.rValue, assignment.lValue.actualType,
                 check_constant_range=not is_indirection)
         
+    def visitIncrement(self, node):
+        self._typecheck_augmented_assignment(node, subtract=False)
+
+    def visitDecrement(self, node):
+        self._typecheck_augmented_assignment(node, subtract=True)
+
+    def _typecheck_augmented_assignment(self, node, subtract):
+        # A += B / A -= B : like an assignment, the operand is cast to the
+        # target's type (so a numeric op's operands match and a string += is a
+        # concatenation). -= is not defined for strings.
+        self.visit(node.lValue)
+        self.visit(node.rValue)
+        target_type = node.lValue.actualType
+        if subtract and target_type == StringOwlType():
+            self.typeMismatch(node, "-= is not defined for strings")
+            return
+        self.checkAndInsertRValueCast(node.rValue, target_type)
+
     def visitForToStep(self, for_stmt):
         '''
         Visit FOR N=1 TO 10 STEP 2
