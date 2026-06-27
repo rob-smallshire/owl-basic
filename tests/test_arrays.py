@@ -180,9 +180,10 @@ import pytest
 from owl_basic.ext.backends.dotnet.emitter import CodeGenerationError
 
 
-def test_array_initialiser_list_is_a_clean_error(dotnet_backend):
-    with pytest.raises(CodeGenerationError):
-        dotnet_backend.emit_il(analyse("DIM A%(3)\nA%() = 1,2,3\nEND\n", name="il"))
+def test_array_initialiser_list_is_lowered(dotnet_backend):
+    # A() = e0, e1, ... assigns successive elements -- now supported
+    # (see test_array_initialiser_and_graphics_stubs for the runtime behaviour).
+    assert dotnet_backend.emit_il(analyse("DIM A%(3)\nA%() = 1,2,3\nEND\n", name="il"))
 
 
 def test_multidimensional_whole_array_op_is_a_clean_error(dotnet_backend):

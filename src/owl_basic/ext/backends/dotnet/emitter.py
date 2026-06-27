@@ -2001,17 +2001,24 @@ class _MethodEmitter:
         dimension for now; the RHS is a single expression."""
         target = node.lValue
         rvalues = node.rValue
-        if len(rvalues) != 1:
-            raise CodeGenerationError(
-                "array initialiser lists (A() = a, b, ...) are not supported yet")
         # The real rank is the one the array was DIMmed with (registered field
         # type), not the 1-D type we would compute here -- check that before the
-        # 1-D element loop, so a multidim array fails cleanly rather than silently.
+        # 1-D element work, so a multidim array fails cleanly rather than silently.
         if "," in self._globals.get(_field_name(target.identifier), ""):
             raise CodeGenerationError(
                 "whole-array operations on multidimensional arrays are not "
                 "supported yet")
         field, array_il, element_il = self._array_field(target.identifier, 1)
+        if len(rvalues) != 1:
+            # An initialiser list A() = e0, e1, ...: assign each to the array
+            # element of the same position (A(0)=e0, A(1)=e1, ...). Each operand
+            # was cast to the element type by the type checker.
+            for position, rhs in enumerate(rvalues):
+                self.emit("ldsfld %s %s" % (array_il, field))
+                self.emit("ldc.i4 %d" % position)
+                self.lower_expression(rhs)
+                self.emit(_STELEM[element_il])
+            return
         rhs = rvalues[0]
         index = self._local_slot("__wa_index", IntegerOwlType())
         top = self._new_label("wa_top")
@@ -2691,6 +2698,12 @@ class _MethodEmitter:
 
     def _stmt_MousePosition(self, node):
         self._emit_deferred("MOUSE TO")
+
+    def _stmt_MousePointer(self, node):
+        self._emit_deferred("MOUSE ON/OFF")
+
+    def _stmt_Ellipse(self, node):
+        self._emit_deferred("ELLIPSE")
 
     def _stmt_Increment(self, node):
         self._augmented_assignment(node, "add")
