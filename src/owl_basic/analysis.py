@@ -156,14 +156,28 @@ def analyse_numbered_lines(numbered_lines, name, source_filepath=None, options=N
     options = options or _DefaultOptions()
     numbered_lines = expand_numbered_lines(numbered_lines)  # expand abbreviations
 
-    # Lines inside a multi-line [ ... ] assembler block can't be parsed on their
-    # own; the whole-program parse captures the block as one ASSEMBLER token.
-    assembler_lines = _assembler_block_numbers(numbered_lines)
-    unparseable = [
-        number for number, text in numbered_lines
-        if number not in assembler_lines
-        and text.strip() and _line_parse_errors(text, options)
-    ]
+    # Identifying unparseable lines line-by-line cannot see a construct that
+    # legitimately spans lines -- a block IF/ENDIF, CASE/ENDCASE or [ ] assembler
+    # block -- so it would flag each such line as bad. Parse the whole program
+    # first: if it parses, no line is unparseable. Only on failure fall back to
+    # the per-line check to pinpoint the offending lines (for the strict error
+    # message and lenient recovery). The whole parse joins the bodies with the
+    # newline that separates statements, so independent lines stay independent
+    # and a genuinely broken line still fails -- only multi-line constructs are
+    # newly accepted.
+    whole_source = "\n".join(text for _, text in numbered_lines) + "\n"
+    if _line_parse_errors(whole_source, options):
+        # Lines inside a multi-line [ ... ] assembler block can't be parsed on
+        # their own; the whole-program parse captures the block as one ASSEMBLER
+        # token, so exclude them from the per-line gate too.
+        assembler_lines = _assembler_block_numbers(numbered_lines)
+        unparseable = [
+            number for number, text in numbered_lines
+            if number not in assembler_lines
+            and text.strip() and _line_parse_errors(text, options)
+        ]
+    else:
+        unparseable = []
     if unparseable and strict:
         raise CompileError(
             "could not parse %d line(s): %s"
