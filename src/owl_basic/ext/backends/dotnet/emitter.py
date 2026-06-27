@@ -269,8 +269,10 @@ def emit_program(program, assembly_name):
     # __reset clears ordinary globals; __seed_residents then seeds @%/A%-Z% from
     # the environment (both run once here, not on RUN -- see their definitions).
     prologue = ["call void __reset()", "call void __seed_residents()"]
-    if data_items:
-        prologue += _data_init_lines(data_items)
+    # Always build the DATA array (empty when the program has no DATA): READ and
+    # RESTORE reference the __data/__dataIndex fields, so a program that RESTOREs
+    # or READs without any DATA statement still needs them declared and set.
+    prologue += _data_init_lines(data_items)
     methods = [
         _emit_method(
             entry_name, blocks, signatures, globals_registry, data_index,
@@ -284,12 +286,13 @@ def emit_program(program, assembly_name):
         ".field static %s %s\n" % (il_type, name)
         for name, il_type in globals_registry.items()
     )
-    if data_items:
-        fields += ".field static %s %s\n" % (_DATA_ARRAY_TYPE, _DATA_FIELD)
-        fields += ".field static int32 %s\n" % _DATA_INDEX_FIELD
+    # The DATA fields are always declared (see the prologue): READ/RESTORE
+    # reference them even in a program with no DATA statement.
+    fields += ".field static %s %s\n" % (_DATA_ARRAY_TYPE, _DATA_FIELD)
+    fields += ".field static int32 %s\n" % _DATA_INDEX_FIELD
     # __reset is always defined (Main calls it to initialise globals; RUN reuses
     # it to clear them), generated once all globals are known.
-    methods.append(_emit_reset_method(globals_registry, bool(data_items)))
+    methods.append(_emit_reset_method(globals_registry, has_data=True))
     # __seed_residents likewise needs the full registry (it stores into the
     # resident fields the program uses), so it is generated here at the end.
     methods.append(_emit_seed_residents_method(globals_registry))
