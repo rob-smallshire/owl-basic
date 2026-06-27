@@ -366,3 +366,24 @@ def test_dispatch_with_fixed_prefix_runs(compile_and_run):
         'n$="0"\nPRINT EVAL("FNpart"+n$)\n'
         'n$="2"\nPRINT EVAL("FNpart"+n$)\n' + _PARTS, name="t"))
     assert out.split() == ["10", "30"]
+
+
+# A name built from several runtime parts with no arguments -- EVAL("FN"+a$+o$)
+# naming a grid FNinitLoad, FNinitSave, FNdoLoad, ... -- is pure name dispatch:
+# the whole post-"FN" expression collapses to the runtime name. Surfaced by The
+# Micro User LIB23_1 (EVAL("FN"+x$+opt$(O%))).
+
+_GRID = ('END\n'
+         'DEF FNinitLoad=1\nDEF FNinitSave=2\n'
+         'DEF FNdoLoad=3\nDEF FNdoSave=4\n')
+
+
+def test_dispatch_name_from_two_runtime_parts_compiles():
+    assert _compiles('a$="init"\no$="Load"\nPRINT EVAL("FN"+a$+o$)\n' + _GRID)
+
+
+@requires_dotnet_toolchain
+def test_dispatch_name_from_two_runtime_parts_runs(compile_and_run):
+    out = compile_and_run(analyse(
+        'a$="do"\no$="Save"\nPRINT EVAL("FN"+a$+o$)\n' + _GRID, name="t"))
+    assert out.strip() == "4"

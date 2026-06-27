@@ -320,16 +320,34 @@ def _lower_dispatch(eval_node, parse_tree, options, helper_serial):
     call = _parse_skeleton(skeleton, options)
     if call is None or type(call).__name__ != "UserFunc":
         return False    # the skeleton is not statically a function call: residue
+    if not call.name.startswith("FN"):
+        return False
+    first_kind, first_value = segments[0]
+    if first_kind != "lit" or not first_value.startswith("FN"):
+        return False    # the name must begin with a literal "FN"
 
-    # The "FN" literal prefix names the dispatch: the callee is "FN", an optional
-    # fixed prefix, then one bare hole that is the runtime name (a suffix). So
-    # EVAL("FN"+n$) has an empty prefix, and EVAL("FNpart"+n$) has prefix "part"
-    # selecting among FNpart0, FNpart1, ... The fixed prefix is folded into the
-    # runtime name below, reducing both to the same dispatch.
+    # No arguments: the whole expression after "FN" is the runtime name, however
+    # it is built -- EVAL("FN"+n$), EVAL("FNpart"+n$), EVAL("FN"+act$+opt$). It
+    # collapses (like the hex idiom) to a single name string and dispatches over
+    # the program's nullary DEF FNs. Argument structure is what the with-args path
+    # below must keep static; a bare name has none, so its complexity is free.
+    arguments_node = call.actualParameters
+    if not (arguments_node is not None and getattr(arguments_node, "arguments", None)):
+        tail = [("lit", first_value[len("FN"):])] + list(segments[1:])
+        name_expr = _concat_segments(tail, eval_node.lineNum)
+        if name_expr is None:
+            return False
+        return _emit_dispatch(eval_node, parse_tree, options, helper_serial,
+                              name_expr, [], "", [])
+
+    # With arguments: the callee is "FN", an optional fixed prefix, then one bare
+    # hole that is the runtime name (a suffix); EVAL("FNpart"+n$+"(a)") folds the
+    # prefix into the runtime name. Any other bare hole is a runtime argument
+    # structure (general EVAL again) and stays residue.
     name_hole = None
     name_prefix = ""
     for hole in holes:
-        if (hole["kind"] == "bare" and call.name.startswith("FN")
+        if (hole["kind"] == "bare"
                 and call.name.endswith(hole["placeholder"])
                 and len(call.name) > len(hole["placeholder"]) + 1):
             name_hole = hole
@@ -337,8 +355,6 @@ def _lower_dispatch(eval_node, parse_tree, options, helper_serial):
             break
     if name_hole is None:
         return False
-    # A bare hole anywhere else is a runtime *argument structure* (general EVAL
-    # again): selecting the function is not enough, you would have to evaluate it.
     if any(h["kind"] == "bare" and h is not name_hole for h in holes):
         return False
     value_holes = [h for h in holes if h["kind"] == "value"]
@@ -358,6 +374,45 @@ def _lower_dispatch(eval_node, parse_tree, options, helper_serial):
     if arg_sigils is None:
         return False    # a compound argument expression: cannot match signatures
 
+    # The helper matches owlname$ against each candidate's full name (minus "FN"),
+    # so a fixed prefix is prepended to the runtime suffix: EVAL("FNpart"+n$+"(a)")
+    # passes "part"+n$, which matches candidate FNpart<n>.
+    name_expr = name_hole["node"]
+    if name_prefix:
+        literal = LiteralString(value=name_prefix)
+        _set_line_num(literal, eval_node.lineNum)
+        name_expr = Concatenate(lhs=literal, rhs=name_expr)
+        _set_line_num(name_expr, eval_node.lineNum)
+    return _emit_dispatch(eval_node, parse_tree, options, helper_serial,
+                          name_expr, param_names, rest, arg_sigils,
+                          [h["node"] for h in value_holes])
+
+
+def _concat_segments(segments, line_num):
+    """One string expression from segments (lit -> LiteralString, hole -> node),
+    or None if empty; empty literal segments are dropped."""
+    parts = []
+    for kind, value in segments:
+        if kind == "lit":
+            if value:
+                node = LiteralString(value=value)
+                _set_line_num(node, line_num)
+                parts.append(node)
+        else:
+            parts.append(value)
+    if not parts:
+        return None
+    expr = parts[0]
+    for node in parts[1:]:
+        expr = Concatenate(lhs=expr, rhs=node)
+        _set_line_num(expr, line_num)
+    return expr
+
+
+def _emit_dispatch(eval_node, parse_tree, options, helper_serial,
+                   name_expr, param_names, rest, arg_sigils, value_nodes=()):
+    """Append a by-name dispatch helper and replace *eval_node* with a call to it
+    (the runtime name first, then each staged value argument)."""
     candidates = _dispatch_candidates(parse_tree, arg_sigils)
     if not candidates:
         raise CompileError(
@@ -373,21 +428,10 @@ def _lower_dispatch(eval_node, parse_tree, options, helper_serial):
                                    eval_node.lineNum, options):
         parse_tree.statements.append(statement)
 
-    # The EVAL becomes a synchronous call to the helper: the runtime name first,
-    # then each staged value argument (captured by value at the EVAL site).
     arguments = ActualArgList()
-    # The helper matches owlname$ against each candidate's full name (minus "FN"),
-    # so a fixed prefix is prepended to the runtime suffix here: EVAL("FNpart"+n$)
-    # passes "part"+n$, which matches candidate FNpart<n>.
-    name_argument = name_hole["node"]
-    if name_prefix:
-        literal = LiteralString(value=name_prefix)
-        _set_line_num(literal, eval_node.lineNum)
-        name_argument = Concatenate(lhs=literal, rhs=name_argument)
-        _set_line_num(name_argument, eval_node.lineNum)
-    arguments.append(name_argument)
-    for hole in value_holes:
-        arguments.append(hole["node"])
+    arguments.append(name_expr)
+    for node in value_nodes:
+        arguments.append(node)
     _splice(eval_node, UserFunc(name=helper_name, actualParameters=arguments))
     return True
 
