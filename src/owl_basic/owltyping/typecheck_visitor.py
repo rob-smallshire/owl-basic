@@ -494,9 +494,9 @@ class TypecheckVisitor(Visitor):
     def visitUserFunc(self, user_func):
         if user_func.actualParameters:
             self.visit(user_func.actualParameters)
-            # TODO: Check argument types against Procedure
-            # TODO: This needs different code for internal and external linkage
-            self.checkActualParameters(user_func)
+        # Check the call (argument types, and that the callable exists) -- always,
+        # so a no-argument call to an undefined FN is diagnosed too.
+        self.checkActualParameters(user_func)
         # The function's return type is inferred between typecheck passes; until
         # it is known the call stays Pending (so operators over it stay Pending).
         entry_point = self.__entry_points.get(user_func.name)
@@ -509,9 +509,10 @@ class TypecheckVisitor(Visitor):
     def visitCallProcedure(self, proc):
         if proc.actualParameters:
             self.visit(proc.actualParameters)
-            # TODO: Check argument types against Procedure
-            # TODO: This needs different code for internal and external linkage
-            self.checkActualParameters(proc)
+        # Check the call (argument types, and that the callable exists) -- always,
+        # so a no-argument call to an undefined PROC is diagnosed too (else the
+        # backend would emit a call to a method that does not exist).
+        self.checkActualParameters(proc)
         
     def checkActualParameters(self, call):
         '''
@@ -524,8 +525,8 @@ class TypecheckVisitor(Visitor):
         if call.name in self.__entry_points:
             callable = self.__entry_points[call.name]
             n = 1
-            for actual, formal in zip(call.actualParameters,
-                                      callable.formalParameters.arguments):
+            formals = getattr(callable.formalParameters, "arguments", None) or []
+            for actual, formal in zip(call.actualParameters or [], formals):
                 if formal.argument.actualType is None:
                     # There is no type information on the callable yet, so visit it
                     self.visit(callable)
