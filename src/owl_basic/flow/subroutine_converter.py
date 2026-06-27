@@ -100,6 +100,40 @@ def _bridgeFallthrough(predecessor, head, procname, from_main):
     call.addOutEdge(terminator)
     terminator.addInEdge(call)
 
+def _bridgeMainEntry(defproc, procname, entry_points):
+    """Give the program its own main when a GOSUB'd subroutine's head is also the
+    program entry point.
+
+    If RUN starts inside the subroutine (its head is the program's first
+    statement) and the routine reaches its own head again by GOTO/GOSUB, then
+    main and the subroutine would otherwise share the head's blocks -- block
+    identification walks the whole subroutine body from the main entry, so the
+    PROC comes out bodiless ("Cannot emit a method for PROCSub..."). Splice a
+    standalone main, ``PROC procname : END``, and repoint ``__owl__main`` at it,
+    so the subroutine owns the head exclusively. The top-level RETURN then unwinds
+    to this END -- reproducing the BBC's "RETURN without GOSUB" halt at the
+    outermost level -- and the inner GOSUBs recurse into the PROC as usual.
+    """
+    call = CallProcedure(name=procname)
+    end = End()
+    call.lineNum = end.lineNum = defproc.lineNum
+    # AST: place `call : end` immediately before the subroutine's DefineProcedure.
+    parent_list = getattr(defproc.parent, defproc.parent_property)
+    index = parent_list.index(defproc)
+    parent_list.insert(index, end)
+    parent_list.insert(index, call)
+    call.parent = end.parent = defproc.parent
+    call.parent_property = end.parent_property = defproc.parent_property
+    # CFG: call -> end (terminal); the head is not reachable from main any more.
+    call.addOutEdge(end)
+    end.addInEdge(call)
+    # This island is the new main routine.
+    for node in (call, end):
+        node.addEntryPoint("MAIN")
+    call.entryPoint = "__owl__main"
+    entry_points["__owl__main"] = call
+
+
 def convertSubroutinesToProcedures(parse_tree, entry_points, line_mapper, options):
     logger.info("Convert subroutines to procedures")   
     entry_point_names_to_remove = []
@@ -137,6 +171,10 @@ def convertSubroutinesToProcedures(parse_tree, entry_points, line_mapper, option
                     "(by fall-through or a branch); compiling such a subroutine "
                     "is not supported" % subname[3:]
                 )
+            # The head may also be the program entry point: RUN starts inside the
+            # subroutine, which loops/recurses back to its own head. main and the
+            # PROC would then share blocks; give main its own body below.
+            head_is_main = entry_points.get("__owl__main") is entry_point
             defproc = DefineProcedure(name=procname, formalParameters=None)
             insertStatementBefore(entry_point, defproc)
             deTagSuccessors(entry_point)
@@ -145,6 +183,8 @@ def convertSubroutinesToProcedures(parse_tree, entry_points, line_mapper, option
             entry_points_to_add[procname] = defproc
             entry_point.clearComeFromGosubEdges()
             tagSuccessors(defproc, line_mapper)
+            if head_is_main:
+                _bridgeMainEntry(defproc, procname, entry_points)
     for name in entry_point_names_to_remove:
         del entry_points[name]
     entry_points.update(entry_points_to_add)
