@@ -950,18 +950,9 @@ class _MethodEmitter:
                 # A trailing ';' (or ',') suppresses PRINT's end-of-line newline.
                 if last and item.manipulator in (";", ","):
                     suppress_newline = True
-            elif kind in ("TabH", "TabXY"):
-                # PRINT TAB(x) / TAB(x,y): move the cursor (a void call).
-                self.lower_expression(item.xCoord)
-                if kind == "TabH":
-                    self.emit(_runtime("TabH", "int32"))
-                else:
-                    self.lower_expression(item.yCoord)
-                    self.emit(_runtime("TabXY", "int32", "int32"))
-            elif kind == "Spc":
-                # PRINT SPC(n): print n spaces (a void call).
-                self.lower_expression(item.spaces)
-                self.emit(_runtime("Spc", "int32"))
+            elif kind in ("TabH", "TabXY", "Spc"):
+                # PRINT TAB(x) / TAB(x,y) / SPC(n): move the cursor (a void call).
+                self._emit_print_positioning(item, kind)
             else:
                 self.lower_expression(item)
                 self.emit(self._print_call(item))
@@ -1357,10 +1348,15 @@ class _MethodEmitter:
         self.emit("%s:" % loop_back)
         self.emit("brtrue " + body_label)
 
+    @staticmethod
+    def _is_input_target(node):
+        """A writable INPUT reads into: a scalar variable or an array element."""
+        return type(node).__name__ in ("Variable", "Indexer")
+
     def _stmt_Input(self, node):
-        # Prompt strings/manipulators interleave with variables; a run of
-        # consecutive variables is read together (one line, comma-separated),
-        # following the legacy CIL visitor's query-prompt logic.
+        # Prompt strings/manipulators/cursor moves interleave with the read
+        # targets; a run of consecutive targets is read together (one line,
+        # comma-separated), following the legacy CIL visitor's query-prompt logic.
         items = [print_item.item for print_item in (node.inputList or [])]
         query = True
         index = 0
@@ -1372,26 +1368,31 @@ class _MethodEmitter:
                 self.emit(self._print_call(item))
                 query = False
                 index += 1
+            elif kind in ("TabH", "TabXY", "Spc"):
+                # A cursor-positioning prompt item, as in PRINT. It does not count
+                # as a prompt string, so the '?' query is unchanged.
+                self._emit_print_positioning(item, kind)
+                index += 1
             elif kind == "InputManipulator":
                 if item.manipulator == "'":
                     self.emit(_PRINT_NEWLINE)
                 else:                       # ',' / ';' re-enable the '?' prompt
                     query = True
                 index += 1
-            elif kind == "Variable":
-                # A run of variables read together (one line): bare, or separated
-                # by ',' / ';' manipulators (which mean "same input line").
+            elif self._is_input_target(item):
+                # A run of targets read together (one line): bare, or separated by
+                # ',' / ';' manipulators (which mean "same input line").
                 run = [item]
                 index += 1
                 while index < len(items):
                     nxt = items[index]
-                    if type(nxt).__name__ == "Variable":
+                    if self._is_input_target(nxt):
                         run.append(nxt)
                         index += 1
                     elif (type(nxt).__name__ == "InputManipulator"
                           and nxt.manipulator in (",", ";")
                           and index + 1 < len(items)
-                          and type(items[index + 1]).__name__ == "Variable"):
+                          and self._is_input_target(items[index + 1])):
                         run.append(items[index + 1])
                         index += 2
                     else:
@@ -1400,30 +1401,67 @@ class _MethodEmitter:
             else:
                 raise CodeGenerationError("INPUT item %r not supported" % kind)
 
-    def _emit_input_run(self, variables, query):
-        # Build a Type[] of the variables' types and read them via the runtime.
+    def _emit_print_positioning(self, item, kind):
+        """Lower a TAB(x) / TAB(x,y) / SPC(n) cursor move (a void runtime call),
+        shared by PRINT and INPUT."""
+        if kind == "TabH":
+            self.lower_expression(item.xCoord)
+            self.emit(_runtime("TabH", "int32"))
+        elif kind == "TabXY":
+            self.lower_expression(item.xCoord)
+            self.lower_expression(item.yCoord)
+            self.emit(_runtime("TabXY", "int32", "int32"))
+        else:  # Spc
+            self.lower_expression(item.spaces)
+            self.emit(_runtime("Spc", "int32"))
+
+    def _emit_input_run(self, targets, query):
+        # Build a Type[] of the targets' types and read them all via the runtime,
+        # then dequeue and store each (a scalar, or into an array element).
         self.emit("ldc.i4.%d" % (1 if query else 0))    # bool prompt
-        self.emit("ldc.i4 %d" % len(variables))
+        self.emit("ldc.i4 %d" % len(targets))
         self.emit("newarr [System.Runtime]System.Type")
-        for index, variable in enumerate(variables):
+        for index, target in enumerate(targets):
             self.emit("dup")
             self.emit("ldc.i4 %d" % index)
-            self.emit("ldtoken %s" % _CLR_TYPE_TOKEN[_il_type(variable.actualType)])
+            self.emit("ldtoken %s" % _CLR_TYPE_TOKEN[_il_type(target.actualType)])
             self.emit(_GET_TYPE_FROM_HANDLE)
             self.emit("stelem.ref")
         self.emit("call %s [OwlRuntime]OwlRuntime.BasicCommands::Input(bool, %s)"
                   % (_QUEUE_OBJECT, _TYPE_ARRAY))
         queue_slot = self._input_queue_local()
         self.emit("stloc V_%d" % queue_slot)
-        for variable in variables:
-            self.emit("ldloc V_%d" % queue_slot)
-            self.emit("callvirt instance !0 %s::Dequeue()" % _QUEUE_OBJECT)
-            il = _il_type(variable.actualType)
-            if il == "string":
-                self.emit("castclass [System.Runtime]System.String")
+        for target in targets:
+            if type(target).__name__ == "Indexer":
+                # stelem wants [array, index..., value]; the value is the dequeue.
+                indices = target.indices
+                rank = len(indices)
+                field, array_il, element_il = self._array_field(
+                    target.identifier, rank)
+                self.emit("ldsfld %s %s" % (array_il, field))
+                self._push_indices(indices)
+                self.emit("ldloc V_%d" % queue_slot)
+                self._dequeue_input_value(target.actualType)
+                if rank == 1:
+                    self.emit(_STELEM[element_il])
+                else:
+                    args = ", ".join(["int32"] * rank)
+                    self.emit("call instance void %s::Set(%s, %s)"
+                              % (array_il, args, element_il))
             else:
-                self.emit("unbox.any %s" % il)
-            self._store_variable(variable)
+                self.emit("ldloc V_%d" % queue_slot)
+                self._dequeue_input_value(target.actualType)
+                self._store_variable(target)
+
+    def _dequeue_input_value(self, owl_type):
+        """Dequeue one read value (already on the queue, loaded by the caller) and
+        unbox/cast it to *owl_type*'s CIL type."""
+        self.emit("callvirt instance !0 %s::Dequeue()" % _QUEUE_OBJECT)
+        il = _il_type(owl_type)
+        if il == "string":
+            self.emit("castclass [System.Runtime]System.String")
+        else:
+            self.emit("unbox.any %s" % il)
 
     def _input_queue_local(self):
         if self._input_queue_slot is None:
