@@ -1,5 +1,11 @@
 # Inline assembler: division of responsibilities
 
+> This is the worked example of a general principle. `CALL`, `USR` and `SYS` are
+> target-specific in the same way and follow the identical frontend-parses /
+> backend-decides contract — see
+> [`backend-specific-constructs.md`](backend-specific-constructs.md).
+
+
 BBC BASIC lets a program drop into a machine-code assembler between `[` and
 `]`. The dialect inside the brackets is target-specific (6502 on the Model B,
 ARM on the Archimedes) and is *not* portable between machines -- a program's
