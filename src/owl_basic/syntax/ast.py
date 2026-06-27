@@ -827,6 +827,12 @@ class AdvalFunc(AstNode):
     actual_type = formal_type
     factor = Node(formalType=IntegerOwlType())
 
+class UsrFunc(AstNode):
+    "USR -- call a machine-code routine at an address, returning a value (a target-specific construct; the backend decides whether and how to compile it)."
+    formal_type = TypeOption(IntegerOwlType())
+    actual_type = formal_type
+    factor = Node(formalType=IntegerOwlType())
+
 class AscFunc(AstNode):
     "ASC"
     formal_type = TypeOption(IntegerOwlType())

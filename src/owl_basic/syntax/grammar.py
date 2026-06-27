@@ -1604,6 +1604,7 @@ def p_time_str_value(p):
 def p_expr_function(p):
     '''expr_function : user_func
                      | adval_func
+                     | usr_func
                      | abs_func
                      | acs_func
                      | asc_func
@@ -1690,7 +1691,15 @@ def p_adval_func(p):
     'adval_func : ADVAL factor %prec FUNCTION'
     p[0] = AdvalFunc(factor = p[2])
     p[0].lineNum = p.lineno(1) - 1
-    
+
+def p_usr_func(p):
+    'usr_func : USR factor %prec FUNCTION'
+    # USR(addr): call machine code, returning a value. The frontend parses it
+    # into a neutral node; whether it compiles is the backend's decision (the
+    # dotnet backend cannot run machine code, a bbc-micro-6502 backend could).
+    p[0] = UsrFunc(factor = p[2])
+    p[0].lineNum = p.lineno(1) - 1
+
 def p_asn_func(p):
     'asn_func : ASN factor %prec FUNCTION'
     p[0] = AsnFunc(factor = p[2])

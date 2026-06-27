@@ -208,11 +208,13 @@ def _diagnose_parse_failure(data, options):
       it is not a text BASIC listing. Checked first, so binary that happens to
       contain a USR or assembler token is reported as binary.
 
-    * native machine code -- an inline assembler block ``[ ... ]`` or the ``USR``
-      function (enter a 6502 routine at an address). OWL targets .NET and cannot
-      run 6502, so these are named explicitly rather than surfacing as an opaque
-      "Syntax error at 'USR'" (USR has no grammar production). ``USR`` is
-      non-conditional in the ROM, so a ``USR`` token is always the keyword.
+    * native machine code -- an inline assembler block ``[ ... ]``. OWL's dotnet
+      backend cannot run 6502/ARM, but that is a backend decision: the block
+      parses to an ``InlineAssembler`` node and is rejected at code generation
+      (see docs/backend-specific-constructs.md). This frontend message only
+      fires when the *whole-program* parse fails with such a block present (the
+      per-line gate could not capture it). ``CALL``/``USR``/``SYS`` are likewise
+      target-specific but now parse into neutral nodes and reach the backend.
 
     * otherwise -- a genuine syntax error in an otherwise-text listing; name the
       first one the parser reported.
@@ -233,12 +235,10 @@ def _diagnose_parse_failure(data, options):
         raise CompileError("the source is a URL, not a BASIC program.")
     lexer = syntax_parser.buildLexer(options)
     lexer.input(data)
-    has_assembler = has_usr = False
+    has_assembler = False
     for token in lexer:
         if token.type == "ASSEMBLER":
             has_assembler = True
-        elif token.type == "USR":
-            has_usr = True
     if lexer.num_illegal_characters:
         raise CompileError(
             "the source contains %d character(s) that are not valid BASIC text "
@@ -250,12 +250,6 @@ def _diagnose_parse_failure(data, options):
         raise CompileError(
             "inline 6502 assembly ([ ... ]) is not supported: OWL targets "
             ".NET, which cannot run 6502 machine code."
-        )
-    if has_usr:
-        raise CompileError(
-            "USR is not supported: it enters a 6502 machine-code routine at "
-            "an address, which OWL targets .NET and cannot run as machine "
-            "code."
         )
     raise CompileError("could not parse the source: %s"
                        % _grammar.syntax_errors[0])

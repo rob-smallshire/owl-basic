@@ -1476,13 +1476,29 @@ class _MethodEmitter:
         self.emit(_runtime("Mode", "int32"))
 
     def _stmt_Call(self, node):
-        # CALL <addr> enters a 6502 machine-code routine at an address; OWL
-        # targets .NET and cannot run it (like USR). Named here rather than left
-        # as an opaque "cannot lower". (Analysis keeps it -- the call graph shows
-        # it as an external sink -- so the rejection lives at code generation.)
+        # CALL <addr> enters a machine-code routine at an address. Whether this
+        # compiles is a backend decision (docs/backend-specific-constructs.md):
+        # the frontend parses it, and this backend rejects it because .NET cannot
+        # run 6502/ARM. A bbc-micro-6502 backend would lower it natively.
         raise CodeGenerationError(
-            "CALL is not supported: it enters a machine-code routine at an "
-            "address, which OWL targets .NET and cannot run as 6502 machine code.")
+            "the dotnet backend cannot compile CALL: it enters a machine-code "
+            "routine at an address, which .NET cannot run.")
+
+    def _expr_UsrFunc(self, node):
+        # USR(addr): call machine code, returning a value. Like CALL, a backend
+        # decision -- the dotnet backend cannot run machine code.
+        raise CodeGenerationError(
+            "the dotnet backend cannot compile USR: it enters a machine-code "
+            "routine at an address, which .NET cannot run.")
+
+    def _stmt_Sys(self, node):
+        # SYS <swi>: a system call (a RISC OS SWI on the Archimedes). The dotnet
+        # backend has no SWI mechanism; this could become a managed foreign-
+        # function call (SYS "Type.Method", ... TO ...), but is not implemented
+        # yet. See docs/backend-specific-constructs.md.
+        raise CodeGenerationError(
+            "the dotnet backend does not support SYS (a system call): it has no "
+            "SWI mechanism. A managed foreign-function form is a future option.")
 
     def _stmt_Cls(self, node):
         # CLS: clear the text screen and home the cursor.

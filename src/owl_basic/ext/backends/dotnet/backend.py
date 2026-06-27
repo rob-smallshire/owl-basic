@@ -33,6 +33,20 @@ class Backend(BackendBase):
     the CoreCLR ilasm. Runs on modern .NET against the OwlRuntime runtime library.
     """
 
+    # Target-specific constructs this backend cannot compile, mapping the AST node
+    # class name to a short reason. The frontend parses these into neutral nodes
+    # (see docs/backend-specific-constructs.md); .NET cannot run 6502/ARM machine
+    # code or RISC OS SWIs, so they are rejected at code generation. A different
+    # backend (e.g. bbc-micro-6502) would declare a different -- likely empty --
+    # set, so "can this compile?" stays a per-backend question. Tools (the corpus
+    # harness) read this rather than hardcoding the list.
+    UNSUPPORTED_CONSTRUCTS = {
+        "InlineAssembler": "assembler",
+        "Call": "machine-code",
+        "UsrFunc": "machine-code",
+        "Sys": "os-call",
+    }
+
     def generate(self, program: Program, output_dirpath, options=None) -> Path:
         """Emit, assemble and configure a runnable .NET assembly for *program*.
 

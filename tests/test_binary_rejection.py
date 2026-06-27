@@ -40,23 +40,21 @@ def test_garbage_containing_a_usr_token_is_reported_as_binary_not_usr():
     assert "USR is not supported" not in msg
 
 
-def test_clean_usr_still_reports_usr():
-    assert "USR is not supported" in _reject("A=USR(&FFF4)\nEND\n")
-
-
 def test_call_machine_code_is_rejected_at_codegen():
-    # CALL <addr> enters a machine-code routine, like USR; OWL cannot run 6502.
-    # Unlike EVAL it stays analysable (the call graph shows it as an external
-    # sink), so it is named clearly at code generation rather than left as an
-    # opaque "cannot lower statement node 'Call'".
+    # CALL <addr> enters a machine-code routine; whether it compiles is a backend
+    # decision (docs/backend-specific-constructs.md). It analyses fine (the call
+    # graph shows it as an external sink) and the dotnet backend rejects it at
+    # code generation with a clear, self-naming message -- not an opaque "cannot
+    # lower statement node 'Call'". (USR/SYS are covered in
+    # test_backend_specific_constructs.py.)
     from owl_basic.extension import create_extension
     from owl_basic.ext.backends.dotnet.emitter import CodeGenerationError
     backend = create_extension("backend", "owl_basic.backend", "dotnet")
     program = analyse("CALL &FFEE\nEND\n", name="t")  # analyses fine
     with pytest.raises(CodeGenerationError) as excinfo:
         backend.emit_il(program)
-    assert "CALL is not supported" in str(excinfo.value)
-    assert "machine code" in str(excinfo.value)
+    message = str(excinfo.value).lower()
+    assert "call" in message and "dotnet backend" in message
 
 
 def test_inline_assembly_is_rejected_at_codegen():
