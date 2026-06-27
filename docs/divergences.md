@@ -26,6 +26,7 @@ here; only intentional ones.
 | 10 | `CHAIN` | loads the file over the program at `PAGE` and runs it in place, preserving `@%`/`A%`-`Z%`, `HIMEM` and reserved memory | launches `<name>.dll` (the chained program's own compiled assembly) as a fresh process, carrying `@%`/`A%`-`Z%` across via `OWL_BASIC_RESIDENT_*` environment variables; named variables don't cross (faithful), but `HIMEM`-reserved memory doesn't either | The fresh process gives the "clear all dynamic vars" semantics for free, and the resident-integer channel is exactly the data BBC carries over; `HIMEM` blocks are machine-code territory (already out of scope) | `tests/test_chain.py`, `tests/test_resident_integers.py` |
 | 11 | A constant computation that overflows (e.g. `100000*80500` into a `%`) | "Number too big" raised at run time, when that line executes | rejected at compile time (the constant folder evaluates it and the narrow-on-store check fails) | The value always overflows, so catching it at compile time is earlier and harmless; constant propagation extends this from literals to variables holding a single constant | `tests/test_wide_integers.py` (the runtime case uses `INPUT` operands), `docs/constant-propagation.md` |
 | 12 | `PRINT#`/`BPUT#` string-record character set | a string's bytes are the BBC character set (e.g. `£` is byte `&60`) | a string's bytes are the .NET string's code units truncated to 8 bits (ISO-8859-1: `£` U+00A3 is byte `&A3`, and byte `&60` decodes to a backtick) | OWL strings are .NET strings, not BBC-charset byte strings; for ASCII (the overwhelming majority of data-file content) the bytes are identical, so files interoperate -- only the handful of glyphs the BBC remaps (notably `£` at `&60`) differ | `tests/test_print_input_file.py` (ASCII round-trips byte-for-byte against oaknut-basic) |
+| 13 | Dynamically-correlated `FOR`/`REPEAT` loops | `NEXT`/`UNTIL` match the innermost open loop on a runtime stack: `NEXT var` pops loops until it finds `var` (so crossed nesting `FOR a:FOR b:NEXT a:NEXT b` and early `GOTO` out of a loop "work"), and a jump that lands between a `FOR` and its `NEXT` is fine because the frame is on the stack | rejected at compile time -- loops are compiled to static structured constructs, so a `NEXT`/`UNTIL` with no statically-matchable opener (crossed nesting, a `GOTO`/`THEN <line>` out of a `FOR`, a point reachable both inside and outside a loop by path) cannot be correlated and is an error | A runtime loop stack would amount to re-implementing the interpreter, defeating the purpose of a compiler; such programs are rare and frequently type-in typos (e.g. `NEXT J` for `FOR K`) | the loop-correlation errors in `correlation_visitor` ("`NEXT ... has no FOR loop to close`", "`UNTIL ... has no REPEAT loop to close`", "control flow ... inside different loops depending on the path") |
 
 ## Notes
 
@@ -47,6 +48,12 @@ here; only intentional ones.
   program and clear its dynamic world". The name-resolution (`<name>.dll`) and
   process launch live in the runtime, so another target can do the right thing
   differently.
+
+- **#13** is a deliberate stance, not a trade: OWL is a *compiler*, and BBC's
+  loop matching is a run-time stack operation. Supporting it faithfully would
+  mean carrying that stack at run time -- re-creating the interpreter -- so OWL
+  rejects the un-correlatable cases cleanly instead. In practice they are rare
+  and usually program bugs.
 
 Out of scope here (these are *limitations*, not divergences -- OWL rejects
 cleanly rather than behaving differently): inline assembler (`[ ... ]`, rejected
