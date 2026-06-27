@@ -975,74 +975,93 @@ class _MethodEmitter:
             )
 
     def _stmt_ScalarAssignment(self, node):
-        target = node.lValue
+        # LET <l-value> = <r-value>: store the r-value into the l-value. The
+        # store machinery is shared with INPUT# (any assignable l-value); here the
+        # value is the lowered r-value.
+        self._store_to_lvalue(
+            node.lValue,
+            lambda: self.lower_expression(node.rValue),
+            node.rValue.actualType)
+
+    def _store_to_lvalue(self, target, emit_value, value_type):
+        """Store a value into any assignable l-value -- the set LET accepts, shared
+        by assignment and INPUT#. *emit_value* is a callable that leaves exactly
+        one value (the one to store) on the stack; it is invoked at the point the
+        r-value would be lowered, after any address/index prefix is pushed (so it
+        may itself consume operands, e.g. INPUT#'s channel). *value_type* is the
+        value's OwlType, for the @% string/int distinction."""
         name = type(target).__name__
         if name in _BYTE_INDIRECTIONS:
-            # ?addr = v / base?offset = v : write a byte into the address space.
+            # ?addr / base?offset : a byte in the address space.
             self._push_memory_index(target)
-            self.lower_expression(node.rValue)
+            emit_value()
             self.emit("stelem.i1")
             return
         if name in _INTEGER_INDIRECTIONS:
-            # !addr = v / base!offset = v : write a 4-byte integer.
+            # !addr / base!offset : a 4-byte integer.
             self._push_indirection_address(target)
-            self.lower_expression(node.rValue)
+            emit_value()
             self.emit(_runtime("WriteInteger", "int32", "int32", cls="MemoryMap"))
             return
         if name == "UnaryStringIndirection":
-            # $addr = s$ : write the string and a CR terminator.
+            # $addr : the string and a CR terminator.
             self._push_indirection_address(target)
-            self.lower_expression(node.rValue)
+            emit_value()
             self.emit(_runtime("WriteString", "int32", "string", cls="MemoryMap"))
             return
         if name == "UnaryFloatIndirection":
-            # |addr = v : write an 8-byte float.
+            # |addr : an 8-byte float.
             self._push_indirection_address(target)
-            self.lower_expression(node.rValue)
+            emit_value()
             self.emit(_runtime("WriteFloat", "int32", "float64", cls="MemoryMap"))
             return
         if name in ("LomemValue", "HimemValue", "PageValue"):
-            # LOMEM/HIMEM/PAGE = v : the runtime models each BBC memory boundary
-            # as a property. (TOP is read-only; PTR is a file operation.)
+            # LOMEM/HIMEM/PAGE : the runtime models each BBC memory boundary as a
+            # property. (TOP is read-only; PTR is a file operation.)
             setter = {"LomemValue": "set_Lomem", "HimemValue": "set_Himem",
                       "PageValue": "set_Page"}[name]
-            self.lower_expression(node.rValue)
+            emit_value()
             self.emit(_runtime(setter, "int32"))
             return
         if name == "TimeValue":
-            # TIME = v : reset the centisecond clock.
-            self.lower_expression(node.rValue)
+            # TIME : the centisecond clock.
+            emit_value()
             self.emit(_runtime("set_Time", "int32"))
             return
         if name == "PtrValue":
-            # PTR#ch = n : move the channel's sequential file pointer (random
-            # access on an OPENUP channel). The pointer is a 64-bit file offset.
+            # PTR#ch : the channel's sequential file pointer (a 64-bit offset).
             self.lower_expression(target.channel)
-            self.lower_expression(node.rValue)
+            emit_value()
             self.emit("conv.i8")
             self.emit(_runtime("SetPtr", "int32", "int64"))
             return
         if name == "Indexer":
-            # A(i) = v : store into an array element.
-            self._store_element(target, node.rValue)
+            # A(i) : an array element. stelem wants [array, index..., value].
+            indices = target.indices
+            rank = len(indices)
+            field, array_il, element_il = self._array_field(target.identifier, rank)
+            self.emit("ldsfld %s %s" % (array_il, field))
+            self._push_indices(indices)
+            emit_value()
+            if rank == 1:
+                self.emit(_STELEM[element_il])
+            else:
+                args = ", ".join(["int32"] * rank)
+                self.emit("call instance void %s::Set(%s, %s)"
+                          % (array_il, args, element_il))
             return
         if name == "Variable" and target.identifier == "@%":
-            # @% = v : the print/STR$ format control word. Route it to the
-            # runtime's format state rather than storing a plain global. A string
-            # r-value uses the printf-style form (@% = "G10.5"); else the packed
-            # 32-bit control word.
-            self.lower_expression(node.rValue)
-            if isinstance(node.rValue.actualType, StringOwlType):
+            # @% : the print/STR$ format control word. A string value uses the
+            # printf-style form (@% = "G10.5"); else the packed 32-bit word.
+            emit_value()
+            if isinstance(value_type, StringOwlType):
                 self.emit(_runtime("SetAtPercentFormat", "string"))
             else:
                 self.emit(_runtime("set_AtPercent", "int32"))
             return
         if name != "Variable":
-            # Other pseudo-variable l-values come later.
-            raise CodeGenerationError(
-                "Cannot lower assignment to %r l-value" % name
-            )
-        self.lower_expression(node.rValue)
+            raise CodeGenerationError("Cannot store to %r l-value" % name)
+        emit_value()
         self._store_variable(target)
 
     def _stmt_If(self, node):
@@ -2315,29 +2334,15 @@ class _MethodEmitter:
 
     def _stmt_InputFile(self, node):
         # INPUT#ch, a, b -- read one tagged record per target, validating the tag
-        # against the target's type. Supports scalar and array-element targets.
+        # against the target's type. The target may be any assignable l-value
+        # (the set LET accepts): the read value is stored through the shared
+        # l-value machinery. _emit_input_record consumes only the channel, so it
+        # works after an address/index prefix is pushed.
         for target in node.items:
-            kind = type(target).__name__
-            if kind == "Variable":
-                self._emit_input_record(node.channel, target.actualType)
-                self._store_variable(target)
-            elif kind == "Indexer":
-                indices = target.indices
-                rank = len(indices)
-                field, array_il, element_il = self._array_field(
-                    target.identifier, rank)
-                self.emit("ldsfld %s %s" % (array_il, field))
-                self._push_indices(indices)
-                self._emit_input_record(node.channel, target.actualType)
-                if rank == 1:
-                    self.emit(_STELEM[element_il])
-                else:
-                    args = ", ".join(["int32"] * rank)
-                    self.emit("call instance void %s::Set(%s, %s)"
-                              % (array_il, args, element_il))
-            else:
-                raise CodeGenerationError(
-                    "INPUT# target %r not supported" % kind)
+            self._store_to_lvalue(
+                target,
+                lambda t=target: self._emit_input_record(node.channel, t.actualType),
+                target.actualType)
 
     def _emit_input_record(self, channel, actual_type):
         """Read one tagged record off *channel*, leaving its value (matching

@@ -95,6 +95,24 @@ def test_owl_print_is_read_by_oaknut(dotnet_backend, tmp_path):
 
 
 @requires_dotnet_toolchain
+def test_input_into_integer_indirection(dotnet_backend, tmp_path):
+    # INPUT# accepts any assignable l-value, like LET: here an integer
+    # indirection (base!offset). Round-trip an integer through a file into memory.
+    out = _run_ok(dotnet_backend, tmp_path,
+                  'DIM b% 100\nf%=OPENOUT("i2.dat")\nPRINT#f%,12345\nCLOSE#f%\n'
+                  'g%=OPENIN("i2.dat")\nINPUT#g%,b%!4\nCLOSE#g%\nPRINT b%!4\nEND\n')
+    assert out.strip() == "12345"
+
+
+@requires_dotnet_toolchain
+def test_input_into_byte_indirection(dotnet_backend, tmp_path):
+    out = _run_ok(dotnet_backend, tmp_path,
+                  'DIM b% 100\nf%=OPENOUT("b2.dat")\nPRINT#f%,65\nCLOSE#f%\n'
+                  'g%=OPENIN("b2.dat")\nINPUT#g%,b%?2\nCLOSE#g%\nPRINT b%?2\nEND\n')
+    assert out.strip() == "65"
+
+
+@requires_dotnet_toolchain
 def test_negative_real_packs_the_sign_bit(dotnet_backend, tmp_path):
     # The float5 sign bit lands in the 4th data byte on the wire (exponent last):
     # -1.0 -> FF 00 00 00 80 81 (cf. the BBC BASIC II disassembly worked example).
