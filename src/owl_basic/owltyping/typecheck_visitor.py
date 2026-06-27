@@ -13,7 +13,7 @@ from owl_basic.ast_utils import elideNode
 from owl_basic.constant_folding import fold_constant
 from owl_basic.owltyping.type_system import (NumericOwlType, ObjectOwlType, IntegerOwlType,
                                 LongIntegerOwlType, FloatOwlType, ByteOwlType, PendingOwlType,
-                                StringOwlType, ArrayOwlType, ChannelOwlType)
+                                StringOwlType, ArrayOwlType, ChannelOwlType, SumOwlType)
 
 _INT32_MIN = -2147483648
 _INT32_MAX = 2147483647
@@ -787,6 +787,16 @@ class TypecheckVisitor(Visitor):
             if r_value.actualType.isConvertibleTo(target_type):
                 if r_value.actualType is not target_type:
                     self.insertCast(r_value, r_value.actualType, target_type)
+            elif (isinstance(r_value.actualType, SumOwlType)
+                  and not isinstance(target_type, SumOwlType)
+                  and any(member.isConvertibleTo(target_type)
+                          for member in r_value.actualType.members)):
+                # A polymorphic (sum) value -- the result of a DEF FN that returns
+                # different types on different paths -- narrowed to a concrete
+                # target. Legal with a runtime-checked unbox (the value carries its
+                # type; a genuine mismatch is a runtime "Type mismatch", as on the
+                # BBC). The cast lowers to an As* coercion in the backend.
+                self.insertCast(r_value, r_value.actualType, target_type)
             else:
                 message = "Cannot assign %s to %s" % (r_value.actualType.__doc__, target_type.__doc__)
                 self.typeMismatch(r_value, message)

@@ -2791,6 +2791,17 @@ class _MethodEmitter:
         # mixed arithmetic, or assigning an integer to a real variable).
         self.lower_expression(node.value)
         target = node.targetType
+        if isinstance(getattr(node, "sourceType", None), SumOwlType):
+            # The value is a boxed polymorphic result (a sum-returning FN). Narrow
+            # it to the concrete target with a runtime-checked unbox -- the value
+            # carries its type, and a genuine mismatch is a BBC "Type mismatch".
+            helper = {"string": "AsString", "float64": "AsFloat",
+                      "int64": "AsLong", "int32": "AsInt"}.get(_il_type(target))
+            if helper is None:
+                raise CodeGenerationError(
+                    "cannot narrow a sum type to %r" % type(target).__name__)
+            self.emit(_runtime(helper, "object"))
+            return
         if isinstance(target, FloatOwlType):
             self.emit("conv.r8")
         elif isinstance(target, LongIntegerOwlType):

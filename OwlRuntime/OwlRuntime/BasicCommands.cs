@@ -1680,6 +1680,42 @@ namespace OwlRuntime
             return printManager.Count;
         }
 
+        // Narrow a boxed polymorphic value (the result of a DEF FN that returns
+        // different types on different paths -- a sum type) to a concrete type at
+        // an assignment. The value carries its runtime type; a genuine mismatch
+        // (e.g. a string where a number is wanted) is a BBC "Type mismatch", just
+        // as the real machine would raise. These run only at call sites where a
+        // sum-returning function's result is stored into a concrete variable.
+        public static string AsString(object o)
+        {
+            if (o is string s) return s;
+            throw new TypeMismatchException("a string value was expected");
+        }
+
+        public static int AsInt(object o)
+        {
+            if (o is int i) return i;
+            if (o is long l) return (int) l;
+            if (o is double d) return (int) d;       // BBC INT truncates
+            throw new TypeMismatchException("a numeric value was expected");
+        }
+
+        public static long AsLong(object o)
+        {
+            if (o is long l) return l;
+            if (o is int i) return i;
+            if (o is double d) return (long) d;
+            throw new TypeMismatchException("a numeric value was expected");
+        }
+
+        public static double AsFloat(object o)
+        {
+            if (o is double d) return d;
+            if (o is int i) return i;
+            if (o is long l) return l;
+            throw new TypeMismatchException("a numeric value was expected");
+        }
+
         public static double Sqr(double factor)
         {
             if (factor < 0.0)

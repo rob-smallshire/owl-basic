@@ -22,6 +22,38 @@
       ]
     ]
   ],
+  "BasicCommands::AsFloat": [
+    [
+      "float64",
+      [
+        "object"
+      ]
+    ]
+  ],
+  "BasicCommands::AsInt": [
+    [
+      "int32",
+      [
+        "object"
+      ]
+    ]
+  ],
+  "BasicCommands::AsLong": [
+    [
+      "int64",
+      [
+        "object"
+      ]
+    ]
+  ],
+  "BasicCommands::AsString": [
+    [
+      "string",
+      [
+        "object"
+      ]
+    ]
+  ],
   "BasicCommands::Asc": [
     [
       "int32",
