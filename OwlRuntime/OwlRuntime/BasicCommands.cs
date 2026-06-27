@@ -737,6 +737,23 @@ namespace OwlRuntime
             return null;
         }
 
+        /// <summary>A library feature OWL compiles but does not yet implement.
+        /// The program compiles and runs; only reaching this operation fails, and
+        /// loudly -- a deferred backend gap surfaced as a runtime library gap
+        /// rather than a refusal to compile.</summary>
+        public static void NotImplemented(string feature)
+        {
+            throw new NotImplementedFeatureException(feature);
+        }
+
+        /// <summary>GET$ / INKEY$: like INKEY but as a one-character string ("" on
+        /// timeout / no key).</summary>
+        public static string InkeyStr(int factor)
+        {
+            int code = Inkey(factor);
+            return code < 0 ? "" : Chr(code);
+        }
+
         public static int Inkey(int factor)
         {
             if (factor >= 0)
@@ -1806,6 +1823,16 @@ namespace OwlRuntime
         public override int ErrorNumber => 19;
         public StringTooLongException() :
             base("String too long")
+        {
+        }
+    }
+
+    /// <summary>A BBC BASIC feature OWL compiles but has not yet implemented in
+    /// the runtime. Raised when such an operation is actually executed.</summary>
+    public class NotImplementedFeatureException :OwlRuntimeException
+    {
+        public NotImplementedFeatureException(string feature) :
+            base(feature + " is not yet implemented in the OWL runtime")
         {
         }
     }

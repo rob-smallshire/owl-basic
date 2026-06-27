@@ -253,6 +253,14 @@
       ]
     ]
   ],
+  "BasicCommands::InkeyStr": [
+    [
+      "string",
+      [
+        "int32"
+      ]
+    ]
+  ],
   "BasicCommands::Input": [
     [
       "class [System.Runtime]System.Collections.Generic.Queue`1<object>",
@@ -408,6 +416,14 @@
       [
         "string",
         "object"
+      ]
+    ]
+  ],
+  "BasicCommands::NotImplemented": [
+    [
+      "void",
+      [
+        "string"
       ]
     ]
   ],

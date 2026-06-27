@@ -684,7 +684,7 @@ def _wrap_longjump_dispatch(emitter, prologue):
 # Statements that emit their own control transfer (or end the method), so the
 # block they end needs no implicit fall-through branch generated for it.
 _BRANCHING_STATEMENTS = frozenset(
-    {"If", "OnGoto", "End", "ReturnFromProcedure", "ReturnFromFunction",
+    {"If", "OnGoto", "End", "Stop", "ReturnFromProcedure", "ReturnFromFunction",
      "LongJump", "Run", "Raise", "Endwhile"}
 )
 
@@ -2450,6 +2450,88 @@ class _MethodEmitter:
 
     def _expr_TopFunc(self, node):
         self.emit(_runtime("get_Top"))
+
+    def _emit_deferred(self, feature, owl_type=None):
+        """Lower a feature OWL compiles but does not yet implement to a runtime
+        call that fails loudly when reached -- a deferred backend gap surfaced as
+        a runtime library gap rather than a refusal to compile. For an expression
+        a default value is pushed after the (throwing) call so the IL stays
+        verifiable; it is never reached."""
+        self.emit('ldstr "%s"' % feature)
+        self.emit(_runtime("NotImplemented", "string"))
+        if owl_type is not None:
+            il = _il_type(owl_type)
+            if il == "string":
+                self.emit('ldstr ""')
+            elif il == "float64":
+                self.emit("ldc.r8 0.0")
+            elif il == "int64":
+                self.emit("ldc.i8 0")
+            else:
+                self.emit("ldc.i4.0")
+
+    def _expr_GetStrFunc(self, node):
+        # GET$: read one keypress, returning it as a one-character string.
+        self.emit(_runtime("Get"))
+        self.emit(_runtime("Chr", "int32"))
+
+    def _expr_InkeyStrFunc(self, node):
+        # INKEY$(n): wait up to n centiseconds for a key, as a string ("" on none).
+        self.lower_expression(node.factor)
+        self.emit("conv.ovf.i4")
+        self.emit(_runtime("InkeyStr", "int32"))
+
+    def _expr_AdvalFunc(self, node):
+        self._emit_deferred("ADVAL", node.actualType)
+
+    def _expr_TimeStrValue(self, node):
+        self._emit_deferred("TIME$", node.actualType)
+
+    def _stmt_Stop(self, node):
+        # STOP halts with "STOP at line N" -- a reported error, unlike END.
+        logical = 0
+        if self._line_mapper is not None:
+            logical = self._line_mapper.physicalToLogical(node.lineNum) or 0
+        self.emit("ldc.i4 %d" % logical)
+        self.emit("newobj instance void "
+                  "[OwlRuntime]OwlRuntime.StopException::.ctor(int32)")
+        self.emit("throw")
+
+    # Features OWL parses and type-checks but has not yet implemented in the
+    # backend. Each lowers to a loud runtime failure (see _emit_deferred) so the
+    # program compiles and runs until -- if ever -- the operation is reached.
+    def _stmt_Sound(self, node):
+        self._emit_deferred("SOUND")
+
+    def _stmt_Envelope(self, node):
+        self._emit_deferred("ENVELOPE")
+
+    def _stmt_Palette(self, node):
+        self._emit_deferred("PALETTE")
+
+    def _stmt_Off(self, node):
+        self._emit_deferred("OFF")
+
+    def _stmt_Width(self, node):
+        self._emit_deferred("WIDTH")
+
+    def _stmt_Clear(self, node):
+        self._emit_deferred("CLEAR")
+
+    def _stmt_Rectangle(self, node):
+        self._emit_deferred("RECTANGLE")
+
+    def _stmt_Circle(self, node):
+        self._emit_deferred("CIRCLE")
+
+    def _stmt_Mouse(self, node):
+        self._emit_deferred("MOUSE")
+
+    def _stmt_MouseRectangleOn(self, node):
+        self._emit_deferred("MOUSE RECTANGLE")
+
+    def _stmt_Increment(self, node):
+        self._emit_deferred("+= (increment)")
 
     def _expr_GetFunc(self, node):
         # GET: read one keypress, returning its code.
