@@ -1466,11 +1466,14 @@ def p_end_fn_stmt(p):
 
 def p_dyadic_indirection(p):
     """dyadic_indirection : variable QUERY factor
-                          | variable PLING factor"""
+                          | variable PLING factor
+                          | indexer QUERY factor
+                          | indexer PLING factor"""
+    # The base is an address-valued l-value primary: a variable or an array
+    # element (A%(i)?j). (A parenthesised-expression base would need ? and ! to be
+    # full binary operators in the factor hierarchy, which conflicts with their
+    # l-value role -- out of scope here.)
     if p[2] == '?':
-        # TODO: Ideally we would want to require that the LHS
-        #       of the dyadic indirection operators is a simple
-        #       variable.  Doesn't work yet, though.
         p[0] = DyadicByteIndirection(base = p[1], offset = p[3])
     elif p[2] == '!':
         p[0] = DyadicIntegerIndirection(base = p[1], offset = p[3])
