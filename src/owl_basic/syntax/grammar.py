@@ -387,6 +387,10 @@ def p_dim_item(p):
     if len(p) == 2:
         p[0] = AllocateArray(identifier = p[1].identifier, dimensions = p[1].indices)
     elif len(p) == 3:
+        # DIM P% n sets P% to the base address of the reserved block, so the
+        # target is an l-value (a write), not a read -- mark it so constant
+        # propagation does not substitute a literal into it.
+        p[1].isLValue = True
         p[0] = AllocateBlock(identifier = p[1], size = p[2])
     
     

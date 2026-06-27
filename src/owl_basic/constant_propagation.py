@@ -175,6 +175,9 @@ def _block_gen(block, constants, must_define, universe):
     return gen
 
 
+_EMPTY = frozenset()
+
+
 def _definite_assignment(blocks, constants, must_define, entry_seed):
     """id(block) -> constants definitely assigned on entry to that block, given the
     method's entry availability *entry_seed* and the callees' must-define summaries
@@ -196,7 +199,13 @@ def _definite_assignment(blocks, constants, must_define, entry_seed):
                 if preds:
                     new_in = set(universe)
                     for pred in preds:
-                        new_in &= defined_out[id(pred)]
+                        # A predecessor may be a block shared with another method
+                        # (block identification assigns a shared block to one
+                        # method's list, yet its in-edges can cross from another).
+                        # Such a pred is not in this method's defined_out; for a
+                        # MUST analysis the sound default is that it guarantees
+                        # nothing, so it cannot over-propagate a constant.
+                        new_in &= defined_out.get(id(pred), _EMPTY)
                 else:
                     new_in = set()                   # unreachable: defines nothing
             new_out = new_in | gen[id(block)]
