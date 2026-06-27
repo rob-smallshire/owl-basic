@@ -228,8 +228,7 @@ def t_ASSEMBLER(t):
             i += 1                       # step past the closing quote
             continue
         if char == ']':
-            i += 1                       # include the terminator
-            break
+            break                        # leave ']' to lex as a separator (RSQUARE)
         i += 1
     t.value = data[start:i]
     t.lexer.lexpos = i

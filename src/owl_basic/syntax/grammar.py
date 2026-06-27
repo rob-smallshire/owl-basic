@@ -74,7 +74,11 @@ def p_statements_tail(p):
         p[0] = StatementList() 
 
 def p_statement_separator(p):
-    'statement_separator : COLON'
+    '''statement_separator : COLON
+                           | RBRAC'''
+    # ']' (RBRAC) closing an inline assembler block terminates the statement just
+    # as ':' does, so a statement may follow it with no colon (e.g. the two-pass
+    # assembler harness's `]NEXT`). t_ASSEMBLER leaves the ']' as its own token.
     p[0] = p[1]
 
 def p_stmt_terminator(p):

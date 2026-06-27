@@ -36,7 +36,11 @@ def test_single_line_block_parses_to_inline_assembler():
         (10, " [OPT2:LDA #65:JSR &FFEE:]"),
         (20, " END"),
     ]))
-    assert node.code.startswith("[") and node.code.rstrip().endswith("]")
+    # The block text is captured from '[' up to (not including) the terminating
+    # ']', which is a separate statement-separator token so a statement may
+    # follow it on the same line (e.g. ']NEXT'). The content is verbatim.
+    assert node.code.startswith("[")
+    assert "LDA #65" in node.code and "JSR &FFEE" in node.code
 
 
 def test_multi_line_block_parses_and_keeps_text_verbatim():
@@ -70,8 +74,11 @@ def test_close_bracket_inside_a_string_does_not_terminate_the_block():
         (10, ' [OPT0:EQUS "Contains]":RTS:]'),
         (20, " END"),
     ]))
+    # The ']' inside the quotes is captured as block content (the block did not
+    # end there), and the block runs on past it to RTS; the real terminator ']'
+    # after RTS is a separate token, so it is not part of the captured code.
     assert 'EQUS "Contains]"' in node.code
-    assert node.code.rstrip().endswith(":]")  # the real terminator, after RTS
+    assert "RTS" in node.code
 
 
 @requires_dotnet_toolchain
