@@ -786,12 +786,20 @@ class _MethodEmitter:
                 if statement.off or _on_error_goto_target(statement) is not None:
                     continue
                 statements = getattr(statement.handler, "statements", None)
-                if not statements:
-                    continue
+                if statements:
+                    entry = statements[0]
+                else:
+                    # An empty handler -- ON ERROR with nothing after it -- means
+                    # "on error, resume at the next statement": the error jumps to
+                    # the ON ERROR, runs the (empty) handler, and falls through to
+                    # the following line. Land the EH_ label on that statement.
+                    entry = findFollowingStatement(statement)
+                    if entry is None:
+                        continue          # nothing follows: leave it unlowerable
                 counter += 1
                 target = -counter
                 self._error_handler_targets[id(statement)] = target
-                self._error_handler_entries[id(statements[0])] = target
+                self._error_handler_entries[id(entry)] = target
 
     def _error_handler_slot(self):
         """Local holding the current ON ERROR handler line (0 = none/disabled)."""
