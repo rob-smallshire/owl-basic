@@ -5,7 +5,8 @@ Convert subroutines with named PROCedures
 import logging
 
 from owl_basic.syntax.ast import (DefineProcedure, CallProcedure,
-                                  ReturnFromProcedure, End)
+                                  ReturnFromProcedure, End, Until, Next,
+                                  Endwhile)
 from owl_basic.exceptions import CompileError
 from owl_basic.ast_utils import insertStatementBefore, findFollowingStatement
 from .convert_sub_visitor import ConvertSubVisitor
@@ -48,6 +49,13 @@ def bridgeFallthroughSubroutines(entry_points, line_mapper):
     bridges = []
     for name, entry_point in entry_points.items():
         if not name.startswith("gosub"):
+            continue
+        # A GOSUB whose target is a loop closer (UNTIL/NEXT/ENDWHILE) jumps into
+        # the middle of a loop, relying on the run-time loop stack to find the
+        # matching opener -- genuinely dynamic and uncompilable. Do not bridge it:
+        # severing the closer's body fall-through would break loop correlation.
+        # Leave it for convertSubroutinesToProcedures to reject cleanly.
+        if isinstance(entry_point, (Until, Next, Endwhile)):
             continue
         procname = "PROCSub" + name[len("gosub"):]
         # An in-edge from inside the routine (a GOTO back to the top -- a loop) is

@@ -16,9 +16,12 @@ subroutine (there is a GOSUB frame to return to), END on the main line (no frame
 the BBC RETURN would be "RETURN without GOSUB", which halts). A fall-through from
 unreachable code is bridged the same way and simply never executed.
 """
+import pytest
+
 from conftest import requires_dotnet_toolchain
 
 from owl_basic.analysis import analyse_numbered_lines
+from owl_basic.exceptions import CompileError
 
 
 def _analyse(lines):
@@ -59,6 +62,16 @@ def test_main_line_fallthrough_into_subroutine_compiles():
     program = _analyse([(10, " GOSUB 100"), (20, ' PRINT "main"'),
                         (100, ' PRINT "s"'), (110, " RETURN")])
     assert program is not None
+
+
+def test_gosub_to_a_loop_closer_is_rejected_not_bridged():
+    # An ON/GOSUB whose target is a loop closer (here the UNTIL of an enclosing
+    # REPEAT) jumps into the middle of the loop and relies on BBC's run-time loop
+    # stack -- genuinely dynamic. The bridge must not touch it (severing the
+    # closer's body fall-through would break loop correlation); it stays rejected.
+    with pytest.raises(CompileError, match="not supported"):
+        _analyse([(10, " REPEAT"), (20, " A%=A%+1"), (30, " IF A%=5 GOSUB 40"),
+                  (40, " UNTIL A%>9"), (50, ' PRINT "done"'), (60, " END")])
 
 
 def test_goto_into_subroutine_head_compiles_via_longjump():
