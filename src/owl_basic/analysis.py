@@ -282,6 +282,43 @@ def _reject_unsupported_constructs(parse_tree):
     walk(parse_tree)
 
 
+def _check_array_dimensions(parse_tree):
+    """Report each array used (an element access) but never DIMmed.
+
+    An array reference whose array has no DIM -- and which is not a formal array
+    parameter (DIMmed by the caller) -- is a program error: on a real BBC it
+    raises at run time, and the backend cannot lower it to consistent IL. Report
+    it as a diagnostic (collected like a type error, so codegen refuses) rather
+    than emitting an invalid array reference. Each array is named once.
+
+    The check is conservative -- a name is "declared" if it is DIMmed *anywhere*
+    or appears as a formal array parameter -- so order and scope never produce a
+    false positive.
+    """
+    declared = set()
+    used = {}                       # identifier -> the lineNum of its first use
+
+    def walk(node):
+        if node is None or not hasattr(node, "forEachChild"):
+            return
+        name = type(node).__name__
+        if name == "AllocateArray":
+            declared.add(node.identifier)
+        elif name in ("FormalArgument", "FormalReferenceArgument"):
+            argument = node.argument
+            if type(argument).__name__ == "Array":
+                declared.add(argument.identifier)
+        elif name == "Indexer":
+            used.setdefault(node.identifier, getattr(node, "lineNum", 0))
+        node.forEachChild(walk)
+
+    walk(parse_tree)
+    for identifier in used:
+        if identifier not in declared:
+            bare = identifier[:-1] if identifier.endswith("(") else identifier
+            errors.error("the array %s() is used but never DIMmed" % bare)
+
+
 def _clear_cfg_edges(parse_tree):
     """Drop every control-flow edge from the statement graph, so the flow can be
     rebuilt cleanly after EVAL lowering appends dispatch-helper statements."""
@@ -409,6 +446,7 @@ def _run_pipeline(data, physical_to_logical_map, line_offsets, line_number_prefi
         _reject_unsupported_constructs(parse_tree)   # any EVAL we still cannot lower
 
         typecheck(parse_tree, entry_points, options)
+        _check_array_dimensions(parse_tree)          # arrays used but never DIMmed
 
         stv = symbol_table_visitor.SymbolTableVisitor()
         if "__owl__main" in entry_points:
