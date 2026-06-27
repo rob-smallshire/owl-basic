@@ -176,8 +176,11 @@ def _set_line_num(node, line_num):
 _STRING_CONCAT = ("Plus", "Concatenate")
 
 
+_HEX_DIGITS = frozenset("0123456789ABCDEFabcdef")
+
+
 def _lower_hex(eval_node):
-    """Lower the hex-to-int idiom EVAL("&" + h$), or return False to leave it.
+    """Lower the hex-to-int idiom EVAL("&" + h$ ...), or return False to leave it.
 
     EVAL of "&" followed by a runtime string is BBC's standard hex-to-integer
     conversion -- VAL is decimal-only, so this is the only way to read a hex
@@ -185,20 +188,55 @@ def _lower_hex(eval_node):
     full expression evaluator, whose factor dispatcher alone handles the "&" hex
     reader -- which is exactly why VAL cannot do this and EVAL can.)
 
-    When the operand is exactly the literal "&" concatenated with one runtime
-    string -- no other structure -- it lowers to EvalHexFunc, which at run time
-    reads the leading hex run as a &-literal does and faults "Bad hex" on a
-    missing/invalid leading digit, as EVAL does. Anything more elaborate (e.g.
-    "&" + h$ + "+1") keeps its structure runtime and stays residue.
+    The operand must be "&" followed by a hex string built from runtime holes and
+    constant *hex-digit* text, in any combination: EVAL("&"+h$), EVAL("&0"+h$)
+    (constant digits after the &), EVAL("&"+a$+b$) (several runtime parts). It
+    lowers to EvalHexFunc over the concatenated content, which at run time reads
+    the leading hex run as a &-literal does and faults "Bad hex" on a
+    missing/invalid leading digit, as EVAL does. Constant text that is not all hex
+    digits (e.g. "&"+h$+"+1") is structure -- general EVAL again -- so it stays
+    residue. At least one hole is required; an all-constant operand is left to
+    constant folding.
     """
     segments = _string_segments(eval_node.factor)
-    if segments is None or len(segments) != 2:
+    if not segments:
         return False
-    (first_kind, first_value), (second_kind, second_value) = segments
-    if first_kind == "lit" and first_value == "&" and second_kind == "hole":
-        _splice(eval_node, EvalHexFunc(factor=second_value))
-        return True
-    return False
+    first_kind, first_value = segments[0]
+    if first_kind != "lit" or not first_value.startswith("&"):
+        return False
+
+    # Collect the hex content after the leading "&": constant runs must be hex
+    # digits; runtime holes are taken as hex (the documented approximation -- the
+    # run-time reader stops at the first non-hex character).
+    def _literal(text):
+        node = LiteralString(value=text)
+        _set_line_num(node, eval_node.lineNum)
+        return node
+
+    content = []
+    head = first_value[1:]
+    if head:
+        if any(character not in _HEX_DIGITS for character in head):
+            return False
+        content.append(_literal(head))
+    has_hole = False
+    for kind, value in segments[1:]:
+        if kind == "lit":
+            if any(character not in _HEX_DIGITS for character in value):
+                return False
+            content.append(_literal(value))
+        else:
+            has_hole = True
+            content.append(value)
+    if not has_hole:
+        return False                 # all constant: leave to constant folding
+
+    factor = content[0]
+    for node in content[1:]:
+        factor = Concatenate(lhs=factor, rhs=node)
+        _set_line_num(factor, eval_node.lineNum)
+    _splice(eval_node, EvalHexFunc(factor=factor))
+    return True
 
 
 def _lower_str_template(eval_node, options):

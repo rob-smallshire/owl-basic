@@ -245,6 +245,39 @@ def test_hex_with_runtime_trailing_structure_stays_rejected():
     assert "EVAL" in str(excinfo.value)
 
 
+# Hex content may be more than a bare "&" + one hole: constant hex digits after
+# the "&" (EVAL("&0"+h$)) and several concatenated runtime parts (EVAL("&"+a$+b$))
+# are all one hex string. Surfaced by The Micro User (DRIVER, LIST1, ULTIMA).
+
+def test_hex_with_constant_digits_after_ampersand_compiles():
+    assert _compiles('INPUT h$\nPRINT EVAL("&0"+h$)\n')
+
+
+def test_hex_with_multipart_runtime_string_compiles():
+    assert _compiles('INPUT a$\nINPUT b$\nPRINT EVAL("&"+a$+b$)\n')
+
+
+@requires_dotnet_toolchain
+def test_hex_with_constant_digits_runs(compile_and_run):
+    # "&0"+h$ : the leading "0" is part of the hex string.
+    out = compile_and_run(analyse('h$="F"\nPRINT EVAL("&0"+h$)\n', name="t"))
+    assert out.strip() == "15"
+
+
+@requires_dotnet_toolchain
+def test_hex_multipart_runtime_runs(compile_and_run):
+    out = compile_and_run(analyse(
+        'a$="F"\nb$="F"\nPRINT EVAL("&"+a$+b$)\n', name="t"))
+    assert out.strip() == "255"
+
+
+def test_hex_with_non_hex_constant_text_stays_rejected():
+    # "&" + h$ + ":1" -- the ":1" is not hex digits, so it is structure, not part
+    # of the hex string: stay the honest residual rejection.
+    with pytest.raises(CompileError):
+        analyse('INPUT h$\nPRINT EVAL("&"+h$+":1")\n', name="t")
+
+
 # --- STR$ value-hole: EVAL(STR$(e) + ...) --------------------------------
 # Sound now that VAL scans the same number syntax as the expression parser:
 # EVAL(STR$(e)+"+1") == VAL(STR$(e))+1. The STR$->parse round-trip is *kept*
