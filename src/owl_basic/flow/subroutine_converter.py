@@ -191,3 +191,6 @@ def convertSubroutinesToProcedures(parse_tree, entry_points, line_mapper, option
     
     csv = ConvertSubVisitor(entry_points)
     parse_tree.accept(csv)
+    # An ON GOTO whose target line begins with GOSUB held a reference to that now
+    # replaced GOSUB; retarget it to the CALL so codegen can label the switch.
+    csv.retargetOnGotos(parse_tree)
