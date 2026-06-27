@@ -83,6 +83,14 @@ _MEMORY_ARRAY = _runtime("get_Memory", cls="MemoryMap")
 _BYTE_INDIRECTIONS = frozenset({"UnaryByteIndirection", "DyadicByteIndirection"})
 _INTEGER_INDIRECTIONS = frozenset({"UnaryIntegerIndirection", "DyadicIntegerIndirection"})
 
+# Every assignable l-value -- the set _store_to_lvalue handles (the targets LET
+# accepts). INPUT reads into any of these, just as an assignment writes to them.
+_ASSIGNABLE_LVALUES = (
+    frozenset({"Variable", "Indexer", "UnaryStringIndirection",
+               "UnaryFloatIndirection", "LomemValue", "HimemValue", "PageValue",
+               "TimeValue", "PtrValue"})
+    | _BYTE_INDIRECTIONS | _INTEGER_INDIRECTIONS)
+
 # DATA is compiled to a static string array read sequentially by READ.
 _DATA_FIELD = "__data"
 _DATA_ARRAY_TYPE = "string[]"
@@ -1380,8 +1388,8 @@ class _MethodEmitter:
 
     @staticmethod
     def _is_input_target(node):
-        """A writable INPUT reads into: a scalar variable or an array element."""
-        return type(node).__name__ in ("Variable", "Indexer")
+        """INPUT reads into any assignable l-value -- the targets LET accepts."""
+        return type(node).__name__ in _ASSIGNABLE_LVALUES
 
     def _stmt_Input(self, node):
         # Prompt strings/manipulators/cursor moves interleave with the read
@@ -1462,26 +1470,13 @@ class _MethodEmitter:
         queue_slot = self._input_queue_local()
         self.emit("stloc V_%d" % queue_slot)
         for target in targets:
-            if type(target).__name__ == "Indexer":
-                # stelem wants [array, index..., value]; the value is the dequeue.
-                indices = target.indices
-                rank = len(indices)
-                field, array_il, element_il = self._array_field(
-                    target.identifier, rank)
-                self.emit("ldsfld %s %s" % (array_il, field))
-                self._push_indices(indices)
+            # Store each read value into the target, whatever kind of l-value it
+            # is (scalar, array element, ?/!/$/| indirection, @%, ...) -- the same
+            # machinery an assignment uses. The value is the next dequeued item.
+            def emit_value(target=target):
                 self.emit("ldloc V_%d" % queue_slot)
                 self._dequeue_input_value(target.actualType)
-                if rank == 1:
-                    self.emit(_STELEM[element_il])
-                else:
-                    args = ", ".join(["int32"] * rank)
-                    self.emit("call instance void %s::Set(%s, %s)"
-                              % (array_il, args, element_il))
-            else:
-                self.emit("ldloc V_%d" % queue_slot)
-                self._dequeue_input_value(target.actualType)
-                self._store_variable(target)
+            self._store_to_lvalue(target, emit_value, target.actualType)
 
     def _dequeue_input_value(self, owl_type):
         """Dequeue one read value (already on the queue, loaded by the caller) and
