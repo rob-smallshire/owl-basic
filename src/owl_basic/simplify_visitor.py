@@ -130,7 +130,30 @@ class SimplificationVisitor(Visitor):
                 
         self.visit(ongoto.switch)
         self.visit(ongoto.targetLogicalLines)
-            
+
+    def visitOnProc(self, onproc):
+        if onproc.outOfRangeClause is not None:
+            if isinstance(onproc.outOfRangeClause, StatementList):
+                sslv = SimplifyStatementListVisitor()
+                sslv.visit(onproc.outOfRangeClause)
+                _localize_child_infos(onproc)
+                onproc.child_infos['out_of_range_clause'] = onproc.outOfRangeClause.child_infos['statements']
+                onproc.outOfRangeClause = sslv.accumulatedStatements
+                if len(onproc.outOfRangeClause) == 0:
+                    onproc.outOfRangeClause = None
+                else:
+                    for index, statement in enumerate(onproc.outOfRangeClause):
+                        statement.parent = onproc
+                        statement.parent_property = 'outOfRangeClause'
+                        statement.parent_index = index
+                        self.visit(statement)
+            else:
+                self.visit(onproc.outOfRangeClause)
+
+        self.visit(onproc.switch)
+        for procedure in onproc.procedures:
+            self.visit(procedure)
+
     def visitCase(self, case):
         "Remove the WhenClauseList level and flatten each clause's body."
         _localize_child_infos(case)

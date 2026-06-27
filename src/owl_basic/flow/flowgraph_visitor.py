@@ -125,6 +125,27 @@ class FlowgraphForwardVisitor(Visitor):
         edges (registered by the entry-point visitor), not normal successors."""
         connectToFollowing(ongosub)
 
+    def visitOnProc(self, onproc):
+        """ON x PROC calls the x-th procedure and returns, so control continues at
+        the following statement. The targets are named PROCs (already entry points
+        via their DEF), lowered as inline calls, so they are not CFG successors. An
+        out-of-range ELSE clause runs then rejoins after, so it is connected and
+        its statements processed (cf. visitOnGoto)."""
+        connectToFollowing(onproc)
+        first_else_statement = None
+        if onproc.outOfRangeClause is not None:
+            if isinstance(onproc.outOfRangeClause, list):
+                if len(onproc.outOfRangeClause) > 0:
+                    first_else_statement = onproc.outOfRangeClause[0]
+                    connect(onproc, first_else_statement)
+                    for statement in onproc.outOfRangeClause:
+                        self.visit(statement)
+            else:
+                first_else_statement = onproc.outOfRangeClause
+                connect(onproc, onproc.outOfRangeClause)
+                self.visit(onproc.outOfRangeClause)
+        onproc.outOfRangeStatement = first_else_statement
+
     def visitOnGoto(self, ongoto):
         """
         Connect the OnGoto to the first statement on each of the target lines

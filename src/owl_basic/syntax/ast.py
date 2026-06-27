@@ -260,6 +260,13 @@ class OnGosub(AstStatement):
     switch = Node(formalType=IntegerOwlType())
     target_logical_lines = Node()
 
+class OnProc(AstStatement):
+    "ON x PROCa, PROCb -- call the x-th procedure (1-based), then continue."
+    switch = Node(formalType=IntegerOwlType())
+    procedures = Node()                       # list of CallProcedure
+    out_of_range_clause = Node()
+    has_else = BoolOption(False)              # distinguishes a bare ELSE from none
+
 class Gosub(AstStatement):
     target_logical_line = Node(formalType=IntegerOwlType())
 

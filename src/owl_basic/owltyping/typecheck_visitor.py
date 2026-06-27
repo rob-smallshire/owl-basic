@@ -345,7 +345,21 @@ class TypecheckVisitor(Visitor):
                 self.typeMismatch(ongoto, "Target expressions must be convertible to Integer")
             
         self.visit(ongoto.outOfRangeClause)
-            
+
+    def visitOnProc(self, onproc):
+        # ON x PROCa, PROCb : the selector must be integer-convertible; each
+        # target is a procedure call (typed like any other), and the optional
+        # out-of-range ELSE clause is typed too.
+        self.visit(onproc.switch)
+        switch_formal_type = onproc.child_infos['switch'].formalType
+        if onproc.switch.actualType.isConvertibleTo(switch_formal_type):
+            self.insertCast(onproc.switch, onproc.switch.actualType, switch_formal_type)
+        else:
+            self.typeMismatch(onproc, "Selector expression must be convertible to %s" % switch_formal_type.__doc__)
+        for procedure in onproc.procedures:
+            self.visit(procedure)
+        self.visit(onproc.outOfRangeClause)
+
     def visitUnaryNumericOperator(self, operator):
         self.visit(operator.factor)
         if self._foldConstant(operator):     # e.g. unary minus of a constant

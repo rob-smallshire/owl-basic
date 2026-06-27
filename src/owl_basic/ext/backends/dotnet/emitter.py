@@ -1211,6 +1211,30 @@ class _MethodEmitter:
             self.emit("br " + end)
         self.emit("%s:" % end)
 
+    def _stmt_OnProc(self, node):
+        # ON x PROCa, PROCb : call the x-th procedure (1-based), then continue
+        # after the ON PROC. Out of range runs the ELSE clause if present, is a
+        # no-op for a bare ELSE, or raises the ON-range error when there is none.
+        end = self._new_label("OP_END")
+        cases = [self._new_label("OP_CASE") for _ in node.procedures]
+        self.lower_expression(node.switch)
+        self.emit("ldc.i4.1")
+        self.emit("sub")
+        self.emit("switch (%s)" % ", ".join(cases))
+        if node.outOfRangeStatement is not None:
+            self.emit("br " + self._block_label(node.outOfRangeStatement.block))
+        elif node.hasElse:
+            self.emit("br " + end)                # bare ELSE: out of range is a no-op
+        else:
+            self.emit("newobj instance void "
+                      "[OwlRuntime]OwlRuntime.OnRangeException::.ctor()")
+            self.emit("throw")
+        for label, procedure in zip(cases, node.procedures):
+            self.emit("%s:" % label)
+            self._stmt_CallProcedure(procedure)
+            self.emit("br " + end)
+        self.emit("%s:" % end)
+
     def _stmt_LongJump(self, node):
         # GOTO out of a routine: throw, to be caught by Main's dispatch loop.
         self.lower_expression(node.targetLogicalLine)

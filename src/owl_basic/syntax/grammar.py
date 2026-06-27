@@ -133,6 +133,7 @@ def p_stmt_body(p):
                  | goto_stmt
                  | on_goto_stmt
                  | on_gosub_stmt
+                 | on_proc_stmt
                  | gosub_stmt
                  | input_stmt
                  | install_stmt
@@ -594,6 +595,32 @@ def p_on_goto_stmt(p):
     elif len(p) == 7:
         p[0] = OnGoto(switch = p[2], targetLogicalLines = p[4], outOfRangeClause = p[6])
     p[0].lineNum = p.lineno(1) - 1
+
+def p_on_proc_stmt(p):
+    '''on_proc_stmt : ON expr proc_list
+                    | ON expr proc_list ELSE
+                    | ON expr proc_list ELSE multi_statement'''
+    # ON x PROCa, PROCb -- call the x-th procedure (1-based). A bare trailing
+    # ELSE makes an out-of-range value a no-op; ELSE <statements> runs them; no
+    # ELSE raises the ON-range error. has_else carries that distinction (an empty
+    # ELSE clause is simplified away to None, indistinguishable otherwise).
+    if len(p) == 4:
+        p[0] = OnProc(switch = p[2], procedures = p[3], hasElse = False)
+    elif len(p) == 5:
+        p[0] = OnProc(switch = p[2], procedures = p[3], hasElse = True)
+    else:
+        p[0] = OnProc(switch = p[2], procedures = p[3],
+                      outOfRangeClause = p[5], hasElse = True)
+    p[0].lineNum = p.lineno(1) - 1
+
+def p_proc_list(p):
+    '''proc_list : proc_stmt
+                 | proc_list COMMA proc_stmt'''
+    if len(p) == 2:
+        p[0] = [p[1]]
+    else:
+        p[1].append(p[3])
+        p[0] = p[1]
     
 # GOSUB statement
 def p_gosub(p):
