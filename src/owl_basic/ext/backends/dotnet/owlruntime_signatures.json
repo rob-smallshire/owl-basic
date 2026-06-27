@@ -110,6 +110,12 @@
       ]
     ]
   ],
+  "BasicCommands::Count": [
+    [
+      "int32",
+      []
+    ]
+  ],
   "BasicCommands::DecFormat": [
     [
       "void",

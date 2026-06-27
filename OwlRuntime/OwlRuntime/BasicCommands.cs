@@ -1672,6 +1672,14 @@ namespace OwlRuntime
             return vdu.TextCursorY;
         }
 
+        public static int Count()
+        {
+            // COUNT is the number of characters PRINTed since the last newline,
+            // tracked by the print manager (it counts PRINT output only and resets
+            // on a CR -- unlike POS, which is the VDU cursor column over all paths).
+            return printManager.Count;
+        }
+
         public static double Sqr(double factor)
         {
             if (factor < 0.0)

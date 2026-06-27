@@ -2579,6 +2579,11 @@ class _MethodEmitter:
     def _expr_VposFunc(self, node):
         self.emit(_runtime("VPos"))
 
+    def _expr_CountFunc(self, node):
+        # COUNT: characters PRINTed since the last newline (a print-manager count,
+        # distinct from POS's cursor column).
+        self.emit(_runtime("Count"))
+
     def _expr_LomemValue(self, node):
         self.emit(_runtime("get_Lomem"))
 
