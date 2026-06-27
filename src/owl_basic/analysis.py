@@ -283,20 +283,45 @@ def _reject_unsupported_constructs(parse_tree):
 
 
 def _check_array_dimensions(parse_tree):
-    """Report each array used (an element access) but never DIMmed.
+    """Report arrays misused as either undimensioned or indexed with the wrong rank.
 
-    An array reference whose array has no DIM -- and which is not a formal array
-    parameter (DIMmed by the caller) -- is a program error: on a real BBC it
-    raises at run time, and the backend cannot lower it to consistent IL. Report
-    it as a diagnostic (collected like a type error, so codegen refuses) rather
-    than emitting an invalid array reference. Each array is named once.
+    Two related program errors that a real BBC raises at run time, and that the
+    backend cannot lower to consistent IL:
 
-    The check is conservative -- a name is "declared" if it is DIMmed *anywhere*
-    or appears as a formal array parameter -- so order and scope never produce a
-    false positive.
+    * An array element access whose array has no DIM -- and which is not a formal
+      array parameter (DIMmed by the caller). The backend has no field of a known
+      element type/rank to reference.
+    * An access that indexes a DIMmed array with a different number of subscripts
+      than its DIM (e.g. p%(c%) against ``DIM p%(9,7)``). The backend would emit
+      an array reference of the wrong rank (int32[] against an int32[,] field),
+      which ilasm rejects.
+
+    Both are reported as diagnostics (collected like a type error, so codegen
+    refuses) rather than emitting an invalid array reference. Each array is named
+    once per problem.
+
+    The check is conservative so order and scope never produce a false positive:
+    a name is "declared" if it is DIMmed *anywhere* or appears as a formal array
+    parameter, and the rank check is skipped for any name that is a formal
+    parameter (rank is the caller's, unknown here) or is DIMmed at more than one
+    rank (ambiguous).
     """
     declared = set()
+    formal = set()                  # formal array parameters -- rank unknown
+    ranks = {}                      # identifier -> declared rank, or None if ambiguous
     used = {}                       # identifier -> the lineNum of its first use
+    accesses = []                   # (identifier, subscript count) for every access
+
+    def _count(sequence):
+        # dimensions/indices are sometimes a plain list, sometimes an
+        # ExpressionList (.expressions) or other list node (.items).
+        if sequence is None:
+            return 0
+        for attribute in ("expressions", "items"):
+            elements = getattr(sequence, attribute, None)
+            if elements is not None:
+                return len(elements)
+        return len(sequence)
 
     def walk(node):
         if node is None or not hasattr(node, "forEachChild"):
@@ -304,12 +329,19 @@ def _check_array_dimensions(parse_tree):
         name = type(node).__name__
         if name == "AllocateArray":
             declared.add(node.identifier)
+            rank = _count(node.dimensions)
+            if node.identifier in ranks and ranks[node.identifier] != rank:
+                ranks[node.identifier] = None
+            else:
+                ranks.setdefault(node.identifier, rank)
         elif name in ("FormalArgument", "FormalReferenceArgument"):
             argument = node.argument
             if type(argument).__name__ == "Array":
                 declared.add(argument.identifier)
+                formal.add(argument.identifier)
         elif name == "Indexer":
             used.setdefault(node.identifier, getattr(node, "lineNum", 0))
+            accesses.append((node.identifier, _count(node.indices)))
         node.forEachChild(walk)
 
     walk(parse_tree)
@@ -317,6 +349,19 @@ def _check_array_dimensions(parse_tree):
         if identifier not in declared:
             bare = identifier[:-1] if identifier.endswith("(") else identifier
             errors.error("the array %s() is used but never DIMmed" % bare)
+
+    flagged_rank = set()
+    for identifier, count in accesses:
+        rank = ranks.get(identifier)
+        if (rank is None or identifier in formal
+                or identifier not in declared or identifier in flagged_rank):
+            continue
+        if count != rank:
+            flagged_rank.add(identifier)
+            bare = identifier[:-1] if identifier.endswith("(") else identifier
+            errors.error(
+                "the array %s() is DIMmed with %d subscript(s) but indexed with %d"
+                % (bare, rank, count))
 
 
 def _clear_cfg_edges(parse_tree):
