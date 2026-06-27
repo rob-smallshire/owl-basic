@@ -2,8 +2,8 @@
 
 `A += B` / `A -= B` are simple: they desugar to `A = A + B` / `A = A - B`,
 reusing the assignment and binary-operator machinery (so string `+=` is
-concatenation and numeric casts are inserted as usual). WAIT is a no-op on the
-headless console (it waits for vertical sync, which has no meaning here). The
+concatenation and numeric casts are inserted as usual). WAIT (it waits for
+vertical sync, which has no meaning on the headless console) and the
 graphics/sound statements that remain unimplemented (LINE, POINT, ORIGIN, ...)
 lower to a loud runtime stub like the other deferred features.
 """
@@ -37,9 +37,20 @@ def test_increment_string_concatenates(compile_and_run):
 
 
 @requires_dotnet_toolchain
-def test_wait_is_a_noop(compile_and_run):
-    out = compile_and_run(analyse('PRINT "before"\nWAIT\nPRINT "after"\n', name="t"))
-    assert out.split() == ["before", "after"]
+def test_wait_compiles_and_fails_only_when_reached(compile_and_run):
+    # WAIT is not implemented on the headless console; guarded behind IF FALSE it
+    # is never reached, so the program runs to completion.
+    out = compile_and_run(analyse('PRINT "ok"\nIF FALSE THEN WAIT\n', name="t"))
+    assert out.strip() == "ok"
+
+
+@requires_dotnet_toolchain
+def test_wait_reached_fails_noisily(dotnet_backend, tmp_path):
+    dll = dotnet_backend.generate(analyse("WAIT\nEND\n", name="t"), tmp_path)
+    shutil.copy(find_owlruntime_dll(), tmp_path)
+    result = subprocess.run(["dotnet", str(dll)], capture_output=True, text=True,
+                            timeout=30, cwd=tmp_path)
+    assert result.returncode != 0
 
 
 @requires_dotnet_toolchain

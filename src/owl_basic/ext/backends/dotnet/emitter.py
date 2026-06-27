@@ -2574,7 +2574,14 @@ class _MethodEmitter:
     def _stmt_Palette(self, node):
         self._emit_deferred("PALETTE")
 
+    def _stmt_On(self, node):
+        # ON: turn the text cursor on. Not implemented on the headless renderer;
+        # defer to a loud runtime stub rather than silently doing nothing.
+        self._emit_deferred("ON")
+
     def _stmt_Off(self, node):
+        # OFF: turn the text cursor off. Not implemented on the headless renderer;
+        # defer to a loud runtime stub rather than silently doing nothing.
         self._emit_deferred("OFF")
 
     def _stmt_Width(self, node):
@@ -2639,9 +2646,10 @@ class _MethodEmitter:
         self._store_variable(target)
 
     def _stmt_Wait(self, node):
-        # WAIT [n]: wait for vertical sync (n centiseconds). Meaningless on the
-        # headless console, so a no-op -- not a deferred failure.
-        pass
+        # WAIT [n]: wait for vertical sync (n centiseconds). Not implemented on the
+        # headless console; defer to a loud runtime stub rather than silently
+        # doing nothing.
+        self._emit_deferred("WAIT")
 
     def _expr_GetFunc(self, node):
         # GET: read one keypress, returning its code.
