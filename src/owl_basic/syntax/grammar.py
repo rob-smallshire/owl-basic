@@ -596,8 +596,10 @@ def p_on_gosub_stmt(p):
 
 def p_on_goto_stmt(p):
     '''on_goto_stmt : ON expr GOTO expr_list
-                    | ON expr GOTO expr_list ELSE multi_statement'''
-    # TODO ELSE clause
+                    | ON expr GOTO expr_list ELSE clause'''
+    # The ELSE clause runs when the selector is out of range. Like an IF's ELSE,
+    # a bare line number there is an implicit GOTO (clause covers both a statement
+    # list and that implicit-goto form).
     if len(p) == 5:
         p[0] = OnGoto(switch = p[2], targetLogicalLines = p[4])
     elif len(p) == 7:
