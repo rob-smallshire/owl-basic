@@ -492,8 +492,11 @@ class Mute(AstStatement):
     mute = BoolOption(False)
 
 class Swap(AstStatement):
-    identifier1 = StringOption()
-    identifier2 = StringOption()
+    # The two operands are l-value nodes (a variable, array element, ...), not
+    # strings -- they must be Node children so the parent linkage and tree
+    # walkers (ParentVisitor, type checker) descend into their subexpressions.
+    identifier1 = Node()
+    identifier2 = Node()
 
 class Stop(AstStatement):
     pass

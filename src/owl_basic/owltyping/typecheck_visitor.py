@@ -346,6 +346,19 @@ class TypecheckVisitor(Visitor):
         else:
             self.typeMismatch(iff, "Conditional expression must be convertible to %s." % condition_formal_type.__doc__)
     
+    def visitSwap(self, swap):
+        # SWAP a,b exchanges two l-values of the same type. Visit both so their
+        # actual types (and any subscript casts) are resolved, then require both
+        # to be strings or both numeric -- a string cannot be swapped with a
+        # number.
+        self.visit(swap.identifier1)
+        self.visit(swap.identifier2)
+        type1 = swap.identifier1.actualType
+        type2 = swap.identifier2.actualType
+        if isinstance(type1, StringOwlType) != isinstance(type2, StringOwlType):
+            self.typeMismatch(swap, "SWAP requires both operands to be the same "
+                              "type, not %s and %s" % (type1.__doc__, type2.__doc__))
+
     def visitOnGoto(self, ongoto):
         # TODO: Does this do anything that visitAstNode doesn't do?
         self.visit(ongoto.switch)

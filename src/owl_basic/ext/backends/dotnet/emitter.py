@@ -2065,6 +2065,78 @@ class _MethodEmitter:
             self.emit("call instance void %s::Set(%s, %s)"
                       % (array_il, args, element_il))
 
+    def _capture_lvalue(self, target):
+        """Fix an l-value's location once and return ``(read, store, owl_type)``.
+
+        ``read()`` leaves the current value on the stack; ``store(emit_value)``
+        writes a value (``emit_value`` leaves it on the stack). Any side-effecting
+        subexpression (an array subscript) is evaluated **here**, once, into a
+        local, so the same location can be both read and written -- needed by SWAP,
+        which reads then writes each operand and must run the subscripts once."""
+        name = type(target).__name__
+        if name == "Variable":
+            return (lambda: self._load_variable(target),
+                    lambda emit_value: (emit_value(), self._store_variable(target)),
+                    target.actualType)
+        if name == "Indexer":
+            # An l-value indexer keeps its subscripts in an ExpressionList; a plain
+            # indexer uses a bare list. Normalise to the element list.
+            indices = getattr(target.indices, "expressions", target.indices)
+            rank = len(indices)
+            field, array_il, element_il = self._array_field(target.identifier, rank)
+            slots = []
+            for position, index in enumerate(indices):
+                slot = self._local_slot("__swap_ix_%d_%d" % (id(target), position),
+                                        IntegerOwlType())
+                self.lower_expression(index)
+                if isinstance(getattr(index, "actualType", None), FloatOwlType):
+                    self.emit("conv.i4")     # BBC subscripts are integers
+                self.emit("stloc V_%d" % slot)
+                slots.append(slot)
+
+            def push_place():
+                self.emit("ldsfld %s %s" % (array_il, field))
+                for slot in slots:
+                    self.emit("ldloc V_%d" % slot)
+
+            def read():
+                push_place()
+                if rank == 1:
+                    self.emit(_LDELEM[element_il])
+                else:
+                    args = ", ".join(["int32"] * rank)
+                    self.emit("call instance %s %s::Get(%s)"
+                              % (element_il, array_il, args))
+
+            def store(emit_value):
+                push_place()
+                emit_value()
+                if rank == 1:
+                    self.emit(_STELEM[element_il])
+                else:
+                    args = ", ".join(["int32"] * rank)
+                    self.emit("call instance void %s::Set(%s, %s)"
+                              % (array_il, args, element_il))
+
+            return (read, store, target.actualType)
+        raise CodeGenerationError("SWAP of %r l-value not yet supported" % name)
+
+    def _stmt_Swap(self, node):
+        """SWAP a,b : exchange two l-values of the same type.
+
+        Both locations are captured first (subscripts run once, in source order),
+        then both old values are read into locals and written back crosswise."""
+        read_a, store_a, type_a = self._capture_lvalue(node.identifier1)
+        read_b, store_b, type_b = self._capture_lvalue(node.identifier2)
+        slot_a = self._local_slot("__swap_a_%d" % id(node), type_a)
+        slot_b = self._local_slot("__swap_b_%d" % id(node), type_b)
+        read_a()
+        self.emit("stloc V_%d" % slot_a)
+        read_b()
+        self.emit("stloc V_%d" % slot_b)
+        store_a(lambda: self.emit("ldloc V_%d" % slot_b))
+        store_b(lambda: self.emit("ldloc V_%d" % slot_a))
+
     def _push_memory_index(self, indirection):
         """Push the OwlRuntime address-space byte array and the target index.
 
