@@ -258,6 +258,10 @@ def emit_program(program, assembly_name):
     # LOCAL/PRIVATE; globals are static fields shared by every method. The
     # registry (field name -> CIL type) is populated as methods are lowered.
     globals_registry = {}
+    # Array fields are settled first, from their DIMs: an array's rank is
+    # intrinsic, so its field type must be fixed before any reference (which
+    # would otherwise guess the rank from its subscript count) is emitted.
+    _register_array_fields(blocks_by_entry, globals_registry)
     # DATA becomes a static string array; READ reads it sequentially. The array
     # is built at the top of Main (before any PROC that might READ runs).
     data = getattr(program, "data", None)
@@ -338,6 +342,34 @@ def _array_param_rank(blocks, identifier):
         for statement in block.statements:
             visit(statement)
     return rank
+
+
+def _register_array_fields(blocks_by_entry, globals_registry):
+    """Pre-register every DIM'd array's backing-field type, program-wide.
+
+    An array's rank is intrinsic -- fixed by its ``DIM`` -- so the field type
+    (``element[,...]``) must be settled once, before any method is emitted.
+    Otherwise the first reference to win the ``setdefault`` in ``_array_field``
+    decides the declaration, and a reference whose locally-derived rank (its
+    subscript count) disagrees with the DIM declares the field at the wrong rank
+    -- the declaration and later references then name different types and the IL
+    fails to resolve. Seeding from the authoritative DIM here makes every
+    reference agree."""
+    def visit(node):
+        if node is None or not hasattr(node, "forEachChild"):
+            return
+        if type(node).__name__ == "AllocateArray":
+            base = node.identifier[:-1] if node.identifier.endswith("(") \
+                else node.identifier
+            element_il = _il_type(identifierToType(base))
+            rank = len(node.dimensions)
+            array_il = element_il + "[" + "," * (rank - 1) + "]"
+            globals_registry["arr_" + _global_field_name(base)] = array_il
+        node.forEachChild(visit)
+    for blocks in blocks_by_entry.values():
+        for block in blocks:
+            for statement in block.statements:
+                visit(statement)
 
 
 def _node_il_type(node, owl_type, blocks):
@@ -1934,9 +1966,16 @@ class _MethodEmitter:
         array variable distinct from the scalar of the same name (``A%``)."""
         base = identifier[:-1] if identifier.endswith("(") else identifier
         element_il = _il_type(identifierToType(base))
-        array_il = element_il + "[" + "," * (rank - 1) + "]"
         field = "arr_" + _global_field_name(base)
-        self._globals.setdefault(field, array_il)
+        # The array's rank is intrinsic to the variable (its DIM, or a formal's
+        # inferred rank), so the registered field type is authoritative. Honour
+        # it for every reference -- never re-derive the type from this call's
+        # local rank -- so the declaration and all references name one type.
+        registered = self._globals.get(field)
+        if registered is not None:
+            return field, registered, element_il
+        array_il = element_il + "[" + "," * (rank - 1) + "]"
+        self._globals[field] = array_il
         return field, array_il, element_il
 
     def _push_indices(self, indices):
