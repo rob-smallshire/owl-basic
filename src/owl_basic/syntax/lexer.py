@@ -479,7 +479,12 @@ def t_OSCLI(t):
     return t
 
 def t_POINT(t):
-    r'POINT'
+    # SUM/WAIT/SWAP/POINT are BASIC V additions; older (BASIC II) listings use
+    # them as ordinary variable names. Like the ROM's conditional-flag keywords,
+    # suppress the keyword when it abuts a name character or a $/% sigil, so a
+    # variable that starts with (or is the word plus a sigil) is an identifier.
+    # The bare word (the BASIC V statement/function) is unaffected.
+    r'POINT(?![A-Za-z0-9_$%])'
     return t
 
 def t_PRINT(t):
@@ -614,7 +619,7 @@ def t_STR_STR(t):
     return t
 
 def t_SWAP(t):
-    r'SWAP'
+    r'SWAP(?![A-Za-z0-9_$%])'      # see t_POINT: BASIC V keyword, BASIC II name
     return t
 
 def t_TAB_LPAREN(t):
@@ -642,7 +647,7 @@ def t_VPOS(t):
     return t
 
 def t_WAIT(t):
-    r'WAIT'
+    r'WAIT(?![A-Za-z0-9_$%])'      # see t_POINT: BASIC V keyword, BASIC II name
     return t
 
 def t_WHEN(t):
@@ -788,7 +793,7 @@ def t_SQR(t):
     return t
 
 def t_SUM(t):
-    r'SUM'
+    r'SUM(?![A-Za-z0-9_$%])'       # see t_POINT: BASIC V keyword, BASIC II name
     return t
 
 def t_SYS(t):
