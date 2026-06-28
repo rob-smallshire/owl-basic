@@ -559,7 +559,21 @@ class TypecheckVisitor(Visitor):
             error("Call to undefined %s '%s': no DEF %s is defined"
                   % (kind, bare, call.name))
     
-    def determineNumericResultType(self, operator):    
+    def _narrow_sum_operand(self, operator, attribute):
+        """Narrow a sum-typed operand to its numeric member (a runtime-checked
+        unbox), so a polymorphic FN result can take part in arithmetic. A sum has
+        at most one numeric member (numeric paths join before a sum forms); its
+        string members become a run-time Type mismatch via the unbox."""
+        operand = getattr(operator, attribute)
+        actual = getattr(operand, "actualType", None)
+        if isinstance(actual, SumOwlType):
+            numeric = [m for m in actual.members if m.isA(NumericOwlType())]
+            if len(numeric) == 1:
+                self.insertCast(operand, source=actual, target=numeric[0])
+
+    def determineNumericResultType(self, operator):
+        self._narrow_sum_operand(operator, "lhs")
+        self._narrow_sum_operand(operator, "rhs")
         if operator.lhs.actualType == PendingOwlType() or operator.rhs.actualType == PendingOwlType():
             operator.actualType = PendingOwlType()
             return
@@ -760,6 +774,16 @@ class TypecheckVisitor(Visitor):
                         # The authoritative second pass checks it once resolved.
                         return True
                     if not actual_type.isConvertibleTo(formal_type):
+                        if (isinstance(actual_type, SumOwlType)
+                                and not isinstance(formal_type, SumOwlType)
+                                and any(member.isConvertibleTo(formal_type)
+                                        for member in actual_type.members)):
+                            # A polymorphic (sum) operand narrowed to a concrete
+                            # operand type, as for assignment: legal with a
+                            # runtime-checked unbox. insertNumericCasts inserts the
+                            # cast (which lowers to an As* coercion); a genuine
+                            # mismatch is a run-time "Type mismatch".
+                            return True
                         message = "%s of %s is incompatible with supplied parameter of type %s at line %s" % (info.description, node.description, actual_type.__doc__, node.lineNum)
                         self.typeMismatch(node, message)
                         return False
