@@ -186,9 +186,10 @@ def test_array_initialiser_list_is_lowered(dotnet_backend):
     assert dotnet_backend.emit_il(analyse("DIM A%(3)\nA%() = 1,2,3\nEND\n", name="il"))
 
 
-def test_multidimensional_whole_array_op_is_a_clean_error(dotnet_backend):
-    with pytest.raises(CodeGenerationError):
-        dotnet_backend.emit_il(analyse("DIM A%(2,2)\nA%() = 0\nEND\n", name="mw"))
+def test_multidimensional_whole_array_op_is_lowered(dotnet_backend):
+    # A whole-array op on a multidimensional array nests the element loop over
+    # every dimension (see test_whole_array_multidim for the runtime behaviour).
+    assert dotnet_backend.emit_il(analyse("DIM A%(2,2)\nA%() = 0\nEND\n", name="mw"))
 
 
 def test_multidimensional_array_parameter_is_a_clean_error(dotnet_backend):

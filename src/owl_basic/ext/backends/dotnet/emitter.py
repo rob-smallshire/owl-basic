@@ -765,7 +765,7 @@ class _MethodEmitter:
         self._symbol_table = None  # the symbol table of the statement being lowered
         self._for_loops = {}       # id(ForToStep) -> loop state, shared with NEXT
         self._label_seq = 0        # for unique intra-method labels
-        self._elementwise_index = None  # local slot when lowering a whole-array op
+        self._elementwise_indices = None  # index slots when lowering a whole-array op
         self._data_index = data_index or {}  # DATA line number -> data array index
         self._data_count = data_count        # total DATA items (for RESTORE past end)
         self._longjump_targets = longjump_targets  # logical lines LONGJUMPs target
@@ -1978,11 +1978,18 @@ class _MethodEmitter:
         """A whole-array reference. Inside a whole-array assignment it means the
         i-th element of that array (B%() -> B%[i]); elsewhere (a PROC/FN actual)
         it pushes the array reference itself."""
-        if self._elementwise_index is not None:
-            field, array_il, element_il = self._array_field(node.identifier, 1)
+        if self._elementwise_indices is not None:
+            rank = len(self._elementwise_indices)
+            field, array_il, element_il = self._array_field(node.identifier, rank)
             self.emit("ldsfld %s %s" % (array_il, field))
-            self.emit("ldloc V_%d" % self._elementwise_index)
-            self.emit(_LDELEM[element_il])
+            for slot in self._elementwise_indices:
+                self.emit("ldloc V_%d" % slot)
+            if rank == 1:
+                self.emit(_LDELEM[element_il])
+            else:
+                args = ", ".join(["int32"] * rank)
+                self.emit("call instance %s %s::Get(%s)"
+                          % (element_il, array_il, args))
             return
         field, array_il, _element = self._array_field(node.identifier,
                                                        self._array_rank(node))
@@ -1999,20 +2006,21 @@ class _MethodEmitter:
         """Whole-array assignment A() = <expr> (BASIC V): assign every element.
 
         Lowered as a loop over the target's elements; the right-hand side is
-        evaluated element-wise, so a scalar fills (A() = 0), a whole array copies
-        (A() = B()), and a mix is applied per element (A() = B() + C()). One
-        dimension for now; the RHS is a single expression."""
+        evaluated element-wise, so a scalar fills (A() = 0), a same-shape array
+        copies (A() = B()), and a mix is applied per element (A() = B() + C()).
+        The element loop nests over every dimension, so any rank is handled; the
+        RHS is a single expression (or, for a 1-D target, an initialiser list)."""
         target = node.lValue
         rvalues = node.rValue
-        # The real rank is the one the array was DIMmed with (registered field
-        # type), not the 1-D type we would compute here -- check that before the
-        # 1-D element work, so a multidim array fails cleanly rather than silently.
-        if "," in self._globals.get(_field_name(target.identifier), ""):
-            raise CodeGenerationError(
-                "whole-array operations on multidimensional arrays are not "
-                "supported yet")
-        field, array_il, element_il = self._array_field(target.identifier, 1)
+        # The real rank is the one the array was DIMmed with: the registered field
+        # type carries it (one comma per extra dimension).
+        rank = self._globals.get(_field_name(target.identifier), "").count(",") + 1
+        field, array_il, element_il = self._array_field(target.identifier, rank)
         if len(rvalues) != 1:
+            if rank != 1:
+                raise CodeGenerationError(
+                    "an initialiser list for a multidimensional array is not "
+                    "supported")
             # An initialiser list A() = e0, e1, ...: assign each to the array
             # element of the same position (A(0)=e0, A(1)=e1, ...). Each operand
             # was cast to the element type by the type checker.
@@ -2023,29 +2031,42 @@ class _MethodEmitter:
                 self.emit(_STELEM[element_il])
             return
         rhs = rvalues[0]
-        index = self._local_slot("__wa_index", IntegerOwlType())
-        top = self._new_label("wa_top")
-        end = self._new_label("wa_end")
-        self.emit("ldc.i4.0")
-        self.emit("stloc V_%d" % index)
-        self.emit("%s:" % top)
-        self.emit("ldloc V_%d" % index)                 # i >= length -> done
-        self.emit("ldsfld %s %s" % (array_il, field))
-        self.emit("ldlen")
-        self.emit("conv.i4")
-        self.emit("bge %s" % end)
-        self.emit("ldsfld %s %s" % (array_il, field))   # target[i] = <rhs(i)>
-        self.emit("ldloc V_%d" % index)
-        self._elementwise_index = index
+        indices = [self._local_slot("__wa_index_%d" % d, IntegerOwlType())
+                   for d in range(rank)]
+        tops = [self._new_label("wa_top") for _ in range(rank)]
+        ends = [self._new_label("wa_end") for _ in range(rank)]
+        for d in range(rank):                           # open one loop per dimension
+            self.emit("ldc.i4.0")
+            self.emit("stloc V_%d" % indices[d])
+            self.emit("%s:" % tops[d])
+            self.emit("ldloc V_%d" % indices[d])        # i_d >= length(d) -> done
+            self.emit("ldsfld %s %s" % (array_il, field))
+            if rank == 1:
+                self.emit("ldlen")
+                self.emit("conv.i4")
+            else:
+                self.emit("ldc.i4 %d" % d)
+                self.emit("call instance int32 %s::GetLength(int32)" % array_il)
+            self.emit("bge %s" % ends[d])
+        self.emit("ldsfld %s %s" % (array_il, field))   # target[i...] = <rhs(i...)>
+        for slot in indices:
+            self.emit("ldloc V_%d" % slot)
+        self._elementwise_indices = list(indices)
         self.lower_expression(rhs)
-        self._elementwise_index = None
-        self.emit(_STELEM[element_il])
-        self.emit("ldloc V_%d" % index)                 # i = i + 1
-        self.emit("ldc.i4.1")
-        self.emit("add")
-        self.emit("stloc V_%d" % index)
-        self.emit("br %s" % top)
-        self.emit("%s:" % end)
+        self._elementwise_indices = None
+        if rank == 1:
+            self.emit(_STELEM[element_il])
+        else:
+            args = ", ".join(["int32"] * rank)
+            self.emit("call instance void %s::Set(%s, %s)"
+                      % (array_il, args, element_il))
+        for d in reversed(range(rank)):                 # close loops, innermost first
+            self.emit("ldloc V_%d" % indices[d])
+            self.emit("ldc.i4.1")
+            self.emit("add")
+            self.emit("stloc V_%d" % indices[d])
+            self.emit("br %s" % tops[d])
+            self.emit("%s:" % ends[d])
 
     def _expr_Indexer(self, node):
         """A(i[,j...]) as an r-value: load the element."""
