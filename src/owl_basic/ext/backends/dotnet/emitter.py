@@ -320,6 +320,37 @@ def _formal_arguments(define_procedure):
     return [formal.argument for formal in parameters.arguments]
 
 
+def _array_param_rank(blocks, identifier):
+    """The rank an array name is indexed with in *blocks* (default 1).
+
+    An array parameter/local carries no rank on its type, so its dimensionality
+    is recovered from how it is subscripted in the routine body -- b(i,j) -> 2."""
+    rank = 1
+    def visit(node):
+        nonlocal rank
+        if node is None or not hasattr(node, "forEachChild"):
+            return
+        if type(node).__name__ == "Indexer" and node.identifier == identifier:
+            indices = getattr(node.indices, "expressions", node.indices)
+            rank = max(rank, len(indices))
+        node.forEachChild(visit)
+    for block in blocks:
+        for statement in block.statements:
+            visit(statement)
+    return rank
+
+
+def _node_il_type(node, owl_type, blocks):
+    """The CIL type of a formal/local, giving an array its body-inferred rank
+    (so a multidimensional array parameter is declared element[,...], not 1-D)."""
+    if type(node).__name__ == "Array" and isinstance(owl_type, ArrayOwlType):
+        rank = _array_param_rank(blocks, node.identifier)
+        element = owl_type.elementType()
+        element_il = _il_type(element) if element is not None else "int32"
+        return element_il + "[" + "," * (rank - 1) + "]"
+    return _il_type(owl_type)
+
+
 def _default_value(il_type):
     """The CIL instruction loading the BBC default for a type ("" / 0 / 0.0)."""
     if il_type.endswith("]"):
@@ -510,7 +541,7 @@ def _collect_signatures(blocks_by_entry):
         if kind not in _DEFINITIONS:
             continue
         return_type = "void" if kind == "DefineProcedure" else _il_type(define.returnType)
-        params = [_il_type(a.actualType) for a in _formal_arguments(define)]
+        params = [_node_il_type(a, a.actualType, blocks) for a in _formal_arguments(define)]
         signatures[entry_name] = (return_type, params)
     return signatures
 
@@ -535,7 +566,7 @@ def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
     if not is_main and blocks and type(blocks[0].statements[0]).__name__ in _DEFINITIONS:
         for index, argument in enumerate(_formal_arguments(blocks[0].statements[0])):
             formal_params.append((argument, argument.actualType, index))
-            parameters.append("%s A%d" % (_il_type(argument.actualType), index))
+            parameters.append("%s A%d" % (_node_il_type(argument, argument.actualType, blocks), index))
 
     emitter = _MethodEmitter(
         signatures=signatures,
@@ -566,7 +597,7 @@ def _emit_method(entry_name, blocks, signatures, globals_registry, data_index,
                    and node.identifier in param_names)]
     )
     for node, owl_type, (init_kind, init_arg) in inits:
-        il_type = _il_type(owl_type)
+        il_type = _node_il_type(node, owl_type, blocks)
         init_line = _ldarg(init_arg) if init_kind == "arg" else _default_value(il_type)
         if type(node).__name__ in ("Variable", "Array"):
             # Cheap path (the common case): the global field of that name, saved
@@ -1967,8 +1998,12 @@ class _MethodEmitter:
         self._store_variable(node.identifier)
 
     def _array_rank(self, node):
-        """The rank of a whole-array reference -- from its type if known, else
-        1 (array params/actuals usually leave rank unspecified)."""
+        """The rank of a whole-array reference. The registered backing field is
+        authoritative (a DIM/index established it); fall back to the type, else 1."""
+        field = _field_name(node.identifier)
+        registered = self._globals.get(field)
+        if registered:
+            return registered.count(",") + 1
         owl_type = getattr(node, "actualType", None)
         if isinstance(owl_type, ArrayOwlType) and owl_type.arrayRank():
             return owl_type.arrayRank()
@@ -1991,15 +2026,11 @@ class _MethodEmitter:
                 self.emit("call instance %s %s::Get(%s)"
                           % (element_il, array_il, args))
             return
+        # Push the array reference itself (a PROC/FN actual). The rank comes from
+        # the registered backing field (the DIM established it), so a
+        # multidimensional array is passed by its correct element[,...] type.
         field, array_il, _element = self._array_field(node.identifier,
                                                        self._array_rank(node))
-        # Rank isn't tracked on array param/actual types, so we assume 1-D; if the
-        # array was actually DIMmed multidimensional, fail cleanly rather than
-        # passing a mismatched reference.
-        if "," in self._globals.get(field, ""):
-            raise CodeGenerationError(
-                "passing a multidimensional array as a parameter is not "
-                "supported yet")
         self.emit("ldsfld %s %s" % (array_il, field))
 
     def _stmt_ArrayAssignment(self, node):

@@ -192,7 +192,9 @@ def test_multidimensional_whole_array_op_is_lowered(dotnet_backend):
     assert dotnet_backend.emit_il(analyse("DIM A%(2,2)\nA%() = 0\nEND\n", name="mw"))
 
 
-def test_multidimensional_array_parameter_is_a_clean_error(dotnet_backend):
-    with pytest.raises(CodeGenerationError):
-        dotnet_backend.emit_il(analyse(
-            "DIM B%(2,2)\nPROCt(B%())\nEND\nDEF PROCt(a%())\nENDPROC\n", name="mp"))
+def test_multidimensional_array_parameter_is_lowered(dotnet_backend):
+    # A multidimensional array can now be passed to a routine (the formal's rank
+    # is inferred from how it is indexed; see test_multidim_array_parameter).
+    assert dotnet_backend.emit_il(analyse(
+        "DIM B%(2,2)\nB%(1,1)=1\nPROCt(B%())\nEND\nDEF PROCt(a%())\nx=a%(1,1)\nENDPROC\n",
+        name="mp"))
