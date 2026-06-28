@@ -322,6 +322,7 @@ def _check_array_dimensions(parse_tree):
     """
     declared = set()
     formal = set()                  # formal array parameters -- rank unknown
+    blocks = set()                  # byte blocks: DIM b% <size> (a scalar, not an array)
     ranks = {}                      # identifier -> declared rank, or None if ambiguous
     used = {}                       # identifier -> the lineNum of its first use
     accesses = []                   # (identifier, subscript count) for every access
@@ -348,6 +349,12 @@ def _check_array_dimensions(parse_tree):
                 ranks[node.identifier] = None
             else:
                 ranks.setdefault(node.identifier, rank)
+        elif name == "AllocateBlock":
+            # DIM b% <size> allocates a byte block and stores its base address in
+            # the integer scalar b%; the same name indexed as an array b%() is a
+            # *different*, undimensioned variable (BBC: an "Array" error).
+            target = node.identifier
+            blocks.add(getattr(target, "identifier", target))
         elif name in ("FormalArgument", "FormalReferenceArgument"):
             argument = node.argument
             if type(argument).__name__ == "Array":
@@ -362,7 +369,13 @@ def _check_array_dimensions(parse_tree):
     for identifier in used:
         if identifier not in declared:
             bare = identifier[:-1] if identifier.endswith("(") else identifier
-            errors.error("the array %s() is used but never DIMmed" % bare)
+            if bare in blocks:
+                # A byte block exists under this name, but it is not an array.
+                errors.error(
+                    "%s is a byte block (DIM %s <size>), not an array; indexing "
+                    "it as %s() is an 'Array' error in BBC BASIC" % (bare, bare, bare))
+            else:
+                errors.error("the array %s() is used but never DIMmed" % bare)
 
     flagged_rank = set()
     for identifier, count in accesses:

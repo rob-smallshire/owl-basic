@@ -53,3 +53,31 @@ def test_formal_array_parameter_is_not_flagged():
 def test_undimensioned_array_refuses_codegen(dotnet_backend):
     with pytest.raises(OwlBasicError):
         dotnet_backend.emit_il(analyse("A(3)=5\nEND\n", name="t"))
+
+
+# --- a byte block does not provide an array of the same name ------------------
+# In BBC BASIC II, `DIM b% 100` allocates a byte block and stores its base
+# address in the integer scalar b%. Indexing that name as an array -- `b%(5)` --
+# refers to a *separate* variable b%() that was never DIMmed, so a real BBC gives
+# an `Array` error at run time. (Byte indirection `b%?5` is the correct way to
+# reach the block.) Surfaced by A&B ADVRUN line 2640, where a dropped `?` turned
+# `Cy%?(M%?9)` into `Cy%(M%?9)` -- the same broken shape. OWL must keep rejecting
+# it rather than treating the block as an array.
+
+def test_byte_block_used_as_an_array_is_diagnosed():
+    diags = _array_diagnostics("DIM b% 100\nPRINT b%(5)\nEND\n")
+    # Distinguished from a never-DIMmed typed array: the message names it a byte
+    # block and the BBC "Array" error, not "never DIMmed".
+    assert any("byte block" in d and "Array" in d for d in diags)
+    assert not any("never DIMmed" in d for d in diags)
+
+
+def test_byte_block_indirection_is_fine():
+    # The block is reached by ?/! indirection, not array indexing.
+    assert _array_diagnostics("DIM b% 100\nb%?5=65\nPRINT b%?5\nEND\n") == []
+
+
+def test_genuinely_undimensioned_array_keeps_its_message():
+    # A name with no DIM at all (no byte block) still says "never DIMmed".
+    diags = _array_diagnostics("PRINT A(5)\nEND\n")
+    assert any("never DIMmed" in d for d in diags)
